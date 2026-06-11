@@ -13,8 +13,9 @@
     "@creator-hub/shared-types": "workspace:*",
     "@creator-hub/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
+    "lucide-react": "^0.400.0",
     "react": "^18.3.0",
-    "lucide-react": "^0.400.0"
+    "sonner": "^2.0.7"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

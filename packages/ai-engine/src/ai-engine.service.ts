@@ -68,7 +68,9 @@ export class AIEngineService {
   private async selectOptimalProvider(request: AIRequest): Promise<AIProvider> {
     const providers = this.providerRegistry.getProvidersByTask(request.taskType);
     if (providers.length === 0) {
-      throw new Error(`No providers available for task: ${request.taskType}`);
+      throw new Error(
+        `No AI providers available for task: ${request.taskType}. Check that your API keys are configured in .env`
+      );
     }
     return providers[0]!.name;
   }

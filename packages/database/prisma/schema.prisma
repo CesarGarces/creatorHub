@@ -284,7 +284,7 @@ model File {
 model GeneratedImage {
   id        String   @id @default(cuid())
   userId    String
-  toolId    String
+  toolId    String?
   fileId    String?
   prompt    String
   negativePrompt String?
@@ -299,7 +299,7 @@ model GeneratedImage {
   createdAt DateTime @default(now())
 
   user User    @relation(fields: [userId], references: [id])
-  tool Tool    @relation(fields: [toolId], references: [id])
+  tool Tool?   @relation(fields: [toolId], references: [id])
   file File?   @relation(fields: [fileId], references: [id])
 }
 

@@ -7,15 +7,19 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 
 export default function AuthedLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, isHydrated, hydrate } = useAuthStore();
 
   useEffect(() => {
-    if (!user) {
+    hydrate();
+  }, [hydrate]);
+
+  useEffect(() => {
+    if (isHydrated && !user) {
       router.push("/login");
     }
-  }, [user, router]);
+  }, [isHydrated, user, router]);
 
-  if (!user) return null;
+  if (!isHydrated || !user) return null;
 
   return <DashboardLayout>{children}</DashboardLayout>;
 }

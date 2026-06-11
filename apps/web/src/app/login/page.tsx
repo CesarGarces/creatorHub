@@ -1,16 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { Button, Input, Card, CardContent, CardHeader } from "@creator-hub/ui";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading } = useAuthStore();
+  const { login, isLoading, user, isHydrated, hydrate } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
+  useEffect(() => {
+    if (isHydrated && user) {
+      router.push("/dashboard");
+    }
+  }, [isHydrated, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

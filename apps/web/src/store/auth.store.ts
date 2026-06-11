@@ -1,6 +1,13 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import api from "@/lib/api";
+import {
+  setAccessToken,
+  getAccessToken,
+  removeAccessToken,
+  setStoredUser,
+  getStoredUser,
+  removeStoredUser,
+} from "@/lib/cookie";
 
 interface User {
   id: string;
@@ -12,59 +19,67 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  isHydrated: boolean;
 
+  hydrate: () => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      user: null,
-      token: null,
-      isLoading: false,
+export const useAuthStore = create<AuthState>()((set, get) => ({
+  user: null,
+  token: null,
+  isLoading: false,
+  isHydrated: false,
 
-      login: async (email, password) => {
-        set({ isLoading: true });
-        try {
-          const res = await api.post<{ accessToken: string; user: User }>("/auth/login", {
-            email,
-            password,
-          });
-          localStorage.setItem("access_token", res.accessToken);
-          set({ user: res.user, token: res.accessToken });
-        } finally {
-          set({ isLoading: false });
-        }
-      },
+  hydrate: () => {
+    if (get().isHydrated) return;
+    const token = getAccessToken();
+    const user = getStoredUser();
+    set({ token, user, isHydrated: true });
+  },
 
-      register: async (email, password, name) => {
-        set({ isLoading: true });
-        try {
-          const res = await api.post<{ accessToken: string; user: User }>("/auth/register", {
-            email,
-            password,
-            name,
-          });
-          localStorage.setItem("access_token", res.accessToken);
-          set({ user: res.user, token: res.accessToken });
-        } finally {
-          set({ isLoading: false });
-        }
-      },
-
-      logout: () => {
-        localStorage.removeItem("access_token");
-        set({ user: null, token: null });
-      },
-
-      setUser: (user) => set({ user }),
-    }),
-    {
-      name: "auth-storage",
-      partialize: (state) => ({ user: state.user, token: state.token }),
+  login: async (email, password) => {
+    set({ isLoading: true });
+    try {
+      const res = await api.post<{ accessToken: string; user: User }>("/auth/login", {
+        email,
+        password,
+      });
+      setAccessToken(res.accessToken);
+      setStoredUser(res.user);
+      set({ user: res.user, token: res.accessToken });
+    } finally {
+      set({ isLoading: false });
     }
-  )
-);
+  },
+
+  register: async (email, password, name) => {
+    set({ isLoading: true });
+    try {
+      const res = await api.post<{ accessToken: string; user: User }>("/auth/register", {
+        email,
+        password,
+        name,
+      });
+      setAccessToken(res.accessToken);
+      setStoredUser(res.user);
+      set({ user: res.user, token: res.accessToken });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  logout: () => {
+    removeAccessToken();
+    removeStoredUser();
+    set({ user: null, token: null });
+  },
+
+  setUser: (user) => {
+    setStoredUser(user);
+    set({ user });
+  },
+}));

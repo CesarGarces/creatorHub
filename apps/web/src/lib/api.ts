@@ -1,3 +1,5 @@
+import { getAccessToken } from "@/lib/cookie";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
 
 interface ApiOptions extends RequestInit {
@@ -13,10 +15,11 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
     url += `?${searchParams}`;
   }
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const token = getAccessToken();
 
   const response = await fetch(url, {
     ...fetchOptions,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -25,7 +28,23 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, await response.text());
+    let errorMessage = `Request failed (${response.status})`;
+    try {
+      const body = await response.json();
+      if (typeof body.message === "string") {
+        errorMessage = body.message;
+      } else if (Array.isArray(body.message) && body.message.length > 0) {
+        errorMessage = body.message[0];
+      } else if (body.error) {
+        errorMessage = body.error;
+      }
+    } catch {
+      try {
+        const text = await response.text();
+        if (text) errorMessage = text;
+      } catch {}
+    }
+    throw new ApiError(response.status, errorMessage);
   }
 
   return response.json();

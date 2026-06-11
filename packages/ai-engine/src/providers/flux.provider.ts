@@ -31,14 +31,24 @@ export class FluxProvider extends AIProviderBase {
       }),
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Flux API error ${response.status}: ${errorText}`);
+    }
+
     const data = (await response.json()) as Record<string, unknown>;
+    const url = (data.result as string) || (data.url as string);
+    if (!url) {
+      throw new Error("Flux returned no image URL");
+    }
+
     return {
       id: (data.id as string) || crypto.randomUUID(),
       provider: this.name,
       model: "flux-dev",
       output: {
         type: "image",
-        url: (data.result as string) || (data.url as string) || "",
+        url,
         width: options.width || 1024,
         height: options.height || 1024,
       },

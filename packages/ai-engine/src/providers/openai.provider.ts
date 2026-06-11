@@ -12,7 +12,7 @@ export class OpenAIImageProvider extends AIProviderBase {
     "text-generation",
     "text-analysis",
   ];
-  readonly supportedModels = ["dall-e-3", "gpt-4o", "gpt-4o-mini"];
+  readonly supportedModels = ["gpt-image-1", "gpt-4o", "gpt-4o-mini"];
 
   private client: OpenAI;
 
@@ -48,20 +48,24 @@ export class OpenAIImageProvider extends AIProviderBase {
 
   async generateImage(options: ImageGenerationOptions): Promise<AIResponse> {
     const response = await this.client.images.generate({
-      model: "dall-e-3",
+      model: "gpt-image-1",
       prompt: options.prompt,
       n: options.numberOfImages || 1,
       size: "1024x1024",
     });
 
     const image = response.data?.[0];
+    if (!image?.url) {
+      throw new Error("OpenAI returned no image URL. The API key may be invalid or expired.");
+    }
+
     return {
       id: response.created.toString(),
       provider: this.name,
-      model: "dall-e-3",
+      model: "gpt-image-1",
       output: {
         type: "image",
-        url: image?.url ?? "",
+        url: image.url,
         width: 1024,
         height: 1024,
       } as const,

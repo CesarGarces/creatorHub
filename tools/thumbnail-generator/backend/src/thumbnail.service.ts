@@ -23,6 +23,7 @@ export class ThumbnailService {
     prompt: string;
     negativePrompt?: string;
     style?: string;
+    provider?: string;
     width?: number;
     height?: number;
   }): Promise<any> {
@@ -33,8 +34,6 @@ export class ThumbnailService {
       throw new Error("Insufficient credits");
     }
 
-    await this.thumbnailQueue.add("generate-thumbnail", params);
-
     const startTime = Date.now();
 
     try {
@@ -43,6 +42,7 @@ export class ThumbnailService {
         : params.prompt;
 
       const result = await this.aiEngine.generateImage(fullPrompt, {
+        provider: params.provider as any,
         negativePrompt: params.negativePrompt,
         width: params.width || 1280,
         height: params.height || 720,
@@ -51,6 +51,56 @@ export class ThumbnailService {
       });
 
       const duration = Date.now() - startTime;
+
+      const output = result.output as { type: string; url: string };
+      if (!output?.url) {
+        throw new Error("AI provider returned no image URL");
+      }
+
+      let finalUrl = output.url;
+
+      if (output.url.startsWith("data:image")) {
+        const base64Data = output.url.split(",")[1];
+        if (!base64Data) {
+          throw new Error("Invalid base64 image data");
+        }
+        const buffer = Buffer.from(base64Data, "base64");
+        const file = await this.storageService.upload(
+          buffer,
+          `thumbnail-${Date.now()}.png`,
+          "image/png",
+          params.userId,
+          "thumbnail-generator"
+        );
+        finalUrl = file.signedUrl;
+      } else if (output.url.startsWith("http")) {
+        try {
+          const response = await fetch(output.url);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch image from provider: ${response.status}`);
+          }
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const contentType = response.headers.get("content-type") || "image/png";
+          const ext = contentType.includes("jpeg") ? "jpg" : "png";
+          const file = await this.storageService.upload(
+            buffer,
+            `thumbnail-${Date.now()}.${ext}`,
+            contentType,
+            params.userId,
+            "thumbnail-generator"
+          );
+          finalUrl = file.signedUrl;
+        } catch (fetchError) {
+          this.logger.warn("Failed to download image from provider, using remote URL", {
+            error: (fetchError as Error).message,
+          });
+        }
+      }
+
+      if (!finalUrl) {
+        throw new Error("Image generation failed: no valid URL after processing");
+      }
 
       await this.creditService.deduct(
         params.userId,
@@ -62,30 +112,28 @@ export class ThumbnailService {
       const image = await prisma.generatedImage.create({
         data: {
           userId: params.userId,
-          toolId: "thumbnail-generator",
           prompt: params.prompt,
           negativePrompt: params.negativePrompt,
           provider: result.provider,
           model: result.model,
           width: params.width || 1280,
           height: params.height || 720,
-          url: (result.output as any).url,
+          url: finalUrl,
           credits: CREDIT_COST,
         },
       });
 
-      const output = result.output as { type: "image"; url: string; width: number; height: number };
-
       return {
         id: image.id,
-        url: output.url,
+        url: finalUrl,
         credits: CREDIT_COST,
         duration,
         provider: result.provider,
       };
     } catch (error) {
-      this.logger.error("Thumbnail generation failed", { error: (error as Error).message });
-      throw error;
+      const message = (error as Error).message || "Thumbnail generation failed";
+      this.logger.error("Thumbnail generation failed", { error: message });
+      throw new Error(message);
     }
   }
 

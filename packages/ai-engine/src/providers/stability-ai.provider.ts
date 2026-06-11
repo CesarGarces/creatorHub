@@ -37,7 +37,15 @@ export class StabilityAIProvider extends AIProviderBase {
       }
     );
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Stability AI error ${response.status}: ${errorText}`);
+    }
+
     const imageBuffer = await response.arrayBuffer();
+    if (imageBuffer.byteLength === 0) {
+      throw new Error("Stability AI returned empty image data");
+    }
     const base64 = Buffer.from(imageBuffer).toString("base64");
 
     return {

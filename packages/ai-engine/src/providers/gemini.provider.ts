@@ -5,11 +5,10 @@ import type { ImageGenerationOptions } from "./provider.interface";
 export class GeminiProvider extends AIProviderBase {
   readonly name: AIProvider = "gemini";
   readonly supportedTasks: AITaskType[] = [
-    "image-generation",
     "text-generation",
     "text-analysis",
   ];
-  readonly supportedModels = ["gemini-pro-vision", "gemini-pro"];
+  readonly supportedModels = ["gemini-pro"];
 
   async generate(request: AIRequest): Promise<AIResponse> {
     const apiKey = this.getApiKey();
@@ -40,12 +39,8 @@ export class GeminiProvider extends AIProviderBase {
     };
   }
 
-  async generateImage(options: ImageGenerationOptions): Promise<AIResponse> {
-    return this.generate({
-      taskType: "image-generation",
-      prompt: options.prompt,
-      model: "gemini-pro-vision",
-    });
+  async generateImage(_options: ImageGenerationOptions): Promise<AIResponse> {
+    throw new Error("Gemini does not support image generation. Use OpenAI, Flux, or Stability AI instead.");
   }
 
   protected getApiKeyEnvVar(): string | null {

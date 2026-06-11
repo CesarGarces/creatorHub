@@ -27,6 +27,12 @@ export class CreditService {
       return false;
     }
 
+    let validToolId: string | null = null;
+    if (toolId) {
+      const tool = await prisma.tool.findUnique({ where: { id: toolId } });
+      if (tool) validToolId = tool.id;
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.creditBalance.update({
         where: { userId },
@@ -41,7 +47,7 @@ export class CreditService {
           amount: -amount,
           type: "USAGE",
           description: description || `Tool usage: ${toolId}`,
-          toolId,
+          toolId: validToolId,
           balance: updated!.balance,
         },
       });

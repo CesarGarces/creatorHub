@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useToolsStore } from "@/store/tools.store";
 import { useCreditsStore } from "@/store/credits.store";
 import api from "@/lib/api";
@@ -19,10 +20,10 @@ const stylePresets = [
 ];
 
 const providers = [
+  { id: "nano-banana", label: "NanoBanana", cost: 5 },
   { id: "openai", label: "DALL-E 3", cost: 10 },
   { id: "flux", label: "Flux", cost: 6 },
   { id: "stability-ai", label: "Stability AI", cost: 8 },
-  { id: "gemini", label: "Gemini", cost: 5 },
 ];
 
 export default function ThumbnailGeneratorPage() {
@@ -33,7 +34,7 @@ export default function ThumbnailGeneratorPage() {
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [style, setStyle] = useState("bold");
-  const [provider, setProvider] = useState("openai");
+  const [provider, setProvider] = useState("nano-banana");
   const [generatedImage, setGeneratedImage] = useState<any>(null);
   const [variations, setVariations] = useState<any[]>([]);
 
@@ -56,10 +57,20 @@ export default function ThumbnailGeneratorPage() {
         height: 720,
       });
     },
-    onSuccess: (data) => {
-      setGeneratedImage(data);
-      setVariations((prev) => [data, ...prev].slice(0, 4));
+    onSuccess: (response) => {
+      const image = response?.data || response;
+      if (!image?.url) {
+        toast.error("Generation failed: no image URL returned");
+        return;
+      }
+      setGeneratedImage(image);
+      setVariations((prev) => [image, ...prev].slice(0, 4));
       fetchBalance();
+      toast.success("Thumbnail generated successfully");
+    },
+    onError: (error: any) => {
+      const message = error?.message || "Failed to generate thumbnail. Please try again.";
+      toast.error(message);
     },
   });
 
@@ -187,11 +198,36 @@ export default function ThumbnailGeneratorPage() {
                 />
               </div>
               <div className="flex justify-center gap-3">
-                <Button variant="secondary" size="sm">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(generatedImage.url);
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "thumbnail.png";
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast.success("Download started");
+                    } catch {
+                      toast.error("Download failed");
+                    }
+                  }}
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                   Download
                 </Button>
-                <Button variant="secondary" size="sm">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedImage.url);
+                    toast.success("URL copied to clipboard");
+                  }}
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                   Copy URL
                 </Button>

@@ -17,7 +17,8 @@ import { ToolsController } from "./modules/tools/tools.controller";
 import { ImagesController } from "./modules/images/images.controller";
 import { AdminController } from "./modules/admin/admin.controller";
 
-// Import tools
+// Import tools (registers them via registerTool)
+import "@creator-hub/thumbnail-generator";
 import { ThumbnailGeneratorModule } from "@creator-hub/thumbnail-generator-backend";
 
 @Module({

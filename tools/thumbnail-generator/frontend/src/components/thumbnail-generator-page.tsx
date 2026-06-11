@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { toast, Toaster } from "sonner";
 import { Button, Card, CardContent } from "@creator-hub/ui";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
@@ -16,16 +17,23 @@ const STYLE_PRESETS = [
 ];
 
 function getToken(): string | null {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("access_token");
-  }
-  return null;
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|; )ch_access_token=([^;]*)/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
+
+const PROVIDERS = [
+  { id: "nano-banana", label: "NanoBanana" },
+  { id: "openai", label: "DALL-E 3" },
+  { id: "flux", label: "Flux" },
+  { id: "stability-ai", label: "Stability AI" },
+];
 
 export function ThumbnailGeneratorPage() {
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [style, setStyle] = useState("");
+  const [provider, setProvider] = useState("nano-banana");
   const [result, setResult] = useState<string | null>(null);
 
   const generateMutation = useMutation({
@@ -42,17 +50,48 @@ export function ThumbnailGeneratorPage() {
           prompt: fullPrompt,
           negativePrompt,
           toolId: "thumbnail-generator",
+          provider,
         }),
       });
+
+      if (!res.ok) {
+        let errorMessage = `Request failed (${res.status})`;
+        try {
+          const body = await res.json();
+          if (typeof body.message === "string") {
+            errorMessage = body.message;
+          } else if (Array.isArray(body.message) && body.message.length > 0) {
+            errorMessage = body.message[0];
+          } else if (body.error) {
+            errorMessage = body.error;
+          }
+        } catch {
+          try {
+            const text = await res.text();
+            if (text) errorMessage = text;
+          } catch {}
+        }
+        throw new Error(errorMessage);
+      }
+
       return res.json() as Promise<{ success: boolean; data: { output: { url: string } } }>;
     },
     onSuccess: (data) => {
-      if (data.success) setResult(data.data.output.url);
+      if (data.success && data.data?.output?.url) {
+        setResult(data.data.output.url);
+        toast.success("Thumbnail generated successfully");
+      } else {
+        toast.error("Failed to generate thumbnail: no image URL returned");
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to generate thumbnail. Please try again.");
     },
   });
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      <Toaster richColors position="top-right" />
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Thumbnail Generator</h1>
         <p className="text-gray-500">
@@ -74,6 +113,25 @@ export function ThumbnailGeneratorPage() {
             {preset.label}
           </button>
         ))}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">AI Provider</label>
+        <div className="flex gap-2">
+          {PROVIDERS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setProvider(p.id)}
+              className={`rounded-lg border px-4 py-2 text-sm transition-all ${
+                provider === p.id
+                  ? "border-blue-500 bg-blue-50 text-blue-700"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <Card>
@@ -114,14 +172,6 @@ export function ThumbnailGeneratorPage() {
         </CardContent>
       </Card>
 
-      {generateMutation.isError && (
-        <Card>
-          <CardContent className="p-4 text-red-600 bg-red-50 rounded-lg">
-            Failed to generate. Please try again.
-          </CardContent>
-        </Card>
-      )}
-
       {result && (
         <Card>
           <CardContent className="p-6 space-y-4">
@@ -129,11 +179,20 @@ export function ThumbnailGeneratorPage() {
             <div className="flex gap-2">
               <Button
                 variant="secondary"
-                onClick={() => {
-                  const a = document.createElement("a");
-                  a.href = result;
-                  a.download = "thumbnail.png";
-                  a.click();
+                onClick={async () => {
+                  try {
+                    const res = await fetch(result);
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "thumbnail.png";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success("Download started");
+                  } catch {
+                    toast.error("Download failed");
+                  }
                 }}
               >
                 Download
@@ -142,6 +201,7 @@ export function ThumbnailGeneratorPage() {
                 variant="secondary"
                 onClick={() => {
                   navigator.clipboard.writeText(result);
+                  toast.success("URL copied to clipboard");
                 }}
               >
                 Copy URL

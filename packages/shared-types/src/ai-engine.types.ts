@@ -11,6 +11,7 @@ export type AIModel =
   | "flux-pro"
   | "stable-diffusion-3"
   | "dall-e-3"
+  | "gpt-image-1"
   | "gemini-pro-vision"
   | "ideogram-v2"
   | "nano-banana-default";

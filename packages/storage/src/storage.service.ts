@@ -13,17 +13,19 @@ import { Logger } from "@creator-hub/shared-utils";
 export class StorageService {
   private s3: S3Client;
   private bucket: string;
+  private endpoint: string | undefined;
   private logger = new Logger("StorageService");
 
   constructor() {
+    this.endpoint = process.env.AWS_S3_ENDPOINT;
     this.s3 = new S3Client({
       region: process.env.AWS_REGION || "us-east-1",
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
       },
-      endpoint: process.env.AWS_S3_ENDPOINT,
-      forcePathStyle: !!process.env.AWS_S3_ENDPOINT,
+      endpoint: this.endpoint,
+      forcePathStyle: !!this.endpoint,
     });
     this.bucket = process.env.AWS_S3_BUCKET || "creatorhub-assets";
   }
@@ -46,7 +48,11 @@ export class StorageService {
       })
     );
 
-    const url = `https://${this.bucket}.s3.amazonaws.com/${key}`;
+    const directUrl = this.endpoint
+      ? `${this.endpoint}/${this.bucket}/${key}`
+      : `https://${this.bucket}.s3.amazonaws.com/${key}`;
+
+    const signedUrl = await this.getSignedUrl(key, 7 * 24 * 60 * 60);
 
     const file = await prisma.file.create({
       data: {
@@ -56,11 +62,11 @@ export class StorageService {
         mimeType,
         size: buffer.length,
         key,
-        url,
+        url: directUrl,
       },
     });
 
-    return file;
+    return { ...file, signedUrl };
   }
 
   async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {

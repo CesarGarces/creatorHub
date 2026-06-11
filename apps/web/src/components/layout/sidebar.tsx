@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn, Tooltip, Separator, CreditDisplay, Avatar } from "@creator-hub/ui";
 import { useAuthStore } from "@/store/auth.store";
 import { useCreditsStore } from "@/store/credits.store";
@@ -27,8 +27,14 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuthStore();
   const { balance } = useCreditsStore();
+
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
 
   const groupedItems = navItems.reduce((acc, item) => {
     if (item.section) {
@@ -124,7 +130,7 @@ export function Sidebar() {
           )}
           {!collapsed && (
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="text-text-dim hover:text-error transition-colors"
               title="Logout"
             >

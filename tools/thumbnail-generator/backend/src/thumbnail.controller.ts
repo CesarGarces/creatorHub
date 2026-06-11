@@ -1,4 +1,13 @@
-import { Controller, Post, Get, Body, Query, UseGuards } from "@nestjs/common";
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Query,
+  UseGuards,
+  BadRequestException,
+  InternalServerErrorException,
+} from "@nestjs/common";
 import { JwtAuthGuard, CurrentUser } from "@creator-hub/auth";
 import { ThumbnailService } from "./thumbnail.service";
 
@@ -10,18 +19,27 @@ export class ThumbnailController {
   @Post("generate")
   async generate(
     @CurrentUser("id") userId: string,
-    @Body() dto: { prompt: string; negativePrompt?: string; style?: string }
+    @Body() dto: { prompt: string; negativePrompt?: string; style?: string; provider?: string }
   ): Promise<any> {
+    if (!dto.prompt?.trim()) {
+      throw new BadRequestException("Prompt is required");
+    }
+
     try {
       const result = await this.thumbnailService.generate({
         userId,
         prompt: dto.prompt,
         negativePrompt: dto.negativePrompt,
         style: dto.style,
+        provider: dto.provider,
       });
       return { success: true, data: result };
     } catch (error) {
-      return { success: false, error: (error as Error).message };
+      const message = (error as Error).message || "Thumbnail generation failed";
+      if (message.includes("Insufficient credits")) {
+        throw new BadRequestException(message);
+      }
+      throw new InternalServerErrorException(message);
     }
   }
 
