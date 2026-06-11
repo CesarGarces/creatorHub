@@ -1,0 +1,955 @@
+# Creator Hub — Architecture Document
+
+> **Software Architecture Document**
+> Modular SaaS platform for content creators. Designed for 1 → 50+ tools.
+
+---
+
+## Table of Contents
+
+1. [Architecture Overview](#1-architecture-overview)
+2. [Monorepo Structure](#2-monorepo-structure)
+3. [Tool Registry System](#3-tool-registry-system)
+4. [AI Engine Design](#4-ai-engine-design)
+5. [Database Schema](#5-database-schema)
+6. [API Design](#6-api-design)
+7. [Event Architecture](#7-event-architecture)
+8. [Credit System](#8-credit-system)
+9. [Storage System](#9-storage-system)
+10. [Authentication](#10-authentication)
+11. [Testing Strategy](#11-testing-strategy)
+12. [CI/CD Strategy](#12-cicd-strategy)
+13. [Scalability Roadmap](#13-scalability-roadmap)
+14. [Creating a New Tool](#14-creating-a-new-tool)
+
+---
+
+## 1. Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                      CREATOR HUB PLATFORM                           │
+│                                                                     │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  │
+│  │ Tool #1 │  │ Tool #2 │  │ Tool #3 │  │ Tool #4 │  │ Tool #N │  │
+│  │Thumbnail│  │  Title  │  │  Stream │  │  Video  │  │ Future  │  │
+│  │Generator│  │Generator│  │  Games  │  │  Editor │  │  Tools  │  │
+│  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘  │
+│       │            │            │            │            │        │
+│       └────────────┴────────────┴────────────┴────────────┘        │
+│                                │                                    │
+│                    ┌───────────┴───────────┐                        │
+│                    │    TOOL REGISTRY      │                        │
+│                    │  (Auto-Discovery)     │                        │
+│                    └───────────┬───────────┘                        │
+│                                │                                    │
+│  ┌──────────┬──────────┬───────┴───────┬──────────┬──────────┐     │
+│  │  Auth    │ AI Engine│   Billing     │ Storage  │Analytics │     │
+│  │ Package  │ Package  │   Package     │ Package  │ Package  │     │
+│  └──────────┴──────────┴───────────────┴──────────┴──────────┘     │
+│                                │                                    │
+│                    ┌───────────┴───────────┐                        │
+│                    │       Database        │                        │
+│                    │   (PostgreSQL+Prisma) │                        │
+│                    └───────────────────────┘                        │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Architectural Principles
+
+| Principle | Application |
+|-----------|-------------|
+| **Clean Architecture** | Dependencies point inward. Tools depend on SDK, not vice versa |
+| **DDD** | Each tool is a bounded context with its own domain |
+| **SOLID** | Open/Closed: new tools don't modify existing code |
+| **Event-Driven** | Tools communicate via BullMQ events, not direct calls |
+| **DI** | All cross-cutting concerns injected via NestJS DI |
+| **Modular Monolith** | Single deployable initially, bounded contexts for future split |
+
+---
+
+## 2. Monorepo Structure
+
+```
+creator-hub/
+├── turbo.json                 # Task orchestration
+├── package.json               # Root scripts (delegates to turbo)
+├── pnpm-workspace.yaml        # Workspace definition
+├── docker-compose.yml         # PostgreSQL, Redis, MinIO
+├── tsconfig.json              # Base TypeScript config
+│
+├── apps/
+│   ├── web/                   # Next.js frontend
+│   │   ├── src/
+│   │   │   ├── app/           # App Router pages
+│   │   │   │   ├── dashboard/
+│   │   │   │   ├── tools/[id]/
+│   │   │   │   ├── credits/
+│   │   │   │   ├── login/
+│   │   │   │   └── register/
+│   │   │   ├── store/         # Zustand stores
+│   │   │   │   ├── auth.store.ts
+│   │   │   │   ├── tools.store.ts
+│   │   │   │   └── credits.store.ts
+│   │   │   └── lib/           # API client, query client
+│   │   └── next.config.js
+│   │
+│   └── api/                   # NestJS backend
+│       ├── src/
+│       │   ├── main.ts
+│       │   ├── app.module.ts       # Root module imports all tools
+│       │   ├── tool-sdk.module.ts   # Dynamic tool loader
+│       │   └── modules/
+│       │       ├── auth/
+│       │       ├── credits/
+│       │       ├── tools/
+│       │       ├── images/
+│       │       ├── admin/
+│       │       └── webhooks/
+│       ├── test/
+│       │   └── jest-e2e.json
+│       └── nest-cli.json
+│
+├── packages/
+│   ├── shared-types/          # TypeScript interfaces (no runtime deps)
+│   │   └── src/
+│   │       ├── tool-registry.types.ts
+│   │       ├── ai-engine.types.ts
+│   │       ├── user.types.ts
+│   │       ├── credit.types.ts
+│   │       ├── event.types.ts
+│   │       └── api.types.ts
+│   │
+│   ├── shared-utils/          # Pure utility functions
+│   │   └── src/
+│   │       ├── id.utils.ts
+│   │       ├── credit.utils.ts
+│   │       ├── string.utils.ts
+│   │       ├── async.utils.ts
+│   │       └── logger.utils.ts
+│   │
+│   ├── database/              # Prisma ORM
+│   │   ├── prisma/
+│   │   │   └── schema.prisma  # Full data model
+│   │   └── src/
+│   │       ├── index.ts       # Singleton PrismaClient
+│   │       └── seed.ts
+│   │
+│   ├── auth/                  # JWT + Passport auth
+│   ├── ai-engine/             # Multi-provider AI abstraction
+│   ├── billing/               # Credits & subscriptions
+│   ├── storage/               # S3/MinIO abstraction
+│   ├── analytics/             # Usage tracking
+│   ├── ui/                    # Shared React components
+│   ├── tool-sdk/              # Tool definition & registry
+│   └── typescript-config/     # Shared TS configs
+│
+├── tools/
+│   └── thumbnail-generator/   # FIRST TOOL (reference implementation)
+│       ├── index.ts           # Entry: registers tool + exports module
+│       ├── frontend/
+│       │   └── src/
+│       │       └── components/
+│       │           └── thumbnail-generator-page.tsx
+│       ├── backend/
+│       │   └── src/
+│       │       ├── thumbnail-generator.module.ts
+│       │       ├── thumbnail.service.ts
+│       │       ├── thumbnail.controller.ts
+│       │       └── thumbnail.processor.ts
+│       └── package.json
+│
+└── .github/
+    └── workflows/
+        └── ci.yml
+```
+
+---
+
+## 3. Tool Registry System
+
+### Architecture
+
+```
+                    ┌─────────────────────────────────────┐
+                    │         Tool Registry               │
+                    │         (Central Registry)           │
+                    ├─────────────────────────────────────┤
+                    │  - register(manifest)                │
+                    │  - get(toolId)                       │
+                    │  - getAll()                          │
+                    │  - getActive()                       │
+                    │  - getFrontendRoutes()               │
+                    └──────────┬──────────────────────────┘
+                               │
+          ┌────────────────────┼────────────────────┐
+          │                    │                    │
+  ┌───────▼──────┐    ┌───────▼──────┐    ┌───────▼──────┐
+  │  Tool #1     │    │  Tool #2     │    │  Tool #N     │
+  │  Thumbnail   │    │  Title Gen   │    │  Future      │
+  │  Generator   │    │  (Future)    │    │  Tools       │
+  └──────────────┘    └──────────────┘    └──────────────┘
+         │                    │                    │
+         └────────────────────┴────────────────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  Tool SDK         │
+                    │  (Package)        │
+                    └───────────────────┘
+```
+
+### Tool Manifest Structure
+
+```typescript
+// A tool registers itself via its entry point (index.ts)
+registerTool({
+  id: "thumbnail-generator",       // Unique identifier
+  name: "Thumbnail Generator",      // Display name
+  description: "Generate...",       // Description
+  icon: "🎨",                      // Icon
+  category: "thumbnail",            // Category for filtering
+  creditsPerUse: 10,                // Cost per use
+  permissions: [                    // Fine-grained permissions
+    { action: "generate", resource: "thumbnail" }
+  ],
+  frontend: {
+    routes: [                       // Frontend routes
+      {
+        path: "/tools/thumbnail-generator",
+        component: "ThumbnailGeneratorPage",
+        title: "Thumbnail Generator",
+        showInNav: true,
+      }
+    ]
+  },
+  backend: {
+    module: ThumbnailGeneratorModule, // NestJS module
+    events: ["image.generated"],      // Events it emits
+  }
+});
+```
+
+### Auto-Discovery Flow
+
+```
+app.module.ts
+    │
+    ├── imports: [
+    │     ThumbnailGeneratorModule,  // Import tool module
+    │   ]
+    │
+    └── ToolSdkModule (global)
+            │
+            ├── ToolRegistry         // Holds all manifests
+            │
+            └── ToolDiscoveryService // OnModuleInit: discovers tools
+                    │
+                    └── loadTools()  // Reads registered manifests
+                            │
+                            └── registry.register(manifest)
+```
+
+---
+
+## 4. AI Engine Design
+
+### Provider Pattern
+
+```
+┌───────────────────────────────────────────┐
+│             AIEngineService                │
+│  (High-level API for tools)               │
+│                                           │
+│  execute(request) → AIResponse            │
+│  generateImage(prompt, opts) → AIResponse │
+└─────────────────┬─────────────────────────┘
+                  │
+                  ▼
+┌───────────────────────────────────────────┐
+│           ProviderRegistry                │
+│  register(provider)                       │
+│  getProvider(name)                        │
+│  getProvidersByTask(taskType)             │
+└─────────────────┬─────────────────────────┘
+                  │
+                  ▼
+┌───────────────────────────────────────────┐
+│            ProviderFactory                │
+│  onModuleInit(): registers all providers  │
+└──────────┬──────────────────┬─────────────┘
+           │                  │
+    ┌──────▼──────┐    ┌──────▼──────┐
+    │ AIProvider  │    │ AIProvider  │
+    │ Interface   │    │ Interface   │
+    └──────┬──────┘    └──────┬──────┘
+           │                  │
+    ┌──────▼──────────┐ ┌──────▼──────────┐
+    │ OpenAIImage     │ │ NanoBanana      │
+    │ Provider        │ │ Provider        │
+    ├────────────────┤ ├────────────────┤
+    │ name: "openai"  │ │ name: "nano-    │
+    │ supportedTasks: │ │   banana"       │
+    │  image-gen      │ │ supportedTasks: │
+    │  text-gen       │ │  image-gen      │
+    │  text-analysis  │ │  text-gen       │
+    └─────────────────┘ └─────────────────┘
+
+    ┌──────────────────┐  ┌──────────────────┐
+    │ GeminiProvider   │  │ FluxProvider     │
+    ├────────────────┤  ├────────────────┤
+    │ name: "gemini"   │  │ name: "flux"     │
+    └──────────────────┘  └──────────────────┘
+
+    ┌──────────────────┐
+    │ StabilityAI      │
+    │ Provider         │
+    ├────────────────┤
+    │ name: "stability-ai"│
+    └──────────────────┘
+```
+
+### Provider Interface
+
+```typescript
+interface AIProviderInterface {
+  readonly name: AIProvider;
+  readonly supportedTasks: AITaskType[];
+  readonly supportedModels: string[];
+
+  generate(request: AIRequest): Promise<AIResponse>;
+  generateImage(options: ImageGenerationOptions): Promise<AIResponse>;
+  validateConfig(): boolean;  // Checks if API keys exist
+}
+```
+
+### Provider Selection Strategy
+
+When a tool calls `aiEngine.execute(request)`:
+1. If `request.provider` is specified → use directly
+2. Otherwise → select optimal provider from registry
+3. Provider selection is based on: task type match, priority, availability
+4. Tools never hardcode provider names
+
+---
+
+## 5. Database Schema
+
+```
+┌─────────────────────┐     ┌────────────────────────┐
+│       User          │     │       Tool             │
+├─────────────────────┤     ├────────────────────────┤
+│ id (PK)             │◄────┤ id (PK)                │
+│ email (UQ)          │     │ name                   │
+│ name                │     │ description            │
+│ passwordHash        │     │ category               │
+│ role (USER/PREMIUM/ │     │ creditsPerUse          │
+│       ADMIN)        │     │ status                 │
+│ isActive            │     │ configSchema (JSON)    │
+│ credits             │     └────────┬───────────────┘
+│ createdAt           │              │
+└──────┬──────────────┘              │
+       │                            │
+       │ 1:1                        │ 1:1
+       ▼                            ▼
+┌────────────────────┐   ┌───────────────────────┐
+│   CreditBalance    │   │     ToolConfig        │
+├────────────────────┤   ├───────────────────────┤
+│ userId (FK,UQ)     │   │ toolId (FK,UQ)        │
+│ balance            │   │ enabled               │
+│ lifetime           │   │ creditsPerUse         │
+└──────┬─────────────┘   │ maxUsesPerDay         │
+       │                 │ allowedRoles          │
+       │                 │ providerOverrides(JSON)│
+       ▼                 └───────────────────────┘
+┌────────────────────┐
+│ CreditTransaction  │   ┌─────────────────────────┐
+├────────────────────┤   │   GeneratedImage        │
+│ id (PK)            │   ├─────────────────────────┤
+│ userId (FK)        │   │ id (PK)                 │
+│ toolId (FK)        │   │ userId (FK)             │
+│ amount             │   │ toolId (FK) = "thumbnail"│
+│ type (USAGE/PURCH) │   │ prompt                  │
+│ description        │   │ provider                │
+│ balance (post-txn) │   │ model                   │
+│ createdAt          │   │ url                     │
+└────────────────────┘   │ width, height           │
+                         │ credits                 │
+                         │ createdAt               │
+                         └─────────────────────────┘
+
+┌─────────────────────┐   ┌─────────────────────┐
+│   Subscription      │   │   UsageLog          │
+├─────────────────────┤   ├─────────────────────┤
+│ userId (FK)         │   │ userId (FK)         │
+│ planId (FK)         │   │ toolId (FK)         │
+│ status              │   │ credits             │
+│ currentPeriodStart  │   │ duration            │
+│ currentPeriodEnd    │   │ success             │
+│ creditsThisPeriod   │   │ metadata (JSON)     │
+└──────┬──────────────┘   │ createdAt           │
+       │                  └─────────────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│  SubscriptionPlan   │
+├─────────────────────┤
+│ id (PK)             │
+│ name                │
+│ price (cents)       │
+│ creditsPerMonth     │
+│ features (string[]) │
+│ tools (string[])    │
+└─────────────────────┘
+```
+
+---
+
+## 6. API Design
+
+### REST API Endpoints
+
+```
+POST   /api/v1/auth/register         # Register user
+POST   /api/v1/auth/login            # Login
+
+GET    /api/v1/tools                 # List active tools
+GET    /api/v1/tools/:id             # Get tool details
+GET    /api/v1/tools/routes          # Get all frontend routes
+
+POST   /api/v1/images/generate       # Generate image (generic)
+
+POST   /api/v1/tools/thumbnail-generator/generate  # Tool-specific
+GET    /api/v1/tools/thumbnail-generator/images     # User's images
+
+GET    /api/v1/credits/balance       # Get credit balance
+GET    /api/v1/credits/plans         # List subscription plans
+POST   /api/v1/credits/subscribe     # Subscribe to plan
+
+GET    /api/v1/admin/dashboard       # Admin stats
+GET    /api/v1/admin/tools           # List all tools (admin)
+POST   /api/v1/admin/tools/toggle    # Enable/disable tool
+```
+
+### API Response Format
+
+```json
+// Success
+{ "success": true, "data": { ... } }
+
+// Error
+{ "success": false, "error": { "code": "INSUFFICIENT_CREDITS", "message": "..." } }
+
+// Paginated
+{ "data": [...], "meta": { "page": 1, "limit": 20, "total": 100, "totalPages": 5 } }
+```
+
+---
+
+## 7. Event Architecture
+
+```
+                    ┌─────────────────────┐
+                    │   Redis (BullMQ)    │
+                    │   Event Bus         │
+                    └────────┬────────────┘
+                             │
+           ┌─────────────────┼──────────────────┐
+           │                 │                   │
+    ┌──────▼──────┐  ┌──────▼──────┐   ┌───────▼────────┐
+    │  Credits    │  │  Analytics  │   │   Tool-Specific│
+    │  Queue      │  │  Queue      │   │   Queues       │
+    ├─────────────┤  ├─────────────┤   ├────────────────┤
+    │ deduct      │  │ track-usage │   │ thumbnail-gen  │
+    │ add credits │  │ user-stats  │   │ title-gen      │
+    │ expire      │  │ report      │   │ image-processing│
+    └─────────────┘  └─────────────┘   └────────────────┘
+```
+
+### Event Types
+
+| Event | Producer | Consumer | Purpose |
+|-------|----------|----------|---------|
+| `tool.used` | All tools | Analytics, Credits | Track usage |
+| `credits.deducted` | CreditService | Notifications | Alert user |
+| `credits.depleted` | CreditService | Notifications | Prompt purchase |
+| `ai.request.completed` | AIEngine | Analytics, Billing | Track costs |
+| `image.generated` | Thumbnail | Storage, Notify | Save & notify |
+
+### Event-Driven Flow Example
+
+```
+User clicks "Generate" in Thumbnail Generator
+    │
+    ├──► API: POST /tools/thumbnail-generator/generate
+    │       │
+    │       ├──► CreditService.deduct() ← emits "credits.deducted"
+    │       │                              └──► Analytics records
+    │       │
+    │       ├──► AIEngineService.generateImage()
+    │       │       │
+    │       │       ├──► OpenAI Provider generate()
+    │       │       │
+    │       │       └──► emits "ai.request.completed"
+    │       │               └──► Billing calculates cost
+    │       │
+    │       ├──► UsageTracker.track() ──► Analytics queue
+    │       │
+    │       ├──► BullMQ: "thumbnail-generation" queue
+    │       │       └──► Post-processing (resize, overlay)
+    │       │
+    │       └──► Returns { url, credits, duration }
+    │
+    └──► Frontend shows image, updates credit balance
+```
+
+---
+
+## 8. Credit System
+
+### Flow
+
+```
+                    ┌──────────────┐
+                    │   Purchase   │
+                    │   Credits    │
+                    └──────┬───────┘
+                           ▼
+                    ┌──────────────┐
+                    │   Balance    │
+                    │   +1000      │
+                    └──────┬───────┘
+                           │
+         ┌─────────────────┼─────────────────┐
+         │                 │                 │
+         ▼                 ▼                 ▼
+  ┌────────────┐   ┌──────────────┐   ┌────────────┐
+  │ Tool Use   │   │ Subscription│   │ Promotions │
+  │ -10 credits│   │ +500/month  │   │ +200 bonus │
+  └────────────┘   └──────────────┘   └────────────┘
+```
+
+### Credit Decision Flow
+
+```
+User requests tool usage
+    │
+    ├──► Check balance
+    │      ├──► Sufficient? → Deduct credits
+    │      │                  ├──► Execute tool
+    │      │                  └──► Record transaction
+    │      │
+    │      └──► Insufficient?
+    │             ├──► Return error
+    │             └──► Emit "credits.depleted" → Notification
+    │
+    └──► Return result
+```
+
+### Credit Costs by Provider
+
+| Provider | Cost per Image |
+|----------|---------------|
+| OpenAI (DALL-E 3) | 10 credits |
+| Stability AI | 8 credits |
+| Flux | 6 credits |
+| Gemini | 5 credits |
+| Nano Banana | 4 credits |
+
+---
+
+## 9. Storage System
+
+```
+┌─────────────────────────────────────────────┐
+│              StorageService                  │
+│  (Abstraction over S3/MinIO)                │
+├─────────────────────────────────────────────┤
+│  upload(buffer, name, type) → File record   │
+│  getSignedUrl(key) → temporary URL          │
+│  delete(key)                                │
+└──────────────────┬──────────────────────────┘
+                   │
+    ┌──────────────┴──────────────┐
+    ▼                             ▼
+┌──────────────┐          ┌──────────────┐
+│  AWS S3      │          │   MinIO      │
+│  (Prod)      │          │  (Dev/Local) │
+└──────────────┘          └──────────────┘
+```
+
+### File Organization in S3
+
+```
+bucket/
+├── users/
+│   └── {userId}/
+│       ├── {timestamp}-{file}
+│       └── ...
+├── tools/
+│   └── {toolId}/
+│       └── {userId}/
+│           └── {timestamp}-{file}
+└── public/
+    └── {toolId}/
+        └── {file}
+```
+
+---
+
+## 10. Authentication
+
+```
+┌────────┐          ┌─────────┐          ┌──────────┐
+│ Client │──POST──►│  Auth   │──JWT──►│ Protected │
+│ (Web)  │  /login │Service  │  token │ Endpoints │
+└────────┘          └─────────┘          └──────────┘
+
+Auth Flow:
+1. User sends email + password → AuthService.login()
+2. Service validates credentials via bcrypt
+3. Service returns JWT access token + refresh token
+4. Client stores token (localStorage via Zustand persist)
+5. Subsequent requests include Authorization: Bearer <token>
+6. JwtAuthGuard validates token on protected routes
+```
+
+### Auth Stack
+
+| Component | Technology |
+|-----------|------------|
+| Password hashing | bcryptjs (12 rounds) |
+| JWT signing | @nestjs/jwt |
+| JWT validation | passport-jwt |
+| Guard | JwtAuthGuard (global) |
+| Role check | RolesGuard |
+| OAuth ready | Account model supports Google/GitHub |
+
+---
+
+## 11. Testing Strategy
+
+### Test Pyramid
+
+```
+        ╱╲
+       ╱  ╲          E2E Tests (5%)
+      ╱    ╲       SuperTest + full module
+     ╱──────╲
+    ╱        ╲    Integration Tests (25%)
+   ╱          ╲  Service tests with DB
+  ╱────────────╲
+ ╱              ╲  Unit Tests (70%)
+╱────────────────╲ Pure function + component tests
+```
+
+### Test Structure
+
+```
+apps/api/
+├── src/
+│   ├── modules/
+│   │   └── auth/
+│   │       ├── auth.controller.ts
+│   │       ├── auth.controller.spec.ts     # Unit tests
+│   │       └── ...
+│   └── ...
+└── test/
+    ├── app.e2e-spec.ts                    # E2E tests
+    └── jest-e2e.json
+
+tools/thumbnail-generator/
+├── backend/
+│   └── src/
+│       ├── thumbnail.service.ts
+│       ├── thumbnail.service.spec.ts       # Integration tests
+│       └── thumbnail.controller.spec.ts    # Controller tests
+```
+
+### Key Testing Approaches
+
+| Layer | Tool | Focus |
+|-------|------|-------|
+| Shared utils | Vitest | Pure functions |
+| Services | Jest | Business logic |
+| Controllers | Supertest | HTTP contracts |
+| E2E | @nestjs/testing | Full app flows |
+| Frontend | Testing Library | Component behavior |
+
+---
+
+## 12. CI/CD Strategy
+
+### GitHub Actions Workflow
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_DB: test, POSTGRES_USER: test, POSTGRES_PASSWORD: test }
+        options: --health-cmd pg_isready
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+
+      - run: pnpm install
+      - run: pnpm db:generate
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+```
+
+### Pipeline Stages
+
+```
+Commit → Lint → TypeCheck → Unit Tests → Build → Integration Tests → E2E → Deploy
+   │         │        │           │         │           │             │       │
+   │         │        │           │         │           │             │       └──► Vercel (web)
+   │         │        │           │         │           │             │           Railway (api)
+   │         │        │           │         │           │             │
+   └─────────┴────────┴───────────┴─────────┴───────────┴─────────────┘
+   All checks must pass before merge
+```
+
+---
+
+## 13. Scalability Roadmap
+
+### Phase 1: MVP (0 → 100 users)
+```
+Architecture: Modular Monolith
+Deployment: Single server (Railway / Fly.io)
+Database: Single PostgreSQL instance
+Queue: Single Redis instance
+Storage: MinIO (local) / S3
+Cache: In-memory + basic Redis
+```
+
+### Phase 2: Growth (100 → 10,000 users)
+```
+Architecture: Modular Monolith (scaled vertically + horizontally)
+Deployment: 2-4 API replicas behind load balancer
+Database: PostgreSQL with connection pooling (PgBouncer)
+Queue: Redis Cluster
+Storage: AWS S3
+Cache: Redis for session + query cache
+CDN: CloudFront for generated images
+```
+
+### Phase 3: Scale (10,000 → 100,000 users)
+```
+Architecture: Modular Monolith → Domain Decomposition
+Deployment: Kubernetes (EKS / GKE)
+Database: PostgreSQL read replicas + partitioning
+Queue: BullMQ with Redis Cluster
+Search: Elasticsearch for image search
+CDN: Multi-region CloudFront
+Monitoring: Datadog / Grafana + Prometheus
+```
+
+### Phase 4: Enterprise (100,000 → 1,000,000+ users)
+```
+Architecture: Microservices (split by domain)
+  └── Auth Service
+  └── Billing Service
+  └── AI Engine Service
+  └── Storage Service
+  └── Analytics Service
+  └── Per-tool services (if high traffic)
+
+Database: Sharded PostgreSQL per service
+Cache: Redis Cluster (multi-region)
+Queue: Kafka for event streaming
+Storage: S3 + CDN multi-region
+Observability: OpenTelemetry + distributed tracing
+```
+
+### Scaling Decision Tree
+
+```
+Scale decision per bottleneck:
+
+CPU-bound?
+├── AI providers (external) → Already async
+└── Image processing → Dedicated worker queues
+
+Memory-bound?
+├── Session store → Redis
+├── Cache → Redis + CDN
+└── Large payloads → Stream / S3 presigned URLs
+
+Database-bound?
+├── Read heavy → Read replicas
+├── Write heavy → Queue writes, batch inserts
+└── Complex queries → Materialized views + Elasticsearch
+
+Queue-bound?
+├── Slow consumers → More workers
+├── Queue backpressure → Priority queues
+└── Failed jobs → Dead letter queues + alerts
+```
+
+---
+
+## 14. Creating a New Tool
+
+### Tool Checklist (< 1 hour)
+
+```
+Step 1: Create directory structure
+└── tools/
+    └── your-tool-name/
+        ├── index.ts              # Entry: registerTool()
+        ├── package.json
+        ├── frontend/
+        │   ├── src/
+        │   │   ├── index.ts
+        │   │   └── components/
+        │   │       └── YourToolPage.tsx
+        │   └── package.json
+        └── backend/
+            ├── src/
+            │   ├── index.ts
+            │   ├── your-tool.module.ts
+            │   ├── your-tool.service.ts
+            │   ├── your-tool.controller.ts
+            │   └── your-tool.processor.ts
+            └── package.json
+
+Step 2: Define manifest (index.ts)
+└── registerTool({
+      id: "your-tool-id",
+      name: "Your Tool",
+      description: "...",
+      category: "...",
+      creditsPerUse: 10,
+      frontend: { routes: [...] },
+      backend: { module: YourToolModule },
+    })
+
+Step 3: Create backend module
+└── @Module({ imports: [AIEngineModule, BillingModule], ... })
+
+Step 4: Implement service
+└── Use AIEngineService, CreditService, StorageService
+
+Step 5: Create frontend component
+└── Use @creator-hub/ui components, @tanstack/react-query
+
+Step 6: Register in app.module.ts
+└── imports: [YourToolModule]
+```
+
+### Tool Template
+
+```typescript
+// tools/your-tool/index.ts
+import { registerTool } from "@creator-hub/tool-sdk";
+export { YourToolModule } from "./backend/src/your-tool.module";
+
+registerTool({
+  id: "your-tool",
+  name: "Your Tool",
+  description: "What this tool does",
+  icon: "🔧",
+  category: "other",
+  creditsPerUse: 5,
+  permissions: [
+    { action: "use", resource: "your-tool" },
+  ],
+  frontend: {
+    routes: [{
+      path: "/tools/your-tool",
+      component: "YourToolPage",
+      title: "Your Tool",
+      showInNav: true,
+    }],
+  },
+  backend: {
+    module: "@your-tool/backend",
+    events: ["your-tool.used"],
+  },
+});
+```
+
+```
+
+// tools/your-tool/backend/src/your-tool.module.ts
+import { Module } from "@nestjs/common";
+import { AIEngineModule } from "@creator-hub/ai-engine";
+import { BillingModule } from "@creator-hub/billing";
+import { YourToolService } from "./your-tool.service";
+import { YourToolController } from "./your-tool.controller";
+
+@Module({
+  imports: [AIEngineModule, BillingModule],
+  controllers: [YourToolController],
+  providers: [YourToolService],
+  exports: [YourToolService],
+})
+export class YourToolModule {}
+```
+
+```
+// tools/your-tool/backend/src/your-tool.service.ts
+import { Injectable } from "@nestjs/common";
+import { AIEngineService } from "@creator-hub/ai-engine";
+import { CreditService } from "@creator-hub/billing";
+
+@Injectable()
+export class YourToolService {
+  constructor(
+    private aiEngine: AIEngineService,
+    private creditService: CreditService,
+  ) {}
+
+  async execute(userId: string, params: any) {
+    const CREDIT_COST = 5;
+    const hasCredits = await this.creditService.hasEnoughCredits(userId, CREDIT_COST);
+    if (!hasCredits) throw new Error("Insufficient credits");
+
+    const result = await this.aiEngine.execute({
+      taskType: "text-generation",
+      prompt: params.prompt,
+      userId,
+      toolId: "your-tool",
+    });
+
+    await this.creditService.deduct(userId, CREDIT_COST, "your-tool");
+    return result;
+  }
+}
+```
+
+### Architecture Decision Records
+
+| Decision | Rationale |
+|----------|-----------|
+| **Modular Monolith first** | Faster iteration, no distributed complexity. Microservices boundaries are well-defined for future split |
+| **Tool SDK for registration** | Loose coupling: tools don't import the registry directly |
+| **AI Provider pattern** | Tools switch providers via config, not code changes. Add a provider = add a class |
+| **BullMQ for events** | Redis-backed, supports delays, retries, scheduling. Familiar for NestJS devs |
+| **Prisma as ORM** | Type-safe, auto-generated client, strong migration system |
+| **Zustand over Redux** | Minimal boilerplate, TypeScript-native, persist middleware built in |
+| **React Query** | Server state management, caching, deduplication built in |
+| **Credits as abstraction** | Rate limits, monetization, and abuse prevention unified in one system |
+| **pnpm workspaces** | Faster than npm/yarn, strict dependency isolation |
+| **S3-compatible storage** | MinIO for dev, AWS S3 for prod — same interface |
+
+---
+
+> **Creator Hub** — Built for 1 tool today, 50 tools tomorrow.

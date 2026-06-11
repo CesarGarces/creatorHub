@@ -1,0 +1,63 @@
+export type EventName =
+  | "tool.used"
+  | "tool.enabled"
+  | "tool.disabled"
+  | "credits.deducted"
+  | "credits.added"
+  | "credits.depleted"
+  | "user.registered"
+  | "user.subscribed"
+  | "ai.request.started"
+  | "ai.request.completed"
+  | "ai.request.failed"
+  | "image.generated"
+  | "storage.file.uploaded"
+  | "storage.file.deleted";
+
+export interface BaseEvent {
+  id: string;
+  name: EventName;
+  timestamp: Date;
+  correlationId?: string;
+  userId?: string;
+  toolId?: string;
+}
+
+export interface ToolUsedEvent extends BaseEvent {
+  name: "tool.used";
+  payload: {
+    toolId: string;
+    userId: string;
+    creditsUsed: number;
+    provider?: string;
+    duration: number;
+    success: boolean;
+  };
+}
+
+export interface CreditsDeductedEvent extends BaseEvent {
+  name: "credits.deducted";
+  payload: {
+    userId: string;
+    amount: number;
+    balance: number;
+    toolId?: string;
+  };
+}
+
+export interface AIRequestCompletedEvent extends BaseEvent {
+  name: "ai.request.completed";
+  payload: {
+    requestId: string;
+    provider: string;
+    model: string;
+    latency: number;
+    creditsConsumed: number;
+    toolId: string;
+  };
+}
+
+export type PlatformEvent =
+  | ToolUsedEvent
+  | CreditsDeductedEvent
+  | AIRequestCompletedEvent;

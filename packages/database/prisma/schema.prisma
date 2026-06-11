@@ -1,0 +1,328 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────
+// USERS & AUTH
+// ──────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  passwordHash   String?
+  avatarUrl      String?
+  role           UserRole @default(USER)
+  isActive       Boolean  @default(true)
+  lastLoginAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  accounts       Account[]
+  sessions       Session[]
+  credits        CreditBalance?
+  creditTxns     CreditTransaction[]
+  subscriptions  Subscription[]
+  toolAccess     ToolAccess[]
+  usageLogs      UsageLog[]
+  images         GeneratedImage[]
+  apiKeys        ApiKey[]
+}
+
+enum UserRole {
+  USER
+  PREMIUM
+  ADMIN
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  provider          String  // "google", "github", "email"
+  providerAccountId String
+  refreshToken      String?
+  accessToken       String?
+  expiresAt         Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  key       String   @unique
+  lastUsed  DateTime?
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────
+// TOOL REGISTRY
+// ──────────────────────────────────────────────
+
+model Tool {
+  id              String   @id
+  name            String
+  description     String
+  version         String   @default("1.0.0")
+  icon            String?
+  category        String
+  creditsPerUse   Int      @default(10)
+  status          String   @default("active") // active, inactive, beta, deprecated
+  configSchema    Json?
+  manifestVersion String   @default("1.0")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  toolAccess      ToolAccess[]
+  usageLogs       UsageLog[]
+  images          GeneratedImage[]
+  toolConfigs     ToolConfig[]
+  creditTxns      CreditTransaction[]
+}
+
+model ToolConfig {
+  id             String   @id @default(cuid())
+  toolId         String
+  enabled        Boolean  @default(true)
+  creditsPerUse  Int
+  maxUsesPerDay  Int?
+  allowedRoles   String[] @default([])
+  providerOverrides Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([toolId])
+}
+
+model ToolAccess {
+  id        String   @id @default(cuid())
+  userId    String
+  toolId    String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, toolId])
+}
+
+// ──────────────────────────────────────────────
+// CREDITS & BILLING
+// ──────────────────────────────────────────────
+
+model CreditBalance {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Int      @default(0)
+  lifetime  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CreditTransaction {
+  id          String              @id @default(cuid())
+  userId      String
+  amount      Int
+  type        CreditTransactionType
+  description String
+  toolId      String?
+  provider    String?
+  referenceId String?             // payment intent or external ref
+  balance     Int                 // post-transaction balance
+  createdAt   DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tool Tool? @relation(fields: [toolId], references: [id])
+}
+
+enum CreditTransactionType {
+  PURCHASE
+  USAGE
+  REFUND
+  BONUS
+  SUBSCRIPTION
+  PROMOTION
+}
+
+model Subscription {
+  id            String           @id @default(cuid())
+  userId        String
+  planId        String
+  status        SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  creditsThisPeriod Int              @default(0)
+  cancelAtPeriodEnd Boolean          @default(false)
+  stripeSubscriptionId String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  EXPIRED
+  TRIALING
+}
+
+model SubscriptionPlan {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  price           Int      // cents
+  creditsPerMonth Int
+  features        String[]
+  tools           String[] // tool IDs included
+  stripePriceId   String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+// ──────────────────────────────────────────────
+// USAGE & ANALYTICS
+// ──────────────────────────────────────────────
+
+model UsageLog {
+  id        String   @id @default(cuid())
+  userId    String
+  toolId    String
+  credits   Int
+  duration  Int?     // ms
+  success   Boolean  @default(true)
+  error     String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  tool Tool @relation(fields: [toolId], references: [id])
+}
+
+// ──────────────────────────────────────────────
+// AI ENGINE
+// ──────────────────────────────────────────────
+
+model AIProviderConfig {
+  id        String   @id @default(cuid())
+  name      String   @unique // "openai", "gemini", "stability-ai", etc.
+  isEnabled Boolean  @default(true)
+  priority  Int      @default(0) // lower = preferred
+  config    Json     // api key, base url, etc. (encrypted)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AIRequestLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  toolId     String?
+  provider   String
+  model      String
+  taskType   String
+  prompt     String
+  response   Json?
+  credits    Int
+  latency    Int
+  success    Boolean  @default(true)
+  error      String?
+  createdAt  DateTime @default(now())
+}
+
+// ──────────────────────────────────────────────
+// STORAGE
+// ──────────────────────────────────────────────
+
+model File {
+  id          String   @id @default(cuid())
+  userId      String?
+  toolId      String?
+  originalName String
+  mimeType    String
+  size        Int
+  key         String   @unique // S3 key
+  url         String
+  width       Int?
+  height      Int?
+  duration    Int?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  images GeneratedImage[]
+}
+
+model GeneratedImage {
+  id        String   @id @default(cuid())
+  userId    String
+  toolId    String
+  fileId    String?
+  prompt    String
+  negativePrompt String?
+  provider  String
+  model     String
+  width     Int
+  height    Int
+  url       String
+  credits   Int
+  metadata  Json?
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User    @relation(fields: [userId], references: [id])
+  tool Tool    @relation(fields: [toolId], references: [id])
+  file File?   @relation(fields: [fileId], references: [id])
+}
+
+// ──────────────────────────────────────────────
+// NOTIFICATIONS
+// ──────────────────────────────────────────────
+
+model Notification {
+  id        String            @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime          @default(now())
+}
+
+enum NotificationType {
+  CREDIT_LOW
+  CREDIT_ADDED
+  IMAGE_READY
+  TOOL_NEW
+  SUBSCRIPTION_EXPIRING
+  SYSTEM
+}

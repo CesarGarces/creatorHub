@@ -1,0 +1,21 @@
+{
+  "name": "@creator-hub/thumbnail-generator",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "scripts": {
+    "build": "echo 'Manifest package - no build needed'",
+    "lint": "echo 'ok'",
+    "typecheck": "echo 'ok'"
+  },
+  "dependencies": {
+    "@creator-hub/tool-sdk": "workspace:*",
+    "@creator-hub/shared-types": "workspace:*",
+    "@creator-hub/shared-utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "^5.5.0"
+  }
+}

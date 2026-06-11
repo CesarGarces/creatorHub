@@ -1,0 +1,19 @@
+import type { AIRequest, AIResponse, AIProvider, AITaskType } from "@creator-hub/shared-types";
+
+export interface ImageGenerationOptions {
+  prompt: string;
+  negativePrompt?: string;
+  width?: number;
+  height?: number;
+  numberOfImages?: number;
+}
+
+export interface AIProviderInterface {
+  readonly name: AIProvider;
+  readonly supportedTasks: AITaskType[];
+  readonly supportedModels: string[];
+
+  generate(request: AIRequest): Promise<AIResponse>;
+  generateImage(options: ImageGenerationOptions): Promise<AIResponse>;
+  validateConfig(): boolean;
+}

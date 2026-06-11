@@ -1,0 +1,31 @@
+{
+  "name": "@creator-hub/auth",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/core": "^10.0.0",
+    "@nestjs/jwt": "^10.0.0",
+    "@nestjs/passport": "^10.0.0",
+    "@creator-hub/database": "workspace:*",
+    "@creator-hub/shared-types": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "passport": "^0.7.0",
+    "rxjs": "^7.0.0",
+    "passport-jwt": "^4.0.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/bcryptjs": "^2.4.0",
+    "@types/node": "^20.0.0",
+    "@types/passport-jwt": "^4.0.0",
+    "typescript": "^5.5.0"
+  }
+}

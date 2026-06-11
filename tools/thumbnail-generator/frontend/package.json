@@ -1,0 +1,25 @@
+{
+  "name": "@creator-hub/thumbnail-generator-frontend",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@creator-hub/shared-types": "workspace:*",
+    "@creator-hub/ui": "workspace:*",
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^18.3.0",
+    "lucide-react": "^0.400.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "typescript": "^5.5.0"
+  }
+}
