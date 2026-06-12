@@ -17,17 +17,48 @@ export class StorageService {
   private logger = new Logger("StorageService");
 
   constructor() {
-    this.endpoint = process.env.AWS_S3_ENDPOINT;
-    this.s3 = new S3Client({
-      region: process.env.AWS_REGION || "us-east-1",
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-      },
-      endpoint: this.endpoint,
-      forcePathStyle: !!this.endpoint,
-    });
-    this.bucket = process.env.AWS_S3_BUCKET || "creatorhub-assets";
+    const provider = process.env.STORAGE_PROVIDER || "r2";
+
+    if (provider === "r2") {
+      this.endpoint = process.env.R2_ENDPOINT;
+      this.s3 = new S3Client({
+        region: "auto",
+        credentials: {
+          accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+          secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+        },
+        endpoint: this.endpoint,
+        forcePathStyle: true,
+      });
+      this.bucket = process.env.R2_BUCKET || "creatorhub-assets";
+      this.logger.log("Using Cloudflare R2 storage");
+    } else if (provider === "minio") {
+      this.endpoint = process.env.AWS_S3_ENDPOINT;
+      this.s3 = new S3Client({
+        region: process.env.AWS_REGION || "us-east-1",
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+        },
+        endpoint: this.endpoint,
+        forcePathStyle: true,
+      });
+      this.bucket = process.env.AWS_S3_BUCKET || "creatorhub-assets";
+      this.logger.log("Using MinIO storage");
+    } else {
+      this.endpoint = process.env.AWS_S3_ENDPOINT;
+      this.s3 = new S3Client({
+        region: process.env.AWS_REGION || "us-east-1",
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+        },
+        endpoint: this.endpoint,
+        forcePathStyle: !!this.endpoint,
+      });
+      this.bucket = process.env.AWS_S3_BUCKET || "creatorhub-assets";
+      this.logger.log("Using AWS S3 storage");
+    }
   }
 
   async upload(
