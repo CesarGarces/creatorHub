@@ -23,7 +23,7 @@ function getToken(): string | null {
 }
 
 const PROVIDERS = [
-  { id: "nano-banana", label: "NanoBanana" },
+  { id: "gemini", label: "Gemini" },
   { id: "openai", label: "DALL-E 3" },
   { id: "flux", label: "Flux" },
   { id: "stability-ai", label: "Stability AI" },
@@ -33,7 +33,7 @@ export function ThumbnailGeneratorPage() {
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [style, setStyle] = useState("");
-  const [provider, setProvider] = useState("nano-banana");
+  const [provider, setProvider] = useState("gemini");
   const [result, setResult] = useState<string | null>(null);
 
   const generateMutation = useMutation({

@@ -21,7 +21,14 @@ export class AIEngineService {
 
     const startTime = Date.now();
     try {
-      const response = await instance.generate(request);
+      const response = request.taskType === "image-generation"
+        ? await instance.generateImage({
+            prompt: request.prompt,
+            negativePrompt: request.negativePrompt,
+            width: (request.parameters?.width as number) || 1024,
+            height: (request.parameters?.height as number) || 1024,
+          })
+        : await instance.generate(request);
       const latency = Date.now() - startTime;
 
       return {

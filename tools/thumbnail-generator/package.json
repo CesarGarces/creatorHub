@@ -2,12 +2,12 @@
   "name": "@creator-hub/thumbnail-generator",
   "version": "0.0.1",
   "private": true,
-  "main": "./index.ts",
-  "types": "./index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "echo 'Manifest package - no build needed'",
+    "build": "tsc",
     "lint": "echo 'ok'",
-    "typecheck": "echo 'ok'"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@creator-hub/tool-sdk": "workspace:*",

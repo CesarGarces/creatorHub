@@ -1,5 +1,4 @@
 export type AIProvider =
-  | "nano-banana"
   | "openai"
   | "gemini"
   | "flux"
@@ -14,7 +13,8 @@ export type AIModel =
   | "gpt-image-1"
   | "gemini-pro-vision"
   | "ideogram-v2"
-  | "nano-banana-default";
+  | "gemini-2.5-flash"
+  | "gemini-2.5-flash-image";
 
 export type AITaskType =
   | "image-generation"

@@ -20,7 +20,7 @@ const stylePresets = [
 ];
 
 const providers = [
-  { id: "nano-banana", label: "NanoBanana", cost: 5 },
+  { id: "gemini", label: "Gemini", cost: 5 },
   { id: "openai", label: "DALL-E 3", cost: 10 },
   { id: "flux", label: "Flux", cost: 6 },
   { id: "stability-ai", label: "Stability AI", cost: 8 },
@@ -34,13 +34,19 @@ export default function ThumbnailGeneratorPage() {
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [style, setStyle] = useState("bold");
-  const [provider, setProvider] = useState("nano-banana");
+  const [provider, setProvider] = useState("gemini");
   const [generatedImage, setGeneratedImage] = useState<any>(null);
   const [variations, setVariations] = useState<any[]>([]);
 
   useEffect(() => {
     fetchTools();
     fetchBalance();
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const promptParam = searchParams.get("prompt");
+    if (promptParam) {
+      setPrompt(promptParam);
+    }
   }, [fetchTools, fetchBalance]);
 
   const tool = tools.find((t) => t.id === params.id);

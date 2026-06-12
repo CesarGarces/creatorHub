@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -20,6 +21,7 @@ interface GeneratedImage {
 }
 
 export default function AssetsPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
 
@@ -95,6 +97,22 @@ export default function AssetsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          aria-label="Use prompt"
+                          title="Use prompt"
+                          onClick={() => {
+                            router.push(`/tools/thumbnail-generator?prompt=${encodeURIComponent(img.prompt)}`);
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                          </svg>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label="Download"
+                          title="Download"
                           onClick={async () => {
                             try {
                               const res = await fetch(img.url);
@@ -119,6 +137,8 @@ export default function AssetsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          aria-label="Copy link"
+                          title="Copy link"
                           onClick={() => {
                             navigator.clipboard.writeText(img.url);
                             toast.success("URL copied");
@@ -132,6 +152,8 @@ export default function AssetsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          aria-label="Delete asset"
+                          title="Delete asset"
                           onClick={() => {
                             if (confirm("Delete this image?")) {
                               deleteMutation.mutate(img.id);

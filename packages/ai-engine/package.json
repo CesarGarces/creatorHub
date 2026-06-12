@@ -15,6 +15,7 @@
     "@creator-hub/shared-types": "workspace:*",
     "@creator-hub/shared-utils": "workspace:*",
     "@creator-hub/database": "workspace:*",
+    "@google/genai": "^1.0.0",
     "openai": "^4.0.0"
   },
   "devDependencies": {

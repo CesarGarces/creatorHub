@@ -4,7 +4,6 @@ import { OpenAIImageProvider } from "./openai.provider";
 import { GeminiProvider } from "./gemini.provider";
 import { StabilityAIProvider } from "./stability-ai.provider";
 import { FluxProvider } from "./flux.provider";
-import { NanoBananaProvider } from "./nano-banana.provider";
 import { Logger } from "@creator-hub/shared-utils";
 
 @Injectable()
@@ -23,7 +22,6 @@ export class ProviderFactory implements OnModuleInit {
       new GeminiProvider(),
       new StabilityAIProvider(),
       new FluxProvider(),
-      new NanoBananaProvider(),
     ];
 
     for (const provider of providers) {

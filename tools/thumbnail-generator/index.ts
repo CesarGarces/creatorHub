@@ -6,7 +6,7 @@ registerTool({
   description: "Generate stunning YouTube thumbnails with AI",
   version: "1.0.0",
   icon: "🎨",
-  category: "ai-image",
+  category: "thumbnail",
   creditsPerUse: 10,
   permissions: [
     { action: "generate", resource: "thumbnail", description: "Generate thumbnails" },
@@ -24,7 +24,7 @@ registerTool({
     ],
   },
   backend: {
-    module: "./backend/src/thumbnail-generator.module",
+    module: "ThumbnailGeneratorModule",
     events: ["image.generated", "thumbnail.created"],
   },
 });
