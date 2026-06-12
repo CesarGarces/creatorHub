@@ -115,6 +115,7 @@ export class ThumbnailService {
           prompt: params.prompt,
           negativePrompt: params.negativePrompt,
           provider: result.provider,
+          storageProvider: this.storageService.getProvider(),
           model: result.model,
           width: params.width || 1280,
           height: params.height || 720,
@@ -142,13 +143,13 @@ export class ThumbnailService {
 
     const [images, total] = await Promise.all([
       prisma.generatedImage.findMany({
-        where: { userId, toolId: "thumbnail-generator" },
+        where: { userId, toolId: "thumbnail-generator", storageProvider: this.storageService.getProvider() },
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
       prisma.generatedImage.count({
-        where: { userId, toolId: "thumbnail-generator" },
+        where: { userId, toolId: "thumbnail-generator", storageProvider: this.storageService.getProvider() },
       }),
     ]);
 

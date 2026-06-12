@@ -38,12 +38,12 @@ export class ImagesController {
 
     const [images, total] = await Promise.all([
       prisma.generatedImage.findMany({
-        where: { userId },
+        where: { userId, storageProvider: this.storageService.getProvider() },
         orderBy: { createdAt: "desc" },
         skip,
         take: limitNum,
       }),
-      prisma.generatedImage.count({ where: { userId } }),
+      prisma.generatedImage.count({ where: { userId, storageProvider: this.storageService.getProvider() } }),
     ]);
 
     return {
@@ -140,6 +140,21 @@ export class ImagesController {
       if (!finalUrl) {
         throw new Error("Image generation failed: no valid URL after processing");
       }
+
+      await prisma.generatedImage.create({
+        data: {
+          userId,
+          toolId: dto.toolId,
+          prompt: dto.prompt,
+          provider: dto.provider || "unknown",
+          storageProvider: this.storageService.getProvider(),
+          model: (result as any).model || "unknown",
+          width: (result as any).width || 0,
+          height: (result as any).height || 0,
+          url: finalUrl,
+          credits: 10,
+        },
+      });
 
       await this.creditService.deduct(userId, 10, dto.toolId, "Image generation");
 

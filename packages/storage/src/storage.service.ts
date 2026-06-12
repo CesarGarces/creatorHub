@@ -14,12 +14,13 @@ export class StorageService {
   private s3: S3Client;
   private bucket: string;
   private endpoint: string | undefined;
+  private provider: string;
   private logger = new Logger("StorageService");
 
   constructor() {
-    const provider = process.env.STORAGE_PROVIDER || "r2";
+    this.provider = process.env.STORAGE_PROVIDER || "r2";
 
-    if (provider === "r2") {
+    if (this.provider === "r2") {
       this.endpoint = process.env.R2_ENDPOINT;
       this.s3 = new S3Client({
         region: "auto",
@@ -31,8 +32,8 @@ export class StorageService {
         forcePathStyle: true,
       });
       this.bucket = process.env.R2_BUCKET || "creatorhub-assets";
-      this.logger.log("Using Cloudflare R2 storage");
-    } else if (provider === "minio") {
+      this.logger.info("Using Cloudflare R2 storage");
+    } else if (this.provider === "minio") {
       this.endpoint = process.env.AWS_S3_ENDPOINT;
       this.s3 = new S3Client({
         region: process.env.AWS_REGION || "us-east-1",
@@ -44,7 +45,7 @@ export class StorageService {
         forcePathStyle: true,
       });
       this.bucket = process.env.AWS_S3_BUCKET || "creatorhub-assets";
-      this.logger.log("Using MinIO storage");
+      this.logger.info("Using MinIO storage");
     } else {
       this.endpoint = process.env.AWS_S3_ENDPOINT;
       this.s3 = new S3Client({
@@ -57,8 +58,12 @@ export class StorageService {
         forcePathStyle: !!this.endpoint,
       });
       this.bucket = process.env.AWS_S3_BUCKET || "creatorhub-assets";
-      this.logger.log("Using AWS S3 storage");
+      this.logger.info("Using AWS S3 storage");
     }
+  }
+
+  getProvider(): string {
+    return this.provider;
   }
 
   async upload(
