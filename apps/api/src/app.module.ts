@@ -28,10 +28,12 @@ import { ThumbnailGeneratorModule } from "@creator-hub/thumbnail-generator-backe
       envFilePath: join(process.cwd(), "../../.env"),
     }),
     BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || "localhost",
-        port: parseInt(process.env.REDIS_PORT || "6379"),
-      },
+      connection: process.env.REDIS_URL
+        ? { url: process.env.REDIS_URL }
+        : {
+            host: process.env.REDIS_HOST || "localhost",
+            port: parseInt(process.env.REDIS_PORT || "6379"),
+          },
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
 
