@@ -16,11 +16,6 @@ export function Hero() {
           transition={{ duration: 0.5 }}
           className="flex flex-col items-center text-center"
         >
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 mb-8">
-            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-            <span className="text-xs font-medium text-primary">Powered by AI</span>
-          </div>
-
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] text-balance max-w-4xl">
             One Workspace.{" "}
             <span className="gradient-text">Infinite Content.</span>
