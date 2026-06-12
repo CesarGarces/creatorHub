@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: "Creator Hub — One Workspace. Infinite Content.",
   description:
     "AI-powered platform for content creators. Generate thumbnails, scripts, clips, stream games and content ideas using AI tools and agents.",
+  icons: {
+    icon: "/favicon.png",
+  },
   openGraph: {
     title: "Creator Hub — One Workspace. Infinite Content.",
     description:
