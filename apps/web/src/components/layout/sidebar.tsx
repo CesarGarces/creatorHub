@@ -61,10 +61,8 @@ export function Sidebar() {
       <div className="flex h-14 items-center justify-between px-4 border-b border-border">
         {!collapsed && (
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white font-bold text-sm">
-              C
-            </div>
-            <span className="font-semibold text-text text-sm">Creator Hub</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/isologo_white.png" alt="Creator Hub" className="h-8 w-auto" />
           </Link>
         )}
         <button
