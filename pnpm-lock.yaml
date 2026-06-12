@@ -47,6 +47,9 @@ importers:
       '@creator-hub/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@creator-hub/thumbnail-generator':
+        specifier: workspace:*
+        version: link:../../tools/thumbnail-generator
       '@creator-hub/thumbnail-generator-backend':
         specifier: workspace:*
         version: link:../../tools/thumbnail-generator/backend
