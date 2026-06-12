@@ -16,7 +16,7 @@ async function bootstrap() {
   SwaggerModule.setup("api/docs", app, document);
 
   app.setGlobalPrefix("api/v1");
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, "");
   console.log(`[CORS] Allowed origin: ${frontendUrl}`);
   app.enableCors({
     origin: [frontendUrl, `${frontendUrl}/`],
