@@ -29,9 +29,7 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white font-bold text-sm">
-                C
-              </div>
+              <img src="/logo.png" alt="Creator Hub" className="h-8 w-8 object-contain" />
               <span className="text-lg font-semibold text-text">Creator Hub</span>
             </div>
             <p className="text-sm text-text-muted leading-relaxed max-w-xs">
