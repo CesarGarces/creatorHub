@@ -24,7 +24,7 @@ function getToken(): string | null {
 
 const PROVIDERS = [
   { id: "gemini", label: "Gemini" },
-  { id: "openai", label: "DALL-E 3" },
+  { id: "openai", label: "GPT Image" },
   { id: "flux", label: "Flux" },
   { id: "stability-ai", label: "Stability AI" },
 ];

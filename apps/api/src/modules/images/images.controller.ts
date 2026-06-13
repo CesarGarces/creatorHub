@@ -163,11 +163,29 @@ export class ImagesController {
         data: { ...result, output: { ...result.output, url: finalUrl } },
       };
     } catch (error) {
-      this.logger.error("Image generation failed", {
-        error: (error as Error).message,
-      });
+      const message = (error as Error).message || "Unknown error";
+      this.logger.error("Image generation failed", { error: message });
+
+      if (message.includes("billing limit")) {
+        throw new BadRequestException(
+          "The AI provider's billing limit has been reached. Please try a different provider or contact support."
+        );
+      }
+
+      if (message.includes("rate limit")) {
+        throw new BadRequestException(
+          "Too many requests to the AI provider. Please try again in a few moments."
+        );
+      }
+
+      if (message.includes("API key")) {
+        throw new InternalServerErrorException(
+          "AI provider configuration error. Please contact support."
+        );
+      }
+
       throw new InternalServerErrorException(
-        `Image generation failed: ${(error as Error).message}`
+        `Image generation failed: ${message}`
       );
     }
   }

@@ -6,6 +6,7 @@ export interface ImageGenerationOptions {
   width?: number;
   height?: number;
   numberOfImages?: number;
+  model?: string;
 }
 
 export interface AIProviderInterface {

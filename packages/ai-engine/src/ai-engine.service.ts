@@ -10,39 +10,74 @@ export class AIEngineService {
   constructor(private providerRegistry: ProviderRegistry) {}
 
   async execute(request: AIRequest): Promise<AIResponse> {
-    const provider = request.provider || (await this.selectOptimalProvider(request));
-    const instance = this.providerRegistry.getProvider(provider);
+    const requestedProvider = request.provider;
+    const providers = requestedProvider
+      ? [this.providerRegistry.getProvider(requestedProvider)]
+      : this.providerRegistry.getProvidersByTask(request.taskType);
 
-    this.logger.info("Executing AI request", {
-      provider,
-      taskType: request.taskType,
-      toolId: request.toolId,
-    });
-
-    const startTime = Date.now();
-    try {
-      const response = request.taskType === "image-generation"
-        ? await instance.generateImage({
-            prompt: request.prompt,
-            negativePrompt: request.negativePrompt,
-            width: (request.parameters?.width as number) || 1024,
-            height: (request.parameters?.height as number) || 1024,
-          })
-        : await instance.generate(request);
-      const latency = Date.now() - startTime;
-
-      return {
-        ...response,
-        provider,
-        latency,
-      };
-    } catch (error) {
-      this.logger.error("AI request failed", {
-        provider,
-        error: (error as Error).message,
-      });
-      throw error;
+    if (providers.length === 0) {
+      throw new Error(
+        `No AI providers available for task: ${request.taskType}. Check that your API keys are configured in .env`
+      );
     }
+
+    let lastError: Error | null = null;
+
+    for (const provider of providers) {
+      this.logger.info("Executing AI request", {
+        provider: provider.name,
+        taskType: request.taskType,
+        toolId: request.toolId,
+      });
+
+      const startTime = Date.now();
+      try {
+        const response = request.taskType === "image-generation"
+          ? await provider.generateImage({
+              prompt: request.prompt,
+              negativePrompt: request.negativePrompt,
+              width: (request.parameters?.width as number) || 1024,
+              height: (request.parameters?.height as number) || 1024,
+              model: request.model,
+            })
+          : await provider.generate(request);
+        const latency = Date.now() - startTime;
+
+        return {
+          ...response,
+          provider: provider.name,
+          latency,
+        };
+      } catch (error) {
+        const latency = Date.now() - startTime;
+        lastError = error as Error;
+        const message = (error as Error).message || "";
+
+        this.logger.error("AI provider failed", {
+          provider: provider.name,
+          error: message,
+          latency,
+        });
+
+        const isRetryable =
+          message.includes("billing") ||
+          message.includes("rate limit") ||
+          message.includes("quota") ||
+          message.includes("insufficient") ||
+          message.includes("limit");
+
+        if (isRetryable && providers.length > 1) {
+          this.logger.info("Retrying with next available provider", {
+            failedProvider: provider.name,
+          });
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    throw lastError || new Error("All AI providers failed");
   }
 
   async generateImage(
@@ -72,13 +107,4 @@ export class AIEngineService {
     });
   }
 
-  private async selectOptimalProvider(request: AIRequest): Promise<AIProvider> {
-    const providers = this.providerRegistry.getProvidersByTask(request.taskType);
-    if (providers.length === 0) {
-      throw new Error(
-        `No AI providers available for task: ${request.taskType}. Check that your API keys are configured in .env`
-      );
-    }
-    return providers[0]!.name;
-  }
 }
