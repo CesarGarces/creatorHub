@@ -153,10 +153,10 @@ export default function ThumbnailGeneratorPage() {
                   key={s.id}
                   onClick={() => !isProcessing && setStyle(s.id)}
                   disabled={isProcessing}
-                  className={`flex items-center gap-2 rounded-lg border p-2.5 text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`flex items-center gap-2 rounded-lg border p-2.5 text-xs font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                     style === s.id
                       ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-surface-elevated text-text-muted hover:border-border/80"
+                      : "border-border bg-surface-elevated text-text-muted hover:border-primary/50 hover:bg-primary/5"
                   }`}
                 >
                   <span>{s.emoji}</span>
@@ -174,10 +174,10 @@ export default function ThumbnailGeneratorPage() {
                   key={p.id}
                   onClick={() => !isProcessing && setAiProvider(p.id)}
                   disabled={isProcessing}
-                  className={`flex w-full items-center justify-between rounded-lg border p-3 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`flex w-full items-center justify-between rounded-lg border p-3 text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                     aiProvider === p.id
                       ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-surface-elevated text-text-muted hover:border-border/80"
+                      : "border-border bg-surface-elevated text-text-muted hover:border-primary/50 hover:bg-primary/5"
                   }`}
                 >
                   <span className="font-medium">{p.label}</span>
