@@ -12,7 +12,9 @@ export type EventName =
   | "ai.request.failed"
   | "image.generated"
   | "storage.file.uploaded"
-  | "storage.file.deleted";
+  | "storage.file.deleted"
+  | "thumbnail.completed"
+  | "thumbnail.failed";
 
 export interface BaseEvent {
   id: string;
@@ -55,6 +57,25 @@ export interface AIRequestCompletedEvent extends BaseEvent {
     creditsConsumed: number;
     toolId: string;
   };
+}
+
+export interface ThumbnailCompletedEvent {
+  userId: string;
+  key: string;
+  bucket: string;
+  imageId: string;
+}
+
+export interface ThumbnailFailedEvent {
+  userId: string;
+  error: string;
+  rawError?: string;
+  jobId?: string;
+}
+
+export interface ThumbnailReadyPayload {
+  url: string;
+  imageId: string;
 }
 
 export type PlatformEvent =

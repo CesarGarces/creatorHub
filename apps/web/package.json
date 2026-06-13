@@ -16,11 +16,14 @@
     "@creator-hub/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
     "framer-motion": "^12.40.0",
+    "gsap": "^3.12.0",
     "lucide-react": "^0.400.0",
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "socket.io-client": "^4.8.0",
     "sonner": "^2.0.7",
+    "three": "^0.170.0",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
@@ -30,6 +33,7 @@
     "@types/node": "^20.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.170.0",
     "autoprefixer": "^10.0.0",
     "postcss": "^8.0.0",
     "tailwindcss": "^4.0.0",

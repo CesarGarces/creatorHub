@@ -98,20 +98,26 @@ export class ImagesController {
 
       let finalUrl = output.url;
 
+      const bucket = this.storageService.getDefaultBucket();
+
       if (output.url.startsWith("data:image")) {
         const base64Data = output.url.split(",")[1];
         if (!base64Data) {
           throw new Error("Invalid base64 image data");
         }
         const buffer = Buffer.from(base64Data, "base64");
-        const file = await this.storageService.upload(
+        const key = `${userId}/${Date.now()}-generated.png`;
+        const uploadResult = await this.storageService.uploadBuffer(
+          bucket,
+          key,
           buffer,
-          `generated-${Date.now()}.png`,
-          "image/png",
-          userId,
-          dto.toolId
+          "image/png"
         );
-        finalUrl = file.signedUrl;
+        finalUrl = await this.storageService.getPresignedDownloadUrl(
+          uploadResult.bucket,
+          uploadResult.key,
+          7 * 24 * 60 * 60
+        );
       } else if (output.url.startsWith("http")) {
         try {
           const response = await fetch(output.url);
@@ -122,14 +128,18 @@ export class ImagesController {
           const buffer = Buffer.from(arrayBuffer);
           const contentType = response.headers.get("content-type") || "image/png";
           const ext = contentType.includes("jpeg") ? "jpg" : "png";
-          const file = await this.storageService.upload(
+          const key = `${userId}/${Date.now()}-generated.${ext}`;
+          const uploadResult = await this.storageService.uploadBuffer(
+            bucket,
+            key,
             buffer,
-            `generated-${Date.now()}.${ext}`,
-            contentType,
-            userId,
-            dto.toolId
+            contentType
           );
-          finalUrl = file.signedUrl;
+          finalUrl = await this.storageService.getPresignedDownloadUrl(
+            uploadResult.bucket,
+            uploadResult.key,
+            7 * 24 * 60 * 60
+          );
         } catch (fetchError) {
           this.logger.warn("Failed to download image from provider, using remote URL", {
             error: (fetchError as Error).message,

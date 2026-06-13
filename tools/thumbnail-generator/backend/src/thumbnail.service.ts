@@ -1,11 +1,15 @@
 import { Injectable } from "@nestjs/common";
-import { AIEngineService } from "@creator-hub/ai-engine";
 import { CreditService } from "@creator-hub/billing";
 import { StorageService } from "@creator-hub/storage";
+import { AIEngineService } from "@creator-hub/ai-engine";
 import { prisma } from "@creator-hub/database";
 import { Logger } from "@creator-hub/shared-utils";
 import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
+
+export interface EnqueuedThumbnail {
+  jobId: string;
+}
 
 @Injectable()
 export class ThumbnailService {
@@ -26,7 +30,7 @@ export class ThumbnailService {
     provider?: string;
     width?: number;
     height?: number;
-  }): Promise<any> {
+  }): Promise<EnqueuedThumbnail> {
     const CREDIT_COST = 10;
 
     const hasCredits = await this.creditService.hasEnoughCredits(params.userId, CREDIT_COST);
@@ -34,108 +38,57 @@ export class ThumbnailService {
       throw new Error("Insufficient credits");
     }
 
-    const startTime = Date.now();
+    const job = await this.thumbnailQueue.add("generate", {
+      userId: params.userId,
+      prompt: params.prompt,
+      negativePrompt: params.negativePrompt,
+      style: params.style,
+      provider: params.provider,
+      width: params.width || 1280,
+      height: params.height || 720,
+      creditCost: CREDIT_COST,
+    });
 
-    try {
-      const fullPrompt = params.style
-        ? `${params.prompt}, ${params.style}`
-        : params.prompt;
+    this.logger.info(`Thumbnail job enqueued`, { jobId: job.id, userId: params.userId });
 
-      const result = await this.aiEngine.generateImage(fullPrompt, {
-        provider: params.provider as any,
-        negativePrompt: params.negativePrompt,
-        width: params.width || 1280,
-        height: params.height || 720,
-        userId: params.userId,
-        toolId: "thumbnail-generator",
-      });
+    return { jobId: job.id! };
+  }
 
-      const duration = Date.now() - startTime;
-
-      const output = result.output as { type: string; url: string };
-      if (!output?.url) {
-        throw new Error("AI provider returned no image URL");
-      }
-
-      let finalUrl = output.url;
-
-      if (output.url.startsWith("data:image")) {
-        const base64Data = output.url.split(",")[1];
-        if (!base64Data) {
-          throw new Error("Invalid base64 image data");
-        }
-        const buffer = Buffer.from(base64Data, "base64");
-        const file = await this.storageService.upload(
-          buffer,
-          `thumbnail-${Date.now()}.png`,
-          "image/png",
-          params.userId,
-          "thumbnail-generator"
-        );
-        finalUrl = file.signedUrl;
-      } else if (output.url.startsWith("http")) {
-        try {
-          const response = await fetch(output.url);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch image from provider: ${response.status}`);
-          }
-          const arrayBuffer = await response.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          const contentType = response.headers.get("content-type") || "image/png";
-          const ext = contentType.includes("jpeg") ? "jpg" : "png";
-          const file = await this.storageService.upload(
-            buffer,
-            `thumbnail-${Date.now()}.${ext}`,
-            contentType,
-            params.userId,
-            "thumbnail-generator"
-          );
-          finalUrl = file.signedUrl;
-        } catch (fetchError) {
-          this.logger.warn("Failed to download image from provider, using remote URL", {
-            error: (fetchError as Error).message,
-          });
-        }
-      }
-
-      if (!finalUrl) {
-        throw new Error("Image generation failed: no valid URL after processing");
-      }
-
-      await this.creditService.deduct(
-        params.userId,
-        CREDIT_COST,
-        "thumbnail-generator",
-        `Generated thumbnail: ${params.prompt.slice(0, 50)}...`
-      );
-
-      const image = await prisma.generatedImage.create({
-        data: {
-          userId: params.userId,
-          prompt: params.prompt,
-          negativePrompt: params.negativePrompt,
-          provider: result.provider,
-          storageProvider: this.storageService.getProvider(),
-          model: result.model,
-          width: params.width || 1280,
-          height: params.height || 720,
-          url: finalUrl,
-          credits: CREDIT_COST,
-        },
-      });
-
-      return {
-        id: image.id,
-        url: finalUrl,
-        credits: CREDIT_COST,
-        duration,
-        provider: result.provider,
-      };
-    } catch (error) {
-      const message = (error as Error).message || "Thumbnail generation failed";
-      this.logger.error("Thumbnail generation failed", { error: message });
-      throw new Error(message);
+  async getJobStatus(jobId: string, userId: string): Promise<{ status: string; failedReason?: string }> {
+    const job = await this.thumbnailQueue.getJob(jobId);
+    if (!job) {
+      return { status: "not_found" };
     }
+    if (job.data.userId !== userId) {
+      return { status: "not_found" };
+    }
+    const state = await job.getState();
+    return {
+      status: state,
+      failedReason: state === "failed" ? this.getFriendlyError(job.failedReason || "") : undefined,
+    };
+  }
+
+  private getFriendlyError(errorMessage: string): string {
+    const msg = errorMessage.toLowerCase();
+    if (
+      msg.includes("429") ||
+      msg.includes("resource_exhausted") ||
+      msg.includes("rate limit") ||
+      msg.includes("quota") ||
+      msg.includes("credits") ||
+      msg.includes("billing") ||
+      msg.includes("depleted")
+    ) {
+      return "AI is taking a break. The provider is taking longer than usual to process the details. Don't worry, your credits are safe. Shall we try again?";
+    }
+    if (msg.includes("timeout") || msg.includes("timed out")) {
+      return "The request took too long. The provider might be busy. Your credits are safe. Shall we try again?";
+    }
+    if (msg.includes("insufficient credits")) {
+      return "You don't have enough credits. Buy more to keep generating.";
+    }
+    return "Something went wrong. Don't worry, your credits are safe. Shall we try again?";
   }
 
   async getUserImages(userId: string, page = 1, limit = 20): Promise<any> {
@@ -143,13 +96,13 @@ export class ThumbnailService {
 
     const [images, total] = await Promise.all([
       prisma.generatedImage.findMany({
-        where: { userId, toolId: "thumbnail-generator", storageProvider: this.storageService.getProvider() },
+        where: { userId, toolId: "thumbnail-generator" },
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
       prisma.generatedImage.count({
-        where: { userId, toolId: "thumbnail-generator", storageProvider: this.storageService.getProvider() },
+        where: { userId, toolId: "thumbnail-generator" },
       }),
     ]);
 

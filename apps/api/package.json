@@ -19,6 +19,7 @@
     "@creator-hub/auth": "workspace:*",
     "@creator-hub/billing": "workspace:*",
     "@creator-hub/database": "workspace:*",
+    "@creator-hub/domain-events": "workspace:*",
     "@creator-hub/shared-types": "workspace:*",
     "@creator-hub/shared-utils": "workspace:*",
     "@creator-hub/storage": "workspace:*",
@@ -32,8 +33,10 @@
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/platform-socket.io": "^11.0.0",
     "@nestjs/swagger": "^11.4.4",
     "@nestjs/throttler": "^6.0.0",
+    "@nestjs/websockets": "^11.0.0",
     "bullmq": "^5.0.0",
     "class-transformer": "^0.5.0",
     "class-validator": "^0.14.0",
@@ -41,7 +44,8 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.0",
     "reflect-metadata": "^0.2.0",
-    "rxjs": "^7.0.0"
+    "rxjs": "^7.0.0",
+    "socket.io": "^4.8.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",

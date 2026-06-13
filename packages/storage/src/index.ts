@@ -1,2 +1,2 @@
 export { StorageModule } from "./storage.module";
-export { StorageService } from "./storage.service";
+export { StorageService, UploadResult } from "./storage.service";

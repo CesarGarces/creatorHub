@@ -9,6 +9,7 @@ import { AIEngineModule } from "@creator-hub/ai-engine";
 import { BillingModule } from "@creator-hub/billing";
 import { StorageModule } from "@creator-hub/storage";
 import { AnalyticsModule } from "@creator-hub/analytics";
+import { DomainEventsModule } from "@creator-hub/domain-events";
 import { ToolSdkModule } from "./tool-sdk.module";
 
 import { AuthController } from "./modules/auth/auth.controller";
@@ -16,6 +17,9 @@ import { CreditsController } from "./modules/credits/credits.controller";
 import { ToolsController } from "./modules/tools/tools.controller";
 import { ImagesController } from "./modules/images/images.controller";
 import { AdminController } from "./modules/admin/admin.controller";
+
+import { WebsocketModule } from "./modules/websocket/websocket.module";
+import { ThumbnailListenerModule } from "./modules/thumbnail-listener/thumbnail-listener.module";
 
 // Import tools (registers them via registerTool)
 import "@creator-hub/thumbnail-generator";
@@ -43,7 +47,12 @@ import { ThumbnailGeneratorModule } from "@creator-hub/thumbnail-generator-backe
     BillingModule,
     StorageModule,
     AnalyticsModule,
+    DomainEventsModule,
     ToolSdkModule,
+
+    // WebSocket + event listeners
+    WebsocketModule,
+    ThumbnailListenerModule,
 
     // Tools (registered automatically via ToolSdkModule)
     ThumbnailGeneratorModule,

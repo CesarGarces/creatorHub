@@ -6,13 +6,19 @@ import {
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { prisma } from "@creator-hub/database";
 import { Logger } from "@creator-hub/shared-utils";
+
+export interface UploadResult {
+  bucket: string;
+  key: string;
+  size: number;
+  mimeType: string;
+}
 
 @Injectable()
 export class StorageService {
   private s3: S3Client;
-  private bucket: string;
+  private defaultBucket: string;
   private endpoint: string | undefined;
   private provider: string;
   private logger = new Logger("StorageService");
@@ -31,7 +37,7 @@ export class StorageService {
         endpoint: this.endpoint,
         forcePathStyle: true,
       });
-      this.bucket = process.env.R2_BUCKET || "creatorhub-assets";
+      this.defaultBucket = process.env.R2_BUCKET || "creatorhub-assets";
       this.logger.info("Using Cloudflare R2 storage");
     } else if (this.provider === "minio") {
       this.endpoint = process.env.AWS_S3_ENDPOINT;
@@ -44,7 +50,7 @@ export class StorageService {
         endpoint: this.endpoint,
         forcePathStyle: true,
       });
-      this.bucket = process.env.AWS_S3_BUCKET || "creatorhub-assets";
+      this.defaultBucket = process.env.AWS_S3_BUCKET || "creatorhub-assets";
       this.logger.info("Using MinIO storage");
     } else {
       this.endpoint = process.env.AWS_S3_ENDPOINT;
@@ -57,7 +63,7 @@ export class StorageService {
         endpoint: this.endpoint,
         forcePathStyle: !!this.endpoint,
       });
-      this.bucket = process.env.AWS_S3_BUCKET || "creatorhub-assets";
+      this.defaultBucket = process.env.AWS_S3_BUCKET || "creatorhub-assets";
       this.logger.info("Using AWS S3 storage");
     }
   }
@@ -66,62 +72,56 @@ export class StorageService {
     return this.provider;
   }
 
-  async upload(
+  getDefaultBucket(): string {
+    return this.defaultBucket;
+  }
+
+  async uploadBuffer(
+    bucket: string,
+    key: string,
     buffer: Buffer,
-    fileName: string,
-    mimeType: string,
-    userId?: string,
-    toolId?: string
-  ): Promise<any> {
-    const key = `${userId || "anonymous"}/${Date.now()}-${fileName}`;
+    mimeType: string
+  ): Promise<UploadResult> {
+    if (!buffer || buffer.length === 0) {
+      throw new Error("Cannot upload empty buffer");
+    }
 
     await this.s3.send(
       new PutObjectCommand({
-        Bucket: this.bucket,
+        Bucket: bucket,
         Key: key,
         Body: buffer,
         ContentType: mimeType,
       })
     );
 
-    const directUrl = this.endpoint
-      ? `${this.endpoint}/${this.bucket}/${key}`
-      : `https://${this.bucket}.s3.amazonaws.com/${key}`;
-
-    const signedUrl = await this.getSignedUrl(key, 7 * 24 * 60 * 60);
-
-    const file = await prisma.file.create({
-      data: {
-        userId,
-        toolId,
-        originalName: fileName,
-        mimeType,
-        size: buffer.length,
-        key,
-        url: directUrl,
-      },
-    });
-
-    return { ...file, signedUrl };
+    return {
+      bucket,
+      key,
+      size: buffer.length,
+      mimeType,
+    };
   }
 
-  async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
+  async getPresignedDownloadUrl(
+    bucket: string,
+    key: string,
+    expiresInSeconds: number = 900
+  ): Promise<string> {
     const command = new GetObjectCommand({
-      Bucket: this.bucket,
+      Bucket: bucket,
       Key: key,
     });
 
-    return getSignedUrl(this.s3, command, { expiresIn });
+    return getSignedUrl(this.s3, command, { expiresIn: expiresInSeconds });
   }
 
-  async delete(key: string) {
+  async delete(key: string, bucket?: string): Promise<void> {
     await this.s3.send(
       new DeleteObjectCommand({
-        Bucket: this.bucket,
+        Bucket: bucket || this.defaultBucket,
         Key: key,
       })
     );
-
-    await prisma.file.deleteMany({ where: { key } });
   }
 }

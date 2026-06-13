@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Body,
+  Param,
   Query,
   UseGuards,
   BadRequestException,
@@ -20,7 +21,7 @@ export class ThumbnailController {
   async generate(
     @CurrentUser("id") userId: string,
     @Body() dto: { prompt: string; negativePrompt?: string; style?: string; provider?: string }
-  ): Promise<any> {
+  ): Promise<{ success: boolean; data: { jobId: string } }> {
     if (!dto.prompt?.trim()) {
       throw new BadRequestException("Prompt is required");
     }
@@ -41,6 +42,14 @@ export class ThumbnailController {
       }
       throw new InternalServerErrorException(message);
     }
+  }
+
+  @Get("jobs/:jobId/status")
+  async getJobStatus(
+    @CurrentUser("id") userId: string,
+    @Param("jobId") jobId: string
+  ): Promise<{ status: string; failedReason?: string }> {
+    return this.thumbnailService.getJobStatus(jobId, userId);
   }
 
   @Get("images")

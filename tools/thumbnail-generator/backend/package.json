@@ -14,6 +14,8 @@
     "@creator-hub/auth": "workspace:*",
     "@creator-hub/billing": "workspace:*",
     "@creator-hub/database": "workspace:*",
+    "@creator-hub/domain-events": "workspace:*",
+    "@creator-hub/shared-types": "workspace:*",
     "@creator-hub/storage": "workspace:*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/bullmq": "^11.0.0",
