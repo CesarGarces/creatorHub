@@ -16,20 +16,20 @@
   ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["db:generate", "^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "dev": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["db:generate", "^build"],
       "cache": false,
       "persistent": true
     },
     "lint": {},
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["db:generate", "^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["db:generate", "^build"]
     },
     "clean": {
       "cache": false
