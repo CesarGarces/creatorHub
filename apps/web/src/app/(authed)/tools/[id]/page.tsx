@@ -36,15 +36,19 @@ export default function ThumbnailGeneratorPage() {
     status,
     imageUrl,
     error: generationError,
+    prompt,
+    negativePrompt,
+    style,
+    aiProvider,
+    setPrompt,
+    setNegativePrompt,
+    setStyle,
+    setAiProvider,
     startGeneration,
     setReady,
     setFailed,
     reset,
   } = useGenerationStore();
-  const [prompt, setPrompt] = useState("");
-  const [negativePrompt, setNegativePrompt] = useState("");
-  const [style, setStyle] = useState("bold");
-  const [provider, setProvider] = useState("gemini");
   const [variations, setVariations] = useState<Array<{ url: string; imageId: string }>>([]);
   const lastCompletedRef = useRef<string | null>(null);
 
@@ -54,7 +58,7 @@ export default function ThumbnailGeneratorPage() {
     const searchParams = new URLSearchParams(window.location.search);
     const promptParam = searchParams.get("prompt");
     if (promptParam) setPrompt(promptParam);
-  }, [fetchTools, fetchBalance]);
+  }, [fetchTools, fetchBalance, setPrompt]);
 
   useEffect(() => {
     if (status === "READY" && imageUrl && lastCompletedRef.current !== imageUrl) {
@@ -68,13 +72,14 @@ export default function ThumbnailGeneratorPage() {
   }, [status, imageUrl]);
 
   const tool = tools.find((t) => t.id === params.id);
-  const selectedProvider = providers.find((p) => p.id === provider);
+  const selectedProvider = providers.find((p) => p.id === aiProvider);
+  const isProcessing = status === "GENERATING" || status === "REVEALING";
 
   const generateMutation = useMutation({
     mutationFn: async () => {
       return api.post<{ success: boolean; data: { jobId: string } }>(
         "/tools/thumbnail-generator/generate",
-        { prompt, negativePrompt, style, provider, width: 1280, height: 720 }
+        { prompt, negativePrompt, style, provider: aiProvider, width: 1280, height: 720 }
       );
     },
     onSuccess: (response) => {
@@ -100,8 +105,6 @@ export default function ThumbnailGeneratorPage() {
     generateMutation.mutate();
   };
 
-  const isProcessing = status === "GENERATING" || status === "REVEALING";
-
   return (
     <>
       <TopBar
@@ -126,7 +129,8 @@ export default function ThumbnailGeneratorPage() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Describe the thumbnail you want to create..."
-              className="w-full h-32 rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none transition-colors"
+              disabled={isProcessing}
+              className="w-full h-32 rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -136,7 +140,8 @@ export default function ThumbnailGeneratorPage() {
               value={negativePrompt}
               onChange={(e) => setNegativePrompt(e.target.value)}
               placeholder="Exclude: text, watermark, blurry..."
-              className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+              disabled={isProcessing}
+              className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -146,8 +151,9 @@ export default function ThumbnailGeneratorPage() {
               {stylePresets.map((s) => (
                 <button
                   key={s.id}
-                  onClick={() => setStyle(s.id)}
-                  className={`flex items-center gap-2 rounded-lg border p-2.5 text-xs font-medium transition-all ${
+                  onClick={() => !isProcessing && setStyle(s.id)}
+                  disabled={isProcessing}
+                  className={`flex items-center gap-2 rounded-lg border p-2.5 text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     style === s.id
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border bg-surface-elevated text-text-muted hover:border-border/80"
@@ -166,9 +172,10 @@ export default function ThumbnailGeneratorPage() {
               {providers.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => setProvider(p.id)}
-                  className={`flex w-full items-center justify-between rounded-lg border p-3 text-sm transition-all ${
-                    provider === p.id
+                  onClick={() => !isProcessing && setAiProvider(p.id)}
+                  disabled={isProcessing}
+                  className={`flex w-full items-center justify-between rounded-lg border p-3 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    aiProvider === p.id
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border bg-surface-elevated text-text-muted hover:border-border/80"
                   }`}

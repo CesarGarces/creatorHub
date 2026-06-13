@@ -9,6 +9,15 @@ interface GenerationState {
   error: string | null;
   jobId: string | null;
 
+  prompt: string;
+  negativePrompt: string;
+  style: string;
+  aiProvider: string;
+
+  setPrompt: (prompt: string) => void;
+  setNegativePrompt: (negativePrompt: string) => void;
+  setStyle: (style: string) => void;
+  setAiProvider: (provider: string) => void;
   startGeneration: (jobId: string) => void;
   setReady: (url: string, imageId: string) => void;
   setFailed: (error: string) => void;
@@ -31,6 +40,16 @@ export const useGenerationStore = create<GenerationState>()((set, get) => ({
   imageId: null,
   error: null,
   jobId: null,
+
+  prompt: "",
+  negativePrompt: "",
+  style: "bold",
+  aiProvider: "gemini",
+
+  setPrompt: (prompt) => set({ prompt }),
+  setNegativePrompt: (negativePrompt) => set({ negativePrompt }),
+  setStyle: (style) => set({ style }),
+  setAiProvider: (aiProvider) => set({ aiProvider }),
 
   startGeneration: (jobId: string) => {
     set({
