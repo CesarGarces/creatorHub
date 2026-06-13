@@ -47,7 +47,7 @@ export class AuthService {
   }
 
   async validateOAuth(provider: string, providerAccountId: string, email: string, name?: string) {
-    let account = await prisma.account.findUnique({
+    const account = await prisma.account.findUnique({
       where: { provider_providerAccountId: { provider, providerAccountId } },
       include: { user: true },
     });

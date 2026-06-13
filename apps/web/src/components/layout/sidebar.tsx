@@ -61,7 +61,7 @@ export function Sidebar() {
       <div className="flex h-14 items-center justify-between px-4 border-b border-border">
         {!collapsed && (
           <Link href="/dashboard" className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+
             <img src="/isologo_white.png" alt="Creator Hub" className="h-8 w-auto" />
           </Link>
         )}

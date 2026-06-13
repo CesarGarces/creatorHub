@@ -24,7 +24,7 @@ export default function Home() {
   return (
     <div className="flex h-screen items-center justify-center bg-bg">
       <div className="flex flex-col items-center gap-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+
         <img src="/isologo_white.png" alt="Creator Hub" className="h-14 w-auto animate-pulse-glow" />
         <div className="h-2 w-24 rounded-full shimmer" />
       </div>

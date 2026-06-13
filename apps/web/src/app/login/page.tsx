@@ -42,7 +42,7 @@ export default function LoginPage() {
 
       <Card className="w-full max-w-md relative z-10 border-border/50 bg-surface/90 backdrop-blur-sm">
         <CardHeader className="text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+
           <img src="/isologo_white.png" alt="Creator Hub" className="mx-auto mb-4 h-14 w-auto" />
           <h1 className="text-2xl font-bold text-text">Welcome to Creator Hub</h1>
           <p className="text-sm text-text-muted">Sign in to your account</p>
