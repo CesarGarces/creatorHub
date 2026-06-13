@@ -5,11 +5,16 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { useSocketEvents } from "@/hooks/use-socket-events";
+import { useBackgroundPolling } from "@/hooks/use-background-polling";
 
 export default function AuthedLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isHydrated, hydrate } = useAuthStore();
   const { fetchBalance } = useCreditsStore();
+
+  useSocketEvents();
+  useBackgroundPolling();
 
   useEffect(() => {
     hydrate();

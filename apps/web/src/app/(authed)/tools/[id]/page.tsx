@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useToolsStore } from "@/store/tools.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { useGenerationStore } from "@/store/generation.store";
-import { connectSocket, disconnectSocket } from "@/lib/socket";
 import api from "@/lib/api";
 import { Button, Badge, Skeleton, EmptyState } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
@@ -29,8 +28,6 @@ const providers = [
   { id: "stability-ai", label: "Stability AI", cost: 8 },
 ];
 
-const TIMEOUT_MS = 60_000;
-
 export default function ThumbnailGeneratorPage() {
   const params = useParams();
   const { tools, fetchTools } = useToolsStore();
@@ -49,8 +46,7 @@ export default function ThumbnailGeneratorPage() {
   const [style, setStyle] = useState("bold");
   const [provider, setProvider] = useState("gemini");
   const [variations, setVariations] = useState<Array<{ url: string; imageId: string }>>([]);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastCompletedRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetchTools();
@@ -61,106 +57,15 @@ export default function ThumbnailGeneratorPage() {
   }, [fetchTools, fetchBalance]);
 
   useEffect(() => {
-    return () => {
-      clearTimeoutRefs();
-      disconnectSocket();
-    };
-  }, []);
-
-  const clearTimeoutRefs = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
+    if (status === "READY" && imageUrl && lastCompletedRef.current !== imageUrl) {
+      lastCompletedRef.current = imageUrl;
+      setVariations((prev) => {
+        const exists = prev.some((v) => v.url === imageUrl);
+        if (exists) return prev;
+        return [{ url: imageUrl, imageId: "" }, ...prev].slice(0, 4);
+      });
     }
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-  }, []);
-
-  const setupSocketAndFallback = useCallback(
-    (jobId: string) => {
-      let resolved = false;
-
-      const markDone = () => {
-        if (resolved) return;
-        resolved = true;
-        clearTimeoutRefs();
-      };
-
-      // --- WebSocket path ---
-      try {
-        const socket = connectSocket();
-        if (socket) {
-          const onReady = (data: { url: string; imageId: string }) => {
-            markDone();
-            setReady(data.url, data.imageId);
-            setVariations((prev) => [{ url: data.url, imageId: data.imageId }, ...prev].slice(0, 4));
-            fetchBalance();
-            toast.success("Thumbnail ready!");
-          };
-          const onError = (data: { message: string }) => {
-            markDone();
-            setFailed(data.message);
-            toast.error(data.message);
-          };
-
-          socket.off("thumbnail_ready");
-          socket.off("thumbnail_error");
-          socket.on("thumbnail_ready", onReady);
-          socket.on("thumbnail_error", onError);
-        }
-      } catch {
-        // WebSocket unavailable, rely on polling
-      }
-
-      // --- Timeout (hard limit) ---
-      timeoutRef.current = setTimeout(() => {
-        if (resolved) return;
-        const currentStatus = useGenerationStore.getState().status;
-        if (currentStatus === "GENERATING" || currentStatus === "REVEALING") {
-          markDone();
-          setFailed("Generation timed out. The AI provider may be unavailable.");
-          toast.error("Generation timed out. Please try again.");
-        }
-      }, TIMEOUT_MS);
-
-      // --- Polling fallback (every 5s, check job status) ---
-      pollingRef.current = setInterval(async () => {
-        if (resolved) return;
-        const currentStatus = useGenerationStore.getState().status;
-        if (currentStatus !== "GENERATING" && currentStatus !== "REVEALING") {
-          markDone();
-          return;
-        }
-        try {
-          const statusRes = await api.get<{ status: string; failedReason?: string }>(
-            `/tools/thumbnail-generator/jobs/${jobId}/status`
-          );
-          if (statusRes.status === "completed") {
-            const imagesRes = await api.get<{ data: any[] }>(
-              `/tools/thumbnail-generator/images?limit=1`
-            );
-            const latest = imagesRes?.data?.[0];
-            if (latest?.url) {
-              markDone();
-              setReady(latest.url, latest.id);
-              setVariations((prev) => [{ url: latest.url, imageId: latest.id }, ...prev].slice(0, 4));
-              fetchBalance();
-              toast.success("Thumbnail ready! (via polling)");
-            }
-          } else if (statusRes.status === "failed") {
-            markDone();
-            setFailed(statusRes.failedReason || "Generation failed");
-            toast.error(statusRes.failedReason || "Generation failed");
-          }
-        } catch {
-          // ignore polling errors
-        }
-      }, 5_000);
-    },
-    [clearTimeoutRefs, setReady, setFailed, fetchBalance]
-  );
+  }, [status, imageUrl]);
 
   const tool = tools.find((t) => t.id === params.id);
   const selectedProvider = providers.find((p) => p.id === provider);
@@ -169,14 +74,7 @@ export default function ThumbnailGeneratorPage() {
     mutationFn: async () => {
       return api.post<{ success: boolean; data: { jobId: string } }>(
         "/tools/thumbnail-generator/generate",
-        {
-          prompt,
-          negativePrompt,
-          style,
-          provider,
-          width: 1280,
-          height: 720,
-        }
+        { prompt, negativePrompt, style, provider, width: 1280, height: 720 }
       );
     },
     onSuccess: (response) => {
@@ -185,8 +83,8 @@ export default function ThumbnailGeneratorPage() {
         toast.error("Generation failed: no job ID returned");
         return;
       }
+      lastCompletedRef.current = null;
       startGeneration(jobId);
-      setupSocketAndFallback(jobId);
     },
     onError: (error: any) => {
       const message = error?.message || "Failed to generate thumbnail. Please try again.";
@@ -197,8 +95,8 @@ export default function ThumbnailGeneratorPage() {
 
   const handleGenerate = () => {
     if (!prompt.trim()) return;
-    clearTimeoutRefs();
     reset();
+    generateMutation.reset();
     generateMutation.mutate();
   };
 
@@ -335,11 +233,7 @@ export default function ThumbnailGeneratorPage() {
                     status === "READY" ? "opacity-100" : "opacity-0"
                   }`}
                 >
-                  <img
-                    src={imageUrl}
-                    alt={prompt}
-                    className="w-full aspect-video object-cover"
-                  />
+                  <img src={imageUrl} alt={prompt} className="w-full aspect-video object-cover" />
                 </div>
                 {status === "READY" && (
                   <div className="flex justify-center gap-3">
@@ -407,7 +301,7 @@ export default function ThumbnailGeneratorPage() {
           {variations.length > 0 ? (
             variations.map((v, i) => (
               <div
-                key={v.imageId || i}
+                key={v.url || i}
                 className={`rounded-lg overflow-hidden border cursor-pointer transition-all ${
                   imageUrl === v.url
                     ? "border-primary ring-2 ring-primary/20"
