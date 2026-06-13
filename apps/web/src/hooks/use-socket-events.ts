@@ -5,8 +5,10 @@ import { toast } from "sonner";
 import { useGenerationStore } from "@/store/generation.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { connectSocket } from "@/lib/socket";
+import type { ToolJobUpdatePayload } from "@creator-hub/shared-types";
 
 export function useSocketEvents() {
+  const setRevealing = useGenerationStore((s) => s.setRevealing);
   const setReady = useGenerationStore((s) => s.setReady);
   const setFailed = useGenerationStore((s) => s.setFailed);
   const fetchBalance = useCreditsStore((s) => s.fetchBalance);
@@ -20,15 +22,23 @@ export function useSocketEvents() {
       if (attachedRef.current || !socket) return;
       attachedRef.current = true;
 
-      socket.on("thumbnail_ready", (data: { url: string; imageId: string }) => {
-        setReady(data.url, data.imageId);
-        fetchBalance();
-        toast.success("Thumbnail ready!");
-      });
+      socket.on("tool_job_updated", (data: ToolJobUpdatePayload) => {
+        const store = useGenerationStore.getState();
+        if (store.toolId !== data.toolId) return;
 
-      socket.on("thumbnail_error", (data: { message: string }) => {
-        setFailed(data.message);
-        toast.error(data.message);
+        if (data.status === "completed") {
+          const payload = data.payload as { url?: string; imageId?: string };
+          if (payload.url) {
+            setRevealing(payload.url, payload.imageId || "");
+            setReady();
+            fetchBalance();
+            toast.success("Thumbnail ready!");
+          }
+        } else if (data.status === "failed") {
+          const payload = data.payload as { error?: string };
+          setFailed(payload.error || "Generation failed");
+          toast.error(payload.error || "Generation failed");
+        }
       });
     }
 
@@ -41,8 +51,7 @@ export function useSocketEvents() {
 
     return () => {
       socket.off("connect", attach);
-      socket.off("thumbnail_ready");
-      socket.off("thumbnail_error");
+      socket.off("tool_job_updated");
       attachedRef.current = false;
     };
   }, [setReady, setFailed, fetchBalance]);

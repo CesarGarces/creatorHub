@@ -4,6 +4,7 @@ import { StorageService } from "@creator-hub/storage";
 import { AIEngineService } from "@creator-hub/ai-engine";
 import { prisma } from "@creator-hub/database";
 import { Logger } from "@creator-hub/shared-utils";
+import { getFriendlyError } from "@creator-hub/shared-utils";
 import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
 
@@ -65,30 +66,8 @@ export class ThumbnailService {
     const state = await job.getState();
     return {
       status: state,
-      failedReason: state === "failed" ? this.getFriendlyError(job.failedReason || "") : undefined,
+      failedReason: state === "failed" ? getFriendlyError(job.failedReason || "") : undefined,
     };
-  }
-
-  private getFriendlyError(errorMessage: string): string {
-    const msg = errorMessage.toLowerCase();
-    if (
-      msg.includes("429") ||
-      msg.includes("resource_exhausted") ||
-      msg.includes("rate limit") ||
-      msg.includes("quota") ||
-      msg.includes("credits") ||
-      msg.includes("billing") ||
-      msg.includes("depleted")
-    ) {
-      return "AI is taking a break. The provider is taking longer than usual to process the details. Don't worry, your credits are safe. Shall we try again?";
-    }
-    if (msg.includes("timeout") || msg.includes("timed out")) {
-      return "The request took too long. The provider might be busy. Your credits are safe. Shall we try again?";
-    }
-    if (msg.includes("insufficient credits")) {
-      return "You don't have enough credits. Buy more to keep generating.";
-    }
-    return "Something went wrong. Don't worry, your credits are safe. Shall we try again?";
   }
 
   async getUserImages(userId: string, page = 1, limit = 20): Promise<any> {

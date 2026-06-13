@@ -10,6 +10,7 @@ const POLL_INTERVAL = 5_000;
 const TIMEOUT_MS = 60_000;
 
 export function useBackgroundPolling() {
+  const setRevealing = useGenerationStore((s) => s.setRevealing);
   const setReady = useGenerationStore((s) => s.setReady);
   const setFailed = useGenerationStore((s) => s.setFailed);
   const fetchBalance = useCreditsStore((s) => s.fetchBalance);
@@ -18,10 +19,10 @@ export function useBackgroundPolling() {
   const activeJobIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const unsub = useGenerationStore.subscribe((state, prev) => {
+    const unsub = useGenerationStore.subscribe((state) => {
       if (state.status === "GENERATING" && state.jobId && state.jobId !== activeJobIdRef.current) {
         activeJobIdRef.current = state.jobId;
-        startPolling(state.jobId);
+        startPolling(state.toolId!, state.jobId);
       } else if (state.status === "IDLE" || state.status === "READY" || state.status === "FAILED") {
         stopPolling();
         activeJobIdRef.current = null;
@@ -34,7 +35,7 @@ export function useBackgroundPolling() {
     };
   }, []);
 
-  function startPolling(jobId: string) {
+  function startPolling(toolId: string, jobId: string) {
     stopPolling();
 
     timeoutRef.current = setTimeout(() => {
@@ -54,16 +55,17 @@ export function useBackgroundPolling() {
       }
       try {
         const statusRes = await api.get<{ status: string; failedReason?: string }>(
-          `/tools/thumbnail-generator/jobs/${jobId}/status`
+          `/tools/${toolId}/jobs/${jobId}/status`
         );
         if (statusRes.status === "completed") {
           stopPolling();
           const imagesRes = await api.get<{ data: any[] }>(
-            `/tools/thumbnail-generator/images?limit=1`
+            `/tools/${toolId}/images?limit=1`
           );
           const latest = imagesRes?.data?.[0];
           if (latest?.url) {
-            setReady(latest.url, latest.id);
+            setRevealing(latest.url, latest.id);
+            setReady();
             fetchBalance();
             toast.success("Thumbnail ready!");
           }

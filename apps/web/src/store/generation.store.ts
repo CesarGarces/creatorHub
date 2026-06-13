@@ -2,26 +2,19 @@ import { create } from "zustand";
 
 export type GenerationStatus = "IDLE" | "GENERATING" | "REVEALING" | "READY" | "FAILED";
 
-interface GenerationState {
+// ─── Base State (reusable for ANY tool) ──────────────────────────────────────
+export interface BaseGenerationState {
   status: GenerationStatus;
-  imageUrl: string | null;
-  imageId: string | null;
-  error: string | null;
   jobId: string | null;
+  toolId: string | null;
+  resultUrl: string | null;
+  resultId: string | null;
+  error: string | null;
 
-  prompt: string;
-  negativePrompt: string;
-  style: string;
-  aiProvider: string;
-
-  setPrompt: (prompt: string) => void;
-  setNegativePrompt: (negativePrompt: string) => void;
-  setStyle: (style: string) => void;
-  setAiProvider: (provider: string) => void;
-  startGeneration: (jobId: string) => void;
-  setReady: (url: string, imageId: string) => void;
+  startGeneration: (toolId: string, jobId: string) => void;
+  setRevealing: (url: string, id: string) => void;
+  setReady: () => void;
   setFailed: (error: string) => void;
-  markRevealed: () => void;
   reset: () => void;
 }
 
@@ -34,38 +27,65 @@ const preloadImage = (url: string): Promise<void> => {
   });
 };
 
-export const useGenerationStore = create<GenerationState>()((set, get) => ({
-  status: "IDLE",
-  imageUrl: null,
-  imageId: null,
-  error: null,
-  jobId: null,
+// ─── Thumbnail-specific form state ───────────────────────────────────────────
+export interface ThumbnailFormState {
+  prompt: string;
+  negativePrompt: string;
+  style: string;
+  aiProvider: string;
 
+  setPrompt: (prompt: string) => void;
+  setNegativePrompt: (negativePrompt: string) => void;
+  setStyle: (style: string) => void;
+  setAiProvider: (provider: string) => void;
+}
+
+// ─── Combined store type ─────────────────────────────────────────────────────
+export type GenerationStore = BaseGenerationState & ThumbnailFormState;
+
+export const useGenerationStore = create<GenerationStore>()((set, get) => ({
+  // Base state
+  status: "IDLE",
+  jobId: null,
+  toolId: null,
+  resultUrl: null,
+  resultId: null,
+  error: null,
+
+  // Thumbnail form state
   prompt: "",
   negativePrompt: "",
   style: "bold",
   aiProvider: "gemini",
 
+  // Thumbnail form setters
   setPrompt: (prompt) => set({ prompt }),
   setNegativePrompt: (negativePrompt) => set({ negativePrompt }),
   setStyle: (style) => set({ style }),
   setAiProvider: (aiProvider) => set({ aiProvider }),
 
-  startGeneration: (jobId: string) => {
+  // Base actions
+  startGeneration: (toolId: string, jobId: string) => {
     set({
       status: "GENERATING",
-      imageUrl: null,
-      imageId: null,
+      resultUrl: null,
+      resultId: null,
       error: null,
       jobId,
+      toolId,
     });
   },
 
-  setReady: async (url: string, imageId: string) => {
-    set({ status: "REVEALING", imageUrl: url, imageId });
+  setRevealing: (url: string, id: string) => {
+    set({ status: "REVEALING", resultUrl: url, resultId: id });
+  },
+
+  setReady: async () => {
+    const { resultUrl } = get();
+    if (!resultUrl) return;
 
     try {
-      await preloadImage(url);
+      await preloadImage(resultUrl);
       set({ status: "READY" });
     } catch {
       set({ status: "FAILED", error: "Image failed to load" });
@@ -76,19 +96,14 @@ export const useGenerationStore = create<GenerationState>()((set, get) => ({
     set({ status: "FAILED", error });
   },
 
-  markRevealed: () => {
-    if (get().status === "REVEALING") {
-      set({ status: "READY" });
-    }
-  },
-
   reset: () => {
     set({
       status: "IDLE",
-      imageUrl: null,
-      imageId: null,
+      resultUrl: null,
+      resultId: null,
       error: null,
       jobId: null,
+      toolId: null,
     });
   },
 }));

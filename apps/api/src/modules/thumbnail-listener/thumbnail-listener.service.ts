@@ -10,6 +10,7 @@ import type {
   ThumbnailCompletedEvent,
   ThumbnailFailedEvent,
   ThumbnailReadyPayload,
+  ToolJobUpdatePayload,
 } from "@creator-hub/shared-types";
 
 const THUMBNAIL_COMPLETED_CHANNEL = "thumbnail:completed";
@@ -64,18 +65,26 @@ export class ThumbnailListenerService implements OnModuleInit, OnModuleDestroy {
         imageId: event.imageId,
       };
 
-      this.gateway.emitToUser(event.userId, "thumbnail_ready", payload);
+      this.gateway.emitToUser(event.userId, "tool_job_updated", {
+        toolId: "thumbnail-generator",
+        jobId: event.imageId,
+        status: "completed",
+        payload,
+      } satisfies ToolJobUpdatePayload);
 
-      this.logger.log("Emitted thumbnail_ready", { userId: event.userId });
+      this.logger.log("Emitted tool_job_updated", { userId: event.userId });
     } catch (error) {
       this.logger.error("Failed to generate presigned URL", {
         error: (error as Error).message,
         userId: event.userId,
       });
 
-      this.gateway.emitToUser(event.userId, "thumbnail_error", {
-        message: "Failed to generate download URL",
-      });
+      this.gateway.emitToUser(event.userId, "tool_job_updated", {
+        toolId: "thumbnail-generator",
+        jobId: "",
+        status: "failed",
+        payload: { error: "Failed to generate download URL" },
+      } satisfies ToolJobUpdatePayload);
     }
   }
 
@@ -85,8 +94,11 @@ export class ThumbnailListenerService implements OnModuleInit, OnModuleDestroy {
       error: event.rawError || event.error,
     });
 
-    this.gateway.emitToUser(event.userId, "thumbnail_error", {
-      message: event.error || "Thumbnail generation failed",
-    });
+    this.gateway.emitToUser(event.userId, "tool_job_updated", {
+      toolId: "thumbnail-generator",
+      jobId: event.jobId || "",
+      status: "failed",
+      payload: { error: event.error },
+    } satisfies ToolJobUpdatePayload);
   }
 }

@@ -6,6 +6,7 @@ import { CreditService } from "@creator-hub/billing";
 import { StorageService } from "@creator-hub/storage";
 import { prisma } from "@creator-hub/database";
 import { Logger } from "@creator-hub/shared-utils";
+import { getFriendlyError } from "@creator-hub/shared-utils";
 import {
   DomainEventPublisher,
   DOMAIN_EVENT_PUBLISHER,
@@ -185,7 +186,7 @@ export class ThumbnailProcessor extends WorkerHost {
 
     const userId = job.data?.userId;
     if (userId) {
-      const friendlyMessage = this.getFriendlyError(cleanMessage);
+      const friendlyMessage = getFriendlyError(cleanMessage);
       const event: ThumbnailFailedEvent = {
         userId,
         error: friendlyMessage,
@@ -194,27 +195,5 @@ export class ThumbnailProcessor extends WorkerHost {
       };
       await this.eventPublisher.publish(THUMBNAIL_FAILED_CHANNEL, event);
     }
-  }
-
-  private getFriendlyError(errorMessage: string): string {
-    const msg = errorMessage.toLowerCase();
-    if (
-      msg.includes("429") ||
-      msg.includes("resource_exhausted") ||
-      msg.includes("rate limit") ||
-      msg.includes("quota") ||
-      msg.includes("credits") ||
-      msg.includes("billing") ||
-      msg.includes("depleted")
-    ) {
-      return "AI is taking a break. The provider is taking longer than usual to process the details. Don't worry, your credits are safe. Shall we try again?";
-    }
-    if (msg.includes("timeout") || msg.includes("timed out")) {
-      return "The request took too long. The provider might be busy. Your credits are safe. Shall we try again?";
-    }
-    if (msg.includes("insufficient credits")) {
-      return "You don't have enough credits. Buy more to keep generating.";
-    }
-    return "Something went wrong. Don't worry, your credits are safe. Shall we try again?";
   }
 }

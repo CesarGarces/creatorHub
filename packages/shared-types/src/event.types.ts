@@ -78,6 +78,14 @@ export interface ThumbnailReadyPayload {
   imageId: string;
 }
 
+export interface ToolJobUpdatePayload {
+  toolId: string;
+  jobId: string;
+  status: "completed" | "failed";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  payload: any;
+}
+
 export type PlatformEvent =
   | ToolUsedEvent
   | CreditsDeductedEvent

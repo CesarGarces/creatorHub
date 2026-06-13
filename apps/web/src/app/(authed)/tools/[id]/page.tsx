@@ -34,7 +34,8 @@ export default function ThumbnailGeneratorPage() {
   const { balance, fetchBalance } = useCreditsStore();
   const {
     status,
-    imageUrl,
+    resultUrl: imageUrl,
+    resultId: imageId,
     error: generationError,
     prompt,
     negativePrompt,
@@ -45,6 +46,7 @@ export default function ThumbnailGeneratorPage() {
     setStyle,
     setAiProvider,
     startGeneration,
+    setRevealing,
     setReady,
     setFailed,
     reset,
@@ -89,7 +91,7 @@ export default function ThumbnailGeneratorPage() {
         return;
       }
       lastCompletedRef.current = null;
-      startGeneration(jobId);
+      startGeneration("thumbnail-generator", jobId);
     },
     onError: (error: any) => {
       const message = error?.message || "Failed to generate thumbnail. Please try again.";
@@ -314,7 +316,7 @@ export default function ThumbnailGeneratorPage() {
                     ? "border-primary ring-2 ring-primary/20"
                     : "border-border hover:border-border/80"
                 }`}
-                onClick={() => setReady(v.url, v.imageId)}
+                onClick={() => { setRevealing(v.url, v.imageId); setReady(); }}
               >
                 <img src={v.url} alt={`Variation ${i + 1}`} className="w-full aspect-video object-cover" />
               </div>
