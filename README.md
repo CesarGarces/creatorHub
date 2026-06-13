@@ -21,12 +21,14 @@ Creator Hub es una plataforma donde los creadores de contenido pueden acceder a 
 
 | Capa | Tecnología |
 |------|-----------|
-| Frontend | Next.js 14, React 18, Zustand, TanStack Query, TailwindCSS |
-| Backend | NestJS 10, TypeScript, Prisma ORM |
+| Frontend | Next.js 16, React 19, Zustand, TanStack Query, TailwindCSS |
+| Backend | NestJS 11, TypeScript, Prisma ORM |
 | Base de datos | PostgreSQL 16 |
 | Cola de mensajes | Redis + BullMQ |
-| Storage | MinIO (dev) / AWS S3 (prod) |
-| AI | OpenAI, Gemini, Stability AI, Flux, Nano Banana |
+| Storage | Cloudflare R2 (prod) / MinIO (dev) |
+| WebSocket | Socket.IO |
+| Domain Events | Redis Pub/Sub (ioredis) |
+| AI | OpenAI, Gemini, Stability AI, Flux |
 | Monorepo | Turborepo + pnpm workspaces |
 
 ## Arquitectura
@@ -34,23 +36,240 @@ Creator Hub es una plataforma donde los creadores de contenido pueden acceder a 
 ```
 creator-hub/
 ├── apps/
-│   ├── web/          # Next.js frontend
-│   └── api/          # NestJS backend
+│   ├── web/              # Next.js frontend
+│   └── api/              # NestJS backend
 ├── packages/
-│   ├── auth/         # JWT + Passport
-│   ├── ai-engine/    # Multi-provider AI abstraction
-│   ├── billing/      # Sistema de créditos
-│   ├── storage/      # S3/MinIO abstraction
-│   ├── analytics/    # Tracking de uso
-│   ├── database/     # Prisma ORM
-│   ├── tool-sdk/     # Tool Registry
-│   ├── shared-types/ # Interfaces TypeScript
-│   └── shared-utils/ # Utilidades puras
-└── tools/
-    └── thumbnail-generator/  # Primera herramienta
+│   ├── auth/             # JWT + Passport
+│   ├── ai-engine/        # Multi-provider AI abstraction
+│   ├── billing/          # Sistema de créditos
+│   ├── storage/          # R2/MinIO abstraction
+│   ├── analytics/        # Tracking de uso
+│   ├── database/         # Prisma ORM
+│   ├── domain-events/    # Redis Pub/Sub abstraction
+│   ├── tool-sdk/         # Tool Registry
+│   ├── shared-types/     # Interfaces TypeScript
+│   └── shared-utils/     # Utilidades puras
+├── tools/
+│   └── thumbnail-generator/  # Primera herramienta
+│       └── backend/          # BullMQ processor + controller
+└── agents/               # Agentes especializados
 ```
 
 El sistema sigue principios de **Clean Architecture** y **DDD**: cada herramienta es un bounded context que se registra automáticamente via `ToolRegistry`. Las dependencias apuntan hacia adentro — las herramientas dependen del SDK, nunca al revés.
+
+---
+
+## Background Task Architecture
+
+El sistema de tareas en segundo plano es **multi-tool y desacoplado**. Cualquier herramienta nueva se integra siguiendo el mismo patrón sin modificar infraestructura existente.
+
+### Diagrama de Flujo — Generación de Thumbnail
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          USUARIO (Browser)                              │
+│                                                                         │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────────────────┐  │
+│  │  Prompt Input │    │ Style Select │    │    Generate Button       │  │
+│  │  (store.form) │    │ (store.form) │    │  handleGenerate()       │  │
+│  └──────┬───────┘    └──────┬───────┘    └────────────┬─────────────┘  │
+│         │                   │                          │                 │
+│         └───────────────────┴──────────────────────────┘                │
+│                              │                                          │
+│                              ▼                                          │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │                    Zustand Store (Global)                         │  │
+│  │                                                                   │  │
+│  │  BaseGenerationState          ThumbnailFormState                  │  │
+│  │  ├── status: GENERATING       ├── prompt: "crear computador..."  │  │
+│  │  ├── jobId: "26"              ├── style: "bold"                  │  │
+│  │  ├── toolId: "thumb-gen"      ├── aiProvider: "gemini"           │  │
+│  │  ├── resultUrl: null          └── negativePrompt: ""             │  │
+│  │  └── error: null                                               │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+│                              │                                          │
+│              ┌───────────────┴───────────────┐                         │
+│              │                               │                         │
+│              ▼                               ▼                         │
+│  ┌───────────────────┐          ┌──────────────────────┐              │
+│  │ Layout:           │          │ Page:                │              │
+│  │ useSocketEvents() │          │ useBackgroundPolling()│              │
+│  │ (always active)   │          │ (starts on GENERATING)│             │
+│  └─────────┬─────────┘          └──────────┬───────────┘              │
+└────────────┼───────────────────────────────┼───────────────────────────┘
+             │                               │
+             │ WebSocket                     │ HTTP Polling
+             │ (Socket.IO)                   │ (every 5s)
+             │                               │
+┌────────────┼───────────────────────────────┼───────────────────────────┐
+│            ▼                               ▼          API (NestJS)     │
+│  ┌──────────────────┐          ┌──────────────────────────────┐       │
+│  │  AppGateway       │          │  ThumbnailController         │       │
+│  │  emitToUser()     │          │  POST /generate → enqueue    │       │
+│  └────────┬─────────┘          │  GET  /jobs/:id/status       │       │
+│           │                    └──────────────┬───────────────┘       │
+│           │                                   │                       │
+│           │                                   ▼                       │
+│           │                    ┌──────────────────────────────┐       │
+│           │                    │  ThumbnailService             │       │
+│           │                    │  generate() → BullMQ job     │       │
+│           │                    └──────────────┬───────────────┘       │
+│           │                                   │                       │
+│           │                                   ▼                       │
+│           │                    ┌──────────────────────────────┐       │
+│           │                    │  BullMQ Queue                │       │
+│           │                    │  "thumbnail-generation"      │       │
+│           │                    └──────────────┬───────────────┘       │
+│           │                                   │                       │
+│           │                                   ▼                       │
+│           │                    ┌──────────────────────────────┐       │
+│           │                    │  ThumbnailProcessor          │       │
+│           │                    │  AI → Buffer → R2 → DB      │       │
+│           │                    └──────────────┬───────────────┘       │
+│           │                                   │                       │
+│           │                    ┌──────────────┴───────────────┐       │
+│           │                    │                              │       │
+│           │                    ▼                              ▼       │
+│           │         ┌──────────────────┐         ┌────────────────┐  │
+│           │         │ @OnWorkerEvent   │         │ DomainEvent    │  │
+│           │         │ "completed"      │         │ Publisher      │  │
+│           │         │ (same process)   │         │ (Redis Pub/Sub)│  │
+│           │         └────────┬─────────┘         └───────┬────────┘  │
+│           │                  │                           │            │
+│           │                  └───────────┬───────────────┘            │
+│           │                              │                            │
+│           │                              ▼                            │
+│           │                   ┌────────────────────────┐              │
+│           │                   │ ThumbnailListener      │              │
+│           │                   │ Service                │              │
+│           │                   │ subscribe → presign →  │              │
+│           │                   │ emitToUser()           │              │
+│           │                   └───────────┬────────────┘              │
+│           │                               │                           │
+│           │                               ▼                           │
+│           │                    ┌────────────────────────┐              │
+│           │                    │ Redis Channel           │              │
+│           │                    │ "thumbnail:completed"   │              │
+│           │                    └───────────┬────────────┘              │
+│           │                               │                           │
+└───────────┼───────────────────────────────┼───────────────────────────┘
+            │                               │
+            ▼                               │
+┌───────────────────────────────────────────┼───────────────────────────┐
+│  Socket.IO Client (useSocketEvents)       │                           │
+│                                           │                           │
+│  socket.on("tool_job_updated", (data) => │                           │
+│    if (store.toolId === data.toolId) {    │                           │
+│      setRevealing(data.payload.url)      │                           │
+│      setReady()   // preload + fade-in   │                           │
+│      toast.success("Thumbnail ready!")   │                           │
+│    }                                      │                           │
+│  )                                        │                           │
+└───────────────────────────────────────────┘                           │
+                                                                       │
+┌───────────────────────────────────────────────────────────────────────┘
+│
+│  ┌──────────────────────────────────────────────────────────────────┐
+│  │  Polling Fallback (useBackgroundPolling)                         │
+│  │                                                                  │
+│  │  if (status === "GENERATING") {                                  │
+│  │    setInterval(async () => {                                     │
+│  │      const res = await GET /tools/${toolId}/jobs/${jobId}/status │
+│  │      if (res.status === "completed") → setRevealing + setReady   │
+│  │      if (res.status === "failed")    → setFailed + toast.error   │
+│  │    }, 5000)                                                      │
+│  │  }                                                               │
+│  └──────────────────────────────────────────────────────────────────┘
+```
+
+### State Machine
+
+```
+                    ┌──────────────────────────────────────┐
+                    │                                      │
+                    ▼                                      │
+              ┌──────────┐     generate()          ┌──────┴─────┐
+              │   IDLE   │ ──────────────────────▶ │ GENERATING │
+              └──────────┘                         └──────┬─────┘
+                    ▲                                     │
+                    │                              ┌──────┴──────┐
+                    │                              │             │
+                    │                              ▼             ▼
+                    │                    ┌──────────────┐  ┌──────────┐
+                    │                    │  REVEALING   │  │  FAILED  │
+                    │                    │  (preload)   │  └────┬─────┘
+                    │                    └──────┬───────┘       │
+                    │                           │               │
+                    │                    preload OK        reset()
+                    │                           │               │
+                    │                           ▼               │
+                    │                    ┌──────────┐           │
+                    └────────────────────│   READY  │◀──────────┘
+                                         └──────────┘
+```
+
+### WebSocket Event Flow
+
+```
+Backend (NestJS)                          Frontend (Next.js)
+─────────────────                         ──────────────────
+
+ThumbnailProcessor                        
+  @OnWorkerEvent("completed")             
+    │                                     
+    ├─ DomainEventPublisher               
+    │   .publish("thumbnail:completed")   
+    │       │                             
+    │       ▼                             
+    │   Redis Pub/Sub                     
+    │       │                             
+    │       ▼                             
+    │   ThumbnailListenerService          
+    │     .handleCompleted()              
+    │       │                             
+    │       ├─ StorageService             
+    │       │   .getPresignedDownloadUrl()│
+    │       │                             
+    │       └─ AppGateway                 
+    │           .emitToUser(userId,       
+    │             "tool_job_updated",     ──▶ socket.on("tool_job_updated")
+    │             {                            │
+    │               toolId,                    ├─ filter by toolId
+    │               jobId,                     ├─ setRevealing(url, id)
+    │               status: "completed",       ├─ setReady() → preload → READY
+    │               payload: { url, imageId }  └─ toast.success()
+    │             })                          
+```
+
+### Multi-Tool Integration Checklist
+
+Para agregar una nueva tool (ej: `title-generator`):
+
+| Capa | Archivo | Acción |
+|------|---------|--------|
+| **Backend** | `tools/title-generator/backend/` | Crear processor, service, controller |
+| **Backend** | `thumbnail.processor.ts` → `title.processor.ts` | Mismo patrón: AI → Store → DB |
+| **Backend** | `thumbnail-listener.service.ts` | Llamar `registerTool()` con nuevos canales |
+| **Shared** | `event.types.ts` | Agregar `TitleCompletedEvent`, `TitleFailedEvent` |
+| **Shared** | `shared-utils/error.utils.ts` | Ya reutilizable (sin cambios) |
+| **Frontend** | `store/generation.store.ts` | Componer `BaseGenerationState` + campos propios |
+| **Frontend** | `use-background-polling.ts` | Ya genérico (sin cambios, lee `toolId` del store) |
+| **Frontend** | `use-socket-events.ts` | Ya genérico (sin cambios, filtra por `toolId`) |
+| **Frontend** | `tools/[id]/page.tsx` | Crear página con campos específicos |
+
+### Paquetes Clave
+
+| Paquete | Responsabilidad | Multi-Tool |
+|---------|----------------|------------|
+| `@creator-hub/domain-events` | Publisher/Subscriber interfaces + Redis impl | ✅ Genérico |
+| `@creator-hub/shared-utils` | `getFriendlyError()`, logging, utilities | ✅ Genérico |
+| `@creator-hub/shared-types` | `ToolJobUpdatePayload`, event interfaces | ✅ Genérico |
+| `@creator-hub/storage` | `uploadBuffer()`, `getPresignedDownloadUrl()` | ✅ Genérico |
+| `@creator-hub/ai-engine` | Multi-provider AI abstraction | ✅ Genérico |
+| `@creator-hub/billing` | Credit system | ✅ Genérico |
+| `@creator-hub/ui` | Button, Badge, Skeleton, etc. | ✅ Genérico |
+
+---
 
 ## Requisitos
 
@@ -89,6 +308,7 @@ DATABASE_URL="postgresql://creatorhub:creatorhub@localhost:5433/creatorhub"
 REDIS_URL="redis://localhost:6379"
 
 # Storage (MinIO para desarrollo)
+STORAGE_PROVIDER=minio
 AWS_ACCESS_KEY_ID="minioadmin"
 AWS_SECRET_ACCESS_KEY="minioadmin"
 AWS_S3_ENDPOINT="http://localhost:9000"
@@ -127,8 +347,9 @@ POST   /api/v1/auth/login             # Login
 GET    /api/v1/tools                  # Listar herramientas
 GET    /api/v1/tools/:id              # Detalle de herramienta
 
-POST   /api/v1/tools/thumbnail-generator/generate  # Generar thumbnail
-GET    /api/v1/tools/thumbnail-generator/images     # Imágenes del usuario
+POST   /api/v1/tools/thumbnail-generator/generate       # Generar thumbnail
+GET    /api/v1/tools/thumbnail-generator/jobs/:id/status # Estado del job
+GET    /api/v1/tools/thumbnail-generator/images          # Imágenes del usuario
 
 GET    /api/v1/credits/balance        # Saldo de créditos
 GET    /api/v1/credits/plans          # Planes de suscripción
@@ -145,7 +366,6 @@ Los usuarios reciben 100 créditos al registrarse. Cada uso de herramienta descu
 | Stability AI | 8 créditos |
 | Flux | 6 créditos |
 | Gemini | 5 créditos |
-| Nano Banana | 4 créditos |
 
 ## Comandos
 
