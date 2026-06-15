@@ -35,21 +35,35 @@ export class ThumbnailService {
     width?: number;
     height?: number;
   }): Promise<EnqueuedThumbnail> {
-    const CREDIT_COST = 1;
-
     const user = await prisma.user.findUnique({ where: { id: params.userId } });
     if (!user) {
       throw new Error("User not found");
     }
 
+    const providerSlug = this.selectProviderSlug(params.provider);
+    const provider = await prisma.provider.findUnique({
+      where: { slug: providerSlug },
+    });
+    if (!provider) {
+      throw new Error("Selected provider is not available");
+    }
+
+    // Free tier users cannot use paid providers
+    if (user.plan === "FREE" && provider.tier === "PRO") {
+      throw new Error(
+        "This provider is only available on paid plans. Please upgrade.",
+      );
+    }
+
+    const creditCost = provider.costPerCredit;
     const totalCredits = user.freeCredits + user.purchasedCredits;
-    if (totalCredits < CREDIT_COST) {
+    if (totalCredits < creditCost) {
       throw new Error(
         "No credits available. Please upgrade your plan or purchase credits.",
       );
     }
 
-    const selectedProvider = this.selectProvider(user, params.provider);
+    const selectedProvider = this.selectProviderName(user, provider.slug);
 
     const job = await this.thumbnailQueue.add("generate", {
       userId: params.userId,
@@ -57,9 +71,11 @@ export class ThumbnailService {
       negativePrompt: params.negativePrompt,
       style: params.style,
       provider: selectedProvider,
+      providerId: provider.id,
+      providerTier: provider.tier,
+      creditCost,
       width: params.width || 1280,
       height: params.height || 720,
-      creditCost: CREDIT_COST,
     });
 
     this.logger.info(`Thumbnail job enqueued`, {
@@ -135,22 +151,23 @@ export class ThumbnailService {
     };
   }
 
-  private selectProvider(user: any, requestedProvider?: string): string {
+  private selectProviderSlug(requestedProvider?: string): string {
     if (requestedProvider) {
-      if (user.plan === "FREE" && user.freeCredits > 0) {
-        if (this.providerRegistry.isRegistered(requestedProvider as any)) {
-          return requestedProvider;
-        }
-        const freeProviders = this.providerRegistry.getFreeProviders();
-        const firstFree = freeProviders[0];
-        if (firstFree) {
-          return firstFree.name;
-        }
-      }
       return requestedProvider;
     }
 
-    if (user.plan === "FREE" && user.freeCredits > 0) {
+    // Default to first active free provider if none requested
+    return "z-image-turbo";
+  }
+
+  private selectProviderName(user: any, slug: string): string {
+    // If the requested provider is not registered at runtime, fall back to a
+    // registered provider respecting the user's plan.
+    if (this.providerRegistry.isRegistered(slug as any)) {
+      return slug;
+    }
+
+    if (user.plan === "FREE") {
       const freeProviders = this.providerRegistry.getFreeProviders();
       const firstFree = freeProviders[0];
       if (firstFree) {
@@ -158,6 +175,12 @@ export class ThumbnailService {
       }
     }
 
-    return "openai";
+    const allProviders = this.providerRegistry.getAllProviders();
+    const first = allProviders[0];
+    if (first) {
+      return first.name;
+    }
+
+    return slug;
   }
 }

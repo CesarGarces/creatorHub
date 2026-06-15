@@ -17,6 +17,7 @@ import { CreditsController } from "./modules/credits/credits.controller";
 import { ToolsController } from "./modules/tools/tools.controller";
 import { ImagesController } from "./modules/images/images.controller";
 import { AdminController } from "./modules/admin/admin.controller";
+import { AIController } from "./modules/ai/ai.controller";
 
 import { WebsocketModule } from "./modules/websocket/websocket.module";
 import { ThumbnailListenerModule } from "./modules/thumbnail-listener/thumbnail-listener.module";
@@ -63,6 +64,7 @@ import { ThumbnailGeneratorModule } from "@creator-hub/thumbnail-generator-backe
     ToolsController,
     ImagesController,
     AdminController,
+    AIController,
   ],
 })
 export class AppModule {}

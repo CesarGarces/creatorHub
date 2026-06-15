@@ -40,6 +40,8 @@ export class ThumbnailProcessor extends WorkerHost {
       negativePrompt?: string;
       style?: string;
       provider?: string;
+      providerId?: string;
+      providerTier?: "FREE" | "PRO";
       width: number;
       height: number;
       creditCost: number;
@@ -51,6 +53,8 @@ export class ThumbnailProcessor extends WorkerHost {
       negativePrompt,
       style,
       provider,
+      providerId,
+      providerTier,
       width,
       height,
       creditCost,
@@ -144,12 +148,13 @@ export class ThumbnailProcessor extends WorkerHost {
 
     const duration = Date.now() - startTime;
 
-    const isProModel = provider !== "siliconflow" && provider !== "mock";
+    const isProModel = providerTier === "PRO";
 
     const image = await prisma.generatedImage.create({
       data: {
         userId,
         toolId: "thumbnail-generator",
+        providerId,
         prompt,
         negativePrompt,
         provider: result.provider,

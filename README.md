@@ -68,8 +68,10 @@ El sistema sigue principios de **Clean Architecture** y **DDD**: cada herramient
 | Plan              | Créditos iniciales  | Proveedores IA                                         |
 | ----------------- | ------------------- | ------------------------------------------------------ |
 | **FREE**          | 100 créditos gratis | Solo proveedores gratuitos (Z-Image-Turbo, FLUX.2-pro) |
-| **PAY_AS_YOU_GO** | Compra bajo demanda | Todos los proveedores                                  |
-| **PREMIUM**       | Suscripción mensual | Todos los proveedores                                  |
+| **PAY_AS_YOU_GO** | Compra bajo demanda | Todos los proveedores activos                          |
+| **PREMIUM**       | Suscripción mensual | Todos los proveedores activos                          |
+
+Los proveedores y sus costos se configuran en la tabla `Provider` de la base de datos. El frontend los consume dinámicamente desde `GET /api/v1/ai/providers`.
 
 ### Flujo de registro
 
@@ -82,7 +84,7 @@ Los usuarios reciben **100 créditos gratis** al registrarse. No se requiere tar
 
 ### Sistema de créditos
 
-Cada generación cuesta **1 crédito** (flat cost). Los créditos se deducen en orden de prioridad:
+El costo por generación depende del proveedor seleccionado y se lee desde la tabla `Provider` (`costPerCredit`). Los créditos se deducen en orden de prioridad:
 
 ```
 freeCredits → purchasedCredits → Error (sin créditos)
@@ -111,14 +113,19 @@ Estos eventos se almacenan en la tabla `MarketingEvent` y se usan para:
 - Logging para futuras integraciones de email/push notifications
 - Analytics de conversión Free → Paid
 
-### Selección automática de proveedor
+### Selección de proveedor
 
 ```
-Usuario FREE + freeCredits > 0
-  → ProviderRegistry.getFreeProviders() → Z-Image-Turbo (primero)
+Frontend
+  → GET /api/v1/ai/providers
+  → Lista filtrada (isActive=true), ordenada por tier + costo
 
-Usuario con purchasedCredits > 0 o plan PREMIUM/PAY_AS_YOU_GO
-  → ProviderRegistry.getProProviders() → OpenAI, Gemini, etc.
+Usuario FREE + freeCredits > 0
+  → Solo proveedores con tier=FREE son seleccionables
+  → El backend rechaza peticiones a proveedores PRO
+
+Usuario PAY_AS_YOU_GO / PREMIUM
+  → Todos los proveedores activos disponibles
 ```
 
 ---
@@ -266,12 +273,27 @@ El sistema de tareas en segundo plano es **multi-tool y desacoplado**. Cualquier
 
 ## AI Providers
 
+Los proveedores de IA se administran desde la base de datos (`Provider`). El runtime registra las implementaciones, pero la metadata (nombre, modelo, tier, costo, tareas soportadas) se lee de la BD.
+
+### Tabla `Provider`
+
+| Campo            | Descripción                                   |
+| ---------------- | --------------------------------------------- |
+| `slug`           | ID único (`z-image-turbo`, `openai`, etc.)    |
+| `name`           | Nombre para mostrar                           |
+| `model`          | Modelo de IA (`dall-e-3`, `FLUX.2-pro`, etc.) |
+| `tier`           | `FREE` o `PRO`                                |
+| `costPerCredit`  | Créditos que consume cada generación          |
+| `isActive`       | ¿Disponible en el frontend?                   |
+| `supportedTasks` | Array de tareas soportadas (ej. `thumbnail`)  |
+| `config`         | Configuración específica del proveedor (JSON) |
+
 ### Proveedores gratuitos (tier: free)
 
-| Proveedor         | Modelo                         | Dimensiones soportadas              | Notas                      |
-| ----------------- | ------------------------------ | ----------------------------------- | -------------------------- |
-| **Z-Image-Turbo** | `Tongyi-MAI/Z-Image-Turbo`     | 1024x1024, 1280x720, 720x1280, etc. | Default para usuarios FREE |
-| **SiliconFlow**   | `black-forest-labs/FLUX.2-pro` | 1024x1024 (ignora image_size)       | Via SiliconFlow API        |
+| Proveedor         | Modelo                         | Dimensiones soportadas              | Costo |
+| ----------------- | ------------------------------ | ----------------------------------- | ----- |
+| **Z-Image-Turbo** | `Tongyi-MAI/Z-Image-Turbo`     | 1024x1024, 1280x720, 720x1280, etc. | 1 cr  |
+| **SiliconFlow**   | `black-forest-labs/FLUX.2-pro` | 1024x1024 (ignora image_size)       | 1 cr  |
 
 ### Proveedores de pago (tier: pro)
 
@@ -285,30 +307,37 @@ El sistema de tareas en segundo plano es **multi-tool y desacoplado**. Cualquier
 ### Flujo de selección
 
 ```
-selectProvider(user, requestedProvider?)
-  │
-  ├─ requestedProvider specified?
-  │   ├─ FREE user + freeCredits > 0 → validate in free providers, fallback to first free
-  │   └─ Otherwise → use requested
-  │
-  └─ No provider specified?
-      ├─ FREE user + freeCredits > 0 → first free provider (Z-Image-Turbo)
-      └─ Otherwise → "openai"
+Frontend
+  → GET /api/v1/ai/providers
+  → Renderiza selector compacto (dropdown)
+  → Envía provider seleccionado en POST /generate
+
+Backend: ThumbnailService.generate()
+  → Busca proveedor en BD por slug
+  → Si tier=PRO y plan=FREE → Error (upgrade requerido)
+  → Verifica saldo >= costPerCredit
+  → Encola job con provider, providerId, providerTier, creditCost
+
+Backend: ThumbnailProcessor.process()
+  → Genera imagen con AI provider runtime
+  → Deduce creditCost del usuario
+  → Guarda GeneratedImage con providerId y isProModel=(providerTier=PRO)
 ```
 
 ### Registro de proveedores
 
 ```typescript
-// ProviderFactory registra automáticamente al iniciar el módulo:
-new OpenAIImageProvider(); // tier: pro
-new GeminiProvider(); // tier: pro
-new StabilityAIProvider(); // tier: pro
-new FluxProvider(); // tier: pro
-new SiliconFlowProvider(); // tier: free
-new ZImageTurboProvider(); // tier: free
+// ProviderFactory registra las implementaciones al iniciar el módulo.
+// La metadata (tier, costo, etc.) se lee de la tabla Provider en runtime.
+new OpenAIImageProvider();
+new GeminiProvider();
+new StabilityAIProvider();
+new FluxProvider();
+new SiliconFlowProvider();
+new ZImageTurboProvider();
 
 // En desarrollo sin SILICONFLOW_API_KEY:
-new MockImageProvider(); // tier: free (solo dev)
+new MockImageProvider(); // solo dev
 ```
 
 ---
@@ -423,7 +452,9 @@ POST   /api/v1/auth/login             # Login
 GET    /api/v1/tools                  # Listar herramientas
 GET    /api/v1/tools/:id              # Detalle de herramienta
 
-POST   /api/v1/tools/thumbnail-generator/generate       # Generar thumbnail (accepts width, height)
+GET    /api/v1/ai/providers           # Listar proveedores activos (metadata desde BD)
+
+POST   /api/v1/tools/thumbnail-generator/generate       # Generar thumbnail (accepts width, height, provider)
 GET    /api/v1/tools/thumbnail-generator/jobs/:id/status # Estado del job
 GET    /api/v1/tools/thumbnail-generator/images          # Imágenes del usuario
 
@@ -435,7 +466,7 @@ POST   /api/v1/credits/subscribe      # Suscribirse a un plan
 
 ## Sistema de créditos
 
-Los usuarios reciben **100 créditos gratis** al registrarse. Cada generación cuesta **1 crédito** (flat cost).
+Los usuarios reciben **100 créditos gratis** al registrarse. El costo por generación depende del proveedor y se obtiene de la tabla `Provider` (`costPerCredit`).
 
 El sistema distingue entre dos tipos de créditos:
 

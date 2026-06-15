@@ -30,24 +30,24 @@ const aspectRatios = [
   { id: "16:9", label: "16:9", width: 1280, height: 720, iconClass: "w-8 h-5" },
 ];
 
-const providers = [
-  {
-    id: "z-image-turbo",
-    label: "Z-Image Turbo",
-    cost: 1,
-    tier: "free" as const,
-  },
-  { id: "siliconflow", label: "FLUX 2 Pro", cost: 1, tier: "free" as const },
-  { id: "gemini", label: "Gemini", cost: 5, tier: "pro" as const },
-  { id: "openai", label: "DALL-E 3", cost: 10, tier: "pro" as const },
-  { id: "flux", label: "Flux", cost: 6, tier: "pro" as const },
-  { id: "stability-ai", label: "Stability AI", cost: 8, tier: "pro" as const },
-];
+type ProviderFromApi = {
+  id: string;
+  name: string;
+  displayName: string;
+  tier: "free" | "pro";
+  costPerCredit: number;
+  model: string;
+  supportedTasks: string[];
+};
 
 export default function ThumbnailGeneratorPage() {
   const params = useParams();
   const { tools, fetchTools } = useToolsStore();
-  const { balance, freeCredits, plan, fetchBalance } = useCreditsStore();
+  const { balance, plan, fetchBalance } = useCreditsStore();
+  const [providers, setProviders] = useState<ProviderFromApi[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
+  const [isProviderOpen, setIsProviderOpen] = useState(false);
+  const providerDropdownRef = useRef<HTMLDivElement>(null);
   const {
     status,
     resultUrl: imageUrl,
@@ -86,10 +86,49 @@ export default function ThumbnailGeneratorPage() {
   }, [fetchTools, fetchBalance, setPrompt]);
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        providerDropdownRef.current &&
+        !providerDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsProviderOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
     if (balance === 0 && plan === "FREE") {
       setShowUpgradeModal(true);
     }
   }, [balance, plan]);
+
+  useEffect(() => {
+    api
+      .get<ProviderFromApi[]>("/ai/providers")
+      .then((list) => {
+        if (Array.isArray(list) && list.length > 0) {
+          const thumbnailProviders = list.filter((p) =>
+            p.supportedTasks?.includes("thumbnail"),
+          );
+          setProviders(thumbnailProviders);
+
+          // Ensure selected provider is valid; default to first available
+          const firstProvider = thumbnailProviders[0];
+          const validIds = new Set(thumbnailProviders.map((p) => p.id));
+          if (firstProvider && !validIds.has(aiProvider)) {
+            setAiProvider(firstProvider.id);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load providers", err);
+      })
+      .finally(() => {
+        setProvidersLoading(false);
+      });
+  }, [aiProvider, setAiProvider]);
 
   useEffect(() => {
     if (
@@ -180,7 +219,7 @@ export default function ThumbnailGeneratorPage() {
             )}
             {selectedProvider && (
               <Badge variant="primary" size="sm">
-                ⚡ {selectedProvider.cost} credits
+                ⚡ {selectedProvider.costPerCredit} credits
               </Badge>
             )}
             {plan === "FREE" && (
@@ -298,41 +337,130 @@ export default function ThumbnailGeneratorPage() {
             </div>
           </div>
 
-          <div>
+          <div className="relative" ref={providerDropdownRef}>
             <label className="block text-sm font-medium text-text-muted mb-3">
               AI Provider
             </label>
-            <div className="space-y-2">
-              {providers.map((p) => (
+            {providersLoading ? (
+              <div className="h-12 rounded-lg bg-surface-elevated animate-pulse" />
+            ) : providers.length === 0 ? (
+              <p className="text-xs text-text-dim">No providers available.</p>
+            ) : (
+              <>
                 <button
-                  key={p.id}
-                  onClick={() => !isProcessing && setAiProvider(p.id)}
-                  disabled={
-                    isProcessing ||
-                    (p.tier === "pro" && plan === "FREE" && freeCredits > 0)
-                  }
-                  className={`flex w-full items-center justify-between rounded-lg border p-3 text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                    aiProvider === p.id
+                  type="button"
+                  onClick={() => !isProcessing && setIsProviderOpen((v) => !v)}
+                  disabled={isProcessing}
+                  aria-haspopup="listbox"
+                  aria-expanded={isProviderOpen}
+                  className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] ${
+                    isProviderOpen
                       ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-surface-elevated text-text-muted hover:border-primary/50 hover:bg-primary/5"
+                      : "border-border bg-surface-elevated text-text hover:border-primary/50 hover:bg-primary/5"
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{p.label}</span>
-                    {p.tier === "free" ? (
-                      <Badge variant="free" size="sm">
-                        FREE
-                      </Badge>
-                    ) : (
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium truncate">
+                      {selectedProvider?.displayName ||
+                        selectedProvider?.name ||
+                        "Select provider"}
+                    </span>
+                    {selectedProvider?.tier === "pro" && (
                       <Badge variant="premium" size="sm">
                         PRO
                       </Badge>
                     )}
                   </div>
-                  <span className="text-xs">⚡ {p.cost} cr</span>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    {selectedProvider && (
+                      <span className="text-xs text-text-muted tabular-nums">
+                        {selectedProvider.costPerCredit} cr
+                      </span>
+                    )}
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className={`transition-transform duration-200 ${
+                        isProviderOpen ? "rotate-180" : ""
+                      }`}
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
                 </button>
-              ))}
-            </div>
+
+                {isProviderOpen && (
+                  <div
+                    className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-border bg-surface-elevated shadow-xl animate-fade-in"
+                    role="listbox"
+                    aria-label="AI Provider"
+                  >
+                    {providers.map((p) => {
+                      const isSelected = aiProvider === p.id;
+                      const isDisabled =
+                        isProcessing || (p.tier === "pro" && plan === "FREE");
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          disabled={isDisabled}
+                          onClick={() => {
+                            if (isDisabled) return;
+                            setAiProvider(p.id);
+                            setIsProviderOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between px-3 py-3 text-sm text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] ${
+                            isSelected
+                              ? "bg-primary/10 text-primary"
+                              : "hover:bg-surface text-text"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-medium truncate">
+                              {p.displayName || p.name}
+                            </span>
+                            {p.tier === "pro" && (
+                              <Badge variant="premium" size="sm">
+                                PRO
+                              </Badge>
+                            )}
+                            {isDisabled && p.tier === "pro" && (
+                              <span className="text-[10px] text-text-dim whitespace-nowrap">
+                                (upgrade)
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                            <span className="text-xs text-text-muted tabular-nums">
+                              {p.costPerCredit} cr
+                            </span>
+                            {isSelected && (
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                className="text-primary"
+                              >
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           <div className="pt-2">
@@ -343,14 +471,14 @@ export default function ThumbnailGeneratorPage() {
               isLoading={isProcessing}
               disabled={
                 !prompt.trim() ||
-                balance < (selectedProvider?.cost || 1) ||
+                balance < (selectedProvider?.costPerCredit ?? 1) ||
                 isProcessing
               }
               onClick={handleGenerate}
             >
               {isProcessing ? "Generating..." : "Generate Thumbnail"}
             </Button>
-            {balance < (selectedProvider?.cost || 1) && (
+            {balance < (selectedProvider?.costPerCredit ?? 1) && (
               <p className="mt-2 text-xs text-error text-center">
                 Insufficient credits.{" "}
                 <button

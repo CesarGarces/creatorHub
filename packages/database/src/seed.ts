@@ -81,6 +81,79 @@ async function main() {
     console.log(`Admin created: ${admin.email}`);
   }
 
+  // Seed AI providers
+  const providers = [
+    {
+      slug: "z-image-turbo",
+      name: "Z-Image Turbo",
+      model: "Tongyi-MAI/Z-Image-Turbo",
+      tier: "FREE" as const,
+      costPerCredit: 1,
+      isActive: true,
+      supportedTasks: ["thumbnail"],
+    },
+    {
+      slug: "siliconflow",
+      name: "FLUX 2 Pro",
+      model: "black-forest-labs/FLUX.2-pro",
+      tier: "FREE" as const,
+      costPerCredit: 1,
+      isActive: true,
+      supportedTasks: ["thumbnail"],
+    },
+    {
+      slug: "gemini",
+      name: "Gemini",
+      model: "gemini-2.0-flash",
+      tier: "PRO" as const,
+      costPerCredit: 5,
+      isActive: true,
+      supportedTasks: ["thumbnail"],
+    },
+    {
+      slug: "openai",
+      name: "DALL-E 3",
+      model: "dall-e-3",
+      tier: "PRO" as const,
+      costPerCredit: 10,
+      isActive: true,
+      supportedTasks: ["thumbnail"],
+    },
+    {
+      slug: "flux",
+      name: "Flux",
+      model: "flux-1.1-pro",
+      tier: "PRO" as const,
+      costPerCredit: 6,
+      isActive: true,
+      supportedTasks: ["thumbnail"],
+    },
+    {
+      slug: "stability-ai",
+      name: "Stability AI",
+      model: "stable-diffusion-xl-1024-v1-0",
+      tier: "PRO" as const,
+      costPerCredit: 8,
+      isActive: true,
+      supportedTasks: ["thumbnail"],
+    },
+  ];
+
+  for (const p of providers) {
+    await prisma.provider.upsert({
+      where: { slug: p.slug },
+      update: {
+        name: p.name,
+        model: p.model,
+        tier: p.tier,
+        costPerCredit: p.costPerCredit,
+        isActive: p.isActive,
+        supportedTasks: p.supportedTasks,
+      },
+      create: p,
+    });
+  }
+
   console.log("Seed completed");
 }
 

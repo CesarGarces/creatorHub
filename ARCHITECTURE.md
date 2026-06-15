@@ -104,6 +104,7 @@ creator-hub/
 │       │       ├── credits/
 │       │       ├── tools/
 │       │       ├── images/
+│       │       ├── ai/             # DB-driven provider metadata
 │       │       ├── admin/
 │       │       └── webhooks/
 │       ├── test/
@@ -326,27 +327,37 @@ interface AIProviderInterface {
 
 ### Provider Selection Strategy
 
+Provider metadata (name, model, tier, cost, active status, supported tasks) lives in the `Provider` table and is exposed via `GET /api/v1/ai/providers`. Runtime provider implementations are still registered in `ProviderFactory` / `ProviderRegistry`, but their configuration is DB-driven.
+
 When a tool calls `aiEngine.execute(request)`:
 
-1. If `request.provider` is specified → use directly
-2. Otherwise → select optimal provider from registry
-3. Provider selection is based on: task type match, priority, availability
-4. Tools never hardcode provider names
+1. Frontend fetches active providers from `GET /api/v1/ai/providers`
+2. User selects a provider; frontend sends `provider` slug in the request
+3. Backend validates the provider exists in DB and respects user plan tier
+4. If `request.provider` is specified → use directly (after DB validation)
+5. Otherwise → select optimal provider from registry
+6. Provider selection is based on: task type match, priority, availability, plan restrictions
+7. Tools never hardcode provider names or costs
 
 ### Provider Tiers
 
-Providers are classified by tier:
+Providers are classified by tier in the `Provider` table:
 
 | Tier   | Providers                               | Used By                |
 | ------ | --------------------------------------- | ---------------------- |
 | `free` | Z-Image-Turbo, SiliconFlow (FLUX.2-pro) | FREE plan users        |
 | `pro`  | OpenAI, Gemini, Stability AI, Flux      | PAY_AS_YOU_GO, PREMIUM |
 
-The `ProviderRegistry` exposes:
+The `ProviderRegistry` exposes runtime provider instances:
 
-- `getFreeProviders()` — Returns only free-tier providers
-- `getProProviders()` — Returns only pro-tier providers
-- `getProviderForUser(user)` — Auto-selects based on plan and credits
+- `getFreeProviders()` — Returns only free-tier runtime providers
+- `getProProviders()` — Returns only pro-tier runtime providers
+- `getAllProviders()` — Returns all registered runtime providers
+- `isRegistered(name)` — Checks if a runtime provider is available
+
+The `AIController` exposes DB-driven provider metadata:
+
+- `GET /api/v1/ai/providers` — Returns active providers with `id`, `name`, `displayName`, `tier`, `costPerCredit`, `model`, `supportedTasks`
 
 ---
 
@@ -386,8 +397,11 @@ The `ProviderRegistry` exposes:
 │ createdAt              │   │   GeneratedImage        │
 └────────────────────────┘   ├─────────────────────────┤
                              │ id (PK)                 │
-┌──────────────────────────┐ │ userId (FK)             │
-│   MarketingEvent         │ │ toolId (FK)             │
+                             │ userId (FK)             │
+                             │ toolId (FK)             │
+                             │ providerId (FK)         │
+┌──────────────────────────┐ │ prompt                  │
+│   MarketingEvent         │ │ provider                │
 ├──────────────────────────┤ │ prompt                  │
 │ id (PK)                  │ │ provider                │
 │ userId (FK)              │ │ model                   │
@@ -397,6 +411,21 @@ The `ProviderRegistry` exposes:
 │ metadata (JSON)          │ │ credits                 │
 │ createdAt                │ │ createdAt               │
 └──────────────────────────┘ └─────────────────────────┘
+
+                             ┌─────────────────────────┐
+                             │       Provider          │
+                             ├─────────────────────────┤
+                             │ id (PK)                 │
+                             │ slug (UQ)               │
+                             │ name                    │
+                             │ model                   │
+                             │ tier (FREE/PRO)         │
+                             │ costPerCredit           │
+                             │ isActive                │
+                             │ supportedTasks          │
+                             │ config (JSON)           │
+                             │ createdAt, updatedAt    │
+                             └─────────────────────────┘
 
 ┌─────────────────────┐   ┌─────────────────────┐
 │   Subscription      │   │   UsageLog          │
@@ -428,7 +457,8 @@ The `ProviderRegistry` exposes:
 - **No `CreditBalance` model** — Credits live directly on `User` as `freeCredits` + `purchasedCredits`
 - **`UserPlan` enum** — `FREE`, `PAY_AS_YOU_GO`, `PREMIUM`
 - **`MarketingEvent`** — Tracks credit threshold events for conversion analytics
-- **`GeneratedImage.isProModel`** — Distinguishes free vs pro tier generations
+- **`Provider` model** — Metadata de proveedores IA (slug, name, model, tier, costPerCredit, isActive, supportedTasks, config)
+- **`GeneratedImage.providerId`** — Relación con `Provider`; `isProModel` se deriva del tier del proveedor
 
 ---
 
@@ -444,9 +474,11 @@ GET    /api/v1/tools                 # List active tools
 GET    /api/v1/tools/:id             # Get tool details
 GET    /api/v1/tools/routes          # Get all frontend routes
 
+GET    /api/v1/ai/providers          # List active AI providers from DB
+
 POST   /api/v1/images/generate       # Generate image (generic)
 
-POST   /api/v1/tools/thumbnail-generator/generate  # Generate (accepts width, height)
+POST   /api/v1/tools/thumbnail-generator/generate  # Generate (accepts width, height, provider)
 GET    /api/v1/tools/thumbnail-generator/jobs/:id/status
 GET    /api/v1/tools/thumbnail-generator/images     # User's images
 
@@ -512,24 +544,30 @@ POST   /api/v1/admin/tools/toggle    # Enable/disable tool
 ```
 User clicks "Generate" in Thumbnail Generator
     │
-    ├──► API: POST /tools/thumbnail-generator/generate
+    ├──► Frontend: GET /ai/providers (cached, DB-driven metadata)
+    │
+    ├──► Frontend: POST /tools/thumbnail-generator/generate
+    │       │        (includes provider slug, width, height)
     │       │
-    │       ├──► CreditService.deduct() ← emits "credits.deducted"
-    │       │                              └──► Analytics records
-    │       │
-    │       ├──► AIEngineService.generateImage()
-    │       │       │
-    │       │       ├──► OpenAI Provider generate()
-    │       │       │
-    │       │       └──► emits "ai.request.completed"
-    │       │               └──► Billing calculates cost
-    │       │
-    │       ├──► UsageTracker.track() ──► Analytics queue
+    │       ├──► ThumbnailService.generate()
+    │       │       ├──► Lookup provider in DB (tier, costPerCredit)
+    │       │       ├──► Validate plan vs provider tier (FREE cannot use PRO)
+    │       │       ├──► Check totalCredits >= costPerCredit
+    │       │       └──► Enqueue BullMQ job with providerId + providerTier
     │       │
     │       ├──► BullMQ: "thumbnail-generation" queue
-    │       │       └──► Post-processing (resize, overlay)
+    │       │       │
+    │       │       └──► ThumbnailProcessor.process()
+    │       │               ├──► AIEngineService.generateImage()
+    │       │               │       └──► Runtime AI Provider generate()
+    │       │               ├──► StorageService.uploadBuffer()
+    │       │               ├──► CreditService.deduct(creditCost)
+    │       │               │       └──► emits "credits.deducted"
+    │       │               └──► GeneratedImage.create(providerId, credits=creditCost)
     │       │
-    │       └──► Returns { url, credits, duration }
+    │       └──► Returns { jobId }
+    │
+    ├──► WebSocket: "tool_job_updated" → presigned URL
     │
     └──► Frontend shows image, updates credit balance
 ```
@@ -601,15 +639,20 @@ Events emitted when credit thresholds are crossed:
 
 ### Credit Costs
 
-Flat cost: **1 generation = 1 credit** regardless of provider.
+Provider-specific cost: each `Provider` row defines `costPerCredit`. ThumbnailService reads this value at request time and passes it to the worker. Credit deduction uses the actual provider cost, not a flat rate.
 
 ### Provider Selection by Plan
 
 ```
-FREE + freeCredits > 0  → Free providers (Z-Image-Turbo, FLUX.2-pro)
-FREE + freeCredits = 0  → Error (upgrade modal)
-PAY_AS_YOU_GO           → All providers
-PREMIUM                 → All providers
+Frontend
+  → GET /ai/providers
+  → Render only selectable providers
+  → PRO providers disabled for FREE plan
+
+Backend validation
+  → FREE + provider.tier=PRO → Error (upgrade required)
+  → FREE + provider.tier=FREE + totalCredits >= costPerCredit → OK
+  → PAY_AS_YOU_GO / PREMIUM + totalCredits >= costPerCredit → OK
 ```
 
 ---
@@ -998,18 +1041,18 @@ export class YourToolService {
 
 ### Architecture Decision Records
 
-| Decision                      | Rationale                                                                                               |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Modular Monolith first**    | Faster iteration, no distributed complexity. Microservices boundaries are well-defined for future split |
-| **Tool SDK for registration** | Loose coupling: tools don't import the registry directly                                                |
-| **AI Provider pattern**       | Tools switch providers via config, not code changes. Add a provider = add a class                       |
-| **BullMQ for events**         | Redis-backed, supports delays, retries, scheduling. Familiar for NestJS devs                            |
-| **Prisma as ORM**             | Type-safe, auto-generated client, strong migration system                                               |
-| **Zustand over Redux**        | Minimal boilerplate, TypeScript-native, persist middleware built in                                     |
-| **React Query**               | Server state management, caching, deduplication built in                                                |
-| **Credits as abstraction**    | Rate limits, monetization, and abuse prevention unified in one system                                   |
-| **pnpm workspaces**           | Faster than npm/yarn, strict dependency isolation                                                       |
-| **S3-compatible storage**     | MinIO for dev, AWS S3 for prod — same interface                                                         |
+| Decision                      | Rationale                                                                                                                                         |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Modular Monolith first**    | Faster iteration, no distributed complexity. Microservices boundaries are well-defined for future split                                           |
+| **Tool SDK for registration** | Loose coupling: tools don't import the registry directly                                                                                          |
+| **AI Provider pattern**       | Tools switch providers via config, not code changes. Runtime classes + DB metadata (`Provider`) decouple implementation from pricing/availability |
+| **BullMQ for events**         | Redis-backed, supports delays, retries, scheduling. Familiar for NestJS devs                                                                      |
+| **Prisma as ORM**             | Type-safe, auto-generated client, strong migration system                                                                                         |
+| **Zustand over Redux**        | Minimal boilerplate, TypeScript-native, persist middleware built in                                                                               |
+| **React Query**               | Server state management, caching, deduplication built in                                                                                          |
+| **Credits as abstraction**    | Rate limits, monetization, and abuse prevention unified in one system                                                                             |
+| **pnpm workspaces**           | Faster than npm/yarn, strict dependency isolation                                                                                                 |
+| **S3-compatible storage**     | MinIO for dev, AWS S3 for prod — same interface                                                                                                   |
 
 ---
 

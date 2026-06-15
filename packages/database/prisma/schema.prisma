@@ -244,6 +244,27 @@ model AIProviderConfig {
   updatedAt DateTime @updatedAt
 }
 
+model Provider {
+  id              String   @id @default(cuid())
+  slug            String   @unique           // "z-image-turbo", "siliconflow", etc.
+  name            String                     // "Z-Image Turbo", "FLUX 2 Pro", etc.
+  model           String                     // "Tongyi-MAI/Z-Image-Turbo", etc.
+  tier            ProviderTier @default(FREE)
+  costPerCredit   Int      @default(1)
+  isActive        Boolean  @default(true)
+  supportedTasks  String[] @default(["thumbnail"])
+  config          Json?                     // api key, base url, etc.
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  images GeneratedImage[]
+}
+
+enum ProviderTier {
+  FREE
+  PRO
+}
+
 model AIRequestLog {
   id         String   @id @default(cuid())
   userId     String?
@@ -287,6 +308,7 @@ model GeneratedImage {
   userId    String
   toolId    String?
   fileId    String?
+  providerId String?
   prompt    String
   negativePrompt String?
   provider  String
@@ -301,9 +323,10 @@ model GeneratedImage {
   isPublic  Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  user User    @relation(fields: [userId], references: [id])
-  tool Tool?   @relation(fields: [toolId], references: [id])
-  file File?   @relation(fields: [fileId], references: [id])
+  user     User      @relation(fields: [userId], references: [id])
+  tool     Tool?     @relation(fields: [toolId], references: [id])
+  file     File?     @relation(fields: [fileId], references: [id])
+  providerRef Provider? @relation(fields: [providerId], references: [id])
 }
 
 // ──────────────────────────────────────────────
