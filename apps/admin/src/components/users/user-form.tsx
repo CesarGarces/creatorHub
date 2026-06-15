@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input } from "@creator-hub/ui";
+import { Toggle } from "@/components/ui/toggle";
 import type { User } from "@/types";
 
 interface UserFormProps {
@@ -176,18 +177,15 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
+      <div className="flex items-center">
+        <Toggle
           name="isActive"
-          id="isActive"
           checked={form.isActive}
-          onChange={handleChange}
-          className="h-4 w-4 rounded border-border bg-surface text-primary"
+          onChange={(checked) =>
+            setForm((prev) => ({ ...prev, isActive: checked }))
+          }
+          label="Active"
         />
-        <label htmlFor="isActive" className="text-sm text-text-muted">
-          Active
-        </label>
       </div>
 
       <div className="flex items-center gap-3 pt-4">

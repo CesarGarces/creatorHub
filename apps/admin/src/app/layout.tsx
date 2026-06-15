@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Creator Hub Admin",
   description: "Admin panel for Creator Hub",
+  icons: {
+    icon: "/logo-dark.png",
+  },
 };
 
 export default function RootLayout({
