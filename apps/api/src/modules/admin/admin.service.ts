@@ -244,7 +244,7 @@ export class AdminService {
         plan: dto.plan ?? "FREE",
         freeCredits: dto.freeCredits ?? 100,
         purchasedCredits: dto.purchasedCredits ?? 0,
-        isActive: true,
+        isActive: dto.isActive ?? true,
       },
       select: {
         id: true,

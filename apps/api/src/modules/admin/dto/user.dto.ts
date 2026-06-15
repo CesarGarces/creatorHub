@@ -50,6 +50,10 @@ export class CreateUserDto {
   @Min(0)
   @IsOptional()
   purchasedCredits?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
 }
 
 class UpdateUserBaseDto {
