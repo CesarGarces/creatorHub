@@ -94,6 +94,18 @@ creator-hub/
 │   │   │   └── lib/           # API client, query client
 │   │   └── next.config.js
 │   │
+│   ├── admin/                 # Next.js admin panel (separate app)
+│   │   ├── src/
+│   │   │   ├── app/
+│   │   │   │   ├── page.tsx           # Dashboard
+│   │   │   │   ├── providers/         # Provider CRUD
+│   │   │   │   ├── users/             # User CRUD
+│   │   │   │   └── login/             # Admin login
+│   │   │   ├── components/
+│   │   │   ├── lib/
+│   │   │   └── types/
+│   │   └── package.json
+│   │
 │   └── api/                   # NestJS backend
 │       ├── src/
 │       │   ├── main.ts
@@ -456,9 +468,11 @@ The `AIController` exposes DB-driven provider metadata:
 
 - **No `CreditBalance` model** — Credits live directly on `User` as `freeCredits` + `purchasedCredits`
 - **`UserPlan` enum** — `FREE`, `PAY_AS_YOU_GO`, `PREMIUM`
+- **`UserRole` enum** — `USER`, `ADMIN`
 - **`MarketingEvent`** — Tracks credit threshold events for conversion analytics
 - **`Provider` model** — Metadata de proveedores IA (slug, name, model, tier, costPerCredit, isActive, supportedTasks, config)
 - **`GeneratedImage.providerId`** — Relación con `Provider`; `isProModel` se deriva del tier del proveedor
+- **Soft delete** — Users use `isActive: false` instead of `DELETE`
 
 ---
 
@@ -487,7 +501,23 @@ GET    /api/v1/credits/marketing-events  # Marketing events for user
 GET    /api/v1/credits/plans         # List subscription plans
 POST   /api/v1/credits/subscribe     # Subscribe to plan
 
-GET    /api/v1/admin/dashboard       # Admin stats
+# Admin module
+GET    /api/v1/admin/dashboard/stats       # General stats
+GET    /api/v1/admin/dashboard/usage       # Usage by provider/service
+GET    /api/v1/admin/dashboard/top-users   # Top users
+GET    /api/v1/admin/dashboard/registrations # Monthly registrations
+
+GET    /api/v1/admin/providers             # List providers
+POST   /api/v1/admin/providers             # Create provider
+PUT    /api/v1/admin/providers/:id         # Update provider
+DELETE /api/v1/admin/providers/:id         # Delete provider
+
+GET    /api/v1/admin/users                 # List users
+POST   /api/v1/admin/users                 # Create user
+PUT    /api/v1/admin/users/:id             # Update user
+POST   /api/v1/admin/users/:id/deactivate  # Soft delete user
+POST   /api/v1/admin/users/:id/activate    # Reactivate user
+
 GET    /api/v1/admin/tools           # List all tools (admin)
 POST   /api/v1/admin/tools/toggle    # Enable/disable tool
 ```
@@ -654,6 +684,19 @@ Backend validation
   → FREE + provider.tier=FREE + totalCredits >= costPerCredit → OK
   → PAY_AS_YOU_GO / PREMIUM + totalCredits >= costPerCredit → OK
 ```
+
+### Admin Management
+
+Admins can manage providers and users via `AdminModule`:
+
+```
+AdminController
+  ├── AdminGuard (role === ADMIN)
+  ├── Providers CRUD
+  └── Users CRUD (soft delete via isActive)
+```
+
+User credits are **read-only** in admin. Soft delete prevents accidental data loss and preserves historical records.
 
 ---
 
@@ -1041,18 +1084,20 @@ export class YourToolService {
 
 ### Architecture Decision Records
 
-| Decision                      | Rationale                                                                                                                                         |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Modular Monolith first**    | Faster iteration, no distributed complexity. Microservices boundaries are well-defined for future split                                           |
-| **Tool SDK for registration** | Loose coupling: tools don't import the registry directly                                                                                          |
-| **AI Provider pattern**       | Tools switch providers via config, not code changes. Runtime classes + DB metadata (`Provider`) decouple implementation from pricing/availability |
-| **BullMQ for events**         | Redis-backed, supports delays, retries, scheduling. Familiar for NestJS devs                                                                      |
-| **Prisma as ORM**             | Type-safe, auto-generated client, strong migration system                                                                                         |
-| **Zustand over Redux**        | Minimal boilerplate, TypeScript-native, persist middleware built in                                                                               |
-| **React Query**               | Server state management, caching, deduplication built in                                                                                          |
-| **Credits as abstraction**    | Rate limits, monetization, and abuse prevention unified in one system                                                                             |
-| **pnpm workspaces**           | Faster than npm/yarn, strict dependency isolation                                                                                                 |
-| **S3-compatible storage**     | MinIO for dev, AWS S3 for prod — same interface                                                                                                   |
+| Decision                        | Rationale                                                                                                                                         |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Modular Monolith first**      | Faster iteration, no distributed complexity. Microservices boundaries are well-defined for future split                                           |
+| **Tool SDK for registration**   | Loose coupling: tools don't import the registry directly                                                                                          |
+| **AI Provider pattern**         | Tools switch providers via config, not code changes. Runtime classes + DB metadata (`Provider`) decouple implementation from pricing/availability |
+| **BullMQ for events**           | Redis-backed, supports delays, retries, scheduling. Familiar for NestJS devs                                                                      |
+| **Prisma as ORM**               | Type-safe, auto-generated client, strong migration system                                                                                         |
+| **Zustand over Redux**          | Minimal boilerplate, TypeScript-native, persist middleware built in                                                                               |
+| **React Query**                 | Server state management, caching, deduplication built in                                                                                          |
+| **Credits as abstraction**      | Rate limits, monetization, and abuse prevention unified in one system                                                                             |
+| **pnpm workspaces**             | Faster than npm/yarn, strict dependency isolation                                                                                                 |
+| **S3-compatible storage**       | MinIO for dev, AWS S3 for prod — same interface                                                                                                   |
+| **Admin Panel as separate app** | `apps/admin` isolates admin UI, allows independent deploy and stricter access controls                                                            |
+| **Soft delete for users**       | Prevents data loss, preserves analytics and audit trails                                                                                          |
 
 ---
 

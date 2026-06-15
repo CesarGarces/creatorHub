@@ -1,4 +1,5 @@
 import { PrismaClient } from "../generated/client";
+import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -62,24 +63,28 @@ async function main() {
     });
   }
 
-  // Create admin user if not exists
-  const existingAdmin = await prisma.user.findUnique({
+  // Create or update admin user
+  const passwordHash = await bcrypt.hash("admin123", 12);
+  const admin = await prisma.user.upsert({
     where: { email: "admin@creatorhub.ai" },
+    update: {
+      passwordHash,
+      role: "ADMIN",
+      plan: "PREMIUM",
+      freeCredits: 999999,
+      purchasedCredits: 999999,
+    },
+    create: {
+      email: "admin@creatorhub.ai",
+      name: "Admin",
+      passwordHash,
+      role: "ADMIN",
+      plan: "PREMIUM",
+      freeCredits: 999999,
+      purchasedCredits: 999999,
+    },
   });
-
-  if (!existingAdmin) {
-    const admin = await prisma.user.create({
-      data: {
-        email: "admin@creatorhub.ai",
-        name: "Admin",
-        role: "ADMIN",
-        plan: "PREMIUM",
-        freeCredits: 999999,
-        purchasedCredits: 999999,
-      },
-    });
-    console.log(`Admin created: ${admin.email}`);
-  }
+  console.log(`Admin ready: ${admin.email}`);
 
   // Seed AI providers
   const providers = [

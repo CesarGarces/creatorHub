@@ -16,7 +16,7 @@ import { AuthController } from "./modules/auth/auth.controller";
 import { CreditsController } from "./modules/credits/credits.controller";
 import { ToolsController } from "./modules/tools/tools.controller";
 import { ImagesController } from "./modules/images/images.controller";
-import { AdminController } from "./modules/admin/admin.controller";
+import { AdminModule } from "./modules/admin/admin.module";
 import { AIController } from "./modules/ai/ai.controller";
 
 import { WebsocketModule } from "./modules/websocket/websocket.module";
@@ -50,6 +50,7 @@ import { ThumbnailGeneratorModule } from "@creator-hub/thumbnail-generator-backe
     AnalyticsModule,
     DomainEventsModule,
     ToolSdkModule,
+    AdminModule,
 
     // WebSocket + event listeners
     WebsocketModule,
@@ -63,7 +64,6 @@ import { ThumbnailGeneratorModule } from "@creator-hub/thumbnail-generator-backe
     CreditsController,
     ToolsController,
     ImagesController,
-    AdminController,
     AIController,
   ],
 })

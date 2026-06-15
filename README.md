@@ -437,9 +437,41 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 | Servicio      | URL                            |
 | ------------- | ------------------------------ |
 | Frontend      | http://localhost:3000          |
+| Landing       | http://localhost:3002          |
+| Admin Panel   | http://localhost:3003          |
 | API           | http://localhost:3001          |
 | Swagger       | http://localhost:3001/api/docs |
 | MinIO Console | http://localhost:9001          |
+
+## Admin Panel
+
+Panel de administración independiente en `apps/admin/`.
+
+```
+GET    /api/v1/admin/dashboard/stats          # Estadísticas generales
+GET    /api/v1/admin/dashboard/usage          # Uso por proveedor/servicio
+GET    /api/v1/admin/dashboard/top-users      # Top usuarios
+GET    /api/v1/admin/dashboard/registrations  # Registros por mes
+
+GET    /api/v1/admin/providers                # Listar proveedores
+POST   /api/v1/admin/providers                # Crear proveedor
+PUT    /api/v1/admin/providers/:id            # Editar proveedor
+DELETE /api/v1/admin/providers/:id            # Eliminar proveedor
+
+GET    /api/v1/admin/users                    # Listar usuarios
+POST   /api/v1/admin/users                    # Crear usuario
+PUT    /api/v1/admin/users/:id                # Editar usuario
+POST   /api/v1/admin/users/:id/deactivate     # Desactivar usuario (soft delete)
+POST   /api/v1/admin/users/:id/activate       # Reactivar usuario
+```
+
+**Características:**
+
+- Dashboard con métricas y gráficos
+- Gestión de proveedores IA (tier, costo, modelo, tareas)
+- Gestión de usuarios con soft delete (`isActive`)
+- Los créditos de usuario son de solo lectura en el admin
+- Protección: no se puede desactivar el último admin ni a sí mismo
 
 ## API
 
@@ -453,6 +485,21 @@ GET    /api/v1/tools                  # Listar herramientas
 GET    /api/v1/tools/:id              # Detalle de herramienta
 
 GET    /api/v1/ai/providers           # Listar proveedores activos (metadata desde BD)
+
+# Admin endpoints (requieren rol ADMIN)
+GET    /api/v1/admin/dashboard/stats
+GET    /api/v1/admin/dashboard/usage
+GET    /api/v1/admin/dashboard/top-users
+GET    /api/v1/admin/dashboard/registrations
+GET    /api/v1/admin/providers
+POST   /api/v1/admin/providers
+PUT    /api/v1/admin/providers/:id
+DELETE /api/v1/admin/providers/:id
+GET    /api/v1/admin/users
+POST   /api/v1/admin/users
+PUT    /api/v1/admin/users/:id
+POST   /api/v1/admin/users/:id/deactivate
+POST   /api/v1/admin/users/:id/activate
 
 POST   /api/v1/tools/thumbnail-generator/generate       # Generar thumbnail (accepts width, height, provider)
 GET    /api/v1/tools/thumbnail-generator/jobs/:id/status # Estado del job

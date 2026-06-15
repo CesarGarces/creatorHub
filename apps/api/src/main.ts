@@ -19,8 +19,19 @@ async function bootstrap() {
   const frontendUrl = (
     process.env.FRONTEND_URL || "http://localhost:3000"
   ).replace(/\/+$/, "");
-  const devOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
-  const allowedOrigins = [...new Set([frontendUrl, ...devOrigins])];
+  const adminUrl = (process.env.ADMIN_URL || "http://localhost:3003").replace(
+    /\/+$/,
+    "",
+  );
+  const devOrigins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3002",
+    "http://127.0.0.1:3002",
+    "http://localhost:3003",
+    "http://127.0.0.1:3003",
+  ];
+  const allowedOrigins = [...new Set([frontendUrl, adminUrl, ...devOrigins])];
   console.log(`[CORS] Allowed origins: ${allowedOrigins.join(", ")}`);
   app.enableCors({
     origin: allowedOrigins,
