@@ -28,6 +28,12 @@ export class StorageService {
 
     if (this.provider === "r2") {
       this.endpoint = process.env.R2_ENDPOINT;
+      if (!this.endpoint) {
+        throw new Error(
+          "R2_ENDPOINT is required when STORAGE_PROVIDER=r2. " +
+            "Expected format: https://<ACCOUNT_ID>.r2.cloudflarestorage.com",
+        );
+      }
       this.s3 = new S3Client({
         region: "auto",
         credentials: {
@@ -38,9 +44,17 @@ export class StorageService {
         forcePathStyle: true,
       });
       this.defaultBucket = process.env.R2_BUCKET || "creatorhub-assets";
-      this.logger.info("Using Cloudflare R2 storage");
+      this.logger.info("Using Cloudflare R2 storage", {
+        endpoint: this.endpoint,
+        bucket: this.defaultBucket,
+      });
     } else if (this.provider === "minio") {
       this.endpoint = process.env.AWS_S3_ENDPOINT;
+      if (!this.endpoint) {
+        throw new Error(
+          "AWS_S3_ENDPOINT is required when STORAGE_PROVIDER=minio",
+        );
+      }
       this.s3 = new S3Client({
         region: process.env.AWS_REGION || "us-east-1",
         credentials: {
