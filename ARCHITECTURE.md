@@ -57,14 +57,14 @@
 
 ### Architectural Principles
 
-| Principle | Application |
-|-----------|-------------|
+| Principle              | Application                                                    |
+| ---------------------- | -------------------------------------------------------------- |
 | **Clean Architecture** | Dependencies point inward. Tools depend on SDK, not vice versa |
-| **DDD** | Each tool is a bounded context with its own domain |
-| **SOLID** | Open/Closed: new tools don't modify existing code |
-| **Event-Driven** | Tools communicate via BullMQ events, not direct calls |
-| **DI** | All cross-cutting concerns injected via NestJS DI |
-| **Modular Monolith** | Single deployable initially, bounded contexts for future split |
+| **DDD**                | Each tool is a bounded context with its own domain             |
+| **SOLID**              | Open/Closed: new tools don't modify existing code              |
+| **Event-Driven**       | Tools communicate via BullMQ events, not direct calls          |
+| **DI**                 | All cross-cutting concerns injected via NestJS DI              |
+| **Modular Monolith**   | Single deployable initially, bounded contexts for future split |
 
 ---
 
@@ -203,29 +203,31 @@ creator-hub/
 ```typescript
 // A tool registers itself via its entry point (index.ts)
 registerTool({
-  id: "thumbnail-generator",       // Unique identifier
-  name: "Thumbnail Generator",      // Display name
-  description: "Generate...",       // Description
-  icon: "🎨",                      // Icon
-  category: "thumbnail",            // Category for filtering
-  creditsPerUse: 10,                // Cost per use
-  permissions: [                    // Fine-grained permissions
-    { action: "generate", resource: "thumbnail" }
+  id: "thumbnail-generator", // Unique identifier
+  name: "Thumbnail Generator", // Display name
+  description: "Generate...", // Description
+  icon: "🎨", // Icon
+  category: "thumbnail", // Category for filtering
+  creditsPerUse: 10, // Cost per use
+  permissions: [
+    // Fine-grained permissions
+    { action: "generate", resource: "thumbnail" },
   ],
   frontend: {
-    routes: [                       // Frontend routes
+    routes: [
+      // Frontend routes
       {
         path: "/tools/thumbnail-generator",
         component: "ThumbnailGeneratorPage",
         title: "Thumbnail Generator",
         showInNav: true,
-      }
-    ]
+      },
+    ],
   },
   backend: {
     module: ThumbnailGeneratorModule, // NestJS module
-    events: ["image.generated"],      // Events it emits
-  }
+    events: ["image.generated"], // Events it emits
+  },
 });
 ```
 
@@ -318,64 +320,83 @@ interface AIProviderInterface {
 
   generate(request: AIRequest): Promise<AIResponse>;
   generateImage(options: ImageGenerationOptions): Promise<AIResponse>;
-  validateConfig(): boolean;  // Checks if API keys exist
+  validateConfig(): boolean; // Checks if API keys exist
 }
 ```
 
 ### Provider Selection Strategy
 
 When a tool calls `aiEngine.execute(request)`:
+
 1. If `request.provider` is specified → use directly
 2. Otherwise → select optimal provider from registry
 3. Provider selection is based on: task type match, priority, availability
 4. Tools never hardcode provider names
+
+### Provider Tiers
+
+Providers are classified by tier:
+
+| Tier   | Providers                               | Used By                |
+| ------ | --------------------------------------- | ---------------------- |
+| `free` | Z-Image-Turbo, SiliconFlow (FLUX.2-pro) | FREE plan users        |
+| `pro`  | OpenAI, Gemini, Stability AI, Flux      | PAY_AS_YOU_GO, PREMIUM |
+
+The `ProviderRegistry` exposes:
+
+- `getFreeProviders()` — Returns only free-tier providers
+- `getProProviders()` — Returns only pro-tier providers
+- `getProviderForUser(user)` — Auto-selects based on plan and credits
 
 ---
 
 ## 5. Database Schema
 
 ```
-┌─────────────────────┐     ┌────────────────────────┐
-│       User          │     │       Tool             │
-├─────────────────────┤     ├────────────────────────┤
-│ id (PK)             │◄────┤ id (PK)                │
-│ email (UQ)          │     │ name                   │
-│ name                │     │ description            │
-│ passwordHash        │     │ category               │
-│ role (USER/PREMIUM/ │     │ creditsPerUse          │
-│       ADMIN)        │     │ status                 │
-│ isActive            │     │ configSchema (JSON)    │
-│ credits             │     └────────┬───────────────┘
-│ createdAt           │              │
-└──────┬──────────────┘              │
-       │                            │
-       │ 1:1                        │ 1:1
-       ▼                            ▼
-┌────────────────────┐   ┌───────────────────────┐
-│   CreditBalance    │   │     ToolConfig        │
-├────────────────────┤   ├───────────────────────┤
-│ userId (FK,UQ)     │   │ toolId (FK,UQ)        │
-│ balance            │   │ enabled               │
-│ lifetime           │   │ creditsPerUse         │
-└──────┬─────────────┘   │ maxUsesPerDay         │
-       │                 │ allowedRoles          │
-       │                 │ providerOverrides(JSON)│
-       ▼                 └───────────────────────┘
-┌────────────────────┐
-│ CreditTransaction  │   ┌─────────────────────────┐
-├────────────────────┤   │   GeneratedImage        │
-│ id (PK)            │   ├─────────────────────────┤
-│ userId (FK)        │   │ id (PK)                 │
-│ toolId (FK)        │   │ userId (FK)             │
-│ amount             │   │ toolId (FK) = "thumbnail"│
-│ type (USAGE/PURCH) │   │ prompt                  │
-│ description        │   │ provider                │
-│ balance (post-txn) │   │ model                   │
-│ createdAt          │   │ url                     │
-└────────────────────┘   │ width, height           │
-                         │ credits                 │
-                         │ createdAt               │
-                         └─────────────────────────┘
+┌──────────────────────────┐     ┌────────────────────────┐
+│       User               │     │       Tool             │
+├──────────────────────────┤     ├────────────────────────┤
+│ id (PK)                  │◄────┤ id (PK)                │
+│ email (UQ)               │     │ name                   │
+│ name                     │     │ description            │
+│ passwordHash             │     │ category               │
+│ role (USER/PREMIUM/ADMIN)│     │ creditsPerUse          │
+│ plan (FREE/PAY_AS_YOU_GO/│     │ status                 │
+│       PREMIUM)           │     │ configSchema (JSON)    │
+│ freeCredits (default 100)│     └────────┬───────────────┘
+│ purchasedCredits (def 0) │              │
+│ isActive                 │              │
+│ createdAt                │              │
+└──────┬───────────────────┘              │
+       │                                 │
+       │ 1:1                             │ 1:1
+       ▼                                 ▼
+┌────────────────────────┐   ┌───────────────────────┐
+│  CreditTransaction     │   │     ToolConfig        │
+├────────────────────────┤   ├───────────────────────┤
+│ id (PK)                │   │ toolId (FK,UQ)        │
+│ userId (FK)            │   │ enabled               │
+│ amount                 │   │ creditsPerUse         │
+│ type (USAGE/PURCHASE/  │   │ maxUsesPerDay         │
+│   REFUND/BONUS/        │   │ allowedRoles          │
+│   SUBSCRIPTION/PROMO)  │   │ providerOverrides(JSON)│
+│ description            │   └───────────────────────┘
+│ toolId (FK, optional)  │
+│ balance (post-txn)     │   ┌─────────────────────────┐
+│ createdAt              │   │   GeneratedImage        │
+└────────────────────────┘   ├─────────────────────────┤
+                             │ id (PK)                 │
+┌──────────────────────────┐ │ userId (FK)             │
+│   MarketingEvent         │ │ toolId (FK)             │
+├──────────────────────────┤ │ prompt                  │
+│ id (PK)                  │ │ provider                │
+│ userId (FK)              │ │ model                   │
+│ type (CREDIT_THRESHOLD_  │ │ url                     │
+│   75/25/10/5/DEPLETED)  │ │ width, height           │
+│ credits                  │ │ isProModel              │
+│ metadata (JSON)          │ │ credits                 │
+│ createdAt                │ │ createdAt               │
+└──────────────────────────┘ └─────────────────────────┘
 
 ┌─────────────────────┐   ┌─────────────────────┐
 │   Subscription      │   │   UsageLog          │
@@ -402,6 +423,13 @@ When a tool calls `aiEngine.execute(request)`:
 └─────────────────────┘
 ```
 
+### Key Schema Changes
+
+- **No `CreditBalance` model** — Credits live directly on `User` as `freeCredits` + `purchasedCredits`
+- **`UserPlan` enum** — `FREE`, `PAY_AS_YOU_GO`, `PREMIUM`
+- **`MarketingEvent`** — Tracks credit threshold events for conversion analytics
+- **`GeneratedImage.isProModel`** — Distinguishes free vs pro tier generations
+
 ---
 
 ## 6. API Design
@@ -409,7 +437,7 @@ When a tool calls `aiEngine.execute(request)`:
 ### REST API Endpoints
 
 ```
-POST   /api/v1/auth/register         # Register user
+POST   /api/v1/auth/register         # Register user (FREE plan + 100 credits)
 POST   /api/v1/auth/login            # Login
 
 GET    /api/v1/tools                 # List active tools
@@ -418,10 +446,12 @@ GET    /api/v1/tools/routes          # Get all frontend routes
 
 POST   /api/v1/images/generate       # Generate image (generic)
 
-POST   /api/v1/tools/thumbnail-generator/generate  # Tool-specific
+POST   /api/v1/tools/thumbnail-generator/generate  # Generate (accepts width, height)
+GET    /api/v1/tools/thumbnail-generator/jobs/:id/status
 GET    /api/v1/tools/thumbnail-generator/images     # User's images
 
-GET    /api/v1/credits/balance       # Get credit balance
+GET    /api/v1/credits/balance       # Get balance (freeCredits, purchasedCredits, plan)
+GET    /api/v1/credits/marketing-events  # Marketing events for user
 GET    /api/v1/credits/plans         # List subscription plans
 POST   /api/v1/credits/subscribe     # Subscribe to plan
 
@@ -467,13 +497,15 @@ POST   /api/v1/admin/tools/toggle    # Enable/disable tool
 
 ### Event Types
 
-| Event | Producer | Consumer | Purpose |
-|-------|----------|----------|---------|
-| `tool.used` | All tools | Analytics, Credits | Track usage |
-| `credits.deducted` | CreditService | Notifications | Alert user |
-| `credits.depleted` | CreditService | Notifications | Prompt purchase |
-| `ai.request.completed` | AIEngine | Analytics, Billing | Track costs |
-| `image.generated` | Thumbnail | Storage, Notify | Save & notify |
+| Event                       | Producer              | Consumer              | Purpose            |
+| --------------------------- | --------------------- | --------------------- | ------------------ |
+| `tool.used`                 | All tools             | Analytics, Credits    | Track usage        |
+| `credits.deducted`          | CreditService         | Notifications         | Alert user         |
+| `credits.depleted`          | CreditService         | Notifications         | Prompt purchase    |
+| `marketing.credit_depleted` | CreditService         | MarketingEventHandler | Marketing events   |
+| `marketing.threshold`       | MarketingEventHandler | MarketingEvent DB     | Threshold tracking |
+| `ai.request.completed`      | AIEngine              | Analytics, Billing    | Track costs        |
+| `image.generated`           | Thumbnail             | Storage, Notify       | Save & notify      |
 
 ### Event-Driven Flow Example
 
@@ -506,25 +538,34 @@ User clicks "Generate" in Thumbnail Generator
 
 ## 8. Credit System
 
+### Credit Types
+
+| Field              | Description                           | Deduction Priority |
+| ------------------ | ------------------------------------- | ------------------ |
+| `freeCredits`      | 100 free credits on registration      | First              |
+| `purchasedCredits` | Credits from purchase or subscription | Second             |
+
 ### Flow
 
 ```
                     ┌──────────────┐
-                    │   Purchase   │
-                    │   Credits    │
+                    │ Registration │
+                    │ (FREE plan)  │
                     └──────┬───────┘
                            ▼
                     ┌──────────────┐
-                    │   Balance    │
-                    │   +1000      │
+                    │  User        │
+                    │  freeCredits │
+                    │  = 100       │
                     └──────┬───────┘
                            │
          ┌─────────────────┼─────────────────┐
          │                 │                 │
          ▼                 ▼                 ▼
   ┌────────────┐   ┌──────────────┐   ┌────────────┐
-  │ Tool Use   │   │ Subscription│   │ Promotions │
-  │ -10 credits│   │ +500/month  │   │ +200 bonus │
+  │ Tool Use   │   │ Purchase     │   │ Upgrade    │
+  │ -1 credit  │   │ +N credits   │   │ Plan       │
+  │ (flat)     │   │ (purchased)  │   │            │
   └────────────┘   └──────────────┘   └────────────┘
 ```
 
@@ -533,27 +574,43 @@ User clicks "Generate" in Thumbnail Generator
 ```
 User requests tool usage
     │
-    ├──► Check balance
-    │      ├──► Sufficient? → Deduct credits
+    ├──► Check totalCredits (freeCredits + purchasedCredits)
+    │      ├──► Sufficient? → Deduct (freeCredits first, then purchasedCredits)
     │      │                  ├──► Execute tool
-    │      │                  └──► Record transaction
+    │      │                  ├──► Record CreditTransaction
+    │      │                  └──► Check thresholds → MarketingEvent
     │      │
     │      └──► Insufficient?
     │             ├──► Return error
-    │             └──► Emit "credits.depleted" → Notification
+    │             └──► Emit "marketing.credit_depleted" → MarketingEvent
     │
     └──► Return result
 ```
 
-### Credit Costs by Provider
+### Marketing Events
 
-| Provider | Cost per Image |
-|----------|---------------|
-| OpenAI (DALL-E 3) | 10 credits |
-| Stability AI | 8 credits |
-| Flux | 6 credits |
-| Gemini | 5 credits |
-| Nano Banana | 4 credits |
+Events emitted when credit thresholds are crossed:
+
+| Event Type            | Threshold  | Purpose           |
+| --------------------- | ---------- | ----------------- |
+| `CREDIT_THRESHOLD_75` | 75 credits | Early engagement  |
+| `CREDIT_THRESHOLD_25` | 25 credits | Nudge to purchase |
+| `CREDIT_THRESHOLD_10` | 10 credits | Urgency           |
+| `CREDIT_THRESHOLD_5`  | 5 credits  | Critical          |
+| `CREDIT_DEPLETED`     | 0 credits  | Upgrade modal     |
+
+### Credit Costs
+
+Flat cost: **1 generation = 1 credit** regardless of provider.
+
+### Provider Selection by Plan
+
+```
+FREE + freeCredits > 0  → Free providers (Z-Image-Turbo, FLUX.2-pro)
+FREE + freeCredits = 0  → Error (upgrade modal)
+PAY_AS_YOU_GO           → All providers
+PREMIUM                 → All providers
+```
 
 ---
 
@@ -615,14 +672,14 @@ Auth Flow:
 
 ### Auth Stack
 
-| Component | Technology |
-|-----------|------------|
-| Password hashing | bcryptjs (12 rounds) |
-| JWT signing | @nestjs/jwt |
-| JWT validation | passport-jwt |
-| Guard | JwtAuthGuard (global) |
-| Role check | RolesGuard |
-| OAuth ready | Account model supports Google/GitHub |
+| Component        | Technology                           |
+| ---------------- | ------------------------------------ |
+| Password hashing | bcryptjs (12 rounds)                 |
+| JWT signing      | @nestjs/jwt                          |
+| JWT validation   | passport-jwt                         |
+| Guard            | JwtAuthGuard (global)                |
+| Role check       | RolesGuard                           |
+| OAuth ready      | Account model supports Google/GitHub |
 
 ---
 
@@ -667,13 +724,13 @@ tools/thumbnail-generator/
 
 ### Key Testing Approaches
 
-| Layer | Tool | Focus |
-|-------|------|-------|
-| Shared utils | Vitest | Pure functions |
-| Services | Jest | Business logic |
-| Controllers | Supertest | HTTP contracts |
-| E2E | @nestjs/testing | Full app flows |
-| Frontend | Testing Library | Component behavior |
+| Layer        | Tool            | Focus              |
+| ------------ | --------------- | ------------------ |
+| Shared utils | Vitest          | Pure functions     |
+| Services     | Jest            | Business logic     |
+| Controllers  | Supertest       | HTTP contracts     |
+| E2E          | @nestjs/testing | Full app flows     |
+| Frontend     | Testing Library | Component behavior |
 
 ---
 
@@ -730,6 +787,7 @@ Commit → Lint → TypeCheck → Unit Tests → Build → Integration Tests →
 ## 13. Scalability Roadmap
 
 ### Phase 1: MVP (0 → 100 users)
+
 ```
 Architecture: Modular Monolith
 Deployment: Single server (Railway / Fly.io)
@@ -740,6 +798,7 @@ Cache: In-memory + basic Redis
 ```
 
 ### Phase 2: Growth (100 → 10,000 users)
+
 ```
 Architecture: Modular Monolith (scaled vertically + horizontally)
 Deployment: 2-4 API replicas behind load balancer
@@ -751,6 +810,7 @@ CDN: CloudFront for generated images
 ```
 
 ### Phase 3: Scale (10,000 → 100,000 users)
+
 ```
 Architecture: Modular Monolith → Domain Decomposition
 Deployment: Kubernetes (EKS / GKE)
@@ -762,6 +822,7 @@ Monitoring: Datadog / Grafana + Prometheus
 ```
 
 ### Phase 4: Enterprise (100,000 → 1,000,000+ users)
+
 ```
 Architecture: Microservices (split by domain)
   └── Auth Service
@@ -868,16 +929,16 @@ registerTool({
   icon: "🔧",
   category: "other",
   creditsPerUse: 5,
-  permissions: [
-    { action: "use", resource: "your-tool" },
-  ],
+  permissions: [{ action: "use", resource: "your-tool" }],
   frontend: {
-    routes: [{
-      path: "/tools/your-tool",
-      component: "YourToolPage",
-      title: "Your Tool",
-      showInNav: true,
-    }],
+    routes: [
+      {
+        path: "/tools/your-tool",
+        component: "YourToolPage",
+        title: "Your Tool",
+        showInNav: true,
+      },
+    ],
   },
   backend: {
     module: "@your-tool/backend",
@@ -937,18 +998,18 @@ export class YourToolService {
 
 ### Architecture Decision Records
 
-| Decision | Rationale |
-|----------|-----------|
-| **Modular Monolith first** | Faster iteration, no distributed complexity. Microservices boundaries are well-defined for future split |
-| **Tool SDK for registration** | Loose coupling: tools don't import the registry directly |
-| **AI Provider pattern** | Tools switch providers via config, not code changes. Add a provider = add a class |
-| **BullMQ for events** | Redis-backed, supports delays, retries, scheduling. Familiar for NestJS devs |
-| **Prisma as ORM** | Type-safe, auto-generated client, strong migration system |
-| **Zustand over Redux** | Minimal boilerplate, TypeScript-native, persist middleware built in |
-| **React Query** | Server state management, caching, deduplication built in |
-| **Credits as abstraction** | Rate limits, monetization, and abuse prevention unified in one system |
-| **pnpm workspaces** | Faster than npm/yarn, strict dependency isolation |
-| **S3-compatible storage** | MinIO for dev, AWS S3 for prod — same interface |
+| Decision                      | Rationale                                                                                               |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Modular Monolith first**    | Faster iteration, no distributed complexity. Microservices boundaries are well-defined for future split |
+| **Tool SDK for registration** | Loose coupling: tools don't import the registry directly                                                |
+| **AI Provider pattern**       | Tools switch providers via config, not code changes. Add a provider = add a class                       |
+| **BullMQ for events**         | Redis-backed, supports delays, retries, scheduling. Familiar for NestJS devs                            |
+| **Prisma as ORM**             | Type-safe, auto-generated client, strong migration system                                               |
+| **Zustand over Redux**        | Minimal boilerplate, TypeScript-native, persist middleware built in                                     |
+| **React Query**               | Server state management, caching, deduplication built in                                                |
+| **Credits as abstraction**    | Rate limits, monetization, and abuse prevention unified in one system                                   |
+| **pnpm workspaces**           | Faster than npm/yarn, strict dependency isolation                                                       |
+| **S3-compatible storage**     | MinIO for dev, AWS S3 for prod — same interface                                                         |
 
 ---
 

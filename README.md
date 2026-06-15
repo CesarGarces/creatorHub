@@ -7,9 +7,11 @@ Plataforma SaaS modular para content creators. Herramientas de IA para generar t
 Creator Hub es una plataforma donde los creadores de contenido pueden acceder a herramientas potenciadas por IA para acelerar su workflow. Cada herramienta se registra automáticamente en la plataforma usando un sistema de Tool Registry, lo que permite agregar nuevas herramientas sin modificar el código existente.
 
 **Herramientas disponibles:**
-- **Thumbnail Generator** — Genera miniaturas con IA (OpenAI DALL-E, Flux, Stability AI, Gemini)
+
+- **Thumbnail Generator** — Genera miniaturas con IA (Z-Image-Turbo, SiliconFlow FLUX.2-pro, OpenAI, Gemini, Stability AI)
 
 **Herramientas en desarrollo:**
+
 - Title Generator
 - Stream Games
 - Video Editor
@@ -19,17 +21,17 @@ Creator Hub es una plataforma donde los creadores de contenido pueden acceder a 
 
 ## Stack
 
-| Capa | Tecnología |
-|------|-----------|
-| Frontend | Next.js 16, React 19, Zustand, TanStack Query, TailwindCSS |
-| Backend | NestJS 11, TypeScript, Prisma ORM |
-| Base de datos | PostgreSQL 16 |
-| Cola de mensajes | Redis + BullMQ |
-| Storage | Cloudflare R2 (prod) / MinIO (dev) |
-| WebSocket | Socket.IO |
-| Domain Events | Redis Pub/Sub (ioredis) |
-| AI | OpenAI, Gemini, Stability AI, Flux |
-| Monorepo | Turborepo + pnpm workspaces |
+| Capa             | Tecnología                                                            |
+| ---------------- | --------------------------------------------------------------------- |
+| Frontend         | Next.js 16, React 19, Zustand, TanStack Query, TailwindCSS            |
+| Backend          | NestJS 11, TypeScript, Prisma ORM                                     |
+| Base de datos    | PostgreSQL 16                                                         |
+| Cola de mensajes | Redis + BullMQ                                                        |
+| Storage          | Cloudflare R2 (prod) / MinIO (dev)                                    |
+| WebSocket        | Socket.IO                                                             |
+| Domain Events    | Redis Pub/Sub (ioredis)                                               |
+| AI               | SiliconFlow (Z-Image-Turbo, FLUX.2-pro), OpenAI, Gemini, Stability AI |
+| Monorepo         | Turborepo + pnpm workspaces                                           |
 
 ## Arquitectura
 
@@ -40,8 +42,8 @@ creator-hub/
 │   └── api/              # NestJS backend
 ├── packages/
 │   ├── auth/             # JWT + Passport
-│   ├── ai-engine/        # Multi-provider AI abstraction
-│   ├── billing/          # Sistema de créditos
+│   ├── ai-engine/        # Multi-provider AI abstraction (tier-aware)
+│   ├── billing/          # Sistema de créditos (free + purchased)
 │   ├── storage/          # R2/MinIO abstraction
 │   ├── analytics/        # Tracking de uso
 │   ├── database/         # Prisma ORM
@@ -59,6 +61,68 @@ El sistema sigue principios de **Clean Architecture** y **DDD**: cada herramient
 
 ---
 
+## Free-to-Premium Bridge
+
+### Planes de usuario
+
+| Plan              | Créditos iniciales  | Proveedores IA                                         |
+| ----------------- | ------------------- | ------------------------------------------------------ |
+| **FREE**          | 100 créditos gratis | Solo proveedores gratuitos (Z-Image-Turbo, FLUX.2-pro) |
+| **PAY_AS_YOU_GO** | Compra bajo demanda | Todos los proveedores                                  |
+| **PREMIUM**       | Suscripción mensual | Todos los proveedores                                  |
+
+### Flujo de registro
+
+```
+Registro → User.create(plan=FREE, freeCredits=100)
+         → Subscription.create(planId="free", status=ACTIVE)
+```
+
+Los usuarios reciben **100 créditos gratis** al registrarse. No se requiere tarjeta de crédito.
+
+### Sistema de créditos
+
+Cada generación cuesta **1 crédito** (flat cost). Los créditos se deducen en orden de prioridad:
+
+```
+freeCredits → purchasedCredits → Error (sin créditos)
+```
+
+| Campo              | Descripción                                       |
+| ------------------ | ------------------------------------------------- |
+| `freeCredits`      | Créditos gratis del plan FREE (se agotan primero) |
+| `purchasedCredits` | Créditos comprados o de suscripción               |
+
+### Marketing Automation
+
+El sistema emite eventos cuando los créditos del usuario alcanzan ciertos umbrales:
+
+```
+75 créditos → CREDIT_THRESHOLD_75
+25 créditos → CREDIT_THRESHOLD_25
+10 créditos → CREDIT_THRESHOLD_10
+ 5 créditos → CREDIT_THRESHOLD_5
+ 0 créditos → CREDIT_DEPLETED
+```
+
+Estos eventos se almacenan en la tabla `MarketingEvent` y se usan para:
+
+- Mostrar alertas en la UI (modal de upgrade cuando credits = 0)
+- Logging para futuras integraciones de email/push notifications
+- Analytics de conversión Free → Paid
+
+### Selección automática de proveedor
+
+```
+Usuario FREE + freeCredits > 0
+  → ProviderRegistry.getFreeProviders() → Z-Image-Turbo (primero)
+
+Usuario con purchasedCredits > 0 o plan PREMIUM/PAY_AS_YOU_GO
+  → ProviderRegistry.getProProviders() → OpenAI, Gemini, etc.
+```
+
+---
+
 ## Background Task Architecture
 
 El sistema de tareas en segundo plano es **multi-tool y desacoplado**. Cualquier herramienta nueva se integra siguiendo el mismo patrón sin modificar infraestructura existente.
@@ -69,23 +133,24 @@ El sistema de tareas en segundo plano es **multi-tool y desacoplado**. Cualquier
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                          USUARIO (Browser)                              │
 │                                                                         │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────────────────┐  │
-│  │  Prompt Input │    │ Style Select │    │    Generate Button       │  │
-│  │  (store.form) │    │ (store.form) │    │  handleGenerate()       │  │
-│  └──────┬───────┘    └──────┬───────┘    └────────────┬─────────────┘  │
-│         │                   │                          │                 │
-│         └───────────────────┴──────────────────────────┘                │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐              │
+│  │  Prompt Input │    │ Aspect Ratio │    │  Provider    │              │
+│  │  (store.form) │    │  Selector    │    │  Selector    │              │
+│  └──────┬───────┘    └──────┬───────┘    └──────┬───────┘              │
+│         │                   │                    │                       │
+│         └───────────────────┴────────────────────┘                      │
 │                              │                                          │
 │                              ▼                                          │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
 │  │                    Zustand Store (Global)                         │  │
 │  │                                                                   │  │
 │  │  BaseGenerationState          ThumbnailFormState                  │  │
-│  │  ├── status: GENERATING       ├── prompt: "crear computador..."  │  │
+│  │  ├── status: GENERATING       ├── prompt                         │  │
 │  │  ├── jobId: "26"              ├── style: "bold"                  │  │
-│  │  ├── toolId: "thumb-gen"      ├── aiProvider: "gemini"           │  │
-│  │  ├── resultUrl: null          └── negativePrompt: ""             │  │
-│  │  └── error: null                                               │  │
+│  │  ├── toolId: "thumb-gen"      ├── aiProvider: "z-image-turbo"   │  │
+│  │  ├── resultUrl: null          ├── width: 1280                    │  │
+│  │  └── error: null              ├── height: 720                    │  │
+│  │                               └── negativePrompt: ""             │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 │                              │                                          │
 │              ┌───────────────┴───────────────┐                         │
@@ -105,14 +170,14 @@ El sistema de tareas en segundo plano es **multi-tool y desacoplado**. Cualquier
 │            ▼                               ▼          API (NestJS)     │
 │  ┌──────────────────┐          ┌──────────────────────────────┐       │
 │  │  AppGateway       │          │  ThumbnailController         │       │
-│  │  emitToUser()     │          │  POST /generate → enqueue    │       │
+│  │  emitToUser()     │          │  POST /generate (w/ w,h)    │       │
 │  └────────┬─────────┘          │  GET  /jobs/:id/status       │       │
 │           │                    └──────────────┬───────────────┘       │
 │           │                                   │                       │
 │           │                                   ▼                       │
 │           │                    ┌──────────────────────────────┐       │
 │           │                    │  ThumbnailService             │       │
-│           │                    │  generate() → BullMQ job     │       │
+│           │                    │  selectProvider() → BullMQ    │       │
 │           │                    └──────────────┬───────────────┘       │
 │           │                                   │                       │
 │           │                                   ▼                       │
@@ -133,7 +198,6 @@ El sistema de tareas en segundo plano es **multi-tool y desacoplado**. Cualquier
 │           │         ┌──────────────────┐         ┌────────────────┐  │
 │           │         │ @OnWorkerEvent   │         │ DomainEvent    │  │
 │           │         │ "completed"      │         │ Publisher      │  │
-│           │         │ (same process)   │         │ (Redis Pub/Sub)│  │
 │           │         └────────┬─────────┘         └───────┬────────┘  │
 │           │                  │                           │            │
 │           │                  └───────────┬───────────────┘            │
@@ -141,45 +205,35 @@ El sistema de tareas en segundo plano es **multi-tool y desacoplado**. Cualquier
 │           │                              ▼                            │
 │           │                   ┌────────────────────────┐              │
 │           │                   │ ThumbnailListener      │              │
-│           │                   │ Service                │              │
 │           │                   │ subscribe → presign →  │              │
 │           │                   │ emitToUser()           │              │
 │           │                   └───────────┬────────────┘              │
 │           │                               │                           │
 │           │                               ▼                           │
 │           │                    ┌────────────────────────┐              │
-│           │                    │ Redis Channel           │              │
-│           │                    │ "thumbnail:completed"   │              │
+│           │                    │ CreditService.deduct() │              │
+│           │                    │ (freeCredits first)    │              │
 │           │                    └───────────┬────────────┘              │
 │           │                               │                           │
-└───────────┼───────────────────────────────┼───────────────────────────┘
-            │                               │
-            ▼                               │
-┌───────────────────────────────────────────┼───────────────────────────┐
-│  Socket.IO Client (useSocketEvents)       │                           │
-│                                           │                           │
-│  socket.on("tool_job_updated", (data) => │                           │
-│    if (store.toolId === data.toolId) {    │                           │
-│      setRevealing(data.payload.url)      │                           │
-│      setReady()   // preload + fade-in   │                           │
-│      toast.success("Thumbnail ready!")   │                           │
-│    }                                      │                           │
-│  )                                        │                           │
-└───────────────────────────────────────────┘                           │
-                                                                       │
-┌───────────────────────────────────────────────────────────────────────┘
-│
-│  ┌──────────────────────────────────────────────────────────────────┐
-│  │  Polling Fallback (useBackgroundPolling)                         │
-│  │                                                                  │
-│  │  if (status === "GENERATING") {                                  │
-│  │    setInterval(async () => {                                     │
-│  │      const res = await GET /tools/${toolId}/jobs/${jobId}/status │
-│  │      if (res.status === "completed") → setRevealing + setReady   │
-│  │      if (res.status === "failed")    → setFailed + toast.error   │
-│  │    }, 5000)                                                      │
-│  │  }                                                               │
-│  └──────────────────────────────────────────────────────────────────┘
+│           │                               ▼                           │
+│           │                    ┌────────────────────────┐              │
+│           │                    │ MarketingEventHandler  │              │
+│           │                    │ (threshold events)     │              │
+│           │                    └────────────────────────┘              │
+└───────────┼───────────────────────────────────────────────────────────┘
+            │
+            ▼
+┌───────────────────────────────────────────────────────────────────────┐
+│  Socket.IO Client (useSocketEvents)                                   │
+│                                                                       │
+│  socket.on("tool_job_updated", (data) =>                             │
+│    if (store.toolId === data.toolId) {                                │
+│      setRevealing(data.payload.url)                                  │
+│      setReady()   // preload + fade-in                               │
+│      toast.success("Thumbnail ready!")                               │
+│    }                                                                  │
+│  )                                                                    │
+└───────────────────────────────────────────────────────────────────────┘
 ```
 
 ### State Machine
@@ -208,66 +262,84 @@ El sistema de tareas en segundo plano es **multi-tool y desacoplado**. Cualquier
                                          └──────────┘
 ```
 
-### WebSocket Event Flow
+---
+
+## AI Providers
+
+### Proveedores gratuitos (tier: free)
+
+| Proveedor         | Modelo                         | Dimensiones soportadas              | Notas                      |
+| ----------------- | ------------------------------ | ----------------------------------- | -------------------------- |
+| **Z-Image-Turbo** | `Tongyi-MAI/Z-Image-Turbo`     | 1024x1024, 1280x720, 720x1280, etc. | Default para usuarios FREE |
+| **SiliconFlow**   | `black-forest-labs/FLUX.2-pro` | 1024x1024 (ignora image_size)       | Via SiliconFlow API        |
+
+### Proveedores de pago (tier: pro)
+
+| Proveedor        | Modelo           | Costo por imagen |
+| ---------------- | ---------------- | ---------------- |
+| **OpenAI**       | DALL-E 3         | 10 créditos      |
+| **Gemini**       | Imagen 3         | 5 créditos       |
+| **Stability AI** | Stable Diffusion | 8 créditos       |
+| **Flux**         | Flux Dev         | 6 créditos       |
+
+### Flujo de selección
 
 ```
-Backend (NestJS)                          Frontend (Next.js)
-─────────────────                         ──────────────────
-
-ThumbnailProcessor                        
-  @OnWorkerEvent("completed")             
-    │                                     
-    ├─ DomainEventPublisher               
-    │   .publish("thumbnail:completed")   
-    │       │                             
-    │       ▼                             
-    │   Redis Pub/Sub                     
-    │       │                             
-    │       ▼                             
-    │   ThumbnailListenerService          
-    │     .handleCompleted()              
-    │       │                             
-    │       ├─ StorageService             
-    │       │   .getPresignedDownloadUrl()│
-    │       │                             
-    │       └─ AppGateway                 
-    │           .emitToUser(userId,       
-    │             "tool_job_updated",     ──▶ socket.on("tool_job_updated")
-    │             {                            │
-    │               toolId,                    ├─ filter by toolId
-    │               jobId,                     ├─ setRevealing(url, id)
-    │               status: "completed",       ├─ setReady() → preload → READY
-    │               payload: { url, imageId }  └─ toast.success()
-    │             })                          
+selectProvider(user, requestedProvider?)
+  │
+  ├─ requestedProvider specified?
+  │   ├─ FREE user + freeCredits > 0 → validate in free providers, fallback to first free
+  │   └─ Otherwise → use requested
+  │
+  └─ No provider specified?
+      ├─ FREE user + freeCredits > 0 → first free provider (Z-Image-Turbo)
+      └─ Otherwise → "openai"
 ```
 
-### Multi-Tool Integration Checklist
+### Registro de proveedores
+
+```typescript
+// ProviderFactory registra automáticamente al iniciar el módulo:
+new OpenAIImageProvider(); // tier: pro
+new GeminiProvider(); // tier: pro
+new StabilityAIProvider(); // tier: pro
+new FluxProvider(); // tier: pro
+new SiliconFlowProvider(); // tier: free
+new ZImageTurboProvider(); // tier: free
+
+// En desarrollo sin SILICONFLOW_API_KEY:
+new MockImageProvider(); // tier: free (solo dev)
+```
+
+---
+
+## Multi-Tool Integration Checklist
 
 Para agregar una nueva tool (ej: `title-generator`):
 
-| Capa | Archivo | Acción |
-|------|---------|--------|
-| **Backend** | `tools/title-generator/backend/` | Crear processor, service, controller |
-| **Backend** | `thumbnail.processor.ts` → `title.processor.ts` | Mismo patrón: AI → Store → DB |
-| **Backend** | `thumbnail-listener.service.ts` | Llamar `registerTool()` con nuevos canales |
-| **Shared** | `event.types.ts` | Agregar `TitleCompletedEvent`, `TitleFailedEvent` |
-| **Shared** | `shared-utils/error.utils.ts` | Ya reutilizable (sin cambios) |
-| **Frontend** | `store/generation.store.ts` | Componer `BaseGenerationState` + campos propios |
-| **Frontend** | `use-background-polling.ts` | Ya genérico (sin cambios, lee `toolId` del store) |
-| **Frontend** | `use-socket-events.ts` | Ya genérico (sin cambios, filtra por `toolId`) |
-| **Frontend** | `tools/[id]/page.tsx` | Crear página con campos específicos |
+| Capa         | Archivo                                         | Acción                                            |
+| ------------ | ----------------------------------------------- | ------------------------------------------------- |
+| **Backend**  | `tools/title-generator/backend/`                | Crear processor, service, controller              |
+| **Backend**  | `thumbnail.processor.ts` → `title.processor.ts` | Mismo patrón: AI → Store → DB                     |
+| **Backend**  | `thumbnail-listener.service.ts`                 | Llamar `registerTool()` con nuevos canales        |
+| **Shared**   | `event.types.ts`                                | Agregar `TitleCompletedEvent`, `TitleFailedEvent` |
+| **Shared**   | `shared-utils/error.utils.ts`                   | Ya reutilizable (sin cambios)                     |
+| **Frontend** | `store/generation.store.ts`                     | Componer `BaseGenerationState` + campos propios   |
+| **Frontend** | `use-background-polling.ts`                     | Ya genérico (sin cambios, lee `toolId` del store) |
+| **Frontend** | `use-socket-events.ts`                          | Ya genérico (sin cambios, filtra por `toolId`)    |
+| **Frontend** | `tools/[id]/page.tsx`                           | Crear página con campos específicos               |
 
 ### Paquetes Clave
 
-| Paquete | Responsabilidad | Multi-Tool |
-|---------|----------------|------------|
-| `@creator-hub/domain-events` | Publisher/Subscriber interfaces + Redis impl | ✅ Genérico |
-| `@creator-hub/shared-utils` | `getFriendlyError()`, logging, utilities | ✅ Genérico |
-| `@creator-hub/shared-types` | `ToolJobUpdatePayload`, event interfaces | ✅ Genérico |
-| `@creator-hub/storage` | `uploadBuffer()`, `getPresignedDownloadUrl()` | ✅ Genérico |
-| `@creator-hub/ai-engine` | Multi-provider AI abstraction | ✅ Genérico |
-| `@creator-hub/billing` | Credit system | ✅ Genérico |
-| `@creator-hub/ui` | Button, Badge, Skeleton, etc. | ✅ Genérico |
+| Paquete                      | Responsabilidad                                    | Multi-Tool  |
+| ---------------------------- | -------------------------------------------------- | ----------- |
+| `@creator-hub/domain-events` | Publisher/Subscriber interfaces + Redis impl       | ✅ Genérico |
+| `@creator-hub/shared-utils`  | `getFriendlyError()`, logging, utilities           | ✅ Genérico |
+| `@creator-hub/shared-types`  | `ToolJobUpdatePayload`, event interfaces           | ✅ Genérico |
+| `@creator-hub/storage`       | `uploadBuffer()`, `getPresignedDownloadUrl()`      | ✅ Genérico |
+| `@creator-hub/ai-engine`     | Multi-provider AI abstraction (tier-aware)         | ✅ Genérico |
+| `@creator-hub/billing`       | Credit system (free + purchased, marketing events) | ✅ Genérico |
+| `@creator-hub/ui`            | Button, Badge, Skeleton, etc.                      | ✅ Genérico |
 
 ---
 
@@ -316,56 +388,75 @@ AWS_S3_ENDPOINT="http://localhost:9000"
 # Auth
 JWT_SECRET="tu-secret-aqui"
 
-# AI Providers (al menos uno necesario)
+# AI Providers — Free tier (al menos uno necesario para desarrollo)
+SILICONFLOW_API_KEY=""          # Requerido para Z-Image-Turbo y FLUX.2-pro
+
+# AI Providers — Pro tier (opcionales)
 OPENAI_API_KEY=""
 GEMINI_API_KEY=""
 STABILITY_AI_API_KEY=""
-FLUX_API_KEY=""
 
 # App
 NEXT_PUBLIC_API_URL="http://localhost:3001"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
+> **Nota:** En desarrollo sin `SILICONFLOW_API_KEY`, se registra automáticamente un `MockImageProvider` que genera imágenes de prueba.
+
 ## Servicios
 
-| Servicio | URL |
-|----------|-----|
-| Frontend | http://localhost:3000 |
-| API | http://localhost:3001 |
-| Swagger | http://localhost:3001/api/docs |
-| MinIO Console | http://localhost:9001 |
+| Servicio      | URL                            |
+| ------------- | ------------------------------ |
+| Frontend      | http://localhost:3000          |
+| API           | http://localhost:3001          |
+| Swagger       | http://localhost:3001/api/docs |
+| MinIO Console | http://localhost:9001          |
 
 ## API
 
 La API expone endpoints REST bajo `/api/v1`. Documentación interactiva disponible en Swagger.
 
 ```
-POST   /api/v1/auth/register          # Registro
+POST   /api/v1/auth/register          # Registro (asigna FREE + 100 créditos)
 POST   /api/v1/auth/login             # Login
 
 GET    /api/v1/tools                  # Listar herramientas
 GET    /api/v1/tools/:id              # Detalle de herramienta
 
-POST   /api/v1/tools/thumbnail-generator/generate       # Generar thumbnail
+POST   /api/v1/tools/thumbnail-generator/generate       # Generar thumbnail (accepts width, height)
 GET    /api/v1/tools/thumbnail-generator/jobs/:id/status # Estado del job
 GET    /api/v1/tools/thumbnail-generator/images          # Imágenes del usuario
 
-GET    /api/v1/credits/balance        # Saldo de créditos
+GET    /api/v1/credits/balance        # Saldo (freeCredits, purchasedCredits, plan)
+GET    /api/v1/credits/marketing-events  # Eventos de marketing del usuario
 GET    /api/v1/credits/plans          # Planes de suscripción
 POST   /api/v1/credits/subscribe      # Suscribirse a un plan
 ```
 
 ## Sistema de créditos
 
-Los usuarios reciben 100 créditos al registrarse. Cada uso de herramienta descuenta créditos según el proveedor de IA:
+Los usuarios reciben **100 créditos gratis** al registrarse. Cada generación cuesta **1 crédito** (flat cost).
 
-| Proveedor | Costo por imagen |
-|-----------|-----------------|
-| OpenAI (DALL-E 3) | 10 créditos |
-| Stability AI | 8 créditos |
-| Flux | 6 créditos |
-| Gemini | 5 créditos |
+El sistema distingue entre dos tipos de créditos:
+
+| Tipo               | Origen                | Prioridad de deducción |
+| ------------------ | --------------------- | ---------------------- |
+| `freeCredits`      | Registro (100 gratis) | Primero                |
+| `purchasedCredits` | Compra o suscripción  | Segundo                |
+
+Cuando los créditos llegan a 0, se muestra un **modal de upgrade** con opciones de recarga (mínimo $10 USD).
+
+## Pre-commit Hooks
+
+El proyecto usa **Husky** + **lint-staged** para asegurar calidad de código antes de cada commit:
+
+- **ESLint**: Bloquea commits con errores (warnings permitidos)
+- **Prettier**: Verifica formato de código
+
+```sh
+# Los hooks se instalan automáticamente con:
+pnpm install
+```
 
 ## Comandos
 
