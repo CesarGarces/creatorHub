@@ -45,6 +45,10 @@
       "dependsOn": ["db:generate"],
       "cache": false
     },
+    "db:migrate:deploy": {
+      "dependsOn": ["db:generate"],
+      "cache": false
+    },
     "db:seed": {
       "dependsOn": ["db:generate"],
       "cache": false

@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: creatorhub-api
+    runtime: node
+    plan: free
+    buildCommand: pnpm install && pnpm turbo run build --filter=@creator-hub/api...
+    startCommand: npx prisma migrate deploy && node apps/api/dist/main
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: STORAGE_PROVIDER
+        value: r2
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        value: creatorhub-assets
+      - key: SILICONFLOW_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
