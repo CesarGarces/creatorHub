@@ -1,6 +1,14 @@
 const FRIENDLY_PATTERNS: Array<{ patterns: string[]; message: string }> = [
   {
-    patterns: ["429", "resource_exhausted", "rate limit", "quota", "credits", "billing", "depleted"],
+    patterns: [
+      "429",
+      "resource_exhausted",
+      "rate limit",
+      "quota",
+      "credits",
+      "billing",
+      "depleted",
+    ],
     message:
       "AI is taking a break. The provider is taking longer than usual to process the details. Don't worry, your credits are safe. Shall we try again?",
   },

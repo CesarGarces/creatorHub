@@ -37,7 +37,9 @@ export class ProviderRegistry {
   }
 
   getProProviders(): AIProviderInterface[] {
-    return Array.from(this.providers.values()).filter((p) => p.tier === "pro" || !p.tier);
+    return Array.from(this.providers.values()).filter(
+      (p) => p.tier === "pro" || !p.tier,
+    );
   }
 
   getProviderForUser(user: {
@@ -53,7 +55,11 @@ export class ProviderRegistry {
       }
     }
 
-    if (user.purchasedCredits > 0 || user.plan === "PREMIUM" || user.plan === "PAY_AS_YOU_GO") {
+    if (
+      user.purchasedCredits > 0 ||
+      user.plan === "PREMIUM" ||
+      user.plan === "PAY_AS_YOU_GO"
+    ) {
       const proProviders = this.getProProviders();
       const proProvider = proProviders[0];
       if (proProvider) {
@@ -61,7 +67,9 @@ export class ProviderRegistry {
       }
     }
 
-    throw new Error("No credits available. Please upgrade your plan or purchase credits.");
+    throw new Error(
+      "No credits available. Please upgrade your plan or purchase credits.",
+    );
   }
 
   getAllProviders(): AIProviderInterface[] {

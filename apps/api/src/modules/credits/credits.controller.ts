@@ -8,7 +8,7 @@ import { prisma } from "@creator-hub/database";
 export class CreditsController {
   constructor(
     private creditService: CreditService,
-    private billingService: BillingService
+    private billingService: BillingService,
   ) {}
 
   @Get("balance")
@@ -36,7 +36,10 @@ export class CreditsController {
   }
 
   @Post("subscribe")
-  async subscribe(@CurrentUser("id") userId: string, @Body("planId") planId: string) {
+  async subscribe(
+    @CurrentUser("id") userId: string,
+    @Body("planId") planId: string,
+  ) {
     return this.billingService.subscribe(userId, planId);
   }
 

@@ -3,7 +3,14 @@ export { cn } from "./lib/utils";
 // Primitives
 export { Button } from "./components/button";
 export type { ButtonProps } from "./components/button";
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./components/card";
+export {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "./components/card";
 export { Input } from "./components/input";
 export { Textarea } from "./components/textarea";
 export { Separator } from "./components/separator";

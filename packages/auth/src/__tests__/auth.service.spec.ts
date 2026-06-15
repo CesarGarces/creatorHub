@@ -13,6 +13,9 @@ jest.mock("@creator-hub/database", () => ({
       findUnique: jest.fn(),
       create: jest.fn(),
     },
+    subscription: {
+      create: jest.fn(),
+    },
     $transaction: jest.fn(async (fn: (tx: any) => Promise<any>) => fn(prisma)),
   },
 }));
@@ -41,8 +44,13 @@ describe("AuthService", () => {
         email: "test@example.com",
         role: "USER",
       });
+      (prisma.subscription.create as jest.Mock).mockResolvedValue({});
 
-      const result = await service.register("test@example.com", "password123", "Test User");
+      const result = await service.register(
+        "test@example.com",
+        "password123",
+        "Test User",
+      );
 
       expect(result).toHaveProperty("accessToken");
       expect(result).toHaveProperty("refreshToken");
@@ -56,9 +64,12 @@ describe("AuthService", () => {
           email: "test@example.com",
           name: "Test User",
           passwordHash: "$2a$12$hashedpassword",
-          credits: { create: { balance: 100, lifetime: 100 } },
+          plan: "FREE",
+          freeCredits: 100,
+          purchasedCredits: 0,
         },
       });
+      expect(prisma.subscription.create).toHaveBeenCalled();
     });
 
     it("should throw ConflictException if email already exists", async () => {
@@ -68,7 +79,7 @@ describe("AuthService", () => {
       });
 
       await expect(
-        service.register("test@example.com", "password123")
+        service.register("test@example.com", "password123"),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -105,7 +116,7 @@ describe("AuthService", () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(
-        service.login("nonexistent@example.com", "password123")
+        service.login("nonexistent@example.com", "password123"),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -121,7 +132,7 @@ describe("AuthService", () => {
       });
 
       await expect(
-        service.login("test@example.com", "wrongpassword")
+        service.login("test@example.com", "wrongpassword"),
       ).rejects.toThrow(UnauthorizedException);
     });
   });
@@ -139,7 +150,11 @@ describe("AuthService", () => {
         },
       });
 
-      const result = await service.validateOAuth("google", "goog-123", "test@example.com");
+      const result = await service.validateOAuth(
+        "google",
+        "goog-123",
+        "test@example.com",
+      );
 
       expect(result).toHaveProperty("accessToken");
       expect(result.user.id).toBe("user-1");
@@ -153,20 +168,29 @@ describe("AuthService", () => {
         email: "new@example.com",
         role: "USER",
       });
+      (prisma.subscription.create as jest.Mock).mockResolvedValue({});
 
-      const result = await service.validateOAuth("google", "goog-456", "new@example.com", "New User");
+      const result = await service.validateOAuth(
+        "google",
+        "goog-456",
+        "new@example.com",
+        "New User",
+      );
 
       expect(result).toHaveProperty("accessToken");
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: {
           email: "new@example.com",
           name: "New User",
-          credits: { create: { balance: 100, lifetime: 100 } },
+          plan: "FREE",
+          freeCredits: 100,
+          purchasedCredits: 0,
           accounts: {
             create: { provider: "google", providerAccountId: "goog-456" },
           },
         },
       });
+      expect(prisma.subscription.create).toHaveBeenCalled();
     });
 
     it("should link OAuth account to existing user", async () => {
@@ -178,7 +202,11 @@ describe("AuthService", () => {
       });
       (prisma.account.create as jest.Mock).mockResolvedValue({});
 
-      const result = await service.validateOAuth("google", "goog-789", "existing@example.com");
+      const result = await service.validateOAuth(
+        "google",
+        "goog-789",
+        "existing@example.com",
+      );
 
       expect(result).toHaveProperty("accessToken");
       expect(result.user.id).toBe("user-existing");

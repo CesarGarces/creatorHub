@@ -15,7 +15,8 @@ const initialMessages: Message[] = [
   {
     id: "1",
     role: "assistant",
-    content: "Hi! I'm your YouTube Agent. I can help you with:\n\n• Video ideas and scripts\n• Thumbnail generation\n• Title optimization\n• SEO tags and descriptions\n\nWhat would you like to create today?",
+    content:
+      "Hi! I'm your YouTube Agent. I can help you with:\n\n• Video ideas and scripts\n• Thumbnail generation\n• Title optimization\n• SEO tags and descriptions\n\nWhat would you like to create today?",
   },
 ];
 
@@ -46,7 +47,11 @@ export default function AgentChatPage() {
       content: `Based on your request about "${input}", here are my suggestions:\n\n1. **Viral Video Idea**: "Why ${input} is Changing Everything"\n   → [Generate Script] [Generate Thumbnail]\n\n2. **Tutorial Format**: "How to Master ${input} in 2024"\n   → [Generate Script] [Generate Thumbnail]\n\n3. **Listicle**: "Top 10 ${input} Tips Nobody Tells You"\n   → [Generate Script] [Generate Thumbnail]\n\nWould you like me to generate content for any of these?`,
       actions: [
         { label: "Generate Script", icon: "📝" },
-        { label: "Generate Thumbnail", icon: "🎨", href: "/tools/thumbnail-generator" },
+        {
+          label: "Generate Thumbnail",
+          icon: "🎨",
+          href: "/tools/thumbnail-generator",
+        },
       ],
     };
 
@@ -96,7 +101,14 @@ export default function AgentChatPage() {
                     : "bg-primary text-white ml-auto"
                 }`}
               >
-                <div className="whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: msg.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>') }} />
+                <div
+                  className="whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{
+                    __html: msg.content
+                      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                      .replace(/\n/g, "<br/>"),
+                  }}
+                />
                 {msg.actions && (
                   <div className="mt-4 flex flex-wrap gap-2">
                     {msg.actions.map((action, i) => (
@@ -139,7 +151,9 @@ export default function AgentChatPage() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              onKeyDown={(e) =>
+                e.key === "Enter" && !e.shiftKey && handleSend()
+              }
               placeholder="Type a message..."
               className="flex-1 rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary transition-colors"
             />
@@ -148,7 +162,17 @@ export default function AgentChatPage() {
               disabled={!input.trim()}
               className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <line x1="22" x2="11" y1="2" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
             </button>
           </div>
         </div>

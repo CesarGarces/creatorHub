@@ -31,7 +31,12 @@ const aspectRatios = [
 ];
 
 const providers = [
-  { id: "z-image-turbo", label: "Z-Image Turbo", cost: 1, tier: "free" as const },
+  {
+    id: "z-image-turbo",
+    label: "Z-Image Turbo",
+    cost: 1,
+    tier: "free" as const,
+  },
   { id: "siliconflow", label: "FLUX 2 Pro", cost: 1, tier: "free" as const },
   { id: "gemini", label: "Gemini", cost: 5, tier: "pro" as const },
   { id: "openai", label: "DALL-E 3", cost: 10, tier: "pro" as const },
@@ -65,7 +70,9 @@ export default function ThumbnailGeneratorPage() {
     setFailed,
     reset,
   } = useGenerationStore();
-  const [variations, setVariations] = useState<Array<{ url: string; imageId: string }>>([]);
+  const [variations, setVariations] = useState<
+    Array<{ url: string; imageId: string }>
+  >([]);
   const lastCompletedRef = useRef<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showVariations, setShowVariations] = useState(false);
@@ -85,7 +92,11 @@ export default function ThumbnailGeneratorPage() {
   }, [balance, plan]);
 
   useEffect(() => {
-    if (status === "READY" && imageUrl && lastCompletedRef.current !== imageUrl) {
+    if (
+      status === "READY" &&
+      imageUrl &&
+      lastCompletedRef.current !== imageUrl
+    ) {
       lastCompletedRef.current = imageUrl;
       setVariations((prev) => {
         const exists = prev.some((v) => v.url === imageUrl);
@@ -103,7 +114,7 @@ export default function ThumbnailGeneratorPage() {
     mutationFn: async () => {
       return api.post<{ success: boolean; data: { jobId: string } }>(
         "/tools/thumbnail-generator/generate",
-        { prompt, negativePrompt, style, provider: aiProvider, width, height }
+        { prompt, negativePrompt, style, provider: aiProvider, width, height },
       );
     },
     onSuccess: (response) => {
@@ -116,7 +127,8 @@ export default function ThumbnailGeneratorPage() {
       startGeneration("thumbnail-generator", jobId);
     },
     onError: (error: any) => {
-      const message = error?.message || "Failed to generate thumbnail. Please try again.";
+      const message =
+        error?.message || "Failed to generate thumbnail. Please try again.";
       setFailed(message);
       toast.error(message);
     },
@@ -147,14 +159,23 @@ export default function ThumbnailGeneratorPage() {
                     : "border-border bg-surface-elevated text-text-muted hover:border-primary/50 hover:bg-primary/5"
                 }`}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="7" height="7" rx="1"/>
-                  <rect x="14" y="3" width="7" height="7" rx="1"/>
-                  <rect x="3" y="14" width="7" height="7" rx="1"/>
-                  <rect x="14" y="14" width="7" height="7" rx="1"/>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
                 </svg>
                 Variations
-                <span className="ml-1 rounded-full bg-primary/20 px-1.5 text-xs">{variations.length}</span>
+                <span className="ml-1 rounded-full bg-primary/20 px-1.5 text-xs">
+                  {variations.length}
+                </span>
               </button>
             )}
             {selectedProvider && (
@@ -174,7 +195,9 @@ export default function ThumbnailGeneratorPage() {
         {/* Left Panel - Controls */}
         <div className="w-80 border-r border-border bg-surface p-5 space-y-6 overflow-y-auto flex-shrink-0">
           <div>
-            <label className="block text-sm font-medium text-text-muted mb-2">Prompt</label>
+            <label className="block text-sm font-medium text-text-muted mb-2">
+              Prompt
+            </label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -185,7 +208,9 @@ export default function ThumbnailGeneratorPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-muted mb-2">Negative Prompt</label>
+            <label className="block text-sm font-medium text-text-muted mb-2">
+              Negative Prompt
+            </label>
             <input
               value={negativePrompt}
               onChange={(e) => setNegativePrompt(e.target.value)}
@@ -196,8 +221,14 @@ export default function ThumbnailGeneratorPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-muted mb-3">Aspect Ratio</label>
-            <div className="flex gap-1.5" role="radiogroup" aria-label="Aspect ratio selection">
+            <label className="block text-sm font-medium text-text-muted mb-3">
+              Aspect Ratio
+            </label>
+            <div
+              className="flex gap-1.5"
+              role="radiogroup"
+              aria-label="Aspect ratio selection"
+            >
               {aspectRatios.map((ar) => {
                 const isSelected = width === ar.width && height === ar.height;
                 return (
@@ -206,7 +237,9 @@ export default function ThumbnailGeneratorPage() {
                     role="radio"
                     aria-checked={isSelected}
                     aria-label={`${ar.label} aspect ratio`}
-                    onClick={() => !isProcessing && setDimensions(ar.width, ar.height)}
+                    onClick={() =>
+                      !isProcessing && setDimensions(ar.width, ar.height)
+                    }
                     disabled={isProcessing}
                     className={`flex flex-col items-center justify-center gap-1 rounded-lg border transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[48px] h-16 ${
                       isSelected
@@ -214,17 +247,28 @@ export default function ThumbnailGeneratorPage() {
                         : "border-border bg-surface-elevated text-text-dim hover:border-primary/50 hover:bg-primary/5 hover:text-text-muted"
                     }`}
                   >
-                    <div className={`rounded-sm transition-colors ${
-                      isSelected
-                        ? "bg-primary"
-                        : "bg-current opacity-30"
-                    }`}
+                    <div
+                      className={`rounded-sm transition-colors ${
+                        isSelected ? "bg-primary" : "bg-current opacity-30"
+                      }`}
                       style={{
-                        width: ar.id === "1:1" ? 20 : ar.id === "4:3" || ar.id === "16:9" ? 24 : 14,
-                        height: ar.id === "1:1" ? 20 : ar.id === "3:4" || ar.id === "9:16" ? 24 : 14,
+                        width:
+                          ar.id === "1:1"
+                            ? 20
+                            : ar.id === "4:3" || ar.id === "16:9"
+                              ? 24
+                              : 14,
+                        height:
+                          ar.id === "1:1"
+                            ? 20
+                            : ar.id === "3:4" || ar.id === "9:16"
+                              ? 24
+                              : 14,
                       }}
                     />
-                    <span className="text-[11px] font-semibold leading-none">{ar.label}</span>
+                    <span className="text-[11px] font-semibold leading-none">
+                      {ar.label}
+                    </span>
                   </button>
                 );
               })}
@@ -232,7 +276,9 @@ export default function ThumbnailGeneratorPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-muted mb-3">Style</label>
+            <label className="block text-sm font-medium text-text-muted mb-3">
+              Style
+            </label>
             <div className="grid grid-cols-2 gap-2">
               {stylePresets.map((s) => (
                 <button
@@ -253,13 +299,18 @@ export default function ThumbnailGeneratorPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-muted mb-3">AI Provider</label>
+            <label className="block text-sm font-medium text-text-muted mb-3">
+              AI Provider
+            </label>
             <div className="space-y-2">
               {providers.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => !isProcessing && setAiProvider(p.id)}
-                  disabled={isProcessing || (p.tier === "pro" && plan === "FREE" && freeCredits > 0)}
+                  disabled={
+                    isProcessing ||
+                    (p.tier === "pro" && plan === "FREE" && freeCredits > 0)
+                  }
                   className={`flex w-full items-center justify-between rounded-lg border p-3 text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                     aiProvider === p.id
                       ? "border-primary bg-primary/10 text-primary"
@@ -269,9 +320,13 @@ export default function ThumbnailGeneratorPage() {
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{p.label}</span>
                     {p.tier === "free" ? (
-                      <Badge variant="free" size="sm">FREE</Badge>
+                      <Badge variant="free" size="sm">
+                        FREE
+                      </Badge>
                     ) : (
-                      <Badge variant="premium" size="sm">PRO</Badge>
+                      <Badge variant="premium" size="sm">
+                        PRO
+                      </Badge>
                     )}
                   </div>
                   <span className="text-xs">⚡ {p.cost} cr</span>
@@ -286,7 +341,11 @@ export default function ThumbnailGeneratorPage() {
               size="lg"
               className="w-full"
               isLoading={isProcessing}
-              disabled={!prompt.trim() || balance < (selectedProvider?.cost || 1) || isProcessing}
+              disabled={
+                !prompt.trim() ||
+                balance < (selectedProvider?.cost || 1) ||
+                isProcessing
+              }
               onClick={handleGenerate}
             >
               {isProcessing ? "Generating..." : "Generate Thumbnail"}
@@ -294,7 +353,10 @@ export default function ThumbnailGeneratorPage() {
             {balance < (selectedProvider?.cost || 1) && (
               <p className="mt-2 text-xs text-error text-center">
                 Insufficient credits.{" "}
-                <button onClick={() => setShowUpgradeModal(true)} className="underline">
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="underline"
+                >
                   Buy more
                 </button>
               </p>
@@ -305,7 +367,9 @@ export default function ThumbnailGeneratorPage() {
             <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-warning">⚠️</span>
-                <span className="text-sm font-medium text-warning">No credits left</span>
+                <span className="text-sm font-medium text-warning">
+                  No credits left
+                </span>
               </div>
               <p className="text-xs text-text-muted">
                 Upgrade to Pro or buy credit packs to continue generating.
@@ -359,7 +423,11 @@ export default function ThumbnailGeneratorPage() {
                     status === "READY" ? "opacity-100" : "opacity-0"
                   }`}
                 >
-                  <img src={imageUrl} alt={prompt} className="w-full h-full object-contain" />
+                  <img
+                    src={imageUrl}
+                    alt={prompt}
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 {status === "READY" && (
                   <div className="flex justify-center gap-3">
@@ -382,7 +450,18 @@ export default function ThumbnailGeneratorPage() {
                         }
                       }}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" x2="12" y1="15" y2="3" />
+                      </svg>
                       Download
                     </Button>
                     <Button
@@ -393,11 +472,31 @@ export default function ThumbnailGeneratorPage() {
                         toast.success("URL copied to clipboard");
                       }}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                      </svg>
                       Copy URL
                     </Button>
                     <Button variant="ghost" size="sm" onClick={handleGenerate}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                        <path d="M21 3v5h-5" />
+                      </svg>
                       Generate New
                     </Button>
                   </div>
@@ -410,9 +509,16 @@ export default function ThumbnailGeneratorPage() {
                 <div className="text-center space-y-4 animate-fade-in">
                   <div className="rounded-xl border border-error/30 bg-error/5 p-8">
                     <p className="text-error font-medium">Generation failed</p>
-                    <p className="text-sm text-text-muted mt-1">{generationError || "Unknown error"}</p>
+                    <p className="text-sm text-text-muted mt-1">
+                      {generationError || "Unknown error"}
+                    </p>
                     {!generationError?.includes("content filter") && (
-                      <Button variant="secondary" size="sm" className="mt-4" onClick={handleGenerate}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="mt-4"
+                        onClick={handleGenerate}
+                      >
                         Try Again
                       </Button>
                     )}
@@ -427,7 +533,10 @@ export default function ThumbnailGeneratorPage() {
       {/* Variations Drawer */}
       {showVariations && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowVariations(false)} />
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowVariations(false)}
+          />
           <div className="relative w-80 bg-surface border-l border-border shadow-2xl flex flex-col animate-slide-in-right">
             <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="text-sm font-semibold text-text">Variations</h3>
@@ -435,8 +544,15 @@ export default function ThumbnailGeneratorPage() {
                 onClick={() => setShowVariations(false)}
                 className="rounded-lg p-1.5 text-text-muted hover:text-text hover:bg-surface-elevated transition-colors cursor-pointer"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 6L6 18M6 6l12 12"/>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -453,9 +569,17 @@ export default function ThumbnailGeneratorPage() {
                     style={{
                       aspectRatio: `${width} / ${height}`,
                     }}
-                    onClick={() => { setRevealing(v.url, v.imageId); setReady(); setShowVariations(false); }}
+                    onClick={() => {
+                      setRevealing(v.url, v.imageId);
+                      setReady();
+                      setShowVariations(false);
+                    }}
                   >
-                    <img src={v.url} alt={`Variation ${i + 1}`} className="w-full h-full object-contain" />
+                    <img
+                      src={v.url}
+                      alt={`Variation ${i + 1}`}
+                      className="w-full h-full object-contain"
+                    />
                   </div>
                 ))
               ) : (
@@ -468,7 +592,10 @@ export default function ThumbnailGeneratorPage() {
         </div>
       )}
 
-      <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+      />
     </>
   );
 }

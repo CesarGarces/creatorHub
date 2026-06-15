@@ -24,11 +24,14 @@ export class GenerateThumbnailUseCase {
 
   constructor(
     private aiEngine: AIEngineService,
-    private marketingEventService: MarketingEventService
+    private marketingEventService: MarketingEventService,
   ) {}
 
-  async execute(input: GenerateThumbnailInput): Promise<GenerateThumbnailOutput> {
-    const { userId, prompt, negativePrompt, style, provider, width, height } = input;
+  async execute(
+    input: GenerateThumbnailInput,
+  ): Promise<GenerateThumbnailOutput> {
+    const { userId, prompt, negativePrompt, style, provider, width, height } =
+      input;
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -37,7 +40,9 @@ export class GenerateThumbnailUseCase {
 
     const totalCredits = user.freeCredits + user.purchasedCredits;
     if (totalCredits <= 0) {
-      throw new Error("No credits available. Please upgrade your plan or purchase credits.");
+      throw new Error(
+        "No credits available. Please upgrade your plan or purchase credits.",
+      );
     }
 
     const selectedProvider = this.selectProvider(user, provider);

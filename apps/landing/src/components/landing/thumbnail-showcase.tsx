@@ -21,7 +21,9 @@ export function ThumbnailShowcase() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
-            <p className="text-sm font-medium text-primary mb-3">Thumbnail Generator</p>
+            <p className="text-sm font-medium text-primary mb-3">
+              Thumbnail Generator
+            </p>
             <h2 className="text-3xl md:text-4xl font-bold text-text text-balance mb-6">
               Thumbnails that get clicks
             </h2>
@@ -40,8 +42,12 @@ export function ThumbnailShowcase() {
                   transition={{ delay: i * 0.05 }}
                   className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface hover:border-primary/30 transition-colors cursor-pointer"
                 >
-                  <div className={`h-8 w-8 rounded-lg bg-gradient-to-br ${style.color}`} />
-                  <span className="text-sm font-medium text-text">{style.name}</span>
+                  <div
+                    className={`h-8 w-8 rounded-lg bg-gradient-to-br ${style.color}`}
+                  />
+                  <span className="text-sm font-medium text-text">
+                    {style.name}
+                  </span>
                 </motion.div>
               ))}
             </div>
@@ -56,19 +62,26 @@ export function ThumbnailShowcase() {
             <div className="rounded-2xl border border-border bg-surface p-6">
               <div className="flex items-center gap-2 mb-6">
                 <Sparkles size={16} className="text-primary" />
-                <span className="text-sm font-medium text-text">Generate Thumbnail</span>
+                <span className="text-sm font-medium text-text">
+                  Generate Thumbnail
+                </span>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs text-text-muted mb-2">Describe your thumbnail</label>
+                  <label className="block text-xs text-text-muted mb-2">
+                    Describe your thumbnail
+                  </label>
                   <div className="rounded-lg border border-border bg-bg p-3 text-sm text-text-muted">
-                    Epic gaming thumbnail with neon lights, dramatic lighting, bold text overlay...
+                    Epic gaming thumbnail with neon lights, dramatic lighting,
+                    bold text overlay...
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs text-text-muted mb-2">Style</label>
+                  <label className="block text-xs text-text-muted mb-2">
+                    Style
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {styles.slice(0, 3).map((style) => (
                       <span
@@ -87,7 +100,9 @@ export function ThumbnailShowcase() {
                       key={n}
                       className="aspect-video rounded-lg bg-surface-elevated border border-border-subtle flex items-center justify-center"
                     >
-                      <span className="text-[10px] text-text-dim">Variation {n}</span>
+                      <span className="text-[10px] text-text-dim">
+                        Variation {n}
+                      </span>
                     </div>
                   ))}
                 </div>

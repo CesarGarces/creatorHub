@@ -9,24 +9,43 @@ const agents = [
     icon: Youtube,
     title: "YouTube Agent",
     status: "online" as const,
-    description: "Optimize videos for YouTube. Get title suggestions, SEO tags, and thumbnail ideas.",
-    capabilities: ["Title Generation", "SEO Tags", "Content Strategy", "Competitor Analysis"],
-    prompt: "Analyze my latest video and suggest improvements for better reach...",
+    description:
+      "Optimize videos for YouTube. Get title suggestions, SEO tags, and thumbnail ideas.",
+    capabilities: [
+      "Title Generation",
+      "SEO Tags",
+      "Content Strategy",
+      "Competitor Analysis",
+    ],
+    prompt:
+      "Analyze my latest video and suggest improvements for better reach...",
   },
   {
     icon: Tv,
     title: "Twitch Agent",
     status: "online" as const,
-    description: "Grow your Twitch channel. Stream scheduling, raid suggestions, and chat engagement.",
-    capabilities: ["Stream Planning", "Chat Games", "Raid Strategy", "Clip Highlights"],
+    description:
+      "Grow your Twitch channel. Stream scheduling, raid suggestions, and chat engagement.",
+    capabilities: [
+      "Stream Planning",
+      "Chat Games",
+      "Raid Strategy",
+      "Clip Highlights",
+    ],
     prompt: "Help me plan my streaming schedule for maximum viewership...",
   },
   {
     icon: Smartphone,
     title: "TikTok Agent",
     status: "online" as const,
-    description: "Create viral TikTok content. Trending sounds, hook formulas, and posting strategy.",
-    capabilities: ["Hook Writing", "Trend Analysis", "Posting Schedule", "Hashtag Research"],
+    description:
+      "Create viral TikTok content. Trending sounds, hook formulas, and posting strategy.",
+    capabilities: [
+      "Hook Writing",
+      "Trend Analysis",
+      "Posting Schedule",
+      "Hashtag Research",
+    ],
     prompt: "Generate 10 viral hooks for my niche in the fitness category...",
   },
 ];
@@ -46,8 +65,8 @@ export function AgentsSection() {
             Your AI content team
           </h2>
           <p className="mt-4 text-text-muted max-w-2xl mx-auto">
-            Specialized AI agents that understand your platform and help you grow.
-            Each agent is trained on platform-specific best practices.
+            Specialized AI agents that understand your platform and help you
+            grow. Each agent is trained on platform-specific best practices.
           </p>
         </motion.div>
 
@@ -70,15 +89,21 @@ export function AgentsSection() {
                     <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-success border-2 border-surface" />
                   </div>
                   <div>
-                    <h3 className="text-base font-semibold text-text">{agent.title}</h3>
+                    <h3 className="text-base font-semibold text-text">
+                      {agent.title}
+                    </h3>
                     <div className="flex items-center gap-1.5">
                       <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                      <span className="text-[11px] text-success capitalize">{agent.status}</span>
+                      <span className="text-[11px] text-success capitalize">
+                        {agent.status}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-sm text-text-muted leading-relaxed mb-4">{agent.description}</p>
+                <p className="text-sm text-text-muted leading-relaxed mb-4">
+                  {agent.description}
+                </p>
 
                 <div className="flex flex-wrap gap-1.5 mb-5">
                   {agent.capabilities.map((cap) => (
@@ -94,7 +119,9 @@ export function AgentsSection() {
                 <div className="rounded-lg bg-bg border border-border-subtle p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Bot size={12} className="text-text-dim" />
-                    <span className="text-[10px] text-text-dim font-medium">Sample Prompt</span>
+                    <span className="text-[10px] text-text-dim font-medium">
+                      Sample Prompt
+                    </span>
                   </div>
                   <p className="text-xs text-text-muted italic leading-relaxed">
                     &ldquo;{agent.prompt}&rdquo;

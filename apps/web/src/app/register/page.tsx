@@ -32,15 +32,20 @@ export default function RegisterPage() {
 
       <Card className="w-full max-w-md relative z-10 border-border/50 bg-surface/90 backdrop-blur-sm">
         <CardHeader className="text-center">
-
-          <img src="/isologo_white.png" alt="Creator Hub" className="mx-auto mb-4 h-14 w-auto" />
+          <img
+            src="/isologo_white.png"
+            alt="Creator Hub"
+            className="mx-auto mb-4 h-14 w-auto"
+          />
           <h1 className="text-2xl font-bold text-text">Create your account</h1>
           <p className="text-sm text-text-muted">Start creating with AI</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-lg bg-error/10 border border-error/20 p-3 text-sm text-error">{error}</div>
+              <div className="rounded-lg bg-error/10 border border-error/20 p-3 text-sm text-error">
+                {error}
+              </div>
             )}
             <Input
               label="Name"
@@ -65,13 +70,22 @@ export default function RegisterPage() {
               placeholder="••••••••"
               required
             />
-            <Button type="submit" isLoading={isLoading} variant="glow" className="w-full" size="lg">
+            <Button
+              type="submit"
+              isLoading={isLoading}
+              variant="glow"
+              className="w-full"
+              size="lg"
+            >
               Create account
             </Button>
           </form>
           <p className="mt-6 text-center text-sm text-text-muted">
             Already have an account?{" "}
-            <a href="/login" className="text-primary hover:text-primary-hover font-medium transition-colors">
+            <a
+              href="/login"
+              className="text-primary hover:text-primary-hover font-medium transition-colors"
+            >
               Sign in
             </a>
           </p>

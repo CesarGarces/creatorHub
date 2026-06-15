@@ -11,7 +11,7 @@ export class CreditService {
 
   constructor(
     @InjectQueue("credits") private creditsQueue: Queue,
-    private eventEmitter: EventEmitter2
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async getBalance(userId: string): Promise<number> {
@@ -28,7 +28,7 @@ export class CreditService {
     userId: string,
     amount: number,
     toolId?: string,
-    description?: string
+    description?: string,
   ): Promise<boolean> {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
@@ -77,7 +77,8 @@ export class CreditService {
       });
 
       const updated = await tx.user.findUnique({ where: { id: userId } });
-      const newBalance = (updated?.freeCredits || 0) + (updated?.purchasedCredits || 0);
+      const newBalance =
+        (updated?.freeCredits || 0) + (updated?.purchasedCredits || 0);
 
       await tx.creditTransaction.create({
         data: {
@@ -98,7 +99,7 @@ export class CreditService {
     userId: string,
     amount: number,
     description: string,
-    type: "PURCHASE" | "BONUS" | "SUBSCRIPTION" | "PROMOTION" = "BONUS"
+    type: "PURCHASE" | "BONUS" | "SUBSCRIPTION" | "PROMOTION" = "BONUS",
   ): Promise<void> {
     await prisma.$transaction(async (tx) => {
       const field = type === "PURCHASE" ? "purchasedCredits" : "freeCredits";
@@ -111,7 +112,8 @@ export class CreditService {
       });
 
       const updated = await tx.user.findUnique({ where: { id: userId } });
-      const newBalance = (updated?.freeCredits || 0) + (updated?.purchasedCredits || 0);
+      const newBalance =
+        (updated?.freeCredits || 0) + (updated?.purchasedCredits || 0);
 
       await tx.creditTransaction.create({
         data: {

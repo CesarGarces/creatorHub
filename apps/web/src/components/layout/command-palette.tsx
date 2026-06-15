@@ -21,17 +21,77 @@ interface CommandPaletteProps {
 }
 
 const defaultItems: CommandItem[] = [
-  { id: "thumbnail", label: "Thumbnail Generator", description: "Create stunning thumbnails", icon: "🎨", href: "/tools/thumbnail-generator", category: "Tools" },
-  { id: "youtube-agent", label: "YouTube Agent", description: "Plan and optimize YouTube content", icon: "🤖", href: "/agents/youtube", category: "Agents" },
-  { id: "dashboard", label: "Dashboard", description: "Go to dashboard", icon: "🏠", href: "/dashboard", category: "Navigation" },
-  { id: "tools", label: "All Tools", description: "Browse all tools", icon: "🛠️", href: "/tools", category: "Navigation" },
-  { id: "agents", label: "All Agents", description: "Browse all agents", icon: "🤖", href: "/agents", category: "Navigation" },
-  { id: "credits", label: "Credits", description: "Manage your credits", icon: "💎", href: "/credits", category: "Account" },
-  { id: "history", label: "History", description: "View generation history", icon: "📜", href: "/history", category: "Navigation" },
-  { id: "settings", label: "Settings", description: "App settings", icon: "⚙️", href: "/settings", category: "Account" },
+  {
+    id: "thumbnail",
+    label: "Thumbnail Generator",
+    description: "Create stunning thumbnails",
+    icon: "🎨",
+    href: "/tools/thumbnail-generator",
+    category: "Tools",
+  },
+  {
+    id: "youtube-agent",
+    label: "YouTube Agent",
+    description: "Plan and optimize YouTube content",
+    icon: "🤖",
+    href: "/agents/youtube",
+    category: "Agents",
+  },
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    description: "Go to dashboard",
+    icon: "🏠",
+    href: "/dashboard",
+    category: "Navigation",
+  },
+  {
+    id: "tools",
+    label: "All Tools",
+    description: "Browse all tools",
+    icon: "🛠️",
+    href: "/tools",
+    category: "Navigation",
+  },
+  {
+    id: "agents",
+    label: "All Agents",
+    description: "Browse all agents",
+    icon: "🤖",
+    href: "/agents",
+    category: "Navigation",
+  },
+  {
+    id: "credits",
+    label: "Credits",
+    description: "Manage your credits",
+    icon: "💎",
+    href: "/credits",
+    category: "Account",
+  },
+  {
+    id: "history",
+    label: "History",
+    description: "View generation history",
+    icon: "📜",
+    href: "/history",
+    category: "Navigation",
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    description: "App settings",
+    icon: "⚙️",
+    href: "/settings",
+    category: "Account",
+  },
 ];
 
-export function CommandPalette({ isOpen, onClose, items = defaultItems }: CommandPaletteProps) {
+export function CommandPalette({
+  isOpen,
+  onClose,
+  items = defaultItems,
+}: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const router = useRouter();
@@ -39,15 +99,18 @@ export function CommandPalette({ isOpen, onClose, items = defaultItems }: Comman
   const filtered = items.filter(
     (item) =>
       item.label.toLowerCase().includes(query.toLowerCase()) ||
-      item.description?.toLowerCase().includes(query.toLowerCase())
+      item.description?.toLowerCase().includes(query.toLowerCase()),
   );
 
-  const grouped = filtered.reduce((acc, item) => {
-    const cat = item.category || "Other";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(item);
-    return acc;
-  }, {} as Record<string, CommandItem[]>);
+  const grouped = filtered.reduce(
+    (acc, item) => {
+      const cat = item.category || "Other";
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(item);
+      return acc;
+    },
+    {} as Record<string, CommandItem[]>,
+  );
 
   const flatFiltered = Object.values(grouped).flat();
 
@@ -58,7 +121,7 @@ export function CommandPalette({ isOpen, onClose, items = defaultItems }: Comman
       onClose();
       setQuery("");
     },
-    [router, onClose]
+    [router, onClose],
   );
 
   useEffect(() => {
@@ -100,10 +163,26 @@ export function CommandPalette({ isOpen, onClose, items = defaultItems }: Comman
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
-      <div className="fixed inset-0 bg-bg/80 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-bg/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div className="relative w-full max-w-lg rounded-xl border border-border bg-surface shadow-2xl animate-scale-in overflow-hidden">
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-dim"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-text-dim"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
           <input
             autoFocus
             value={query}
@@ -131,14 +210,18 @@ export function CommandPalette({ isOpen, onClose, items = defaultItems }: Comman
                     onMouseEnter={() => setSelectedIndex(idx)}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
-                      idx === selectedIndex ? "bg-primary/10 text-text" : "text-text-muted hover:bg-surface-elevated"
+                      idx === selectedIndex
+                        ? "bg-primary/10 text-text"
+                        : "text-text-muted hover:bg-surface-elevated",
                     )}
                   >
                     {item.icon && <span className="text-lg">{item.icon}</span>}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{item.label}</p>
                       {item.description && (
-                        <p className="text-xs text-text-dim truncate">{item.description}</p>
+                        <p className="text-xs text-text-dim truncate">
+                          {item.description}
+                        </p>
                       )}
                     </div>
                     {idx === selectedIndex && (
@@ -150,7 +233,9 @@ export function CommandPalette({ isOpen, onClose, items = defaultItems }: Comman
             </div>
           ))}
           {flatFiltered.length === 0 && (
-            <div className="py-8 text-center text-sm text-text-dim">No results found</div>
+            <div className="py-8 text-center text-sm text-text-dim">
+              No results found
+            </div>
           )}
         </div>
       </div>

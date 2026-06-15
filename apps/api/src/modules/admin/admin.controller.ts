@@ -9,7 +9,7 @@ import { JwtAuthGuard, Roles, RolesGuard } from "@creator-hub/auth";
 export class AdminController {
   constructor(
     private toolRegistry: ToolRegistry,
-    private analytics: AnalyticsService
+    private analytics: AnalyticsService,
   ) {}
 
   @Get("dashboard")
@@ -23,7 +23,10 @@ export class AdminController {
   }
 
   @Post("tools/toggle")
-  async toggleTool(@Body("toolId") toolId: string, @Body("status") status: string) {
+  async toggleTool(
+    @Body("toolId") toolId: string,
+    @Body("status") status: string,
+  ) {
     // Toggle tool status
     return { success: true };
   }

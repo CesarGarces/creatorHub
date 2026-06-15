@@ -1,6 +1,7 @@
 import { getAccessToken } from "@/lib/cookie";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
 
 interface ApiOptions extends RequestInit {
   params?: Record<string, string>;
@@ -51,19 +52,32 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
     super(message);
     this.name = "ApiError";
   }
 }
 
 export const api = {
-  get: <T>(path: string, options?: ApiOptions) => request<T>(path, { ...options, method: "GET" }),
+  get: <T>(path: string, options?: ApiOptions) =>
+    request<T>(path, { ...options, method: "GET" }),
   post: <T>(path: string, body?: unknown, options?: ApiOptions) =>
-    request<T>(path, { ...options, method: "POST", body: body ? JSON.stringify(body) : undefined }),
+    request<T>(path, {
+      ...options,
+      method: "POST",
+      body: body ? JSON.stringify(body) : undefined,
+    }),
   put: <T>(path: string, body?: unknown, options?: ApiOptions) =>
-    request<T>(path, { ...options, method: "PUT", body: body ? JSON.stringify(body) : undefined }),
-  delete: <T>(path: string, options?: ApiOptions) => request<T>(path, { ...options, method: "DELETE" }),
+    request<T>(path, {
+      ...options,
+      method: "PUT",
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+  delete: <T>(path: string, options?: ApiOptions) =>
+    request<T>(path, { ...options, method: "DELETE" }),
 };
 
 export default api;

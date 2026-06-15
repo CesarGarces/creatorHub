@@ -35,7 +35,10 @@ export class MarketingEventHandler {
   }
 
   @OnEvent("marketing.credit_depleted")
-  async handleCreditDepleted(event: { userId: string; timestamp: Date }): Promise<void> {
+  async handleCreditDepleted(event: {
+    userId: string;
+    timestamp: Date;
+  }): Promise<void> {
     const { userId } = event;
 
     this.logger.log(`Credit depleted - upgrade prompt triggered`, { userId });

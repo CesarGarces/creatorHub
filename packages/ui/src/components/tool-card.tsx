@@ -28,7 +28,8 @@ export function ToolCard({
       className={cn(
         "group relative rounded-xl border border-border bg-surface p-5 transition-all duration-200 cursor-pointer",
         "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5",
-        isInactive && "opacity-50 cursor-not-allowed hover:translate-y-0 hover:shadow-none hover:border-border"
+        isInactive &&
+          "opacity-50 cursor-not-allowed hover:translate-y-0 hover:shadow-none hover:border-border",
       )}
       onClick={isInactive ? undefined : onClick}
     >
@@ -39,7 +40,9 @@ export function ToolCard({
           </div>
           <div>
             <h3 className="font-semibold text-text">{name}</h3>
-            <p className="text-sm text-text-muted line-clamp-1">{description}</p>
+            <p className="text-sm text-text-muted line-clamp-1">
+              {description}
+            </p>
           </div>
         </div>
         {category && (

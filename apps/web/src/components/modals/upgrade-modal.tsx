@@ -26,7 +26,8 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
           <div className="text-4xl">⚡</div>
           <h2 className="text-xl font-bold text-text">No credits remaining</h2>
           <p className="text-sm text-text-muted">
-            You&apos;ve used all your free credits. Upgrade to continue creating amazing thumbnails.
+            You&apos;ve used all your free credits. Upgrade to continue creating
+            amazing thumbnails.
           </p>
         </div>
 
@@ -42,7 +43,11 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
               }`}
             >
               {pack.popular && (
-                <Badge variant="accent" size="sm" className="absolute -top-2 right-3">
+                <Badge
+                  variant="accent"
+                  size="sm"
+                  className="absolute -top-2 right-3"
+                >
                   BEST VALUE
                 </Badge>
               )}
@@ -53,7 +58,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
               <div className="text-right">
                 <p className="text-lg font-bold text-primary">${pack.price}</p>
                 <p className="text-xs text-text-dim">
-                  ${(pack.price / pack.amount * 100).toFixed(1)}¢/credit
+                  ${((pack.price / pack.amount) * 100).toFixed(1)}¢/credit
                 </p>
               </div>
             </button>

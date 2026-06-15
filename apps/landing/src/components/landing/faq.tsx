@@ -69,7 +69,9 @@ export function FAQ() {
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
                 className="flex items-center justify-between w-full p-5 text-left"
               >
-                <span className="text-sm font-medium text-text pr-4">{faq.question}</span>
+                <span className="text-sm font-medium text-text pr-4">
+                  {faq.question}
+                </span>
                 <ChevronDown
                   size={16}
                   className={`text-text-muted shrink-0 transition-transform duration-200 ${

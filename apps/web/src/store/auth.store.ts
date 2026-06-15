@@ -44,10 +44,13 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   login: async (email, password) => {
     set({ isLoading: true });
     try {
-      const res = await api.post<{ accessToken: string; user: User }>("/auth/login", {
-        email,
-        password,
-      });
+      const res = await api.post<{ accessToken: string; user: User }>(
+        "/auth/login",
+        {
+          email,
+          password,
+        },
+      );
       setAccessToken(res.accessToken);
       setStoredUser(res.user);
       set({ user: res.user, token: res.accessToken });
@@ -59,11 +62,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   register: async (email, password, name) => {
     set({ isLoading: true });
     try {
-      const res = await api.post<{ accessToken: string; user: User }>("/auth/register", {
-        email,
-        password,
-        name,
-      });
+      const res = await api.post<{ accessToken: string; user: User }>(
+        "/auth/register",
+        {
+          email,
+          password,
+          name,
+        },
+      );
       setAccessToken(res.accessToken);
       setStoredUser(res.user);
       set({ user: res.user, token: res.accessToken });

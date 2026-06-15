@@ -6,7 +6,11 @@ interface CreditDisplayProps {
   size?: "sm" | "md";
 }
 
-export function CreditDisplay({ balance, className, size = "md" }: CreditDisplayProps) {
+export function CreditDisplay({
+  balance,
+  className,
+  size = "md",
+}: CreditDisplayProps) {
   const isLow = balance < 100;
 
   return (
@@ -17,12 +21,17 @@ export function CreditDisplay({ balance, className, size = "md" }: CreditDisplay
         isLow
           ? "bg-error-light text-error"
           : balance < 500
-          ? "bg-warning-light text-warning"
-          : "bg-secondary-light text-secondary",
-        className
+            ? "bg-warning-light text-warning"
+            : "bg-secondary-light text-secondary",
+        className,
       )}
     >
-      <span className={cn("rounded-full bg-current/20", size === "sm" ? "h-1.5 w-1.5" : "h-2 w-2")} />
+      <span
+        className={cn(
+          "rounded-full bg-current/20",
+          size === "sm" ? "h-1.5 w-1.5" : "h-2 w-2",
+        )}
+      />
       <span>{balance.toLocaleString()} credits</span>
     </div>
   );

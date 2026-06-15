@@ -12,16 +12,27 @@
     "db:generate": "turbo run db:generate",
     "db:push": "turbo run db:push",
     "db:migrate": "turbo run db:migrate",
-    "db:seed": "turbo run db:seed"
+    "db:seed": "turbo run db:seed",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@typescript-eslint/eslint-plugin": "^8.61.0",
     "@typescript-eslint/parser": "^8.61.0",
     "eslint": "^10.4.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
     "prettier": "^3.2.0",
     "turbo": "^2.0.0",
     "typescript": "^5.5.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint"
+    ],
+    "*.{ts,tsx,json,css,md}": [
+      "prettier --check"
+    ]
   },
   "engines": {
     "node": ">=20.0.0"

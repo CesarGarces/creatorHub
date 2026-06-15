@@ -32,7 +32,10 @@ export class ProviderFactory implements OnModuleInit {
 
     // In development without SiliconFlow key, register mock as fallback
     if (!process.env.SILICONFLOW_API_KEY) {
-      if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
+      if (
+        process.env.NODE_ENV === "development" ||
+        process.env.NODE_ENV === "test"
+      ) {
         providers.push(new MockImageProvider());
       }
     }
@@ -40,7 +43,9 @@ export class ProviderFactory implements OnModuleInit {
     for (const provider of providers) {
       if (provider.validateConfig()) {
         this.registry.register(provider);
-        this.logger.info(`Provider registered: ${provider.name} (tier: ${provider.tier || "pro"})`);
+        this.logger.info(
+          `Provider registered: ${provider.name} (tier: ${provider.tier || "pro"})`,
+        );
       }
     }
   }

@@ -20,7 +20,15 @@ export class ThumbnailController {
   @Post("generate")
   async generate(
     @CurrentUser("id") userId: string,
-    @Body() dto: { prompt: string; negativePrompt?: string; style?: string; provider?: string; width?: number; height?: number }
+    @Body()
+    dto: {
+      prompt: string;
+      negativePrompt?: string;
+      style?: string;
+      provider?: string;
+      width?: number;
+      height?: number;
+    },
   ): Promise<{ success: boolean; data: { jobId: string } }> {
     if (!dto.prompt?.trim()) {
       throw new BadRequestException("Prompt is required");
@@ -49,7 +57,7 @@ export class ThumbnailController {
   @Get("jobs/:jobId/status")
   async getJobStatus(
     @CurrentUser("id") userId: string,
-    @Param("jobId") jobId: string
+    @Param("jobId") jobId: string,
   ): Promise<{ status: string; failedReason?: string }> {
     return this.thumbnailService.getJobStatus(jobId, userId);
   }
@@ -58,7 +66,7 @@ export class ThumbnailController {
   async getImages(
     @CurrentUser("id") userId: string,
     @Query("page") page?: number,
-    @Query("limit") limit?: number
+    @Query("limit") limit?: number,
   ): Promise<any> {
     return this.thumbnailService.getUserImages(userId, page, limit);
   }

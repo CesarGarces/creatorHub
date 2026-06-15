@@ -1,6 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { ProviderRegistry } from "./providers/provider-registry";
-import type { AIRequest, AIResponse, AIProvider } from "@creator-hub/shared-types";
+import type {
+  AIRequest,
+  AIResponse,
+  AIProvider,
+} from "@creator-hub/shared-types";
 import { Logger } from "@creator-hub/shared-utils";
 
 @Injectable()
@@ -17,7 +21,7 @@ export class AIEngineService {
 
     if (providers.length === 0) {
       throw new Error(
-        `No AI providers available for task: ${request.taskType}. Check that your API keys are configured in .env`
+        `No AI providers available for task: ${request.taskType}. Check that your API keys are configured in .env`,
       );
     }
 
@@ -32,15 +36,16 @@ export class AIEngineService {
 
       const startTime = Date.now();
       try {
-        const response = request.taskType === "image-generation"
-          ? await provider.generateImage({
-              prompt: request.prompt,
-              negativePrompt: request.negativePrompt,
-              width: (request.parameters?.width as number) || 1024,
-              height: (request.parameters?.height as number) || 1024,
-              model: request.model,
-            })
-          : await provider.generate(request);
+        const response =
+          request.taskType === "image-generation"
+            ? await provider.generateImage({
+                prompt: request.prompt,
+                negativePrompt: request.negativePrompt,
+                width: (request.parameters?.width as number) || 1024,
+                height: (request.parameters?.height as number) || 1024,
+                model: request.model,
+              })
+            : await provider.generate(request);
         const latency = Date.now() - startTime;
 
         return {
@@ -90,7 +95,7 @@ export class AIEngineService {
       height?: number;
       userId?: string;
       toolId?: string;
-    }
+    },
   ): Promise<AIResponse> {
     return this.execute({
       taskType: "image-generation",
@@ -106,5 +111,4 @@ export class AIEngineService {
       toolId: options.toolId,
     });
   }
-
 }

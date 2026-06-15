@@ -1,5 +1,10 @@
 import { AIProviderBase } from "./ai-provider.base";
-import type { AIRequest, AIResponse, AITaskType, AIProvider } from "@creator-hub/shared-types";
+import type {
+  AIRequest,
+  AIResponse,
+  AITaskType,
+  AIProvider,
+} from "@creator-hub/shared-types";
 import type { ImageGenerationOptions } from "./provider.interface";
 
 export class SiliconFlowProvider extends AIProviderBase {
@@ -19,19 +24,22 @@ export class SiliconFlowProvider extends AIProviderBase {
 
   async generateImage(options: ImageGenerationOptions): Promise<AIResponse> {
     const image_size = `${options.width || 1024}x${options.height || 1024}`;
-    const response = await fetch("https://api.siliconflow.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.getApiKey()}`,
-        "Content-Type": "application/json",
+    const response = await fetch(
+      "https://api.siliconflow.com/v1/images/generations",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.getApiKey()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "black-forest-labs/FLUX.2-pro",
+          prompt: options.prompt,
+          negative_prompt: options.negativePrompt,
+          image_size,
+        }),
       },
-      body: JSON.stringify({
-        model: "black-forest-labs/FLUX.2-pro",
-        prompt: options.prompt,
-        negative_prompt: options.negativePrompt,
-        image_size,
-      }),
-    });
+    );
 
     if (!response.ok) {
       const errorText = await response.text();

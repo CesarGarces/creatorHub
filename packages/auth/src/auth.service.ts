@@ -63,7 +63,12 @@ export class AuthService {
     return this.generateTokens(user);
   }
 
-  async validateOAuth(provider: string, providerAccountId: string, email: string, name?: string) {
+  async validateOAuth(
+    provider: string,
+    providerAccountId: string,
+    email: string,
+    name?: string,
+  ) {
     const account = await prisma.account.findUnique({
       where: { provider_providerAccountId: { provider, providerAccountId } },
       include: { user: true },

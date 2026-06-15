@@ -23,7 +23,7 @@ export class ThumbnailService {
     private storageService: StorageService,
     private marketingEventService: MarketingEventService,
     private providerRegistry: ProviderRegistry,
-    @InjectQueue("thumbnail-generation") private thumbnailQueue: Queue
+    @InjectQueue("thumbnail-generation") private thumbnailQueue: Queue,
   ) {}
 
   async generate(params: {
@@ -44,7 +44,9 @@ export class ThumbnailService {
 
     const totalCredits = user.freeCredits + user.purchasedCredits;
     if (totalCredits < CREDIT_COST) {
-      throw new Error("No credits available. Please upgrade your plan or purchase credits.");
+      throw new Error(
+        "No credits available. Please upgrade your plan or purchase credits.",
+      );
     }
 
     const selectedProvider = this.selectProvider(user, params.provider);
@@ -60,12 +62,18 @@ export class ThumbnailService {
       creditCost: CREDIT_COST,
     });
 
-    this.logger.info(`Thumbnail job enqueued`, { jobId: job.id, userId: params.userId });
+    this.logger.info(`Thumbnail job enqueued`, {
+      jobId: job.id,
+      userId: params.userId,
+    });
 
     return { jobId: job.id! };
   }
 
-  async getJobStatus(jobId: string, userId: string): Promise<{ status: string; failedReason?: string }> {
+  async getJobStatus(
+    jobId: string,
+    userId: string,
+  ): Promise<{ status: string; failedReason?: string }> {
     const job = await this.thumbnailQueue.getJob(jobId);
     if (!job) {
       return { status: "not_found" };
@@ -76,7 +84,10 @@ export class ThumbnailService {
     const state = await job.getState();
     return {
       status: state,
-      failedReason: state === "failed" ? getFriendlyError(job.failedReason || "") : undefined,
+      failedReason:
+        state === "failed"
+          ? getFriendlyError(job.failedReason || "")
+          : undefined,
     };
   }
 
@@ -104,14 +115,18 @@ export class ThumbnailService {
           const key = parts.slice(1).join("/");
           if (bucket && key) {
             try {
-              url = await this.storageService.getPresignedDownloadUrl(bucket, key, 3600);
+              url = await this.storageService.getPresignedDownloadUrl(
+                bucket,
+                key,
+                3600,
+              );
             } catch {
               url = img.url;
             }
           }
         }
         return { ...img, url };
-      })
+      }),
     );
 
     return {

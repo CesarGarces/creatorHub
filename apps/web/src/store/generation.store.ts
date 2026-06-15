@@ -1,6 +1,11 @@
 import { create } from "zustand";
 
-export type GenerationStatus = "IDLE" | "GENERATING" | "REVEALING" | "READY" | "FAILED";
+export type GenerationStatus =
+  | "IDLE"
+  | "GENERATING"
+  | "REVEALING"
+  | "READY"
+  | "FAILED";
 
 // ─── Base State (reusable for ANY tool) ──────────────────────────────────────
 export interface BaseGenerationState {

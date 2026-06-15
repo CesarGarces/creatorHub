@@ -1,4 +1,9 @@
-import type { ToolManifest, ToolCategory, ToolPermission, ToolRoute } from "@creator-hub/shared-types";
+import type {
+  ToolManifest,
+  ToolCategory,
+  ToolPermission,
+  ToolRoute,
+} from "@creator-hub/shared-types";
 
 export interface ToolManifestInput {
   id: string;
@@ -13,7 +18,7 @@ export interface ToolManifestInput {
     routes: ToolRoute[];
   };
   backend: {
-    module: any;      // NestJS module class
+    module: any; // NestJS module class
     events?: string[];
   };
 }

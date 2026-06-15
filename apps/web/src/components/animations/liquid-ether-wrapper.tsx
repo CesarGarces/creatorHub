@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { useGenerationStore, type GenerationStatus } from "@/store/generation.store";
+import {
+  useGenerationStore,
+  type GenerationStatus,
+} from "@/store/generation.store";
 
 interface Particle {
   x: number;
@@ -56,21 +59,24 @@ export function LiquidEtherBackground() {
     statusRef.current = status;
   }, [status]);
 
-  const createParticles = useCallback((width: number, height: number, count: number) => {
-    const particles: Particle[] = [];
-    for (let i = 0; i < count; i++) {
-      particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 2,
-        vy: (Math.random() - 0.5) * 2,
-        radius: Math.random() * 3 + 1,
-        alpha: Math.random() * 0.5 + 0.3,
-        color: getStatusColor(statusRef.current),
-      });
-    }
-    return particles;
-  }, []);
+  const createParticles = useCallback(
+    (width: number, height: number, count: number) => {
+      const particles: Particle[] = [];
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          vx: (Math.random() - 0.5) * 2,
+          vy: (Math.random() - 0.5) * 2,
+          radius: Math.random() * 3 + 1,
+          alpha: Math.random() * 0.5 + 0.3,
+          color: getStatusColor(statusRef.current),
+        });
+      }
+      return particles;
+    },
+    [],
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -95,7 +101,11 @@ export function LiquidEtherBackground() {
     resize();
 
     const rect = canvas.parentElement!.getBoundingClientRect();
-    particlesRef.current = createParticles(rect.width || 600, rect.height || 340, 40);
+    particlesRef.current = createParticles(
+      rect.width || 600,
+      rect.height || 340,
+      40,
+    );
 
     const animate = () => {
       const rect = canvas.parentElement!.getBoundingClientRect();

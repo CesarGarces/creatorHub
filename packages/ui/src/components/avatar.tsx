@@ -32,7 +32,13 @@ function stringToColor(str: string): string {
   return colors[Math.abs(hash) % colors.length] ?? "bg-primary";
 }
 
-export function Avatar({ src, alt, name, size = "md", className }: AvatarProps) {
+export function Avatar({
+  src,
+  alt,
+  name,
+  size = "md",
+  className,
+}: AvatarProps) {
   const sizeClasses = {
     sm: "h-8 w-8 text-xs",
     md: "h-10 w-10 text-sm",
@@ -44,7 +50,11 @@ export function Avatar({ src, alt, name, size = "md", className }: AvatarProps) 
       <img
         src={src}
         alt={alt || name || "Avatar"}
-        className={cn("rounded-full object-cover", sizeClasses[size], className)}
+        className={cn(
+          "rounded-full object-cover",
+          sizeClasses[size],
+          className,
+        )}
       />
     );
   }
@@ -55,7 +65,7 @@ export function Avatar({ src, alt, name, size = "md", className }: AvatarProps) 
         "rounded-full flex items-center justify-center font-medium text-white",
         sizeClasses[size],
         name ? stringToColor(name) : "bg-surface-elevated",
-        className
+        className,
       )}
     >
       {name ? getInitials(name) : "?"}

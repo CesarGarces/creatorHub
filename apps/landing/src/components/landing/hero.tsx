@@ -22,8 +22,8 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 text-lg md:text-xl text-text-muted max-w-2xl text-balance">
-            Create thumbnails, scripts, clips, stream games and content ideas using
-            AI tools and agents.
+            Create thumbnails, scripts, clips, stream games and content ideas
+            using AI tools and agents.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
@@ -53,7 +53,9 @@ export function Hero() {
                 <div className="h-3 w-3 rounded-full bg-error/60" />
                 <div className="h-3 w-3 rounded-full bg-warning/60" />
                 <div className="h-3 w-3 rounded-full bg-success/60" />
-                <div className="ml-4 text-xs text-text-dim">Creator Hub Dashboard</div>
+                <div className="ml-4 text-xs text-text-dim">
+                  Creator Hub Dashboard
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <MockToolCard
@@ -64,7 +66,11 @@ export function Hero() {
                 <MockAgentCard
                   title="YouTube Agent"
                   status="online"
-                  capabilities={["Script Writing", "SEO Optimization", "Content Ideas"]}
+                  capabilities={[
+                    "Script Writing",
+                    "SEO Optimization",
+                    "Content Ideas",
+                  ]}
                 />
                 <MockStatsCard />
               </div>
@@ -88,7 +94,9 @@ function MockToolCard({
 }) {
   return (
     <div className="rounded-lg border border-border bg-bg p-4">
-      <div className={`h-10 w-10 rounded-lg bg-${color}/20 flex items-center justify-center mb-3`}>
+      <div
+        className={`h-10 w-10 rounded-lg bg-${color}/20 flex items-center justify-center mb-3`}
+      >
         <div className={`h-5 w-5 rounded bg-${color}`} />
       </div>
       <h3 className="text-sm font-semibold text-text mb-1">{title}</h3>

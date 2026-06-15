@@ -32,7 +32,10 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const token =
         (client.handshake.auth?.token as string) ||
-        (client.handshake.headers?.authorization as string)?.replace("Bearer ", "");
+        (client.handshake.headers?.authorization as string)?.replace(
+          "Bearer ",
+          "",
+        );
 
       if (!token) {
         this.logger.warn("Connection rejected: no token provided");
@@ -55,7 +58,10 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.userId = user.id;
       client.join(user.id);
 
-      this.logger.log(`Client connected`, { userId: user.id, socketId: client.id });
+      this.logger.log(`Client connected`, {
+        userId: user.id,
+        socketId: client.id,
+      });
     } catch (error) {
       this.logger.warn("Connection rejected: invalid token", {
         error: (error as Error).message,

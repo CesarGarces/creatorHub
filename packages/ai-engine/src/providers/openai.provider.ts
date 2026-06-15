@@ -1,11 +1,20 @@
 import OpenAI from "openai";
 import { AIProviderBase } from "./ai-provider.base";
-import type { AIRequest, AIResponse, AITaskType, AIProvider } from "@creator-hub/shared-types";
+import type {
+  AIRequest,
+  AIResponse,
+  AITaskType,
+  AIProvider,
+} from "@creator-hub/shared-types";
 import type { ImageGenerationOptions } from "./provider.interface";
 
 type OpenAIImageModel = "gpt-image-1" | "dall-e-2" | "dall-e-3";
 
-const OPENAI_IMAGE_MODELS: OpenAIImageModel[] = ["gpt-image-1", "dall-e-2", "dall-e-3"];
+const OPENAI_IMAGE_MODELS: OpenAIImageModel[] = [
+  "gpt-image-1",
+  "dall-e-2",
+  "dall-e-3",
+];
 
 export class OpenAIImageProvider extends AIProviderBase {
   readonly name: AIProvider = "openai";
@@ -16,7 +25,13 @@ export class OpenAIImageProvider extends AIProviderBase {
     "text-generation",
     "text-analysis",
   ];
-  readonly supportedModels = ["gpt-image-1", "dall-e-2", "dall-e-3", "gpt-4o", "gpt-4o-mini"];
+  readonly supportedModels = [
+    "gpt-image-1",
+    "dall-e-2",
+    "dall-e-3",
+    "gpt-4o",
+    "gpt-4o-mini",
+  ];
 
   private client: OpenAI;
 
@@ -45,7 +60,10 @@ export class OpenAIImageProvider extends AIProviderBase {
       id: completion.id,
       provider: this.name,
       model: request.model || "gpt-4o-mini",
-      output: { type: "text", content: completion.choices[0]?.message?.content || "" },
+      output: {
+        type: "text",
+        content: completion.choices[0]?.message?.content || "",
+      },
       usage: { credits: 1, tokens: completion.usage?.total_tokens },
       latency: 0,
     };
@@ -66,7 +84,9 @@ export class OpenAIImageProvider extends AIProviderBase {
 
       const image = response.data?.[0];
       if (!image?.url && !image?.b64_json) {
-        throw new Error("OpenAI returned no image data. The API key may be invalid or expired.");
+        throw new Error(
+          "OpenAI returned no image data. The API key may be invalid or expired.",
+        );
       }
 
       const url = image.url || `data:image/png;base64,${image.b64_json}`;
@@ -96,7 +116,11 @@ export class OpenAIImageProvider extends AIProviderBase {
     return "gpt-image-1";
   }
 
-  private getSizeForModel(model: OpenAIImageModel, width?: number, height?: number): string {
+  private getSizeForModel(
+    model: OpenAIImageModel,
+    width?: number,
+    height?: number,
+  ): string {
     const w = width || 1024;
     const h = height || 1024;
 
@@ -134,21 +158,25 @@ export class OpenAIImageProvider extends AIProviderBase {
 
       if (status === 400 && message.toLowerCase().includes("billing")) {
         return new Error(
-          "OpenAI billing limit reached. Please check your OpenAI account billing settings at https://platform.openai.com/settings/organization/billing."
+          "OpenAI billing limit reached. Please check your OpenAI account billing settings at https://platform.openai.com/settings/organization/billing.",
         );
       }
 
       if (status === 401) {
-        return new Error("OpenAI API key is invalid or expired. Please check your OPENAI_API_KEY.");
+        return new Error(
+          "OpenAI API key is invalid or expired. Please check your OPENAI_API_KEY.",
+        );
       }
 
       if (status === 429) {
-        return new Error("OpenAI rate limit exceeded. Please try again in a few moments.");
+        return new Error(
+          "OpenAI rate limit exceeded. Please try again in a few moments.",
+        );
       }
 
       if (status === 400 && message.toLowerCase().includes("model")) {
         return new Error(
-          `OpenAI model error: ${message}. You may not have access to this model or it may not be available for image generation.`
+          `OpenAI model error: ${message}. You may not have access to this model or it may not be available for image generation.`,
         );
       }
 

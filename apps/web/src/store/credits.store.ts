@@ -37,7 +37,8 @@ export const useCreditsStore = create<CreditsState>()((set) => ({
         plan: res.plan,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch credit balance";
+      const message =
+        err instanceof Error ? err.message : "Failed to fetch credit balance";
       set({ error: message });
       console.error("[CreditsStore] fetchBalance failed:", message);
     } finally {

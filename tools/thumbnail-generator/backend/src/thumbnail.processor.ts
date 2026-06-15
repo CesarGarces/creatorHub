@@ -11,7 +11,10 @@ import {
   DomainEventPublisher,
   DOMAIN_EVENT_PUBLISHER,
 } from "@creator-hub/domain-events";
-import type { ThumbnailCompletedEvent, ThumbnailFailedEvent } from "@creator-hub/shared-types";
+import type {
+  ThumbnailCompletedEvent,
+  ThumbnailFailedEvent,
+} from "@creator-hub/shared-types";
 
 const THUMBNAIL_COMPLETED_CHANNEL = "thumbnail:completed";
 const THUMBNAIL_FAILED_CHANNEL = "thumbnail:failed";
@@ -25,7 +28,7 @@ export class ThumbnailProcessor extends WorkerHost {
     private creditService: CreditService,
     private storageService: StorageService,
     @Inject(DOMAIN_EVENT_PUBLISHER)
-    private eventPublisher: DomainEventPublisher
+    private eventPublisher: DomainEventPublisher,
   ) {
     super();
   }
@@ -40,12 +43,23 @@ export class ThumbnailProcessor extends WorkerHost {
       width: number;
       height: number;
       creditCost: number;
-    }>
+    }>,
   ): Promise<{ userId: string; key: string; bucket: string; imageId: string }> {
-    const { userId, prompt, negativePrompt, style, provider, width, height, creditCost } =
-      job.data;
+    const {
+      userId,
+      prompt,
+      negativePrompt,
+      style,
+      provider,
+      width,
+      height,
+      creditCost,
+    } = job.data;
 
-    this.logger.info(`Processing thumbnail job ${job.id}`, { userId, prompt: prompt.slice(0, 50) });
+    this.logger.info(`Processing thumbnail job ${job.id}`, {
+      userId,
+      prompt: prompt.slice(0, 50),
+    });
 
     const fullPrompt = style ? `${prompt}, ${style}` : prompt;
     const startTime = Date.now();
@@ -87,7 +101,9 @@ export class ThumbnailProcessor extends WorkerHost {
     } else if (output.url.startsWith("http")) {
       const response = await fetch(output.url);
       if (!response.ok) {
-        throw new Error(`Failed to fetch image from provider: ${response.status}`);
+        throw new Error(
+          `Failed to fetch image from provider: ${response.status}`,
+        );
       }
       const arrayBuffer = await response.arrayBuffer();
       buffer = Buffer.from(arrayBuffer);
@@ -103,7 +119,12 @@ export class ThumbnailProcessor extends WorkerHost {
 
     let uploadResult;
     try {
-      uploadResult = await this.storageService.uploadBuffer(bucket, key, buffer, mimeType);
+      uploadResult = await this.storageService.uploadBuffer(
+        bucket,
+        key,
+        buffer,
+        mimeType,
+      );
     } catch (error) {
       const msg = (error as Error).message || "Unknown storage error";
       this.logger.error(`R2 upload failed for job ${job.id}`, {
@@ -118,7 +139,7 @@ export class ThumbnailProcessor extends WorkerHost {
       userId,
       creditCost,
       "thumbnail-generator",
-      `Generated thumbnail: ${prompt.slice(0, 50)}...`
+      `Generated thumbnail: ${prompt.slice(0, 50)}...`,
     );
 
     const duration = Date.now() - startTime;
@@ -158,8 +179,13 @@ export class ThumbnailProcessor extends WorkerHost {
   }
 
   @OnWorkerEvent("completed")
-  async onCompleted(job: Job, result: { userId: string; key: string; bucket: string; imageId: string }) {
-    this.logger.info(`Thumbnail job ${job.id} finished, publishing event`, { userId: result.userId });
+  async onCompleted(
+    job: Job,
+    result: { userId: string; key: string; bucket: string; imageId: string },
+  ) {
+    this.logger.info(`Thumbnail job ${job.id} finished, publishing event`, {
+      userId: result.userId,
+    });
 
     const event: ThumbnailCompletedEvent = {
       userId: result.userId,
@@ -186,7 +212,9 @@ export class ThumbnailProcessor extends WorkerHost {
       // not JSON, use as-is
     }
 
-    this.logger.error(`Thumbnail job ${job.id} failed`, { error: cleanMessage });
+    this.logger.error(`Thumbnail job ${job.id} failed`, {
+      error: cleanMessage,
+    });
 
     const userId = job.data?.userId;
     if (userId) {

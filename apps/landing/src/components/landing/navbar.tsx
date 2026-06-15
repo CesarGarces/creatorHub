@@ -19,7 +19,11 @@ export function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border-subtle">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <img src="/logo.png" alt="Creator Hub" className="h-8 w-8 object-contain" />
+          <img
+            src="/logo.png"
+            alt="Creator Hub"
+            className="h-8 w-8 object-contain"
+          />
           <span className="text-lg font-semibold text-text">Creator Hub</span>
         </Link>
 

@@ -18,21 +18,27 @@ export default function SettingsPage() {
       <div className="p-6 space-y-8 max-w-3xl animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-text">Settings</h1>
-          <p className="mt-1 text-text-muted">Manage your account preferences</p>
+          <p className="mt-1 text-text-muted">
+            Manage your account preferences
+          </p>
         </div>
 
         {/* Profile */}
         <Card>
           <CardHeader>
             <h2 className="text-lg font-semibold text-text">Profile</h2>
-            <p className="text-sm text-text-muted">Update your personal information</p>
+            <p className="text-sm text-text-muted">
+              Update your personal information
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white text-xl font-bold">
                 {user?.email?.[0]?.toUpperCase() || "U"}
               </div>
-              <Button variant="secondary" size="sm">Change Avatar</Button>
+              <Button variant="secondary" size="sm">
+                Change Avatar
+              </Button>
             </div>
             <Input label="Name" defaultValue={user?.email?.split("@")[0]} />
             <Input label="Email" type="email" defaultValue={user?.email} />
@@ -48,7 +54,9 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-muted">Default AI Provider</label>
+              <label className="text-sm font-medium text-text-muted">
+                Default AI Provider
+              </label>
               <select className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-primary">
                 <option>OpenAI (DALL-E 3)</option>
                 <option>Flux</option>
@@ -57,7 +65,9 @@ export default function SettingsPage() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-muted">Default Style</label>
+              <label className="text-sm font-medium text-text-muted">
+                Default Style
+              </label>
               <select className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-primary">
                 <option>Bold & Colorful</option>
                 <option>Minimalist</option>
@@ -67,8 +77,12 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center justify-between py-2">
               <div>
-                <p className="text-sm font-medium text-text">Email Notifications</p>
-                <p className="text-xs text-text-muted">Receive updates about your generations</p>
+                <p className="text-sm font-medium text-text">
+                  Email Notifications
+                </p>
+                <p className="text-xs text-text-muted">
+                  Receive updates about your generations
+                </p>
               </div>
               <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-primary transition-colors">
                 <span className="inline-block h-4 w-4 translate-x-6 rounded-full bg-white transition-transform" />
@@ -87,9 +101,13 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between rounded-lg border border-error/20 bg-error/5 p-4">
               <div>
                 <p className="text-sm font-medium text-text">Delete Account</p>
-                <p className="text-xs text-text-muted">Permanently delete your account and all data</p>
+                <p className="text-xs text-text-muted">
+                  Permanently delete your account and all data
+                </p>
               </div>
-              <Button variant="danger" size="sm">Delete Account</Button>
+              <Button variant="danger" size="sm">
+                Delete Account
+              </Button>
             </div>
           </CardContent>
         </Card>

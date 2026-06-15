@@ -13,7 +13,9 @@ export class BillingService {
   }
 
   async subscribe(userId: string, planId: string) {
-    const plan = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
+    const plan = await prisma.subscriptionPlan.findUnique({
+      where: { id: planId },
+    });
     if (!plan) throw new Error("Plan not found");
 
     const now = new Date();
@@ -30,7 +32,12 @@ export class BillingService {
       },
     });
 
-    const userPlan = planId === "free" ? "FREE" : planId === "pro" ? "PREMIUM" : "PAY_AS_YOU_GO";
+    const userPlan =
+      planId === "free"
+        ? "FREE"
+        : planId === "pro"
+          ? "PREMIUM"
+          : "PAY_AS_YOU_GO";
 
     await prisma.user.update({
       where: { id: userId },

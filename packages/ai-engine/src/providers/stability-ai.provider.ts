@@ -1,13 +1,15 @@
 import { AIProviderBase } from "./ai-provider.base";
-import type { AIRequest, AIResponse, AITaskType, AIProvider } from "@creator-hub/shared-types";
+import type {
+  AIRequest,
+  AIResponse,
+  AITaskType,
+  AIProvider,
+} from "@creator-hub/shared-types";
 import type { ImageGenerationOptions } from "./provider.interface";
 
 export class StabilityAIProvider extends AIProviderBase {
   readonly name: AIProvider = "stability-ai";
-  readonly supportedTasks: AITaskType[] = [
-    "image-generation",
-    "image-editing",
-  ];
+  readonly supportedTasks: AITaskType[] = ["image-generation", "image-editing"];
   readonly supportedModels = ["stable-diffusion-3"];
 
   async generate(request: AIRequest): Promise<AIResponse> {
@@ -34,7 +36,7 @@ export class StabilityAIProvider extends AIProviderBase {
           aspect_ratio: "1:1",
           output_format: "png",
         }),
-      }
+      },
     );
 
     if (!response.ok) {

@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from "@nestjs/common";
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from "@nestjs/common";
 import { Inject } from "@nestjs/common";
 import { StorageService } from "@creator-hub/storage";
 import { AppGateway } from "../websocket/websocket.gateway";
@@ -24,18 +29,18 @@ export class ThumbnailListenerService implements OnModuleInit, OnModuleDestroy {
     @Inject(DOMAIN_EVENT_SUBSCRIBER)
     private eventSubscriber: DomainEventSubscriber,
     private storageService: StorageService,
-    private gateway: AppGateway
+    private gateway: AppGateway,
   ) {}
 
   async onModuleInit() {
     await this.eventSubscriber.subscribe<ThumbnailCompletedEvent>(
       THUMBNAIL_COMPLETED_CHANNEL,
-      this.handleCompleted.bind(this)
+      this.handleCompleted.bind(this),
     );
 
     await this.eventSubscriber.subscribe<ThumbnailFailedEvent>(
       THUMBNAIL_FAILED_CHANNEL,
-      this.handleFailed.bind(this)
+      this.handleFailed.bind(this),
     );
 
     this.logger.log("Subscribed to thumbnail events");
@@ -57,7 +62,7 @@ export class ThumbnailListenerService implements OnModuleInit, OnModuleDestroy {
       const url = await this.storageService.getPresignedDownloadUrl(
         event.bucket,
         event.key,
-        900
+        900,
       );
 
       const payload: ThumbnailReadyPayload = {

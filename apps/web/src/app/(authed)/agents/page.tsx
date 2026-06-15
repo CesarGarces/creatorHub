@@ -54,12 +54,16 @@ export default function AgentsPage() {
       <div className="p-6 space-y-8 animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-text">Agents</h1>
-          <p className="mt-1 text-text-muted">AI assistants that help you create content</p>
+          <p className="mt-1 text-text-muted">
+            AI assistants that help you create content
+          </p>
         </div>
 
         {/* Active Agents */}
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">Your Agents</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
+            Your Agents
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {agents.map((agent) => (
               <div
@@ -68,15 +72,23 @@ export default function AgentsPage() {
                 onClick={() => router.push(`/agents/${agent.id}`)}
               >
                 <div className="flex items-start gap-4">
-                  <div className={`flex h-14 w-14 items-center justify-center rounded-xl ${agent.color} text-3xl transition-colors`}>
+                  <div
+                    className={`flex h-14 w-14 items-center justify-center rounded-xl ${agent.color} text-3xl transition-colors`}
+                  >
                     {agent.icon}
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-text">{agent.name}</h3>
-                    <p className="mt-1 text-sm text-text-muted line-clamp-2">{agent.description}</p>
+                    <p className="mt-1 text-sm text-text-muted line-clamp-2">
+                      {agent.description}
+                    </p>
                     <div className="mt-3 flex items-center gap-2">
-                      <Badge variant={agent.badge} size="sm">{agent.badgeText}</Badge>
-                      <span className="text-xs text-text-dim">Last used: {agent.lastUsed}</span>
+                      <Badge variant={agent.badge} size="sm">
+                        {agent.badgeText}
+                      </Badge>
+                      <span className="text-xs text-text-dim">
+                        Last used: {agent.lastUsed}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -87,21 +99,38 @@ export default function AgentsPage() {
 
         {/* Available Agents */}
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">Available Agents</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
+            Available Agents
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: "📊", name: "Analytics Agent", description: "Track and analyze your content performance" },
-              { icon: "🎯", name: "Growth Agent", description: "Strategies to grow your audience" },
+              {
+                icon: "📊",
+                name: "Analytics Agent",
+                description: "Track and analyze your content performance",
+              },
+              {
+                icon: "🎯",
+                name: "Growth Agent",
+                description: "Strategies to grow your audience",
+              },
             ].map((agent) => (
-              <div key={agent.name} className="rounded-xl border border-border bg-surface p-6 opacity-60">
+              <div
+                key={agent.name}
+                className="rounded-xl border border-border bg-surface p-6 opacity-60"
+              >
                 <div className="flex items-start gap-4">
                   <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-surface-elevated text-3xl">
                     {agent.icon}
                   </div>
                   <div>
                     <h3 className="font-semibold text-text">{agent.name}</h3>
-                    <p className="mt-1 text-sm text-text-muted">{agent.description}</p>
-                    <Badge variant="outline" size="sm" className="mt-3">Coming Soon</Badge>
+                    <p className="mt-1 text-sm text-text-muted">
+                      {agent.description}
+                    </p>
+                    <Badge variant="outline" size="sm" className="mt-3">
+                      Coming Soon
+                    </Badge>
                   </div>
                 </div>
               </div>

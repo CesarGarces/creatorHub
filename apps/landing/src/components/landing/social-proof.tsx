@@ -48,7 +48,9 @@ export function SocialProof() {
           <div className="flex flex-wrap justify-center gap-8 md:gap-16 mb-16">
             {stats.map((stat) => (
               <div key={stat.label} className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-text">{stat.value}</div>
+                <div className="text-2xl md:text-3xl font-bold text-text">
+                  {stat.value}
+                </div>
                 <div className="text-sm text-text-muted mt-1">{stat.label}</div>
               </div>
             ))}
@@ -64,13 +66,17 @@ export function SocialProof() {
                 transition={{ duration: 0.4, delay: i * 0.1 }}
                 className="rounded-xl border border-border bg-surface p-6 text-left"
               >
-                <p className="text-sm text-text-muted mb-4 leading-relaxed">&ldquo;{t.text}&rdquo;</p>
+                <p className="text-sm text-text-muted mb-4 leading-relaxed">
+                  &ldquo;{t.text}&rdquo;
+                </p>
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary">
                     {t.avatar}
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-text">{t.name}</div>
+                    <div className="text-sm font-medium text-text">
+                      {t.name}
+                    </div>
                     <div className="text-xs text-text-dim">{t.role}</div>
                   </div>
                 </div>

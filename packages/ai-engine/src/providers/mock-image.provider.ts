@@ -1,5 +1,10 @@
 import { AIProviderBase } from "./ai-provider.base";
-import type { AIRequest, AIResponse, AITaskType, AIProvider } from "@creator-hub/shared-types";
+import type {
+  AIRequest,
+  AIResponse,
+  AITaskType,
+  AIProvider,
+} from "@creator-hub/shared-types";
 import type { ImageGenerationOptions } from "./provider.interface";
 
 export class MockImageProvider extends AIProviderBase {
@@ -18,7 +23,9 @@ export class MockImageProvider extends AIProviderBase {
   }
 
   async generateImage(options: ImageGenerationOptions): Promise<AIResponse> {
-    console.log(`[MOCK] Generando imagen para: "${options.prompt?.slice(0, 50)}..."`);
+    console.log(
+      `[MOCK] Generando imagen para: "${options.prompt?.slice(0, 50)}..."`,
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 

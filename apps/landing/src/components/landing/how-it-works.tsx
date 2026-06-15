@@ -67,9 +67,15 @@ export function HowItWorks() {
                   <step.icon size={28} className={step.color} />
                 </div>
               </div>
-              <div className="text-xs font-mono text-text-dim mb-2">{step.number}</div>
-              <h3 className="text-base font-semibold text-text mb-2">{step.title}</h3>
-              <p className="text-sm text-text-muted leading-relaxed">{step.description}</p>
+              <div className="text-xs font-mono text-text-dim mb-2">
+                {step.number}
+              </div>
+              <h3 className="text-base font-semibold text-text mb-2">
+                {step.title}
+              </h3>
+              <p className="text-sm text-text-muted leading-relaxed">
+                {step.description}
+              </p>
             </motion.div>
           ))}
         </div>

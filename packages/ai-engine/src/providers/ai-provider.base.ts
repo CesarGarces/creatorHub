@@ -1,5 +1,13 @@
-import type { AIProviderInterface, ImageGenerationOptions } from "./provider.interface";
-import type { AIRequest, AIResponse, AIProvider, AITaskType } from "@creator-hub/shared-types";
+import type {
+  AIProviderInterface,
+  ImageGenerationOptions,
+} from "./provider.interface";
+import type {
+  AIRequest,
+  AIResponse,
+  AIProvider,
+  AITaskType,
+} from "@creator-hub/shared-types";
 
 export abstract class AIProviderBase implements AIProviderInterface {
   abstract readonly name: AIProvider;

@@ -28,7 +28,7 @@ export class DomainEventsModule implements OnModuleDestroy {
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private publisher: RedisEventPublisher,
     @Inject(DOMAIN_EVENT_SUBSCRIBER)
-    private subscriber: RedisEventSubscriber
+    private subscriber: RedisEventSubscriber,
   ) {}
 
   async onModuleDestroy() {

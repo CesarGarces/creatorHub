@@ -13,7 +13,7 @@ export class MarketingEventService {
 
   constructor(
     @Inject(DOMAIN_EVENT_PUBLISHER)
-    private eventPublisher: DomainEventPublisher
+    private eventPublisher: DomainEventPublisher,
   ) {}
 
   async checkCreditThresholds(userId: string): Promise<void> {

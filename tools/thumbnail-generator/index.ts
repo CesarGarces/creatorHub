@@ -9,8 +9,16 @@ registerTool({
   category: "thumbnail",
   creditsPerUse: 10,
   permissions: [
-    { action: "generate", resource: "thumbnail", description: "Generate thumbnails" },
-    { action: "read", resource: "thumbnail", description: "View generated thumbnails" },
+    {
+      action: "generate",
+      resource: "thumbnail",
+      description: "Generate thumbnails",
+    },
+    {
+      action: "read",
+      resource: "thumbnail",
+      description: "View generated thumbnails",
+    },
   ],
   frontend: {
     routes: [

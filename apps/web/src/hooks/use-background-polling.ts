@@ -20,10 +20,18 @@ export function useBackgroundPolling() {
 
   useEffect(() => {
     const unsub = useGenerationStore.subscribe((state) => {
-      if (state.status === "GENERATING" && state.jobId && state.jobId !== activeJobIdRef.current) {
+      if (
+        state.status === "GENERATING" &&
+        state.jobId &&
+        state.jobId !== activeJobIdRef.current
+      ) {
         activeJobIdRef.current = state.jobId;
         startPolling(state.toolId!, state.jobId);
-      } else if (state.status === "IDLE" || state.status === "READY" || state.status === "FAILED") {
+      } else if (
+        state.status === "IDLE" ||
+        state.status === "READY" ||
+        state.status === "FAILED"
+      ) {
         stopPolling();
         activeJobIdRef.current = null;
       }
@@ -54,13 +62,14 @@ export function useBackgroundPolling() {
         return;
       }
       try {
-        const statusRes = await api.get<{ status: string; failedReason?: string }>(
-          `/tools/${toolId}/jobs/${jobId}/status`
-        );
+        const statusRes = await api.get<{
+          status: string;
+          failedReason?: string;
+        }>(`/tools/${toolId}/jobs/${jobId}/status`);
         if (statusRes.status === "completed") {
           stopPolling();
           const imagesRes = await api.get<{ data: any[] }>(
-            `/tools/${toolId}/images?limit=1`
+            `/tools/${toolId}/images?limit=1`,
           );
           const latest = imagesRes?.data?.[0];
           if (latest?.url) {

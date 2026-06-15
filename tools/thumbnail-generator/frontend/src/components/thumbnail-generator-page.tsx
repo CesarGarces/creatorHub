@@ -5,15 +5,31 @@ import { useMutation } from "@tanstack/react-query";
 import { toast, Toaster } from "sonner";
 import { Button, Card, CardContent } from "@creator-hub/ui";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
 
 const STYLE_PRESETS = [
-  { label: "Bold & Colorful", prompt: "vibrant colors, bold text overlay, high contrast" },
-  { label: "Minimalist", prompt: "clean design, minimal elements, soft gradients" },
-  { label: "Reaction Face", prompt: "expressive face reaction, dramatic lighting" },
+  {
+    label: "Bold & Colorful",
+    prompt: "vibrant colors, bold text overlay, high contrast",
+  },
+  {
+    label: "Minimalist",
+    prompt: "clean design, minimal elements, soft gradients",
+  },
+  {
+    label: "Reaction Face",
+    prompt: "expressive face reaction, dramatic lighting",
+  },
   { label: "Gaming", prompt: "gaming style, neon glow, dark background, epic" },
-  { label: "Tutorial", prompt: "clean educational style, bright background, clear" },
-  { label: "Cinematic", prompt: "cinematic lighting, film grain, dramatic shadows" },
+  {
+    label: "Tutorial",
+    prompt: "clean educational style, bright background, clear",
+  },
+  {
+    label: "Cinematic",
+    prompt: "cinematic lighting, film grain, dramatic shadows",
+  },
 ];
 
 function getToken(): string | null {
@@ -74,7 +90,10 @@ export function ThumbnailGeneratorPage() {
         throw new Error(errorMessage);
       }
 
-      return res.json() as Promise<{ success: boolean; data: { output: { url: string } } }>;
+      return res.json() as Promise<{
+        success: boolean;
+        data: { output: { url: string } };
+      }>;
     },
     onSuccess: (data) => {
       if (data.success && data.data?.output?.url) {
@@ -85,7 +104,9 @@ export function ThumbnailGeneratorPage() {
       }
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to generate thumbnail. Please try again.");
+      toast.error(
+        error.message || "Failed to generate thumbnail. Please try again.",
+      );
     },
   });
 
@@ -93,7 +114,9 @@ export function ThumbnailGeneratorPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <Toaster richColors position="top-right" />
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Thumbnail Generator</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Thumbnail Generator
+        </h1>
         <p className="text-gray-500">
           Create stunning YouTube thumbnails with AI in seconds
         </p>
@@ -116,7 +139,9 @@ export function ThumbnailGeneratorPage() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">AI Provider</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          AI Provider
+        </label>
         <div className="flex gap-2">
           {PROVIDERS.map((p) => (
             <button
@@ -142,7 +167,9 @@ export function ThumbnailGeneratorPage() {
             </label>
             <textarea
               value={prompt}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPrompt(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                setPrompt(e.target.value)
+              }
               placeholder="e.g., A YouTube thumbnail for a video about AI art, with a futuristic robot painting on a canvas, neon colors..."
               rows={4}
               className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -155,7 +182,9 @@ export function ThumbnailGeneratorPage() {
             </label>
             <input
               value={negativePrompt}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNegativePrompt(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setNegativePrompt(e.target.value)
+              }
               placeholder="blurry, low quality, text, watermark"
               className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
@@ -175,7 +204,11 @@ export function ThumbnailGeneratorPage() {
       {result && (
         <Card>
           <CardContent className="p-6 space-y-4">
-            <img src={result} alt="Generated thumbnail" className="w-full rounded-lg shadow-md" />
+            <img
+              src={result}
+              alt="Generated thumbnail"
+              className="w-full rounded-lg shadow-md"
+            />
             <div className="flex gap-2">
               <Button
                 variant="secondary"

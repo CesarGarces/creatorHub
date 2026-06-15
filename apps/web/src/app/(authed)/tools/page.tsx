@@ -25,9 +25,10 @@ export default function ToolsPage() {
     fetchTools();
   }, [fetchTools]);
 
-  const filtered = activeCategory === "all"
-    ? tools
-    : tools.filter((t) => t.category === activeCategory);
+  const filtered =
+    activeCategory === "all"
+      ? tools
+      : tools.filter((t) => t.category === activeCategory);
 
   return (
     <>
@@ -40,7 +41,9 @@ export default function ToolsPage() {
       <div className="p-6 space-y-6 animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-text">Tools</h1>
-          <p className="mt-1 text-text-muted">AI-powered tools for content creators</p>
+          <p className="mt-1 text-text-muted">
+            AI-powered tools for content creators
+          </p>
         </div>
 
         {/* Category Filter */}
@@ -86,12 +89,26 @@ export default function ToolsPage() {
 
         {/* Coming Soon */}
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">Coming Soon</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
+            Coming Soon
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: "🧠", name: "Content Repurposer", description: "Turn one piece of content into 10 formats" },
-              { icon: "📈", name: "SEO Optimizer", description: "Optimize your content for search engines" },
-              { icon: "🎵", name: "Audio Generator", description: "Generate music and sound effects" },
+              {
+                icon: "🧠",
+                name: "Content Repurposer",
+                description: "Turn one piece of content into 10 formats",
+              },
+              {
+                icon: "📈",
+                name: "SEO Optimizer",
+                description: "Optimize your content for search engines",
+              },
+              {
+                icon: "🎵",
+                name: "Audio Generator",
+                description: "Generate music and sound effects",
+              },
             ].map((item) => (
               <div
                 key={item.name}
@@ -104,12 +121,16 @@ export default function ToolsPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-text">{item.name}</h3>
-                      <p className="text-sm text-text-muted">{item.description}</p>
+                      <p className="text-sm text-text-muted">
+                        {item.description}
+                      </p>
                     </div>
                   </div>
                 </div>
                 <div className="mt-4">
-                  <Badge variant="outline" size="sm">Coming Soon</Badge>
+                  <Badge variant="outline" size="sm">
+                    Coming Soon
+                  </Badge>
                 </div>
               </div>
             ))}

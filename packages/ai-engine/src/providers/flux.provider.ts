@@ -1,5 +1,10 @@
 import { AIProviderBase } from "./ai-provider.base";
-import type { AIRequest, AIResponse, AITaskType, AIProvider } from "@creator-hub/shared-types";
+import type {
+  AIRequest,
+  AIResponse,
+  AITaskType,
+  AIProvider,
+} from "@creator-hub/shared-types";
 import type { ImageGenerationOptions } from "./provider.interface";
 
 export class FluxProvider extends AIProviderBase {

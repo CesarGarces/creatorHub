@@ -24,7 +24,7 @@ export class Logger {
   private log(
     level: string,
     message: string,
-    meta?: Record<string, unknown>
+    meta?: Record<string, unknown>,
   ): void {
     const timestamp = new Date().toISOString();
     const base = { timestamp, level, context: this.context, message };

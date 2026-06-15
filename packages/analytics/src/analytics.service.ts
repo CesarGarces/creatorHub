@@ -34,20 +34,30 @@ export class AnalyticsService {
       }),
     ]);
 
-    return { totalUsage, totalCreditsSpent: Math.abs(totalCredits._sum.amount || 0), toolsUsed: toolsUsed.length };
+    return {
+      totalUsage,
+      totalCreditsSpent: Math.abs(totalCredits._sum.amount || 0),
+      toolsUsed: toolsUsed.length,
+    };
   }
 
   async getDashboardStats() {
-    const [totalUsers, totalUsage, activeTools, totalRevenue] = await Promise.all([
-      prisma.user.count(),
-      prisma.usageLog.count(),
-      prisma.tool.count({ where: { status: "active" } }),
-      prisma.creditTransaction.aggregate({
-        where: { type: "PURCHASE" },
-        _sum: { amount: true },
-      }),
-    ]);
+    const [totalUsers, totalUsage, activeTools, totalRevenue] =
+      await Promise.all([
+        prisma.user.count(),
+        prisma.usageLog.count(),
+        prisma.tool.count({ where: { status: "active" } }),
+        prisma.creditTransaction.aggregate({
+          where: { type: "PURCHASE" },
+          _sum: { amount: true },
+        }),
+      ]);
 
-    return { totalUsers, totalUsage, activeTools, totalRevenue: totalRevenue._sum.amount || 0 };
+    return {
+      totalUsers,
+      totalUsage,
+      activeTools,
+      totalRevenue: totalRevenue._sum.amount || 0,
+    };
   }
 }

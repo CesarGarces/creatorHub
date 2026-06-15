@@ -16,7 +16,9 @@ async function bootstrap() {
   SwaggerModule.setup("api/docs", app, document);
 
   app.setGlobalPrefix("api/v1");
-  const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, "");
+  const frontendUrl = (
+    process.env.FRONTEND_URL || "http://localhost:3000"
+  ).replace(/\/+$/, "");
   const devOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
   const allowedOrigins = [...new Set([frontendUrl, ...devOrigins])];
   console.log(`[CORS] Allowed origins: ${allowedOrigins.join(", ")}`);
@@ -30,7 +32,7 @@ async function bootstrap() {
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
-    })
+    }),
   );
 
   const port = process.env.PORT || 3001;

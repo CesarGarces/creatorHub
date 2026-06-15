@@ -4,7 +4,7 @@ export function sleep(ms: number): Promise<void> {
 
 export async function retry<T>(
   fn: () => Promise<T>,
-  options: { maxRetries?: number; baseDelay?: number } = {}
+  options: { maxRetries?: number; baseDelay?: number } = {},
 ): Promise<T> {
   const { maxRetries = 3, baseDelay = 1000 } = options;
   let lastError: Error | undefined;
@@ -27,7 +27,7 @@ export function timeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms)
+      setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms),
     ),
   ]);
 }

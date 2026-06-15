@@ -23,15 +23,18 @@ export class ImagesController {
   constructor(
     private aiEngine: AIEngineService,
     private creditService: CreditService,
-    private storageService: StorageService
+    private storageService: StorageService,
   ) {}
 
   @Get()
   async listImages(
     @CurrentUser("id") userId: string,
     @Query("page") page?: string,
-    @Query("limit") limit?: string
-  ): Promise<{ data: any[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
+    @Query("limit") limit?: string,
+  ): Promise<{
+    data: any[];
+    meta: { page: number; limit: number; total: number; totalPages: number };
+  }> {
     const pageNum = parseInt(page || "1");
     const limitNum = parseInt(limit || "20");
     const skip = (pageNum - 1) * limitNum;
@@ -43,7 +46,9 @@ export class ImagesController {
         skip,
         take: limitNum,
       }),
-      prisma.generatedImage.count({ where: { userId, storageProvider: this.storageService.getProvider() } }),
+      prisma.generatedImage.count({
+        where: { userId, storageProvider: this.storageService.getProvider() },
+      }),
     ]);
 
     const imagesWithUrls = await Promise.all(
@@ -55,26 +60,35 @@ export class ImagesController {
           const key = parts.slice(1).join("/");
           if (bucket && key) {
             try {
-              url = await this.storageService.getPresignedDownloadUrl(bucket, key, 3600);
+              url = await this.storageService.getPresignedDownloadUrl(
+                bucket,
+                key,
+                3600,
+              );
             } catch {
               url = img.url;
             }
           }
         }
         return { ...img, url };
-      })
+      }),
     );
 
     return {
       data: imagesWithUrls,
-      meta: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
+      meta: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+      },
     };
   }
 
   @Delete(":id")
   async deleteImage(
     @CurrentUser("id") userId: string,
-    @Param("id") id: string
+    @Param("id") id: string,
   ): Promise<{ success: boolean }> {
     const image = await prisma.generatedImage.findFirst({
       where: { id, userId },
@@ -92,7 +106,7 @@ export class ImagesController {
   @Post("generate")
   async generateImage(
     @CurrentUser("id") userId: string,
-    @Body() dto: { prompt: string; toolId: string; provider?: string }
+    @Body() dto: { prompt: string; toolId: string; provider?: string },
   ) {
     if (!dto.prompt?.trim()) {
       throw new BadRequestException("Prompt is required");
@@ -130,44 +144,52 @@ export class ImagesController {
           bucket,
           key,
           buffer,
-          "image/png"
+          "image/png",
         );
         finalUrl = await this.storageService.getPresignedDownloadUrl(
           uploadResult.bucket,
           uploadResult.key,
-          7 * 24 * 60 * 60
+          7 * 24 * 60 * 60,
         );
       } else if (output.url.startsWith("http")) {
         try {
           const response = await fetch(output.url);
           if (!response.ok) {
-            throw new Error(`Failed to fetch image from provider: ${response.status}`);
+            throw new Error(
+              `Failed to fetch image from provider: ${response.status}`,
+            );
           }
           const arrayBuffer = await response.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
-          const contentType = response.headers.get("content-type") || "image/png";
+          const contentType =
+            response.headers.get("content-type") || "image/png";
           const ext = contentType.includes("jpeg") ? "jpg" : "png";
           const key = `${userId}/${Date.now()}-generated.${ext}`;
           const uploadResult = await this.storageService.uploadBuffer(
             bucket,
             key,
             buffer,
-            contentType
+            contentType,
           );
           finalUrl = await this.storageService.getPresignedDownloadUrl(
             uploadResult.bucket,
             uploadResult.key,
-            7 * 24 * 60 * 60
+            7 * 24 * 60 * 60,
           );
         } catch (fetchError) {
-          this.logger.warn("Failed to download image from provider, using remote URL", {
-            error: (fetchError as Error).message,
-          });
+          this.logger.warn(
+            "Failed to download image from provider, using remote URL",
+            {
+              error: (fetchError as Error).message,
+            },
+          );
         }
       }
 
       if (!finalUrl) {
-        throw new Error("Image generation failed: no valid URL after processing");
+        throw new Error(
+          "Image generation failed: no valid URL after processing",
+        );
       }
 
       await prisma.generatedImage.create({
@@ -185,7 +207,12 @@ export class ImagesController {
         },
       });
 
-      await this.creditService.deduct(userId, 10, dto.toolId, "Image generation");
+      await this.creditService.deduct(
+        userId,
+        10,
+        dto.toolId,
+        "Image generation",
+      );
 
       return {
         success: true,
@@ -197,24 +224,24 @@ export class ImagesController {
 
       if (message.includes("billing limit")) {
         throw new BadRequestException(
-          "The AI provider's billing limit has been reached. Please try a different provider or contact support."
+          "The AI provider's billing limit has been reached. Please try a different provider or contact support.",
         );
       }
 
       if (message.includes("rate limit")) {
         throw new BadRequestException(
-          "Too many requests to the AI provider. Please try again in a few moments."
+          "Too many requests to the AI provider. Please try again in a few moments.",
         );
       }
 
       if (message.includes("API key")) {
         throw new InternalServerErrorException(
-          "AI provider configuration error. Please contact support."
+          "AI provider configuration error. Please contact support.",
         );
       }
 
       throw new InternalServerErrorException(
-        `Image generation failed: ${message}`
+        `Image generation failed: ${message}`,
       );
     }
   }

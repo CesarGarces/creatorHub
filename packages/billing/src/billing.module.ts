@@ -11,7 +11,12 @@ import { MarketingEventHandler } from "./marketing-event.handler";
     BullModule.registerQueue({ name: "credits" }),
     EventEmitterModule.forRoot(),
   ],
-  providers: [CreditService, BillingService, CreditProcessor, MarketingEventHandler],
+  providers: [
+    CreditService,
+    BillingService,
+    CreditProcessor,
+    MarketingEventHandler,
+  ],
   exports: [CreditService, BillingService],
 })
 export class BillingModule {}

@@ -1,5 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import type { ToolManifest, ToolConfig, AIProvider } from "@creator-hub/shared-types";
+import type {
+  ToolManifest,
+  ToolConfig,
+  AIProvider,
+} from "@creator-hub/shared-types";
 import { Logger } from "@creator-hub/shared-utils";
 
 @Injectable()
@@ -28,7 +32,9 @@ export class ToolRegistry {
   }
 
   getActive(): ToolManifest[] {
-    return this.getAll().filter((t) => t.status === "active" || t.status === "beta");
+    return this.getAll().filter(
+      (t) => t.status === "active" || t.status === "beta",
+    );
   }
 
   getByCategory(category: string): ToolManifest[] {
@@ -41,7 +47,7 @@ export class ToolRegistry {
         ...route,
         toolId: tool.id,
         toolName: tool.name,
-      }))
+      })),
     );
   }
 
@@ -50,7 +56,7 @@ export class ToolRegistry {
       tool.permissions.map((perm) => ({
         ...perm,
         toolId: tool.id,
-      }))
+      })),
     );
   }
 }

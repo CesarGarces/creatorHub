@@ -9,7 +9,7 @@ export function Skeleton({ className }: SkeletonProps) {
     <div
       className={cn(
         "rounded-lg bg-surface-elevated animate-shimmer bg-[length:200%_100%]",
-        className
+        className,
       )}
     />
   );

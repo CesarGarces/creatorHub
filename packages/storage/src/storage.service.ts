@@ -80,7 +80,7 @@ export class StorageService {
     bucket: string,
     key: string,
     buffer: Buffer,
-    mimeType: string
+    mimeType: string,
   ): Promise<UploadResult> {
     if (!buffer || buffer.length === 0) {
       throw new Error("Cannot upload empty buffer");
@@ -92,7 +92,7 @@ export class StorageService {
         Key: key,
         Body: buffer,
         ContentType: mimeType,
-      })
+      }),
     );
 
     return {
@@ -106,7 +106,7 @@ export class StorageService {
   async getPresignedDownloadUrl(
     bucket: string,
     key: string,
-    expiresInSeconds: number = 900
+    expiresInSeconds: number = 900,
   ): Promise<string> {
     const command = new GetObjectCommand({
       Bucket: bucket,
@@ -121,7 +121,7 @@ export class StorageService {
       new DeleteObjectCommand({
         Bucket: bucket || this.defaultBucket,
         Key: key,
-      })
+      }),
     );
   }
 }

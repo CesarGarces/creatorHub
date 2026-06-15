@@ -96,14 +96,22 @@ export function Pricing() {
               )}
 
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-text mb-1">{plan.name}</h3>
+                <h3 className="text-lg font-semibold text-text mb-1">
+                  {plan.name}
+                </h3>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold text-text">{plan.price}</span>
+                  <span className="text-4xl font-bold text-text">
+                    {plan.price}
+                  </span>
                   {plan.period && (
-                    <span className="text-sm text-text-muted">{plan.period}</span>
+                    <span className="text-sm text-text-muted">
+                      {plan.period}
+                    </span>
                   )}
                 </div>
-                <p className="text-sm text-text-muted mt-2">{plan.description}</p>
+                <p className="text-sm text-text-muted mt-2">
+                  {plan.description}
+                </p>
               </div>
 
               <ul className="space-y-3 mb-8 flex-1">
