@@ -46,8 +46,27 @@ export class ImagesController {
       prisma.generatedImage.count({ where: { userId, storageProvider: this.storageService.getProvider() } }),
     ]);
 
+    const imagesWithUrls = await Promise.all(
+      images.map(async (img) => {
+        let url = img.url || "";
+        if (img.url && !img.url.startsWith("http")) {
+          const parts = img.url.split("/");
+          const bucket = parts[0] || "";
+          const key = parts.slice(1).join("/");
+          if (bucket && key) {
+            try {
+              url = await this.storageService.getPresignedDownloadUrl(bucket, key, 3600);
+            } catch {
+              url = img.url;
+            }
+          }
+        }
+        return { ...img, url };
+      })
+    );
+
     return {
-      data: images,
+      data: imagesWithUrls,
       meta: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
     };
   }

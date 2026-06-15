@@ -17,12 +17,29 @@ export class AuthService {
     if (existing) throw new ConflictException("Email already registered");
 
     const passwordHash = await bcrypt.hash(password, 12);
+
     const user = await prisma.user.create({
       data: {
         email,
         name,
         passwordHash,
-        credits: { create: { balance: 100, lifetime: 100 } },
+        plan: "FREE",
+        freeCredits: 100,
+        purchasedCredits: 0,
+      },
+    });
+
+    const now = new Date();
+    const periodEnd = new Date(now);
+    periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+    await prisma.subscription.create({
+      data: {
+        userId: user.id,
+        planId: "free",
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+        status: "ACTIVE",
       },
     });
 
@@ -60,10 +77,26 @@ export class AuthService {
         data: {
           email,
           name,
-          credits: { create: { balance: 100, lifetime: 100 } },
+          plan: "FREE",
+          freeCredits: 100,
+          purchasedCredits: 0,
           accounts: {
             create: { provider, providerAccountId },
           },
+        },
+      });
+
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+      await prisma.subscription.create({
+        data: {
+          userId: user.id,
+          planId: "free",
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+          status: "ACTIVE",
         },
       });
     } else {

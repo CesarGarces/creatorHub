@@ -7,6 +7,7 @@ import { DomainEventsModule } from "@creator-hub/domain-events";
 import { ThumbnailService } from "./thumbnail.service";
 import { ThumbnailController } from "./thumbnail.controller";
 import { ThumbnailProcessor } from "./thumbnail.processor";
+import { MarketingEventService } from "./use-cases/marketing-event.service";
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { ThumbnailProcessor } from "./thumbnail.processor";
     }),
   ],
   controllers: [ThumbnailController],
-  providers: [ThumbnailService, ThumbnailProcessor],
+  providers: [ThumbnailService, ThumbnailProcessor, MarketingEventService],
   exports: [ThumbnailService],
 })
 export class ThumbnailGeneratorModule {}

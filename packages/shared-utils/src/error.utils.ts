@@ -13,6 +13,11 @@ const FRIENDLY_PATTERNS: Array<{ patterns: string[]; message: string }> = [
     patterns: ["insufficient credits"],
     message: "You don't have enough credits. Buy more to keep generating.",
   },
+  {
+    patterns: ["prohibited", "sensitive content", "content policy", "20021"],
+    message:
+      "The prompt was blocked by the AI provider's content filter. Please try a different prompt — avoid violence, adult content, or sensitive topics.",
+  },
 ];
 
 const DEFAULT_FRIENDLY_ERROR =

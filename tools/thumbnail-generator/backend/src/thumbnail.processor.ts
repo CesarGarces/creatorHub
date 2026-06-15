@@ -123,9 +123,12 @@ export class ThumbnailProcessor extends WorkerHost {
 
     const duration = Date.now() - startTime;
 
+    const isProModel = provider !== "siliconflow" && provider !== "mock";
+
     const image = await prisma.generatedImage.create({
       data: {
         userId,
+        toolId: "thumbnail-generator",
         prompt,
         negativePrompt,
         provider: result.provider,
@@ -135,6 +138,7 @@ export class ThumbnailProcessor extends WorkerHost {
         height,
         url: `${uploadResult.bucket}/${uploadResult.key}`,
         credits: creditCost,
+        isProModel,
       },
     });
 

@@ -32,6 +32,38 @@ export class ProviderRegistry {
       });
   }
 
+  getFreeProviders(): AIProviderInterface[] {
+    return Array.from(this.providers.values()).filter((p) => p.tier === "free");
+  }
+
+  getProProviders(): AIProviderInterface[] {
+    return Array.from(this.providers.values()).filter((p) => p.tier === "pro" || !p.tier);
+  }
+
+  getProviderForUser(user: {
+    plan: string;
+    freeCredits: number;
+    purchasedCredits: number;
+  }): AIProviderInterface {
+    if (user.plan === "FREE" && user.freeCredits > 0) {
+      const freeProviders = this.getFreeProviders();
+      const freeProvider = freeProviders[0];
+      if (freeProvider) {
+        return freeProvider;
+      }
+    }
+
+    if (user.purchasedCredits > 0 || user.plan === "PREMIUM" || user.plan === "PAY_AS_YOU_GO") {
+      const proProviders = this.getProProviders();
+      const proProvider = proProviders[0];
+      if (proProvider) {
+        return proProvider;
+      }
+    }
+
+    throw new Error("No credits available. Please upgrade your plan or purchase credits.");
+  }
+
   getAllProviders(): AIProviderInterface[] {
     return Array.from(this.providers.values());
   }

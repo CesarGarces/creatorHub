@@ -33,11 +33,14 @@ export interface ThumbnailFormState {
   negativePrompt: string;
   style: string;
   aiProvider: string;
+  width: number;
+  height: number;
 
   setPrompt: (prompt: string) => void;
-  setNegativePrompt: (negativePrompt: string) => void;
+  setNegativePrompt: (prompt: string) => void;
   setStyle: (style: string) => void;
   setAiProvider: (provider: string) => void;
+  setDimensions: (width: number, height: number) => void;
 }
 
 // ─── Combined store type ─────────────────────────────────────────────────────
@@ -56,13 +59,16 @@ export const useGenerationStore = create<GenerationStore>()((set, get) => ({
   prompt: "",
   negativePrompt: "",
   style: "bold",
-  aiProvider: "gemini",
+  aiProvider: "z-image-turbo",
+  width: 1280,
+  height: 720,
 
   // Thumbnail form setters
   setPrompt: (prompt) => set({ prompt }),
   setNegativePrompt: (negativePrompt) => set({ negativePrompt }),
   setStyle: (style) => set({ style }),
   setAiProvider: (aiProvider) => set({ aiProvider }),
+  setDimensions: (width, height) => set({ width, height }),
 
   // Base actions
   startGeneration: (toolId: string, jobId: string) => {
@@ -84,12 +90,7 @@ export const useGenerationStore = create<GenerationStore>()((set, get) => ({
     const { resultUrl } = get();
     if (!resultUrl) return;
 
-    try {
-      await preloadImage(resultUrl);
-      set({ status: "READY" });
-    } catch {
-      set({ status: "FAILED", error: "Image failed to load" });
-    }
+    set({ status: "READY" });
   },
 
   setFailed: (error: string) => {

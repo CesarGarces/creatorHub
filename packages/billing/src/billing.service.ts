@@ -30,16 +30,13 @@ export class BillingService {
       },
     });
 
-    await prisma.creditBalance.upsert({
-      where: { userId },
-      update: {
-        balance: { increment: plan.creditsPerMonth },
-        lifetime: { increment: plan.creditsPerMonth },
-      },
-      create: {
-        userId,
-        balance: plan.creditsPerMonth,
-        lifetime: plan.creditsPerMonth,
+    const userPlan = planId === "free" ? "FREE" : planId === "pro" ? "PREMIUM" : "PAY_AS_YOU_GO";
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        plan: userPlan as any,
+        purchasedCredits: { increment: plan.creditsPerMonth },
       },
     });
 

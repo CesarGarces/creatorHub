@@ -1,20 +1,27 @@
+export type ProviderTier = "free" | "pro";
+
 export type AIProvider =
   | "openai"
   | "gemini"
   | "flux"
   | "stability-ai"
-  | "ideogram";
+  | "ideogram"
+  | "siliconflow"
+  | "z-image-turbo"
+  | "mock";
 
 export type AIModel =
   | "flux-dev"
   | "flux-pro"
+  | "flux-1-schnell"
   | "stable-diffusion-3"
   | "dall-e-3"
   | "gpt-image-1"
   | "gemini-pro-vision"
   | "ideogram-v2"
   | "gemini-2.5-flash"
-  | "gemini-2.5-flash-image";
+  | "gemini-2.5-flash-image"
+  | "Z-Image-Turbo";
 
 export type AITaskType =
   | "image-generation"

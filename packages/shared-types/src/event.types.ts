@@ -1,4 +1,7 @@
 export type EventName =
+  | "marketing.credit_threshold"
+  | "marketing.credit_depleted"
+  | "user.plan.upgraded"
   | "tool.used"
   | "tool.enabled"
   | "tool.disabled"
@@ -57,6 +60,25 @@ export interface AIRequestCompletedEvent extends BaseEvent {
     creditsConsumed: number;
     toolId: string;
   };
+}
+
+export interface MarketingCreditThresholdEvent {
+  userId: string;
+  threshold: number;
+  creditsRemaining: number;
+  timestamp: Date;
+}
+
+export interface MarketingCreditDepletedEvent {
+  userId: string;
+  timestamp: Date;
+}
+
+export interface UserPlanUpgradedEvent {
+  userId: string;
+  fromPlan: string;
+  toPlan: string;
+  timestamp: Date;
 }
 
 export interface ThumbnailCompletedEvent {

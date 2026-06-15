@@ -1,7 +1,7 @@
 import { cn } from "../lib/utils";
 
 interface BadgeProps {
-  variant?: "default" | "primary" | "secondary" | "accent" | "error" | "warning" | "outline";
+  variant?: "default" | "primary" | "secondary" | "accent" | "error" | "warning" | "outline" | "premium" | "free";
   size?: "sm" | "md";
   className?: string;
   children: React.ReactNode;
@@ -21,6 +21,8 @@ export function Badge({ variant = "default", size = "sm", className, children }:
           "bg-error-light text-error": variant === "error",
           "bg-warning-light text-warning": variant === "warning",
           "bg-transparent border border-border text-text-muted": variant === "outline",
+          "bg-gradient-to-r from-amber-500 to-orange-500 text-white": variant === "premium",
+          "bg-gradient-to-r from-emerald-500 to-teal-500 text-white": variant === "free",
         },
         className
       )}

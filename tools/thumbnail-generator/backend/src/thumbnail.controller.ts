@@ -20,7 +20,7 @@ export class ThumbnailController {
   @Post("generate")
   async generate(
     @CurrentUser("id") userId: string,
-    @Body() dto: { prompt: string; negativePrompt?: string; style?: string; provider?: string }
+    @Body() dto: { prompt: string; negativePrompt?: string; style?: string; provider?: string; width?: number; height?: number }
   ): Promise<{ success: boolean; data: { jobId: string } }> {
     if (!dto.prompt?.trim()) {
       throw new BadRequestException("Prompt is required");
@@ -33,6 +33,8 @@ export class ThumbnailController {
         negativePrompt: dto.negativePrompt,
         style: dto.style,
         provider: dto.provider,
+        width: dto.width,
+        height: dto.height,
       });
       return { success: true, data: result };
     } catch (error) {

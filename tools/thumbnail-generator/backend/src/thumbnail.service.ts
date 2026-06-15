@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { CreditService } from "@creator-hub/billing";
 import { StorageService } from "@creator-hub/storage";
-import { AIEngineService } from "@creator-hub/ai-engine";
+import { AIEngineService, ProviderRegistry } from "@creator-hub/ai-engine";
 import { prisma } from "@creator-hub/database";
 import { Logger } from "@creator-hub/shared-utils";
 import { getFriendlyError } from "@creator-hub/shared-utils";
 import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
+import { MarketingEventService } from "./use-cases/marketing-event.service";
 
 export interface EnqueuedThumbnail {
   jobId: string;
@@ -20,6 +21,8 @@ export class ThumbnailService {
     private aiEngine: AIEngineService,
     private creditService: CreditService,
     private storageService: StorageService,
+    private marketingEventService: MarketingEventService,
+    private providerRegistry: ProviderRegistry,
     @InjectQueue("thumbnail-generation") private thumbnailQueue: Queue
   ) {}
 
@@ -32,19 +35,26 @@ export class ThumbnailService {
     width?: number;
     height?: number;
   }): Promise<EnqueuedThumbnail> {
-    const CREDIT_COST = 10;
+    const CREDIT_COST = 1;
 
-    const hasCredits = await this.creditService.hasEnoughCredits(params.userId, CREDIT_COST);
-    if (!hasCredits) {
-      throw new Error("Insufficient credits");
+    const user = await prisma.user.findUnique({ where: { id: params.userId } });
+    if (!user) {
+      throw new Error("User not found");
     }
+
+    const totalCredits = user.freeCredits + user.purchasedCredits;
+    if (totalCredits < CREDIT_COST) {
+      throw new Error("No credits available. Please upgrade your plan or purchase credits.");
+    }
+
+    const selectedProvider = this.selectProvider(user, params.provider);
 
     const job = await this.thumbnailQueue.add("generate", {
       userId: params.userId,
       prompt: params.prompt,
       negativePrompt: params.negativePrompt,
       style: params.style,
-      provider: params.provider,
+      provider: selectedProvider,
       width: params.width || 1280,
       height: params.height || 720,
       creditCost: CREDIT_COST,
@@ -85,9 +95,54 @@ export class ThumbnailService {
       }),
     ]);
 
+    const imagesWithUrls = await Promise.all(
+      images.map(async (img) => {
+        let url = img.url || "";
+        if (img.url && !img.url.startsWith("http")) {
+          const parts = img.url.split("/");
+          const bucket = parts[0] || "";
+          const key = parts.slice(1).join("/");
+          if (bucket && key) {
+            try {
+              url = await this.storageService.getPresignedDownloadUrl(bucket, key, 3600);
+            } catch {
+              url = img.url;
+            }
+          }
+        }
+        return { ...img, url };
+      })
+    );
+
     return {
-      data: images,
+      data: imagesWithUrls,
       meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
+  }
+
+  private selectProvider(user: any, requestedProvider?: string): string {
+    if (requestedProvider) {
+      if (user.plan === "FREE" && user.freeCredits > 0) {
+        if (this.providerRegistry.isRegistered(requestedProvider as any)) {
+          return requestedProvider;
+        }
+        const freeProviders = this.providerRegistry.getFreeProviders();
+        const firstFree = freeProviders[0];
+        if (firstFree) {
+          return firstFree.name;
+        }
+      }
+      return requestedProvider;
+    }
+
+    if (user.plan === "FREE" && user.freeCredits > 0) {
+      const freeProviders = this.providerRegistry.getFreeProviders();
+      const firstFree = freeProviders[0];
+      if (firstFree) {
+        return firstFree.name;
+      }
+    }
+
+    return "openai";
   }
 }

@@ -13,32 +13,42 @@ datasource db {
 // ──────────────────────────────────────────────
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  name           String?
-  passwordHash   String?
-  avatarUrl      String?
-  role           UserRole @default(USER)
-  isActive       Boolean  @default(true)
-  lastLoginAt    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  passwordHash      String?
+  avatarUrl         String?
+  role              UserRole  @default(USER)
+  plan              UserPlan  @default(FREE)
+  freeCredits       Int       @default(100)
+  purchasedCredits  Int       @default(0)
+  isActive          Boolean   @default(true)
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  accounts       Account[]
-  sessions       Session[]
-  credits        CreditBalance?
-  creditTxns     CreditTransaction[]
-  subscriptions  Subscription[]
-  toolAccess     ToolAccess[]
-  usageLogs      UsageLog[]
-  images         GeneratedImage[]
-  apiKeys        ApiKey[]
+  accounts          Account[]
+  sessions          Session[]
+  creditTxns        CreditTransaction[]
+  subscriptions     Subscription[]
+  toolAccess        ToolAccess[]
+  usageLogs         UsageLog[]
+  images            GeneratedImage[]
+  apiKeys           ApiKey[]
+  marketingEvents   MarketingEvent[]
+  notifications     Notification[]
 }
 
 enum UserRole {
   USER
   PREMIUM
   ADMIN
+}
+
+enum UserPlan {
+  FREE
+  PAY_AS_YOU_GO
+  PREMIUM
 }
 
 model Account {
@@ -134,16 +144,6 @@ model ToolAccess {
 // ──────────────────────────────────────────────
 // CREDITS & BILLING
 // ──────────────────────────────────────────────
-
-model CreditBalance {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  balance   Int      @default(0)
-  lifetime  Int      @default(0)
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
 
 model CreditTransaction {
   id          String              @id @default(cuid())
@@ -296,6 +296,7 @@ model GeneratedImage {
   height    Int
   url       String
   credits   Int
+  isProModel Boolean @default(false)
   metadata  Json?
   isPublic  Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -318,6 +319,8 @@ model Notification {
   data      Json?
   readAt    DateTime?
   createdAt DateTime          @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum NotificationType {
@@ -327,4 +330,27 @@ enum NotificationType {
   TOOL_NEW
   SUBSCRIPTION_EXPIRING
   SYSTEM
+}
+
+// ──────────────────────────────────────────────
+// MARKETING EVENTS
+// ──────────────────────────────────────────────
+
+enum MarketingEventType {
+  CREDIT_THRESHOLD_75
+  CREDIT_THRESHOLD_25
+  CREDIT_THRESHOLD_10
+  CREDIT_THRESHOLD_5
+  CREDIT_DEPLETED
+}
+
+model MarketingEvent {
+  id        String              @id @default(cuid())
+  userId    String
+  type      MarketingEventType
+  credits   Int
+  metadata  Json?
+  createdAt DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

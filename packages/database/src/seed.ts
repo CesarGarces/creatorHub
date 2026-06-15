@@ -3,6 +3,20 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
+  // Create tools
+  await prisma.tool.createMany({
+    data: [
+      {
+        id: "thumbnail-generator",
+        name: "Thumbnail Generator",
+        description: "AI-powered thumbnail generation for YouTube videos",
+        category: "image",
+        creditsPerUse: 1,
+      },
+    ],
+    skipDuplicates: true,
+  });
+
   // Create default subscription plans
   await prisma.subscriptionPlan.createMany({
     data: [
@@ -48,18 +62,15 @@ async function main() {
     ],
   });
 
-  // Create admin user
+  // Create admin user with unlimited credits
   const admin = await prisma.user.create({
     data: {
       email: "admin@creatorhub.ai",
       name: "Admin",
       role: "ADMIN",
-      credits: {
-        create: {
-          balance: 999999,
-          lifetime: 999999,
-        },
-      },
+      plan: "PREMIUM",
+      freeCredits: 999999,
+      purchasedCredits: 999999,
     },
   });
 
