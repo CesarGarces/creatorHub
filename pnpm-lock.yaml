@@ -467,10 +467,10 @@ importers:
   packages/database:
     dependencies:
       '@prisma/adapter-pg':
-        specifier: ^6.0.0
+        specifier: ~6.19.0
         version: 6.19.3
       '@prisma/client':
-        specifier: ^6.0.0
+        specifier: ~6.19.0
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
       pg:
         specifier: ^8.13.0
@@ -486,7 +486,7 @@ importers:
         specifier: ^8.11.0
         version: 8.20.0
       prisma:
-        specifier: ^6.0.0
+        specifier: ~6.19.0
         version: 6.19.3(typescript@5.9.3)
       tsx:
         specifier: ^4.0.0
