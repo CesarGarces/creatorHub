@@ -179,6 +179,99 @@ creator-hub/
 
 ---
 
+## 2b. UI Components — shadcn-style Library
+
+La UI se construye con componentes estilo **shadcn/ui** en `packages/ui/`. Cada componente se basa en Radix primitives con Tailwind CSS v4, siguiendo el patrón de composición (Root, Trigger, Content, Header, Footer).
+
+### Stack
+
+| Capa            | Tecnología                                                                               |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| Primitives      | Radix UI (Dialog, Popover, DropdownMenu, Switch, ScrollArea, Separator, Tooltip, Avatar) |
+| Command palette | cmdk                                                                                     |
+| Variantes       | class-variance-authority (CVA)                                                           |
+| Utilidad clases | clsx + tailwind-merge → `cn()`                                                           |
+| Íconos          | lucide-react (SVG, no emojis)                                                            |
+| Animaciones     | tailwindcss-animate                                                                      |
+| Estilos         | Tailwind CSS v4, CSS-first con `@theme {}`                                               |
+
+### Componentes
+
+| Componente            | Base             | Uso                                                                    |
+| --------------------- | ---------------- | ---------------------------------------------------------------------- |
+| `Button`              | CVA              | 7 variantes: primary, secondary, ghost, danger, outline, glow, link    |
+| `Dialog`              | Portal manual    | Modal centrado con overlay                                             |
+| `AlertDialog`         | Radix Dialog     | Confirmación (Cancelar / Aceptar)                                      |
+| `ActionConfirmDialog` | Portal manual    | Confirmación con botones dinámicos                                     |
+| `Sheet`               | Portal manual    | Panel lateral deslizante                                               |
+| `Popover`             | Radix Popover    | Notificaciones, tooltips flotantes                                     |
+| `DropdownMenu`        | Radix Dropdown   | Menú desplegable de acciones                                           |
+| `Command`             | cmdk             | Paleta de comandos (⌘K)                                                |
+| `ScrollArea`          | Radix ScrollArea | Scroll personalizado                                                   |
+| `Switch`              | Radix Switch     | Toggle on/off                                                          |
+| `Separator`           | Radix Separator  | Divisor visual                                                         |
+| `Tooltip`             | Radix Tooltip    | Tooltip hover                                                          |
+| `Avatar`              | Radix Avatar     | Avatar con iniciales                                                   |
+| `Badge`               | —                | 7 variantes: primary, secondary, accent, error, warning, free, premium |
+| `Card`                | —                | Card con Header/Content/Footer                                         |
+| `Input` / `Textarea`  | —                | Campos de formulario                                                   |
+| `Skeleton`            | —                | Placeholder de carga                                                   |
+| `ToolCard`            | —                | Tarjeta de herramienta                                                 |
+| `CreditDisplay`       | —                | Visualización de créditos                                              |
+| `EmptyState`          | —                | Estado vacío con ícono y mensaje                                       |
+
+### Z-Index Scale
+
+| Capa             | z-index     |
+| ---------------- | ----------- |
+| Backdrop         | `z-[99997]` |
+| Panel/Sheet      | `z-[99998]` |
+| Popover/Dropdown | `z-[99999]` |
+
+### Convenciones
+
+- **Íconos**: SVG de Lucide, NO emojis para íconos funcionales
+- **Tokens CSS**: `--color-primary`, `--color-surface`, `--color-border`, `--color-text`, `--color-text-muted`, `--color-text-dim`
+- **Dark mode**: `--color-bg: #0b0f19`, `--color-surface: #121826`, `--color-surface-elevated: #1a2236`, `--color-text: #f1f5f9`
+- **Tipografía**: Inter (sans) + JetBrains Mono (mono), `font-feature-settings: "rlig" 1, "calt" 1`
+- **Touch targets**: Mínimo 44px (`py-2.5` / `px-6` en items interactivos)
+- **Animaciones**: 150-300ms, `ease-out` para entrada, portales a `document.body` vía `createPortal`
+
+### Arquitectura de archivos
+
+```
+packages/ui/
+├── src/
+│   ├── components/
+│   │   ├── button.tsx                # CVA variants
+│   │   ├── dialog.tsx                # Portal-based modal
+│   │   ├── alert-dialog.tsx          # Radix AlertDialog
+│   │   ├── action-confirm-dialog.tsx # Dynamic button labels
+│   │   ├── sheet.tsx                 # Slide panel
+│   │   ├── popover.tsx               # Radix Popover
+│   │   ├── dropdown-menu.tsx         # Radix DropdownMenu
+│   │   ├── command.tsx               # cmdk palette
+│   │   ├── scroll-area.tsx           # Radix ScrollArea
+│   │   ├── switch.tsx                # Radix Switch
+│   │   ├── separator.tsx             # Radix Separator
+│   │   ├── tooltip.tsx               # Radix Tooltip
+│   │   ├── avatar.tsx                # Radix Avatar
+│   │   ├── badge.tsx                 # Variants
+│   │   ├── card.tsx                  # Card layout
+│   │   ├── input.tsx                 # Styled input
+│   │   ├── textarea.tsx              # Styled textarea
+│   │   ├── skeleton.tsx              # Loading placeholder
+│   │   ├── tool-card.tsx             # Tool card
+│   │   ├── credit-display.tsx        # Credits display
+│   │   └── empty-state.tsx           # Empty state
+│   ├── lib/
+│   │   └── utils.ts                  # cn() utility
+│   └── index.ts                      # All exports
+└── package.json
+```
+
+---
+
 ## 3. Tool Registry System
 
 ### Architecture

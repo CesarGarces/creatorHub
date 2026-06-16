@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 import api from "@/lib/api";
-import { Button, EmptyState } from "@creator-hub/ui";
+import { Button, EmptyState, ActionConfirmDialog } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 
 interface GeneratedImage {
@@ -27,6 +28,13 @@ export default function AssetsPage() {
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(
     null,
   );
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    imageId: string | null;
+  }>({
+    isOpen: false,
+    imageId: null,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["images", page],
@@ -50,6 +58,12 @@ export default function AssetsPage() {
 
   const images = data?.data || [];
   const meta = data?.meta;
+
+  const handleDelete = () => {
+    if (!deleteDialog.imageId) return;
+    deleteMutation.mutate(deleteDialog.imageId);
+    setDeleteDialog({ isOpen: false, imageId: null });
+  };
 
   return (
     <>
@@ -197,11 +211,9 @@ export default function AssetsPage() {
                           size="sm"
                           aria-label="Delete asset"
                           title="Delete asset"
-                          onClick={() => {
-                            if (confirm("Delete this image?")) {
-                              deleteMutation.mutate(img.id);
-                            }
-                          }}
+                          onClick={() =>
+                            setDeleteDialog({ isOpen: true, imageId: img.id })
+                          }
                         >
                           <svg
                             width="14"
@@ -373,11 +385,12 @@ export default function AssetsPage() {
                 variant="ghost"
                 size="sm"
                 className="text-error hover:text-error"
-                onClick={() => {
-                  if (confirm("Delete this image?")) {
-                    deleteMutation.mutate(selectedImage.id);
-                  }
-                }}
+                onClick={() =>
+                  setDeleteDialog({
+                    isOpen: true,
+                    imageId: selectedImage.id,
+                  })
+                }
               >
                 <svg
                   width="14"
@@ -397,6 +410,19 @@ export default function AssetsPage() {
           </div>
         </div>
       )}
+
+      <ActionConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, imageId: null })}
+        onConfirm={handleDelete}
+        title="Delete Image"
+        description="This image will be permanently removed from your gallery. This action cannot be undone."
+        confirmLabel="Yes, delete"
+        cancelLabel="No, keep it"
+        confirmVariant="danger"
+        icon={<Trash2 className="h-5 w-5" />}
+        isLoading={deleteMutation.isPending}
+      />
     </>
   );
 }

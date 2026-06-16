@@ -8,6 +8,11 @@ export type GenerationStatus =
   | "FAILED";
 
 // ─── Base State (reusable for ANY tool) ──────────────────────────────────────
+export interface Variation {
+  url: string;
+  imageId: string;
+}
+
 export interface BaseGenerationState {
   status: GenerationStatus;
   jobId: string | null;
@@ -15,22 +20,15 @@ export interface BaseGenerationState {
   resultUrl: string | null;
   resultId: string | null;
   error: string | null;
+  variations: Variation[];
 
   startGeneration: (toolId: string, jobId: string) => void;
   setRevealing: (url: string, id: string) => void;
   setReady: () => void;
   setFailed: (error: string) => void;
   reset: () => void;
+  addVariation: (url: string, imageId: string) => void;
 }
-
-const preloadImage = (url: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error("Failed to preload image"));
-    img.src = url;
-  });
-};
 
 // ─── Thumbnail-specific form state ───────────────────────────────────────────
 export interface ThumbnailFormState {
@@ -59,6 +57,7 @@ export const useGenerationStore = create<GenerationStore>()((set, get) => ({
   resultUrl: null,
   resultId: null,
   error: null,
+  variations: [],
 
   // Thumbnail form state
   prompt: "",
@@ -100,6 +99,16 @@ export const useGenerationStore = create<GenerationStore>()((set, get) => ({
 
   setFailed: (error: string) => {
     set({ status: "FAILED", error });
+  },
+
+  addVariation: (url: string, imageId: string) => {
+    set((state) => {
+      const exists = state.variations.some((v) => v.url === url);
+      if (exists) return state;
+      return {
+        variations: [{ url, imageId }, ...state.variations].slice(0, 10),
+      };
+    });
   },
 
   reset: () => {

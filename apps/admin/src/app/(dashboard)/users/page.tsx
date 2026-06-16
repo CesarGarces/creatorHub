@@ -3,8 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Search, Pencil, UserX, UserCheck, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import api from "@/lib/api";
-import { Button, Input, Badge, Skeleton } from "@creator-hub/ui";
+import {
+  Button,
+  Input,
+  Badge,
+  Skeleton,
+  ActionConfirmDialog,
+} from "@creator-hub/ui";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { User, PaginatedResponse } from "@/types";
 
@@ -19,6 +26,13 @@ export default function UsersPage() {
     limit: 20,
     total: 0,
     totalPages: 0,
+  });
+  const [toggleDialog, setToggleDialog] = useState<{
+    isOpen: boolean;
+    user: User | null;
+  }>({
+    isOpen: false,
+    user: null,
   });
 
   const fetchUsers = async (page = 1, query?: string, isSearch = false) => {
@@ -46,14 +60,23 @@ export default function UsersPage() {
     fetchUsers(1, debouncedSearch, true);
   }, [debouncedSearch]);
 
-  const toggleStatus = async (user: User) => {
+  const handleToggleStatus = async () => {
+    if (!toggleDialog.user) return;
+    const user = toggleDialog.user;
     const action = user.isActive ? "deactivate" : "activate";
     try {
       await api.post(`/admin/users/${user.id}/${action}`);
       fetchUsers(meta.page, debouncedSearch, true);
+      toast.success(`User ${action}d successfully`);
     } catch (err: any) {
-      alert(err.response?.data?.message || `Failed to ${action} user`);
+      toast.error(err.response?.data?.message || `Failed to ${action} user`);
+    } finally {
+      setToggleDialog({ isOpen: false, user: null });
     }
+  };
+
+  const openToggleDialog = (user: User) => {
+    setToggleDialog({ isOpen: true, user });
   };
 
   return (
@@ -173,7 +196,7 @@ export default function UsersPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => toggleStatus(user)}
+                        onClick={() => openToggleDialog(user)}
                         aria-label={
                           user.isActive
                             ? `Deactivate ${user.name || user.email}`
@@ -232,6 +255,32 @@ export default function UsersPage() {
           </div>
         </div>
       )}
+
+      <ActionConfirmDialog
+        isOpen={toggleDialog.isOpen}
+        onClose={() => setToggleDialog({ isOpen: false, user: null })}
+        onConfirm={handleToggleStatus}
+        title={
+          toggleDialog.user?.isActive ? "Deactivate User" : "Activate User"
+        }
+        description={
+          toggleDialog.user?.isActive
+            ? `Are you sure you want to deactivate "${toggleDialog.user?.name || toggleDialog.user?.email}"? They will not be able to access the platform.`
+            : `Are you sure you want to activate "${toggleDialog.user?.name || toggleDialog.user?.email}"? They will regain access to the platform.`
+        }
+        confirmLabel={
+          toggleDialog.user?.isActive ? "Deactivate user" : "Activate user"
+        }
+        cancelLabel="Cancel"
+        confirmVariant="danger"
+        icon={
+          toggleDialog.user?.isActive ? (
+            <UserX className="h-5 w-5" />
+          ) : (
+            <UserCheck className="h-5 w-5" />
+          )
+        }
+      />
     </div>
   );
 }

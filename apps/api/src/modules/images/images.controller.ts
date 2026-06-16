@@ -98,6 +98,30 @@ export class ImagesController {
       throw new NotFoundException("Image not found");
     }
 
+    if (image.url) {
+      try {
+        const urlObj = new URL(image.url);
+        const pathParts = urlObj.pathname.split("/").filter(Boolean);
+        if (pathParts.length >= 2) {
+          const bucket = pathParts[0];
+          const key = pathParts.slice(1).join("/");
+          await this.storageService.delete(key, bucket);
+        }
+      } catch {
+        // If URL parsing fails, try raw format (bucket/key)
+        const parts = image.url.split("/");
+        const bucket = parts[0] || "";
+        const key = parts.slice(1).join("/");
+        if (bucket && key) {
+          try {
+            await this.storageService.delete(key, bucket);
+          } catch {
+            // Storage delete failed, continue with DB delete
+          }
+        }
+      }
+    }
+
     await prisma.generatedImage.delete({ where: { id } });
 
     return { success: true };

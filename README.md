@@ -369,6 +369,7 @@ Para agregar una nueva tool (ej: `title-generator`):
 | `@creator-hub/ai-engine`     | Multi-provider AI abstraction (tier-aware)         | ✅ Genérico |
 | `@creator-hub/billing`       | Credit system (free + purchased, marketing events) | ✅ Genérico |
 | `@creator-hub/ui`            | Button, Badge, Skeleton, etc.                      | ✅ Genérico |
+| `@creator-hub/ui`            | shadcn-style component library (Radix + Tailwind)  | ✅ Genérico |
 
 ---
 
@@ -472,6 +473,50 @@ POST   /api/v1/admin/users/:id/activate       # Reactivar usuario
 - Gestión de usuarios con soft delete (`isActive`)
 - Los créditos de usuario son de solo lectura en el admin
 - Protección: no se puede desactivar el último admin ni a sí mismo
+
+## UI Components — shadcn-style
+
+La UI se construye con componentes estilo **shadcn/ui** en `packages/ui/`. Cada componente se basa en Radix primitives con Tailwind CSS v4 para estilizado, siguiendo el patrón de composición (Header, Content, Footer, Trigger).
+
+### Componentes disponibles
+
+| Componente            | Base             | Uso                                                                 |
+| --------------------- | ---------------- | ------------------------------------------------------------------- |
+| `Button`              | CVA              | 7 variantes: primary, secondary, ghost, danger, outline, glow, link |
+| `Dialog`              | Portal manual    | Modal centrado con overlay                                          |
+| `AlertDialog`         | Radix Dialog     | Confirmación (Cancelar / Aceptar)                                   |
+| `ActionConfirmDialog` | Portal manual    | Confirmación con botones dinámicos                                  |
+| `Sheet`               | Portal manual    | Panel lateral deslizante                                            |
+| `Popover`             | Radix Popover    | Notificaciones, tooltips flotantes                                  |
+| `DropdownMenu`        | Radix Dropdown   | Menú desplegable de acciones                                        |
+| `Command`             | cmdk             | Paleta de comandos (⌘K)                                             |
+| `ScrollArea`          | Radix ScrollArea | Scroll personalizado                                                |
+| `Switch`              | Radix Switch     | Toggle on/off                                                       |
+| `Separator`           | Radix Separator  | Divisor visual                                                      |
+| `Tooltip`             | Radix Tooltip    | Tooltip hover                                                       |
+| `Avatar`              | Radix Avatar     | Avatar con iniciales                                                |
+| `Badge`               | —                | 7 variantes de badge                                                |
+| `Card`                | —                | Card con header/content/footer                                      |
+| `Input` / `Textarea`  | —                | Campos de formulario                                                |
+| `Skeleton`            | —                | Placeholder de carga                                                |
+
+### Z-Index Scale
+
+| Capa             | z-index     |
+| ---------------- | ----------- |
+| Backdrop         | `z-[99997]` |
+| Panel/Sheet      | `z-[99998]` |
+| Popover/Dropdown | `z-[99999]` |
+
+### Dependencias
+
+- Radix primitives: `@radix-ui/react-dialog`, `react-popover`, `react-dropdown-menu`, `react-switch`, `react-scroll-area`, `react-separator`, `react-tooltip`, `react-avatar`
+- `cmdk` para Command palette
+- `class-variance-authority` para variantes tipadas
+- `clsx` + `tailwind-merge` → utilidad `cn()`
+- `lucide-react` para íconos (SVG, no emojis)
+
+Ver `structure.md` para arquitectura detallada de archivos.
 
 ## API
 

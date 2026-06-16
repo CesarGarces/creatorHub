@@ -1,14 +1,30 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { cn } from "@creator-hub/ui";
+import {
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandShortcut,
+} from "@creator-hub/ui";
+import {
+  Palette,
+  Bot,
+  LayoutDashboard,
+  Wrench,
+  CreditCard,
+  History,
+  Settings,
+} from "lucide-react";
 
 interface CommandItem {
   id: string;
   label: string;
   description?: string;
-  icon?: string;
+  icon?: React.ReactNode;
   href?: string;
   action?: () => void;
   category?: string;
@@ -25,7 +41,7 @@ const defaultItems: CommandItem[] = [
     id: "thumbnail",
     label: "Thumbnail Generator",
     description: "Create stunning thumbnails",
-    icon: "🎨",
+    icon: <Palette className="h-4 w-4 text-text-dim" />,
     href: "/tools/thumbnail-generator",
     category: "Tools",
   },
@@ -33,7 +49,7 @@ const defaultItems: CommandItem[] = [
     id: "youtube-agent",
     label: "YouTube Agent",
     description: "Plan and optimize YouTube content",
-    icon: "🤖",
+    icon: <Bot className="h-4 w-4 text-text-dim" />,
     href: "/agents/youtube",
     category: "Agents",
   },
@@ -41,7 +57,7 @@ const defaultItems: CommandItem[] = [
     id: "dashboard",
     label: "Dashboard",
     description: "Go to dashboard",
-    icon: "🏠",
+    icon: <LayoutDashboard className="h-4 w-4 text-text-dim" />,
     href: "/dashboard",
     category: "Navigation",
   },
@@ -49,7 +65,7 @@ const defaultItems: CommandItem[] = [
     id: "tools",
     label: "All Tools",
     description: "Browse all tools",
-    icon: "🛠️",
+    icon: <Wrench className="h-4 w-4 text-text-dim" />,
     href: "/tools",
     category: "Navigation",
   },
@@ -57,7 +73,7 @@ const defaultItems: CommandItem[] = [
     id: "agents",
     label: "All Agents",
     description: "Browse all agents",
-    icon: "🤖",
+    icon: <Bot className="h-4 w-4 text-text-dim" />,
     href: "/agents",
     category: "Navigation",
   },
@@ -65,7 +81,7 @@ const defaultItems: CommandItem[] = [
     id: "credits",
     label: "Credits",
     description: "Manage your credits",
-    icon: "💎",
+    icon: <CreditCard className="h-4 w-4 text-text-dim" />,
     href: "/credits",
     category: "Account",
   },
@@ -73,7 +89,7 @@ const defaultItems: CommandItem[] = [
     id: "history",
     label: "History",
     description: "View generation history",
-    icon: "📜",
+    icon: <History className="h-4 w-4 text-text-dim" />,
     href: "/history",
     category: "Navigation",
   },
@@ -81,7 +97,7 @@ const defaultItems: CommandItem[] = [
     id: "settings",
     label: "Settings",
     description: "App settings",
-    icon: "⚙️",
+    icon: <Settings className="h-4 w-4 text-text-dim" />,
     href: "/settings",
     category: "Account",
   },
@@ -92,17 +108,9 @@ export function CommandPalette({
   onClose,
   items = defaultItems,
 }: CommandPaletteProps) {
-  const [query, setQuery] = useState("");
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const router = useRouter();
 
-  const filtered = items.filter(
-    (item) =>
-      item.label.toLowerCase().includes(query.toLowerCase()) ||
-      item.description?.toLowerCase().includes(query.toLowerCase()),
-  );
-
-  const grouped = filtered.reduce(
+  const grouped = items.reduce(
     (acc, item) => {
       const cat = item.category || "Other";
       if (!acc[cat]) acc[cat] = [];
@@ -112,133 +120,36 @@ export function CommandPalette({
     {} as Record<string, CommandItem[]>,
   );
 
-  const flatFiltered = Object.values(grouped).flat();
-
-  const handleSelect = useCallback(
-    (item: CommandItem) => {
-      if (item.action) item.action();
-      else if (item.href) router.push(item.href);
-      onClose();
-      setQuery("");
-    },
-    [router, onClose],
-  );
-
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        if (isOpen) onClose();
-      }
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setSelectedIndex((i) => Math.min(i + 1, flatFiltered.length - 1));
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedIndex((i) => Math.max(i - 1, 0));
-      } else if (e.key === "Enter" && flatFiltered[selectedIndex]) {
-        handleSelect(flatFiltered[selectedIndex]);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, flatFiltered, selectedIndex, handleSelect]);
-
-  if (!isOpen) return null;
-
-  let runningIndex = -1;
+  const handleSelect = (item: CommandItem) => {
+    if (item.action) item.action();
+    else if (item.href) router.push(item.href);
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
-      <div
-        className="fixed inset-0 bg-bg/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative w-full max-w-lg rounded-xl border border-border bg-surface shadow-2xl animate-scale-in overflow-hidden">
-        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="text-text-dim"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.3-4.3" />
-          </svg>
-          <input
-            autoFocus
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search tools, agents, pages..."
-            className="flex-1 bg-transparent text-sm text-text placeholder:text-text-dim outline-none"
-          />
-          <kbd className="rounded border border-border bg-surface-elevated px-1.5 py-0.5 text-[10px] text-text-dim font-mono">
-            ESC
-          </kbd>
-        </div>
-        <div className="max-h-80 overflow-y-auto p-2">
-          {Object.entries(grouped).map(([category, items]) => (
-            <div key={category}>
-              <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-dim">
-                {category}
-              </div>
-              {items.map((item) => {
-                runningIndex++;
-                const idx = runningIndex;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleSelect(item)}
-                    onMouseEnter={() => setSelectedIndex(idx)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
-                      idx === selectedIndex
-                        ? "bg-primary/10 text-text"
-                        : "text-text-muted hover:bg-surface-elevated",
-                    )}
-                  >
-                    {item.icon && <span className="text-lg">{item.icon}</span>}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{item.label}</p>
-                      {item.description && (
-                        <p className="text-xs text-text-dim truncate">
-                          {item.description}
-                        </p>
-                      )}
-                    </div>
-                    {idx === selectedIndex && (
-                      <span className="text-[10px] text-text-dim">↵</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-          {flatFiltered.length === 0 && (
-            <div className="py-8 text-center text-sm text-text-dim">
-              No results found
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <CommandDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <CommandInput placeholder="Search tools, agents, pages..." />
+      <CommandList>
+        <CommandEmpty>No results found.</CommandEmpty>
+        {Object.entries(grouped).map(([category, items]) => (
+          <CommandGroup key={category} heading={category}>
+            {items.map((item) => (
+              <CommandItem key={item.id} onSelect={() => handleSelect(item)}>
+                {item.icon}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm">{item.label}</p>
+                  {item.description && (
+                    <p className="text-xs text-text-dim truncate mt-0.5">
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+                <CommandShortcut>↵</CommandShortcut>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        ))}
+      </CommandList>
+    </CommandDialog>
   );
 }

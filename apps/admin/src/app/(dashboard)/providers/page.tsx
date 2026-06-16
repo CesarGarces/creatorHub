@@ -3,8 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Search, Pencil, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import api from "@/lib/api";
-import { Button, Input, Badge, Skeleton } from "@creator-hub/ui";
+import {
+  Button,
+  Input,
+  Badge,
+  Skeleton,
+  ActionConfirmDialog,
+} from "@creator-hub/ui";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { Provider, PaginatedResponse } from "@/types";
 
@@ -19,6 +26,15 @@ export default function ProvidersPage() {
     limit: 20,
     total: 0,
     totalPages: 0,
+  });
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    id: string | null;
+    name: string;
+  }>({
+    isOpen: false,
+    id: null,
+    name: "",
   });
 
   const fetchProviders = async (page = 1, query?: string, isSearch = false) => {
@@ -49,13 +65,16 @@ export default function ProvidersPage() {
     fetchProviders(1, debouncedSearch, true);
   }, [debouncedSearch]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this provider?")) return;
+  const handleDelete = async () => {
+    if (!deleteDialog.id) return;
     try {
-      await api.delete(`/admin/providers/${id}`);
+      await api.delete(`/admin/providers/${deleteDialog.id}`);
       fetchProviders(meta.page, debouncedSearch, true);
+      toast.success("Provider deleted successfully");
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to delete provider");
+      toast.error(err.response?.data?.message || "Failed to delete provider");
+    } finally {
+      setDeleteDialog({ isOpen: false, id: null, name: "" });
     }
   };
 
@@ -163,7 +182,13 @@ export default function ProvidersPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDelete(provider.id)}
+                        onClick={() =>
+                          setDeleteDialog({
+                            isOpen: true,
+                            id: provider.id,
+                            name: provider.name,
+                          })
+                        }
                         aria-label={`Delete ${provider.name}`}
                         className="min-w-[80px] border-error text-error hover:bg-error/10"
                       >
@@ -204,6 +229,18 @@ export default function ProvidersPage() {
           </div>
         </div>
       )}
+
+      <ActionConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, id: null, name: "" })}
+        onConfirm={handleDelete}
+        title="Delete Provider"
+        description={`Are you sure you want to delete "${deleteDialog.name}"? This action cannot be undone.`}
+        confirmLabel="Delete provider"
+        cancelLabel="Keep provider"
+        confirmVariant="danger"
+        icon={<Trash2 className="h-5 w-5" />}
+      />
     </div>
   );
 }

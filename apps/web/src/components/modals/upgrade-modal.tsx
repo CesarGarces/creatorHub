@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Badge } from "@creator-hub/ui";
+import {
+  Button,
+  Badge,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@creator-hub/ui";
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -17,19 +25,20 @@ const creditPacks = [
 export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
   const [selectedPack, setSelectedPack] = useState<string>("pack-10");
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-surface rounded-2xl border border-border p-6 max-w-md w-full mx-4 space-y-6">
-        <div className="text-center space-y-2">
-          <div className="text-4xl">⚡</div>
-          <h2 className="text-xl font-bold text-text">No credits remaining</h2>
-          <p className="text-sm text-text-muted">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className="max-w-md border border-border"
+        onClose={onClose}
+      >
+        <DialogHeader className="text-center">
+          <div className="text-4xl mx-auto">⚡</div>
+          <DialogTitle>No credits remaining</DialogTitle>
+          <DialogDescription>
             You&apos;ve used all your free credits. Upgrade to continue creating
             amazing thumbnails.
-          </p>
-        </div>
+          </DialogDescription>
+        </DialogHeader>
 
         <div className="space-y-3">
           {creditPacks.map((pack) => (
@@ -96,7 +105,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             Maybe later
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

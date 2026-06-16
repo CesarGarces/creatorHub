@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useToolsStore } from "@/store/tools.store";
@@ -42,6 +42,7 @@ type ProviderFromApi = {
 
 export default function ThumbnailGeneratorPage() {
   const params = useParams();
+  const router = useRouter();
   const { tools, fetchTools } = useToolsStore();
   const { balance, plan, fetchBalance } = useCreditsStore();
   const [providers, setProviders] = useState<ProviderFromApi[]>([]);
@@ -59,6 +60,7 @@ export default function ThumbnailGeneratorPage() {
     aiProvider,
     width,
     height,
+    variations,
     setPrompt,
     setNegativePrompt,
     setStyle,
@@ -68,11 +70,9 @@ export default function ThumbnailGeneratorPage() {
     setRevealing,
     setReady,
     setFailed,
+    addVariation,
     reset,
   } = useGenerationStore();
-  const [variations, setVariations] = useState<
-    Array<{ url: string; imageId: string }>
-  >([]);
   const lastCompletedRef = useRef<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showVariations, setShowVariations] = useState(false);
@@ -137,15 +137,11 @@ export default function ThumbnailGeneratorPage() {
       lastCompletedRef.current !== imageUrl
     ) {
       lastCompletedRef.current = imageUrl;
-      setVariations((prev) => {
-        const exists = prev.some((v) => v.url === imageUrl);
-        if (exists) return prev;
-        return [{ url: imageUrl, imageId: "" }, ...prev].slice(0, 4);
-      });
+      addVariation(imageUrl, imageId || "");
     }
-  }, [status, imageUrl]);
+  }, [status, imageUrl, imageId, addVariation]);
 
-  const tool = tools.find((t) => t.id === params.id);
+  const _tool = tools.find((t) => t.id === params.id);
   const selectedProvider = providers.find((p) => p.id === aiProvider);
   const isProcessing = status === "GENERATING" || status === "REVEALING";
 
@@ -482,8 +478,8 @@ export default function ThumbnailGeneratorPage() {
               <p className="mt-2 text-xs text-error text-center">
                 Insufficient credits.{" "}
                 <button
-                  onClick={() => setShowUpgradeModal(true)}
-                  className="underline"
+                  onClick={() => router.push("/credits")}
+                  className="underline cursor-pointer"
                 >
                   Buy more
                 </button>
@@ -517,7 +513,7 @@ export default function ThumbnailGeneratorPage() {
         {/* Center - Preview */}
         <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg overflow-hidden">
           <div
-            className="relative z-10"
+            className="relative"
             style={{
               aspectRatio: `${width} / ${height}`,
               maxWidth: "100%",
@@ -660,65 +656,73 @@ export default function ThumbnailGeneratorPage() {
 
       {/* Variations Drawer */}
       {showVariations && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setShowVariations(false)}
-          />
-          <div className="relative w-80 bg-surface border-l border-border shadow-2xl flex flex-col animate-slide-in-right">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 className="text-sm font-semibold text-text">Variations</h3>
-              <button
-                onClick={() => setShowVariations(false)}
-                className="rounded-lg p-1.5 text-text-muted hover:text-text hover:bg-surface-elevated transition-colors cursor-pointer"
+        <div
+          className="fixed inset-0 z-[99998] bg-black/60 transition-opacity duration-300"
+          onClick={() => setShowVariations(false)}
+        />
+      )}
+      <div
+        className={`fixed inset-y-0 right-0 w-[85vw] max-w-sm bg-surface border-l border-border shadow-2xl z-[99999] transition-transform duration-300 ease-out ${
+          showVariations ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-between flex-shrink-0 px-6 pt-6 pb-4 border-b border-border">
+            <h2 className="text-lg font-semibold text-text">Variations</h2>
+            <button
+              onClick={() => setShowVariations(false)}
+              className="rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-text-muted"
               >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3 min-h-0">
+            {variations.length > 0 ? (
+              variations.map((v, i) => (
+                <div
+                  key={v.url || i}
+                  className={`rounded-lg overflow-hidden border cursor-pointer transition-all ${
+                    imageUrl === v.url
+                      ? "border-primary ring-2 ring-primary/20"
+                      : "border-border hover:border-border/80"
+                  }`}
+                  style={{
+                    aspectRatio: `${width} / ${height}`,
+                  }}
+                  onClick={() => {
+                    setRevealing(v.url, v.imageId);
+                    setReady();
+                    setShowVariations(false);
+                  }}
                 >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {variations.length > 0 ? (
-                variations.map((v, i) => (
-                  <div
-                    key={v.url || i}
-                    className={`rounded-lg overflow-hidden border cursor-pointer transition-all ${
-                      imageUrl === v.url
-                        ? "border-primary ring-2 ring-primary/20"
-                        : "border-border hover:border-border/80"
-                    }`}
-                    style={{
-                      aspectRatio: `${width} / ${height}`,
-                    }}
-                    onClick={() => {
-                      setRevealing(v.url, v.imageId);
-                      setReady();
-                      setShowVariations(false);
-                    }}
-                  >
-                    <img
-                      src={v.url}
-                      alt={`Variation ${i + 1}`}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-xs text-text-dim">
-                  Generated variations will appear here
+                  <img
+                    src={v.url}
+                    alt={`Variation ${i + 1}`}
+                    className="w-full h-full object-contain"
+                  />
                 </div>
-              )}
-            </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-xs text-text-dim">
+                Generated variations will appear here
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       <UpgradeModal
         isOpen={showUpgradeModal}

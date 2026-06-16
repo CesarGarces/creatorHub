@@ -1,9 +1,43 @@
 import { forwardRef } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/utils";
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "ghost" | "danger" | "outline" | "glow";
-  size?: "sm" | "md" | "lg" | "icon";
+export const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-lg font-medium transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
+  {
+    variants: {
+      variant: {
+        primary:
+          "bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20",
+        secondary:
+          "bg-surface-elevated text-text border border-border hover:bg-surface-elevated/80 hover:border-border/80",
+        ghost:
+          "bg-transparent text-text-muted hover:bg-surface-elevated hover:text-text",
+        danger:
+          "bg-error text-white hover:bg-error/90 shadow-lg shadow-error/20",
+        outline:
+          "bg-transparent text-text-muted border border-border hover:bg-surface-elevated hover:text-text hover:border-border/80",
+        glow: "bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20 animate-pulse-glow",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        sm: "h-8 px-3 text-xs rounded-md gap-1.5",
+        md: "h-10 px-4 text-sm",
+        lg: "h-12 px-6 text-base",
+        icon: "h-10 w-10 p-0",
+      },
+    },
+    defaultVariants: {
+      variant: "primary",
+      size: "md",
+    },
+  },
+);
+
+export interface ButtonProps
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
   isLoading?: boolean;
 }
 
@@ -24,30 +58,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={disabled || isLoading}
-        className={cn(
-          "inline-flex items-center justify-center rounded-lg font-medium transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
-          {
-            "bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20":
-              variant === "primary",
-            "bg-surface-elevated text-text border border-border hover:bg-surface-elevated/80 hover:border-border/80":
-              variant === "secondary",
-            "bg-transparent text-text-muted hover:bg-surface-elevated hover:text-text":
-              variant === "ghost",
-            "bg-error text-white hover:bg-error/90 shadow-lg shadow-error/20":
-              variant === "danger",
-            "bg-transparent text-text-muted border border-border hover:bg-surface-elevated hover:text-text hover:border-border/80":
-              variant === "outline",
-            "bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20 animate-pulse-glow":
-              variant === "glow",
-          },
-          {
-            "h-8 px-3 text-xs rounded-md gap-1.5": size === "sm",
-            "h-10 px-4 text-sm": size === "md",
-            "h-12 px-6 text-base": size === "lg",
-            "h-10 w-10 p-0": size === "icon",
-          },
-          className,
-        )}
+        className={cn(buttonVariants({ variant, size }), className)}
         {...props}
       >
         {isLoading ? (
