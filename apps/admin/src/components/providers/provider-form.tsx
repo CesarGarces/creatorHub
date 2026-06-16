@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Input, Badge } from "@creator-hub/ui";
+import { Button, Input } from "@creator-hub/ui";
+import { Toggle } from "@/components/ui/toggle";
 import type { Provider } from "@/types";
 
 interface ProviderFormProps {
@@ -177,20 +178,15 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
         />
       </div>
 
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
+      <div className="flex items-center">
+        <Toggle
           name="isActive"
-          id="isActive"
           checked={form.isActive}
-          onChange={(e) =>
-            setForm((prev) => ({ ...prev, isActive: e.target.checked }))
+          onChange={(checked) =>
+            setForm((prev) => ({ ...prev, isActive: checked }))
           }
-          className="h-4 w-4 rounded border-border bg-surface text-primary"
+          label="Active"
         />
-        <label htmlFor="isActive" className="text-sm text-text-muted">
-          Active
-        </label>
       </div>
 
       <div className="flex items-center gap-3 pt-4">

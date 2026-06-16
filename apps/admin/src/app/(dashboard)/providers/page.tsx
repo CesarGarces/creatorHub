@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { Button, Input, Badge, Skeleton } from "@creator-hub/ui";
+import { useDebounce } from "@/hooks/use-debounce";
 import type { Provider, PaginatedResponse } from "@/types";
 
 export default function ProvidersPage() {
-  const router = useRouter();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [meta, setMeta] = useState({
     page: 1,
     limit: 20,
@@ -20,8 +21,9 @@ export default function ProvidersPage() {
     totalPages: 0,
   });
 
-  const fetchProviders = async (page = 1) => {
-    setLoading(true);
+  const fetchProviders = async (page = 1, query?: string, isSearch = false) => {
+    if (isSearch) setIsSearching(true);
+    else setLoading(true);
     try {
       const res = await api.get<PaginatedResponse<Provider>>(
         "/admin/providers",
@@ -29,7 +31,7 @@ export default function ProvidersPage() {
           params: {
             page: String(page),
             limit: "20",
-            search: search || undefined,
+            search: query || undefined,
           },
         },
       );
@@ -39,18 +41,19 @@ export default function ProvidersPage() {
       console.error(err.response?.data?.message || "Failed to load providers");
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
   };
 
   useEffect(() => {
-    fetchProviders(1);
-  }, [search]);
+    fetchProviders(1, debouncedSearch, true);
+  }, [debouncedSearch]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this provider?")) return;
     try {
       await api.delete(`/admin/providers/${id}`);
-      fetchProviders(meta.page);
+      fetchProviders(meta.page, debouncedSearch, true);
     } catch (err: any) {
       alert(err.response?.data?.message || "Failed to delete provider");
     }
@@ -79,6 +82,9 @@ export default function ProvidersPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10"
         />
+        {isSearching && (
+          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-text-dim" />
+        )}
       </div>
 
       <div className="rounded-xl border border-border bg-surface overflow-hidden">
@@ -93,7 +99,9 @@ export default function ProvidersPage() {
               <th className="px-4 py-3 font-medium text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody
+            className={`divide-y divide-border ${isSearching ? "opacity-60" : ""}`}
+          >
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>
@@ -140,18 +148,27 @@ export default function ProvidersPage() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-3">
                       <Link href={`/providers/${provider.id}/edit`}>
-                        <Button variant="ghost" size="icon">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-label={`Edit ${provider.name}`}
+                          className="min-w-[80px]"
+                        >
                           <Pencil className="h-4 w-4" />
+                          <span className="hidden sm:inline">Edit</span>
                         </Button>
                       </Link>
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleDelete(provider.id)}
+                        aria-label={`Delete ${provider.name}`}
+                        className="min-w-[80px] border-error text-error hover:bg-error/10"
                       >
-                        <Trash2 className="h-4 w-4 text-error" />
+                        <Trash2 className="h-4 w-4" />
+                        <span className="hidden sm:inline">Delete</span>
                       </Button>
                     </div>
                   </td>

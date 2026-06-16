@@ -2,15 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, UserX, UserCheck } from "lucide-react";
+import { Plus, Search, Pencil, UserX, UserCheck, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { Button, Input, Badge, Skeleton } from "@creator-hub/ui";
+import { useDebounce } from "@/hooks/use-debounce";
 import type { User, PaginatedResponse } from "@/types";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [meta, setMeta] = useState({
     page: 1,
     limit: 20,
@@ -18,14 +21,15 @@ export default function UsersPage() {
     totalPages: 0,
   });
 
-  const fetchUsers = async (page = 1) => {
-    setLoading(true);
+  const fetchUsers = async (page = 1, query?: string, isSearch = false) => {
+    if (isSearch) setIsSearching(true);
+    else setLoading(true);
     try {
       const res = await api.get<PaginatedResponse<User>>("/admin/users", {
         params: {
           page: String(page),
           limit: "20",
-          search: search || undefined,
+          search: query || undefined,
         },
       });
       setUsers(res.data.data);
@@ -34,18 +38,19 @@ export default function UsersPage() {
       console.error(err.response?.data?.message || "Failed to load users");
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
   };
 
   useEffect(() => {
-    fetchUsers(1);
-  }, [search]);
+    fetchUsers(1, debouncedSearch, true);
+  }, [debouncedSearch]);
 
   const toggleStatus = async (user: User) => {
     const action = user.isActive ? "deactivate" : "activate";
     try {
       await api.post(`/admin/users/${user.id}/${action}`);
-      fetchUsers(meta.page);
+      fetchUsers(meta.page, debouncedSearch, true);
     } catch (err: any) {
       alert(err.response?.data?.message || `Failed to ${action} user`);
     }
@@ -74,6 +79,9 @@ export default function UsersPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10"
         />
+        {isSearching && (
+          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-text-dim" />
+        )}
       </div>
 
       <div className="rounded-xl border border-border bg-surface overflow-hidden">
@@ -88,7 +96,9 @@ export default function UsersPage() {
               <th className="px-4 py-3 font-medium text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody
+            className={`divide-y divide-border ${isSearching ? "opacity-60" : ""}`}
+          >
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>
@@ -148,23 +158,41 @@ export default function UsersPage() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-3">
                       <Link href={`/users/${user.id}/edit`}>
-                        <Button variant="ghost" size="icon">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-label={`Edit ${user.name || user.email}`}
+                          className="min-w-[80px]"
+                        >
                           <Pencil className="h-4 w-4" />
+                          <span className="hidden sm:inline">Edit</span>
                         </Button>
                       </Link>
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="outline"
+                        size="sm"
                         onClick={() => toggleStatus(user)}
-                        title={user.isActive ? "Deactivate" : "Activate"}
+                        aria-label={
+                          user.isActive
+                            ? `Deactivate ${user.name || user.email}`
+                            : `Activate ${user.name || user.email}`
+                        }
+                        className={`min-w-[100px] ${
+                          user.isActive
+                            ? "border-error text-error hover:bg-error/10"
+                            : ""
+                        }`}
                       >
                         {user.isActive ? (
-                          <UserX className="h-4 w-4 text-error" />
+                          <UserX className="h-4 w-4" />
                         ) : (
-                          <UserCheck className="h-4 w-4 text-secondary" />
+                          <UserCheck className="h-4 w-4" />
                         )}
+                        <span className="hidden sm:inline">
+                          {user.isActive ? "Deactivate" : "Activate"}
+                        </span>
                       </Button>
                     </div>
                   </td>
@@ -176,27 +204,31 @@ export default function UsersPage() {
       </div>
 
       {meta.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-text-muted">
-            Page {meta.page} of {meta.totalPages}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={meta.page <= 1}
-              onClick={() => fetchUsers(meta.page - 1)}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={meta.page >= meta.totalPages}
-              onClick={() => fetchUsers(meta.page + 1)}
-            >
-              Next
-            </Button>
+        <div className="rounded-lg border border-border bg-surface px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="w-28">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={meta.page <= 1}
+                onClick={() => fetchUsers(meta.page - 1)}
+              >
+                Previous
+              </Button>
+            </div>
+            <p className="flex-1 text-center text-sm text-text-muted">
+              Page {meta.page} of {meta.totalPages}
+            </p>
+            <div className="w-28 text-right">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={meta.page >= meta.totalPages}
+                onClick={() => fetchUsers(meta.page + 1)}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </div>
       )}
