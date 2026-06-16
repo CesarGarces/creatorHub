@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input } from "@creator-hub/ui";
-import { Toggle } from "@/components/ui/toggle";
 import type { User } from "@/types";
 
 interface UserFormProps {
@@ -19,20 +18,15 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
     password: "",
     role: user?.role ?? "USER",
     plan: user?.plan ?? "FREE",
+    freeCredits: user?.freeCredits ?? 0,
+    purchasedCredits: user?.purchasedCredits ?? 0,
     isActive: user?.isActive ?? true,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]:
-        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
-    }));
+  const updateField = (field: string, value: string | number | boolean) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,9 +41,11 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         role: form.role,
         plan: form.plan,
         isActive: form.isActive,
+        freeCredits: form.freeCredits,
+        purchasedCredits: form.purchasedCredits,
       };
 
-      if (!user && form.password) {
+      if (form.password) {
         payload.password = form.password;
       }
 
@@ -81,10 +77,9 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             Email
           </label>
           <Input
-            name="email"
             type="email"
             value={form.email}
-            onChange={handleChange}
+            onChange={(e) => updateField("email", e.target.value)}
             required
           />
         </div>
@@ -94,37 +89,33 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             Name
           </label>
           <Input
-            name="name"
             value={form.name}
-            onChange={handleChange}
+            onChange={(e) => updateField("name", e.target.value)}
             required
           />
         </div>
 
-        {!user && (
-          <div>
-            <label className="mb-1 block text-sm font-medium text-text-muted">
-              Password
-            </label>
-            <Input
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              required={!user}
-              minLength={8}
-            />
-          </div>
-        )}
+        <div>
+          <label className="mb-1 block text-sm font-medium text-text-muted">
+            {user ? "New Password (leave blank to keep)" : "Password"}
+          </label>
+          <Input
+            type="password"
+            value={form.password}
+            onChange={(e) => updateField("password", e.target.value)}
+            required={!user}
+            minLength={8}
+            placeholder={user ? "Leave blank to keep current" : undefined}
+          />
+        </div>
 
         <div>
           <label className="mb-1 block text-sm font-medium text-text-muted">
             Role
           </label>
           <select
-            name="role"
             value={form.role}
-            onChange={handleChange}
+            onChange={(e) => updateField("role", e.target.value)}
             className="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text"
           >
             <option value="USER">USER</option>
@@ -137,9 +128,8 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             Plan
           </label>
           <select
-            name="plan"
             value={form.plan}
-            onChange={handleChange}
+            onChange={(e) => updateField("plan", e.target.value)}
             className="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text"
           >
             <option value="FREE">FREE</option>
@@ -149,43 +139,50 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         </div>
       </div>
 
-      {user && (
-        <div className="rounded-lg border border-border bg-surface-elevated/50 p-4 space-y-3">
-          <p className="text-sm font-medium text-text-muted">
-            Credit Balance (read-only)
-          </p>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <p className="text-xs text-text-dim">Free Credits</p>
-              <p className="text-lg font-semibold text-text">
-                {user.freeCredits}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-text-dim">Purchased Credits</p>
-              <p className="text-lg font-semibold text-text">
-                {user.purchasedCredits}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-text-dim">Total Available</p>
-              <p className="text-lg font-semibold text-text">
-                {user.totalCredits}
-              </p>
-            </div>
+      <div className="rounded-lg border border-border bg-surface-elevated/50 p-4 space-y-4">
+        <p className="text-sm font-medium text-text-muted">Credit Balance</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs text-text-dim">
+              Free Credits
+            </label>
+            <Input
+              type="number"
+              min={0}
+              value={form.freeCredits}
+              onChange={(e) =>
+                updateField("freeCredits", parseInt(e.target.value) || 0)
+              }
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-dim">
+              Purchased Credits
+            </label>
+            <Input
+              type="number"
+              min={0}
+              value={form.purchasedCredits}
+              onChange={(e) =>
+                updateField("purchasedCredits", parseInt(e.target.value) || 0)
+              }
+            />
           </div>
         </div>
-      )}
+      </div>
 
-      <div className="flex items-center">
-        <Toggle
-          name="isActive"
-          checked={form.isActive}
-          onChange={(checked) =>
-            setForm((prev) => ({ ...prev, isActive: checked }))
-          }
-          label="Active"
-        />
+      <div className="flex items-center gap-3">
+        <label className="relative inline-flex cursor-pointer items-center">
+          <input
+            type="checkbox"
+            checked={form.isActive}
+            onChange={(e) => updateField("isActive", e.target.checked)}
+            className="peer sr-only"
+          />
+          <div className="h-6 w-11 rounded-full bg-border peer-checked:bg-primary transition-colors" />
+          <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+        </label>
+        <span className="text-sm text-text-muted">Active</span>
       </div>
 
       <div className="flex items-center gap-3 pt-4">

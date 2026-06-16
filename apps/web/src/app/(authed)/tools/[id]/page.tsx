@@ -8,7 +8,7 @@ import { useToolsStore } from "@/store/tools.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { useGenerationStore } from "@/store/generation.store";
 import api from "@/lib/api";
-import { Button, Badge, Skeleton, EmptyState } from "@creator-hub/ui";
+import { Button, Badge, EmptyState, LoadingSpinner } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { LiquidEtherBackground } from "@/components/animations";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
@@ -534,9 +534,13 @@ export default function ThumbnailGeneratorPage() {
               </div>
             )}
 
-            {status === "GENERATING" && (
-              <div className="absolute inset-0 flex flex-col justify-center space-y-4 animate-fade-in p-4 z-10 opacity-15">
-                <Skeleton className="w-full h-full rounded-xl" />
+            {/* Generating indicator */}
+            {(status === "GENERATING" || status === "REVEALING") && (
+              <div className="absolute inset-0 flex items-center justify-center z-10 animate-fade-in">
+                <LoadingSpinner
+                  text="Generating thumbnail..."
+                  colors={["#c084fc", "#f472b6", "#38bdf8"]}
+                />
               </div>
             )}
 
@@ -609,7 +613,7 @@ export default function ThumbnailGeneratorPage() {
                       </svg>
                       Copy URL
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={handleGenerate}>
+                    <Button variant="ghost" size="sm" onClick={reset}>
                       <svg
                         width="14"
                         height="14"

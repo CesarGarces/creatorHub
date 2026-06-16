@@ -66,6 +66,10 @@ class UpdateUserBaseDto {
   @IsOptional()
   name?: string;
 
+  @IsString()
+  @IsOptional()
+  password?: string;
+
   @IsEnum(UserRoleDto)
   @IsOptional()
   role?: UserRoleDto;
@@ -73,6 +77,16 @@ class UpdateUserBaseDto {
   @IsEnum(UserPlanDto)
   @IsOptional()
   plan?: UserPlanDto;
+
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  freeCredits?: number;
+
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  purchasedCredits?: number;
 
   @IsBoolean()
   @IsOptional()

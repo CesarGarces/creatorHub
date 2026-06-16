@@ -42,6 +42,8 @@ export default function AssetsPage() {
       api.get<{ data: GeneratedImage[]; meta: any }>(
         `/images?page=${page}&limit=12`,
       ),
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const deleteMutation = useMutation({

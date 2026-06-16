@@ -301,8 +301,15 @@ export class AdminService {
       data: {
         ...(dto.email !== undefined && { email: dto.email }),
         ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.password && {
+          passwordHash: await bcrypt.hash(dto.password, 12),
+        }),
         ...(dto.role !== undefined && { role: dto.role }),
         ...(dto.plan !== undefined && { plan: dto.plan }),
+        ...(dto.freeCredits !== undefined && { freeCredits: dto.freeCredits }),
+        ...(dto.purchasedCredits !== undefined && {
+          purchasedCredits: dto.purchasedCredits,
+        }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
       select: {

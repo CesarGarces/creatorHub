@@ -18,6 +18,7 @@ export { Badge } from "./components/badge";
 export { Separator } from "./components/separator";
 export { Switch } from "./components/switch";
 export { ScrollArea, ScrollBar } from "./components/scroll-area";
+export { LoadingSpinner } from "./components/loading-spinner";
 
 // Dialog
 export {
