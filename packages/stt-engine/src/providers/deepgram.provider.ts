@@ -71,7 +71,7 @@ export class DeepgramProvider extends STTProviderBase {
     url.searchParams.set("sample_rate", "16000");
     url.searchParams.set("channels", "1");
     url.searchParams.set("model", "nova-3");
-    url.searchParams.set("language", lang);
+    url.searchParams.set("language", "multi");
     url.searchParams.set("smart_format", "true");
     url.searchParams.set("interim_results", String(interimResults));
     url.searchParams.set("endpointing", String(endpointing));

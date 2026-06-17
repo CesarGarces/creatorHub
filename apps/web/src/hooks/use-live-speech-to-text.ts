@@ -91,44 +91,7 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
   const socketRef = useRef<Socket | null>(null);
   const listenersAttached = useRef(false);
 
-  const attachSocketListeners = useCallback(
-    (socket: Socket) => {
-      if (listenersAttached.current) return;
-      listenersAttached.current = true;
-
-      socket.on(
-        "stt:partial",
-        (data: { text: string; isFinal: boolean; timestamp: number }) => {
-          console.log("[STT] stt:partial:", data.text, data.isFinal);
-          options.onPartialTranscript(data.text, data.isFinal);
-        },
-      );
-
-      socket.on("stt:utterance_end", () => {
-        options.onUtteranceEnd();
-      });
-
-      socket.on(
-        "stt:result",
-        (data: {
-          fullTranscript: string;
-          durationMs: number;
-          wordCount: number;
-          credits: number;
-        }) => {
-          options.onResult(data.fullTranscript, data.durationMs, data.credits);
-        },
-      );
-
-      socket.on("stt:error", (data: { code: string; message: string }) => {
-        options.onError(data.message);
-        cleanup();
-      });
-
-      socket.on("stt:started", () => {});
-    },
-    [options],
-  );
+  const pendingResultRef = useRef(false);
 
   const cleanup = useCallback(() => {
     if (processorRef.current) {
@@ -163,6 +126,48 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
     socketRef.current = null;
     setIsListening(false);
   }, []);
+
+  const attachSocketListeners = useCallback(
+    (socket: Socket) => {
+      if (listenersAttached.current) return;
+      listenersAttached.current = true;
+
+      socket.on(
+        "stt:partial",
+        (data: { text: string; isFinal: boolean; timestamp: number }) => {
+          console.log("[STT] stt:partial:", data.text, data.isFinal);
+          options.onPartialTranscript(data.text, data.isFinal);
+        },
+      );
+
+      socket.on("stt:utterance_end", () => {
+        options.onUtteranceEnd();
+      });
+
+      socket.on(
+        "stt:result",
+        (data: {
+          fullTranscript: string;
+          durationMs: number;
+          wordCount: number;
+          credits: number;
+        }) => {
+          pendingResultRef.current = false;
+          options.onResult(data.fullTranscript, data.durationMs, data.credits);
+          cleanup();
+        },
+      );
+
+      socket.on("stt:error", (data: { code: string; message: string }) => {
+        pendingResultRef.current = false;
+        options.onError(data.message);
+        cleanup();
+      });
+
+      socket.on("stt:started", () => {});
+    },
+    [options, cleanup],
+  );
 
   const startListening = useCallback(async () => {
     if (isListening) return;
@@ -257,9 +262,17 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
 
     if (socketRef.current?.connected) {
       socketRef.current.emit("stt:end");
-    }
+      pendingResultRef.current = true;
 
-    cleanup();
+      setTimeout(() => {
+        if (pendingResultRef.current) {
+          pendingResultRef.current = false;
+          cleanup();
+        }
+      }, 5000);
+    } else {
+      cleanup();
+    }
   }, [isListening, cleanup]);
 
   return {

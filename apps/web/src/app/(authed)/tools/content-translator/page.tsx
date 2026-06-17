@@ -4,7 +4,12 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Button, Badge, LoadingSpinner } from "@creator-hub/ui";
+import {
+  Button,
+  Badge,
+  LoadingSpinner,
+  ActionConfirmDialog,
+} from "@creator-hub/ui";
 import { useCreditsStore } from "@/store/credits.store";
 import { useTranslatorStore } from "@/store/translator.store";
 import { useLiveSpeechToText } from "@/hooks/use-live-speech-to-text";
@@ -73,6 +78,7 @@ export default function ContentTranslatorPage() {
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [isProviderOpen, setIsProviderOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showNewDictationConfirm, setShowNewDictationConfirm] = useState(false);
 
   const langDropdownRef = useRef<HTMLDivElement>(null);
   const providerDropdownRef = useRef<HTMLDivElement>(null);
@@ -120,16 +126,46 @@ export default function ContentTranslatorPage() {
     onError: handleSTTError,
   });
 
+  const playStartSound = () => {
+    const audio = new Audio("/Voice_record_start.mp3");
+    audio.play().catch(() => {});
+  };
+
+  const playEndSound = () => {
+    const audio = new Audio("/Voice_record_end.mp3");
+    audio.play().catch(() => {});
+  };
+
   const toggleMic = useCallback(async () => {
     if (isListening) {
+      playEndSound();
       setListening(false);
       stopListening();
     } else {
-      reset();
+      if (inputText.trim()) {
+        setShowNewDictationConfirm(true);
+        return;
+      }
+      playStartSound();
       setListening(true);
       await startListening();
     }
-  }, [isListening, stopListening, setListening, reset, startListening]);
+  }, [isListening, inputText, stopListening, setListening, startListening]);
+
+  const handleNewDictationConfirm = useCallback(async () => {
+    setShowNewDictationConfirm(false);
+    useTranslatorStore.setState({
+      inputText: "",
+      outputText: "",
+      liveTranscript: "",
+      liveTranscriptFinal: "",
+      status: "IDLE",
+      error: null,
+    });
+    playStartSound();
+    setListening(true);
+    await startListening();
+  }, [setListening, startListening]);
 
   useEffect(() => {
     fetchBalance();
@@ -649,6 +685,31 @@ export default function ContentTranslatorPage() {
             </div>
           )}
       </div>
+
+      <ActionConfirmDialog
+        isOpen={showNewDictationConfirm}
+        onClose={() => setShowNewDictationConfirm(false)}
+        onConfirm={handleNewDictationConfirm}
+        title="New Dictation"
+        description="There's an existing dictation that will be replaced. Do you want to start a new one?"
+        confirmLabel="Yes, start new"
+        cancelLabel="No, keep current"
+        confirmVariant="primary"
+        icon={
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" x2="12" y1="19" y2="22" />
+          </svg>
+        }
+      />
 
       <UpgradeModal
         isOpen={showUpgradeModal}

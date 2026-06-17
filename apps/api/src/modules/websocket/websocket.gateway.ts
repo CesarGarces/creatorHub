@@ -118,11 +118,11 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     if (this.sttEngine.hasActiveSession(client.id)) {
-      client.emit("stt:error", {
-        code: "SESSION_EXISTS",
-        message: "A recording session is already active",
+      this.logger.warn("Cleaning up stale STT session before new start", {
+        userId,
+        clientId: client.id,
       });
-      return;
+      await this.sttEngine.closeSession(client.id);
     }
 
     const user = client.data?.user;
@@ -185,12 +185,57 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (result) {
       const credits = this.sttEngine.calculateCredits(result.durationMs);
 
-      if (userId) {
+      if (userId && credits > 0) {
         try {
-          const { CreditService } = await import("@creator-hub/billing");
-          // Credit deduction will be handled by the caller
-        } catch {
-          // billing module may not be injectable here
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { freeCredits: true, purchasedCredits: true },
+          });
+
+          if (user) {
+            let remaining = credits;
+            const updates: { freeCredits?: number; purchasedCredits?: number } =
+              {};
+
+            const freeDeduct = Math.min(user.freeCredits, remaining);
+            if (freeDeduct > 0) {
+              updates.freeCredits = user.freeCredits - freeDeduct;
+              remaining -= freeDeduct;
+            }
+
+            const purchasedDeduct = Math.min(user.purchasedCredits, remaining);
+            if (purchasedDeduct > 0) {
+              updates.purchasedCredits =
+                user.purchasedCredits - purchasedDeduct;
+              remaining -= purchasedDeduct;
+            }
+
+            if (Object.keys(updates).length > 0) {
+              await prisma.user.update({
+                where: { id: userId },
+                data: updates,
+              });
+
+              const updatedUser = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { freeCredits: true, purchasedCredits: true },
+              });
+
+              this.server.to(userId).emit("credits.deducted", {
+                freeCredits: updatedUser?.freeCredits ?? 0,
+                purchasedCredits: updatedUser?.purchasedCredits ?? 0,
+                totalCredits:
+                  (updatedUser?.freeCredits ?? 0) +
+                  (updatedUser?.purchasedCredits ?? 0),
+              });
+            }
+          }
+        } catch (error) {
+          this.logger.error("Failed to deduct STT credits", {
+            userId,
+            credits,
+            error: (error as Error).message,
+          });
         }
       }
 
