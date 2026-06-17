@@ -9,6 +9,7 @@ Creator Hub es una plataforma donde los creadores de contenido pueden acceder a 
 **Herramientas disponibles:**
 
 - **Thumbnail Generator** — Genera miniaturas con IA (Z-Image-Turbo, SiliconFlow FLUX.2-pro, OpenAI, Gemini, Stability AI)
+- **Content Translator** — Traduce contenido entre idiomas con IA (DeepSeek V4 Flash, DeepSeek V4 Pro)
 
 **Herramientas en desarrollo:**
 
@@ -21,17 +22,17 @@ Creator Hub es una plataforma donde los creadores de contenido pueden acceder a 
 
 ## Stack
 
-| Capa             | Tecnología                                                            |
-| ---------------- | --------------------------------------------------------------------- |
-| Frontend         | Next.js 16, React 19, Zustand, TanStack Query, TailwindCSS            |
-| Backend          | NestJS 11, TypeScript, Prisma ORM                                     |
-| Base de datos    | PostgreSQL 16                                                         |
-| Cola de mensajes | Redis + BullMQ                                                        |
-| Storage          | Cloudflare R2 (prod) / MinIO (dev)                                    |
-| WebSocket        | Socket.IO                                                             |
-| Domain Events    | Redis Pub/Sub (ioredis)                                               |
-| AI               | SiliconFlow (Z-Image-Turbo, FLUX.2-pro), OpenAI, Gemini, Stability AI |
-| Monorepo         | Turborepo + pnpm workspaces                                           |
+| Capa             | Tecnología                                                                         |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| Frontend         | Next.js 16, React 19, Zustand, TanStack Query, TailwindCSS                         |
+| Backend          | NestJS 11, TypeScript, Prisma ORM                                                  |
+| Base de datos    | PostgreSQL 16                                                                      |
+| Cola de mensajes | Redis + BullMQ                                                                     |
+| Storage          | Cloudflare R2 (prod) / MinIO (dev)                                                 |
+| WebSocket        | Socket.IO                                                                          |
+| Domain Events    | Redis Pub/Sub (ioredis)                                                            |
+| AI               | SiliconFlow (Z-Image-Turbo, FLUX.2-pro, DeepSeek V4), OpenAI, Gemini, Stability AI |
+| Monorepo         | Turborepo + pnpm workspaces                                                        |
 
 ## Arquitectura
 
@@ -52,8 +53,11 @@ creator-hub/
 │   ├── shared-types/     # Interfaces TypeScript
 │   └── shared-utils/     # Utilidades puras
 ├── tools/
-│   └── thumbnail-generator/  # Primera herramienta
-│       └── backend/          # BullMQ processor + controller
+│   ├── thumbnail-generator/  # Primera herramienta
+│   │   └── backend/          # BullMQ processor + controller
+│   └── content-translator/   # Traducción de contenido con IA
+│       ├── backend/          # TranslatorProcessor + controller
+│       └── frontend/         # UI full-screen con dos textareas
 └── agents/               # Agentes especializados
 ```
 
@@ -290,19 +294,21 @@ Los proveedores de IA se administran desde la base de datos (`Provider`). El run
 
 ### Proveedores gratuitos (tier: free)
 
-| Proveedor         | Modelo                         | Dimensiones soportadas              | Costo |
-| ----------------- | ------------------------------ | ----------------------------------- | ----- |
-| **Z-Image-Turbo** | `Tongyi-MAI/Z-Image-Turbo`     | 1024x1024, 1280x720, 720x1280, etc. | 1 cr  |
-| **SiliconFlow**   | `black-forest-labs/FLUX.2-pro` | 1024x1024 (ignora image_size)       | 1 cr  |
+| Proveedor             | Modelo                         | Dimensiones soportadas              | Costo |
+| --------------------- | ------------------------------ | ----------------------------------- | ----- |
+| **Z-Image-Turbo**     | `Tongyi-MAI/Z-Image-Turbo`     | 1024x1024, 1280x720, 720x1280, etc. | 1 cr  |
+| **SiliconFlow**       | `black-forest-labs/FLUX.2-pro` | 1024x1024 (ignora image_size)       | 1 cr  |
+| **DeepSeek V4 Flash** | `deepseek-ai/DeepSeek-V4`      | Text generation / translation       | 5 cr  |
 
 ### Proveedores de pago (tier: pro)
 
-| Proveedor        | Modelo           | Costo por imagen |
-| ---------------- | ---------------- | ---------------- |
-| **OpenAI**       | DALL-E 3         | 10 créditos      |
-| **Gemini**       | Imagen 3         | 5 créditos       |
-| **Stability AI** | Stable Diffusion | 8 créditos       |
-| **Flux**         | Flux Dev         | 6 créditos       |
+| Proveedor           | Modelo                    | Costo por imagen |
+| ------------------- | ------------------------- | ---------------- |
+| **OpenAI**          | DALL-E 3                  | 10 créditos      |
+| **Gemini**          | Imagen 3                  | 5 créditos       |
+| **Stability AI**    | Stable Diffusion          | 8 créditos       |
+| **Flux**            | Flux Dev                  | 6 créditos       |
+| **DeepSeek V4 Pro** | `deepseek-ai/DeepSeek-V4` | 10 créditos      |
 
 ### Flujo de selección
 
@@ -335,6 +341,8 @@ new StabilityAIProvider();
 new FluxProvider();
 new SiliconFlowProvider();
 new ZImageTurboProvider();
+new DeepSeekV4FlashProvider(); // free, 5 credits, text-generation
+new DeepSeekV4ProProvider(); // pro, 10 credits, text-generation
 
 // En desarrollo sin SILICONFLOW_API_KEY:
 new MockImageProvider(); // solo dev
@@ -344,19 +352,19 @@ new MockImageProvider(); // solo dev
 
 ## Multi-Tool Integration Checklist
 
-Para agregar una nueva tool (ej: `title-generator`):
+Para agregar una nueva tool (ej: `content-translator`):
 
-| Capa         | Archivo                                         | Acción                                            |
-| ------------ | ----------------------------------------------- | ------------------------------------------------- |
-| **Backend**  | `tools/title-generator/backend/`                | Crear processor, service, controller              |
-| **Backend**  | `thumbnail.processor.ts` → `title.processor.ts` | Mismo patrón: AI → Store → DB                     |
-| **Backend**  | `thumbnail-listener.service.ts`                 | Llamar `registerTool()` con nuevos canales        |
-| **Shared**   | `event.types.ts`                                | Agregar `TitleCompletedEvent`, `TitleFailedEvent` |
-| **Shared**   | `shared-utils/error.utils.ts`                   | Ya reutilizable (sin cambios)                     |
-| **Frontend** | `store/generation.store.ts`                     | Componer `BaseGenerationState` + campos propios   |
-| **Frontend** | `use-background-polling.ts`                     | Ya genérico (sin cambios, lee `toolId` del store) |
-| **Frontend** | `use-socket-events.ts`                          | Ya genérico (sin cambios, filtra por `toolId`)    |
-| **Frontend** | `tools/[id]/page.tsx`                           | Crear página con campos específicos               |
+| Capa         | Archivo                                              | Acción                                                        |
+| ------------ | ---------------------------------------------------- | ------------------------------------------------------------- |
+| **Backend**  | `tools/content-translator/backend/`                  | Crear processor, service, controller                          |
+| **Backend**  | `thumbnail.processor.ts` → `translator.processor.ts` | Mismo patrón: AI → Store → DB                                 |
+| **Backend**  | `translation-listener.service.ts`                    | Llamar `registerTool()` con nuevos canales                    |
+| **Shared**   | `event.types.ts`                                     | Agregar `TranslationCompletedEvent`, `TranslationFailedEvent` |
+| **Shared**   | `shared-utils/error.utils.ts`                        | Ya reutilizable (sin cambios)                                 |
+| **Frontend** | `store/translator.store.ts`                          | Store separado para estado del traductor                      |
+| **Frontend** | `use-background-polling.ts`                          | Ya genérico (sin cambios, lee `toolId` del store)             |
+| **Frontend** | `use-socket-events.ts`                               | Ya genérico (sin cambios, filtra por `toolId`)                |
+| **Frontend** | `tools/content-translator/page.tsx`                  | Página full-screen con dos textareas                          |
 
 ### Paquetes Clave
 
@@ -549,6 +557,9 @@ POST   /api/v1/admin/users/:id/activate
 POST   /api/v1/tools/thumbnail-generator/generate       # Generar thumbnail (accepts width, height, provider)
 GET    /api/v1/tools/thumbnail-generator/jobs/:id/status # Estado del job
 GET    /api/v1/tools/thumbnail-generator/images          # Imágenes del usuario
+
+POST   /api/v1/tools/content-translator/translate       # Traducir contenido (text, targetLanguage, provider)
+GET    /api/v1/tools/content-translator/jobs/:id/status  # Estado del job
 
 GET    /api/v1/credits/balance        # Saldo (freeCredits, purchasedCredits, plan)
 GET    /api/v1/credits/marketing-events  # Eventos de marketing del usuario

@@ -32,8 +32,8 @@
 │                                                                     │
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  │
 │  │ Tool #1 │  │ Tool #2 │  │ Tool #3 │  │ Tool #4 │  │ Tool #N │  │
-│  │Thumbnail│  │  Title  │  │  Stream │  │  Video  │  │ Future  │  │
-│  │Generator│  │Generator│  │  Games  │  │  Editor │  │  Tools  │  │
+│  │Thumbnail│  │ Content │  │  Title  │  │  Stream │  │ Future  │  │
+│  │Generator│  │Translator│  │Generator│  │  Games  │  │  Tools  │  │
 │  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘  │
 │       │            │            │            │            │        │
 │       └────────────┴────────────┴────────────┴────────────┘        │
@@ -158,18 +158,32 @@ creator-hub/
 │   └── typescript-config/     # Shared TS configs
 │
 ├── tools/
-│   └── thumbnail-generator/   # FIRST TOOL (reference implementation)
+│   ├── thumbnail-generator/   # FIRST TOOL (reference implementation)
+│   │   ├── index.ts           # Entry: registers tool + exports module
+│   │   ├── frontend/
+│   │   │   └── src/
+│   │   │       └── components/
+│   │   │           └── thumbnail-generator-page.tsx
+│   │   ├── backend/
+│   │   │   └── src/
+│   │   │       ├── thumbnail-generator.module.ts
+│   │   │       ├── thumbnail.service.ts
+│   │   │       ├── thumbnail.controller.ts
+│   │   │       └── thumbnail.processor.ts
+│   │   └── package.json
+│   │
+│   └── content-translator/    # SECOND TOOL (text translation)
 │       ├── index.ts           # Entry: registers tool + exports module
 │       ├── frontend/
 │       │   └── src/
 │       │       └── components/
-│       │           └── thumbnail-generator-page.tsx
+│       │           └── content-translator-page.tsx
 │       ├── backend/
 │       │   └── src/
-│       │       ├── thumbnail-generator.module.ts
-│       │       ├── thumbnail.service.ts
-│       │       ├── thumbnail.controller.ts
-│       │       └── thumbnail.processor.ts
+│       │       ├── content-translator.module.ts
+│       │       ├── content-translator.service.ts
+│       │       ├── content-translator.controller.ts
+│       │       └── content-translator.processor.ts
 │       └── package.json
 │
 └── .github/
@@ -414,6 +428,19 @@ app.module.ts
     ├────────────────┤
     │ name: "stability-ai"│
     └──────────────────┘
+
+    ┌──────────────────┐  ┌──────────────────┐
+    │ DeepSeekV4Flash  │  │ DeepSeekV4Pro    │
+    │ Provider         │  │ Provider         │
+    ├────────────────┤  ├────────────────┤
+    │ name: "deepseek-  │  │ name: "deepseek-  │
+    │   v4"            │  │   v4-pro"        │
+    │ tier: free       │  │ tier: pro        │
+    │ cost: 5 credits  │  │ cost: 10 credits │
+    │ tasks:           │  │ tasks:           │
+    │  text-generation │  │  text-generation │
+    │  translation     │  │  translation     │
+    └──────────────────┘  └──────────────────┘
 ```
 
 ### Provider Interface
@@ -589,6 +616,9 @@ POST   /api/v1/tools/thumbnail-generator/generate  # Generate (accepts width, he
 GET    /api/v1/tools/thumbnail-generator/jobs/:id/status
 GET    /api/v1/tools/thumbnail-generator/images     # User's images
 
+POST   /api/v1/tools/content-translator/translate   # Translate (text, targetLanguage, provider)
+GET    /api/v1/tools/content-translator/jobs/:id/status
+
 GET    /api/v1/credits/balance       # Get balance (freeCredits, purchasedCredits, plan)
 GET    /api/v1/credits/marketing-events  # Marketing events for user
 GET    /api/v1/credits/plans         # List subscription plans
@@ -661,8 +691,10 @@ POST   /api/v1/admin/tools/toggle    # Enable/disable tool
 | `marketing.threshold`       | MarketingEventHandler | MarketingEvent DB     | Threshold tracking |
 | `ai.request.completed`      | AIEngine              | Analytics, Billing    | Track costs        |
 | `image.generated`           | Thumbnail             | Storage, Notify       | Save & notify      |
+| `translation.completed`     | ContentTranslator     | Notify                | Deliver result     |
+| `translation.failed`        | ContentTranslator     | Notify                | Error handling     |
 
-### Event-Driven Flow Example
+### Event-Driven Flow Example — Thumbnail
 
 ```
 User clicks "Generate" in Thumbnail Generator
@@ -693,6 +725,39 @@ User clicks "Generate" in Thumbnail Generator
     ├──► WebSocket: "tool_job_updated" → presigned URL
     │
     └──► Frontend shows image, updates credit balance
+```
+
+### Event-Driven Flow Example — Content Translator
+
+```
+User clicks "Translate" in Content Translator
+    │
+    ├──► Frontend: GET /ai/providers (filtered by supportedTasks: "translator")
+    │
+    ├──► Frontend: POST /tools/content-translator/translate
+    │       │        (includes text, targetLanguage, provider slug)
+    │       │
+    │       ├──► ContentTranslatorService.translate()
+    │       │       ├──► Lookup provider in DB (tier, costPerCredit)
+    │       │       ├──► Validate plan vs provider tier
+    │       │       ├──► Check totalCredits >= costPerCredit
+    │       │       └──► Enqueue BullMQ job with text, targetLanguage, provider
+    │       │
+    │       ├──► BullMQ: "content-translation" queue
+    │       │       │
+    │       │       └──► ContentTranslatorProcessor.process()
+    │       │               ├──► AIEngineService.execute()
+    │       │               │       ├──► System prompt: professional translator
+    │       │               │       └──► Runtime AI Provider generate() (DeepSeek V4)
+    │       │               ├──► CreditService.deduct(creditCost)
+    │       │               │       └──► emits "credits.deducted"
+    │       │               └──► Emits "translation.completed" via TranslationListenerService
+    │       │
+    │       └──► Returns { jobId }
+    │
+    ├──► WebSocket: "tool_job_updated" → { translation, sourceLanguage, targetLanguage }
+    │
+    └──► Frontend shows translated text, updates credit balance
 ```
 
 ---
