@@ -95,6 +95,7 @@ export { Avatar } from "./components/avatar";
 export { CreditDisplay } from "./components/credit-display";
 export { EmptyState } from "./components/empty-state";
 export { Tooltip } from "./components/tooltip";
+export { BorderGlow } from "./components/border-glow";
 
 // Tool-specific
 export { ToolCard } from "./components/tool-card";

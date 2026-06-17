@@ -1,5 +1,7 @@
 "use client";
 
+import { BorderGlow } from "./border-glow";
+
 interface LoadingSpinnerProps {
   size?: "sm" | "md" | "lg";
   text?: string;
@@ -9,9 +11,27 @@ interface LoadingSpinnerProps {
 }
 
 const SIZE_MAP = {
-  sm: { width: 140, height: 80, fontSize: "text-xs", padding: "px-3" },
-  md: { width: 200, height: 100, fontSize: "text-sm", padding: "px-4" },
-  lg: { width: 280, height: 140, fontSize: "text-base", padding: "px-6" },
+  sm: {
+    width: 160,
+    height: 90,
+    fontSize: "text-xs",
+    padding: "px-3 py-4",
+    borderRadius: 16,
+  },
+  md: {
+    width: 220,
+    height: 110,
+    fontSize: "text-sm",
+    padding: "px-5 py-5",
+    borderRadius: 20,
+  },
+  lg: {
+    width: 300,
+    height: 150,
+    fontSize: "text-base",
+    padding: "px-7 py-7",
+    borderRadius: 24,
+  },
 };
 
 export function LoadingSpinner({
@@ -22,24 +42,24 @@ export function LoadingSpinner({
   className = "",
 }: LoadingSpinnerProps) {
   const dims = SIZE_MAP[size];
-  const gradient = colors.join(", ");
 
   return (
     <div className={`flex flex-col items-center gap-4 ${className}`}>
-      <div
-        className="relative rounded-xl overflow-hidden"
-        style={{ width: dims.width, height: dims.height }}
+      <BorderGlow
+        animated
+        colors={colors}
+        backgroundColor="#120F17"
+        borderRadius={dims.borderRadius}
+        edgeSensitivity={58}
+        glowColor="40 80 80"
+        glowIntensity={2.3}
+        glowRadius={63}
+        coneSpread={36}
       >
         <div
-          className="absolute -inset-2 rounded-xl"
-          style={{
-            background: `conic-gradient(from 0deg, ${gradient})`,
-            animation: `spinGlow ${speed}s linear infinite`,
-            filter: "blur(6px)",
-            opacity: 0.7,
-          }}
-        />
-        <div className="absolute inset-0.5 rounded-xl bg-surface flex items-center justify-center">
+          className="flex items-center justify-center"
+          style={{ width: dims.width, height: dims.height }}
+        >
           {text && (
             <p
               className={`${dims.fontSize} font-medium text-text-muted text-center ${dims.padding}`}
@@ -48,12 +68,7 @@ export function LoadingSpinner({
             </p>
           )}
         </div>
-      </div>
-      <style>{`
-        @keyframes spinGlow {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      </BorderGlow>
     </div>
   );
 }
