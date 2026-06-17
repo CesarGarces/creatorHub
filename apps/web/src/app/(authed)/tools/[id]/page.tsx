@@ -44,7 +44,12 @@ export default function ThumbnailGeneratorPage() {
   const params = useParams();
   const router = useRouter();
   const { tools, fetchTools } = useToolsStore();
-  const { balance, plan, fetchBalance } = useCreditsStore();
+  const {
+    balance,
+    plan,
+    isLoading: creditsLoading,
+    fetchBalance,
+  } = useCreditsStore();
   const [providers, setProviders] = useState<ProviderFromApi[]>([]);
   const [providersLoading, setProvidersLoading] = useState(true);
   const [isProviderOpen, setIsProviderOpen] = useState(false);
@@ -99,10 +104,10 @@ export default function ThumbnailGeneratorPage() {
   }, []);
 
   useEffect(() => {
-    if (balance === 0 && plan === "FREE") {
+    if (!creditsLoading && balance === 0 && plan === "FREE") {
       setShowUpgradeModal(true);
     }
-  }, [balance, plan]);
+  }, [creditsLoading, balance, plan]);
 
   useEffect(() => {
     api
@@ -487,7 +492,7 @@ export default function ThumbnailGeneratorPage() {
             )}
           </div>
 
-          {balance === 0 && plan === "FREE" && (
+          {!creditsLoading && balance === 0 && plan === "FREE" && (
             <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-warning">⚠️</span>

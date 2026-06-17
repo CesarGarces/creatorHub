@@ -51,7 +51,12 @@ type ProviderFromApi = {
 
 export default function ContentTranslatorPage() {
   const router = useRouter();
-  const { balance, plan, fetchBalance } = useCreditsStore();
+  const {
+    balance,
+    plan,
+    isLoading: creditsLoading,
+    fetchBalance,
+  } = useCreditsStore();
   const {
     status,
     inputText,
@@ -191,10 +196,15 @@ export default function ContentTranslatorPage() {
   }, []);
 
   useEffect(() => {
-    if (balance === 0 && plan === "FREE" && status === "IDLE") {
+    if (
+      !creditsLoading &&
+      balance === 0 &&
+      plan === "FREE" &&
+      status === "IDLE"
+    ) {
       setShowUpgradeModal(true);
     }
-  }, [balance, plan, status]);
+  }, [creditsLoading, balance, plan, status]);
 
   useEffect(() => {
     api
