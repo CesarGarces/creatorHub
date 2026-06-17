@@ -26,21 +26,18 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >,
-  ) => {
-    const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]:
-        type === "checkbox"
-          ? (e.target as HTMLInputElement).checked
-          : name === "costPerCredit"
-            ? parseInt(value) || 0
-            : value,
-    }));
+  const updateField = (field: string, value: string | number | boolean) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const validateConfig = (configStr: string): boolean => {
+    try {
+      if (!configStr) return true;
+      JSON.parse(configStr);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +46,10 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
     setLoading(true);
 
     try {
+      if (form.config && !validateConfig(form.config)) {
+        throw new Error("Invalid JSON configuration");
+      }
+
       const payload = {
         ...form,
         supportedTasks: form.supportedTasks
@@ -86,9 +87,8 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
             Slug
           </label>
           <Input
-            name="slug"
             value={form.slug}
-            onChange={handleChange}
+            onChange={(e) => updateField("slug", e.target.value)}
             required
             disabled={!!provider}
           />
@@ -102,13 +102,11 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
             Name
           </label>
           <Input
-            name="name"
             value={form.name}
-            onChange={handleChange}
+            onChange={(e) => updateField("name", e.target.value)}
             required
           />
         </div>
-
         <div>
           <label className="mb-1 block text-sm font-medium text-text-muted">
             Model
@@ -116,7 +114,7 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
           <Input
             name="model"
             value={form.model}
-            onChange={handleChange}
+            onChange={(e) => updateField("model", e.target.value)}
             required
           />
         </div>
@@ -128,7 +126,7 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
           <select
             name="tier"
             value={form.tier}
-            onChange={handleChange}
+            onChange={(e) => updateField("tier", e.target.value)}
             className="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text"
           >
             <option value="FREE">FREE</option>
@@ -145,7 +143,7 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
             type="number"
             min={1}
             value={form.costPerCredit}
-            onChange={handleChange}
+            onChange={(e) => updateField("costPerCredit", e.target.value)}
             required
           />
         </div>
@@ -157,38 +155,48 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
           <Input
             name="supportedTasks"
             value={form.supportedTasks}
-            onChange={handleChange}
+            onChange={(e) => updateField("supportedTasks", e.target.value)}
             placeholder="thumbnail, title-generator"
             required
           />
         </div>
       </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-text-muted">
-          Config (JSON)
+      <div className="rounded-lg border border-border bg-surface-elevated/50 p-4 space-y-4">
+        <p className="text-sm font-medium text-text-muted">Configuration</p>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-text-muted">
+            Config (JSON)
+          </label>
+          <textarea
+            value={form.config}
+            onChange={(e) => updateField("config", e.target.value)}
+            rows={5}
+            className="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text font-mono"
+            placeholder='{"apiKey": "...", "baseUrl": "..."}'
+          />
+          {form.config && !validateConfig(form.config) && (
+            <p className="mt-1 text-xs text-error">Invalid JSON format</p>
+          )}
+        </div>
+      </div>
+
+      {/* ✅ 6. Toggle nativo como en UserForm */}
+      <div className="flex items-center gap-3">
+        <label className="relative inline-flex cursor-pointer items-center">
+          <input
+            type="checkbox"
+            checked={form.isActive}
+            onChange={(e) => updateField("isActive", e.target.checked)}
+            className="peer sr-only"
+          />
+          <div className="h-6 w-11 rounded-full bg-border peer-checked:bg-primary transition-colors" />
+          <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
         </label>
-        <textarea
-          name="config"
-          value={form.config}
-          onChange={handleChange}
-          rows={5}
-          className="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text font-mono"
-          placeholder='{"apiKey": "...", "baseUrl": "..."}'
-        />
+        <span className="text-sm text-text-muted">Active</span>
       </div>
 
-      <div className="flex items-center">
-        <Toggle
-          name="isActive"
-          checked={form.isActive}
-          onChange={(checked) =>
-            setForm((prev) => ({ ...prev, isActive: checked }))
-          }
-          label="Active"
-        />
-      </div>
-
+      {/* Botones */}
       <div className="flex items-center gap-3 pt-4">
         <Button type="submit" isLoading={loading}>
           {provider ? "Update Provider" : "Create Provider"}
