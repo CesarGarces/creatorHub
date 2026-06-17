@@ -50,11 +50,11 @@ export function LoadingSpinner({
         colors={colors}
         backgroundColor="#120F17"
         borderRadius={dims.borderRadius}
-        edgeSensitivity={58}
         glowColor="40 80 80"
         glowIntensity={2.3}
         glowRadius={63}
         coneSpread={36}
+        speed={speed}
       >
         <div
           className="flex items-center justify-center"

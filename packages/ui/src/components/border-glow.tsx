@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 
 function parseHSL(hslStr: string) {
   const match = hslStr.match(/([\d.]+)\s*([\d.]+)%?\s*([\d.]+)%?/);
@@ -38,45 +38,6 @@ function buildBoxShadow(glowColor: string, intensity: number) {
     .join(", ");
 }
 
-function easeOutCubic(x: number) {
-  return 1 - Math.pow(1 - x, 3);
-}
-function easeInCubic(x: number) {
-  return x * x * x;
-}
-
-function animateValue({
-  start = 0,
-  end = 100,
-  duration = 1000,
-  delay = 0,
-  ease = easeOutCubic,
-  onUpdate,
-  onEnd,
-}: {
-  start?: number;
-  end?: number;
-  duration?: number;
-  delay?: number;
-  ease?: (x: number) => number;
-  onUpdate: (v: number) => void;
-  onEnd?: () => void;
-}) {
-  const t0 = performance.now() + delay;
-  const safeDuration = duration ?? 1000;
-  const safeStart = start ?? 0;
-  const safeEnd = end ?? 100;
-  const safeEase = ease ?? easeOutCubic;
-  function tick() {
-    const elapsed = performance.now() - t0;
-    const t = Math.min(elapsed / safeDuration, 1);
-    onUpdate(safeStart + (safeEnd - safeStart) * safeEase(t));
-    if (t < 1) requestAnimationFrame(tick);
-    else if (onEnd) onEnd();
-  }
-  setTimeout(() => requestAnimationFrame(tick), delay);
-}
-
 const GRADIENT_POSITIONS = [
   "80% 55%",
   "69% 34%",
@@ -104,7 +65,6 @@ function buildMeshGradients(colors: string[]) {
 interface BorderGlowProps {
   children: React.ReactNode;
   className?: string;
-  edgeSensitivity?: number;
   glowColor?: string;
   backgroundColor?: string;
   borderRadius?: number;
@@ -114,12 +74,12 @@ interface BorderGlowProps {
   animated?: boolean;
   colors?: string[];
   fillOpacity?: number;
+  speed?: number;
 }
 
 export function BorderGlow({
   children,
   className = "",
-  edgeSensitivity = 30,
   glowColor = "40 80 80",
   backgroundColor = "#120F17",
   borderRadius = 28,
@@ -129,128 +89,39 @@ export function BorderGlow({
   animated = false,
   colors = ["#c084fc", "#f472b6", "#38bdf8"],
   fillOpacity = 0.5,
+  speed = 1.5,
 }: BorderGlowProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
-  const [cursorAngle, setCursorAngle] = useState(45);
-  const [edgeProximity, setEdgeProximity] = useState(0);
-  const [sweepActive, setSweepActive] = useState(false);
-
-  const getCenterOfElement = useCallback(
-    (el: HTMLDivElement): [number, number] => {
-      const { width, height } = el.getBoundingClientRect();
-      return [width / 2, height / 2];
-    },
-    [],
-  );
-
-  const getEdgeProximity = useCallback(
-    (el: HTMLDivElement, x: number, y: number) => {
-      const [cx, cy] = getCenterOfElement(el);
-      const dx = x - cx;
-      const dy = y - cy;
-      let kx = Infinity;
-      let ky = Infinity;
-      if (dx !== 0) kx = cx / Math.abs(dx);
-      if (dy !== 0) ky = cy / Math.abs(dy);
-      return Math.min(Math.max(1 / Math.min(kx, ky), 0), 1);
-    },
-    [getCenterOfElement],
-  );
-
-  const getCursorAngle = useCallback(
-    (el: HTMLDivElement, x: number, y: number) => {
-      const [cx, cy] = getCenterOfElement(el);
-      const dx = x - cx;
-      const dy = y - cy;
-      if (dx === 0 && dy === 0) return 0;
-      const radians = Math.atan2(dy, dx);
-      let degrees = radians * (180 / Math.PI) + 90;
-      if (degrees < 0) degrees += 360;
-      return degrees;
-    },
-    [getCenterOfElement],
-  );
-
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      const card = cardRef.current;
-      if (!card) return;
-      const rect = card.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      setEdgeProximity(getEdgeProximity(card, x, y));
-      setCursorAngle(getCursorAngle(card, x, y));
-    },
-    [getEdgeProximity, getCursorAngle],
-  );
+  const [angle, setAngle] = useState(0);
+  const rafRef = useRef<number>(0);
+  const lastTimeRef = useRef<number>(0);
 
   useEffect(() => {
-    if (!animated) return;
-    const angleStart = 110;
-    const angleEnd = 465;
-    setSweepActive(true);
-    setCursorAngle(angleStart);
+    if (!animated) {
+      setAngle(0);
+      return;
+    }
 
-    animateValue({
-      duration: 500,
-      onUpdate: (v) => setEdgeProximity(v / 100),
-    });
-    animateValue({
-      ease: easeInCubic,
-      duration: 1500,
-      end: 50,
-      onUpdate: (v) => {
-        setCursorAngle(((angleEnd - angleStart) * v) / 100 + angleStart);
-      },
-    });
-    animateValue({
-      ease: easeOutCubic,
-      delay: 1500,
-      duration: 2250,
-      start: 50,
-      end: 100,
-      onUpdate: (v) => {
-        setCursorAngle(((angleEnd - angleStart) * v) / 100 + angleStart);
-      },
-    });
-    animateValue({
-      ease: easeInCubic,
-      delay: 2500,
-      duration: 1500,
-      start: 100,
-      end: 0,
-      onUpdate: (v) => setEdgeProximity(v / 100),
-      onEnd: () => setSweepActive(false),
-    });
-  }, [animated]);
+    lastTimeRef.current = performance.now();
 
-  const colorSensitivity = edgeSensitivity + 20;
-  const isVisible = isHovered || sweepActive;
-  const borderOpacity = isVisible
-    ? Math.max(
-        0,
-        (edgeProximity * 100 - colorSensitivity) / (100 - colorSensitivity),
-      )
-    : 0;
-  const glowOpacity = isVisible
-    ? Math.max(
-        0,
-        (edgeProximity * 100 - edgeSensitivity) / (100 - edgeSensitivity),
-      )
-    : 0;
+    const tick = (now: number) => {
+      const delta = now - lastTimeRef.current;
+      lastTimeRef.current = now;
+      setAngle((prev) => (prev + (delta * 360) / (speed * 1000)) % 360);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [animated, speed]);
 
   const meshGradients = buildMeshGradients(colors);
   const borderBg = meshGradients.map((g) => `${g} border-box`);
   const fillBg = meshGradients.map((g) => `${g} padding-box`);
-  const angleDeg = `${cursorAngle.toFixed(3)}deg`;
+  const angleDeg = `${angle.toFixed(3)}deg`;
 
   return (
     <div
-      ref={cardRef}
-      onPointerMove={handlePointerMove}
-      onPointerEnter={() => setIsHovered(true)}
-      onPointerLeave={() => setIsHovered(false)}
       className={`relative grid isolate border border-white/15 ${className}`}
       style={{
         background: backgroundColor,
@@ -270,12 +141,10 @@ export function BorderGlow({
             "linear-gradient(rgb(255 255 255 / 0%) 0% 100%) border-box",
             ...borderBg,
           ].join(", "),
-          opacity: borderOpacity,
+          opacity: animated ? 1 : 0,
           maskImage: `conic-gradient(from ${angleDeg} at center, black ${coneSpread}%, transparent ${coneSpread + 15}%, transparent ${100 - coneSpread - 15}%, black ${100 - coneSpread}%)`,
           WebkitMaskImage: `conic-gradient(from ${angleDeg} at center, black ${coneSpread}%, transparent ${coneSpread + 15}%, transparent ${100 - coneSpread - 15}%, black ${100 - coneSpread}%)`,
-          transition: isVisible
-            ? "opacity 0.25s ease-out"
-            : "opacity 0.75s ease-in-out",
+          transition: "opacity 0.5s ease-out",
         }}
       />
 
@@ -306,11 +175,9 @@ export function BorderGlow({
           maskComposite: "subtract, add, add, add, add, add",
           WebkitMaskComposite:
             "source-out, source-over, source-over, source-over, source-over, source-over",
-          opacity: borderOpacity * fillOpacity,
+          opacity: animated ? fillOpacity : 0,
           mixBlendMode: "soft-light",
-          transition: isVisible
-            ? "opacity 0.25s ease-out"
-            : "opacity 0.75s ease-in-out",
+          transition: "opacity 0.5s ease-out",
         }}
       />
 
@@ -321,11 +188,9 @@ export function BorderGlow({
           inset: `${-glowRadius}px`,
           maskImage: `conic-gradient(from ${angleDeg} at center, black 2.5%, transparent 10%, transparent 90%, black 97.5%)`,
           WebkitMaskImage: `conic-gradient(from ${angleDeg} at center, black 2.5%, transparent 10%, transparent 90%, black 97.5%)`,
-          opacity: glowOpacity,
+          opacity: animated ? 1 : 0,
           mixBlendMode: "plus-lighter",
-          transition: isVisible
-            ? "opacity 0.25s ease-out"
-            : "opacity 0.75s ease-in-out",
+          transition: "opacity 0.5s ease-out",
         }}
       >
         <span
