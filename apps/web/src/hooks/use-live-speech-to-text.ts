@@ -48,7 +48,7 @@ function waitForConnection(socket: Socket, timeoutMs = 5000): Promise<Socket> {
     socket.on("connect", onConnect);
     socket.on("connect_error", onError);
 
-    if (!socket.connected && !socket.connecting) {
+    if (!socket.connected) {
       socket.connect();
     }
   });
@@ -62,7 +62,7 @@ function downsampleBuffer(
   if (inputSampleRate === outputSampleRate) {
     const int16 = new Int16Array(buffer.length);
     for (let i = 0; i < buffer.length; i++) {
-      const s = Math.max(-1, Math.min(1, buffer[i]));
+      const s = Math.max(-1, Math.min(1, buffer[i]!));
       int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
     }
     return int16;
@@ -74,7 +74,7 @@ function downsampleBuffer(
 
   for (let i = 0; i < newLength; i++) {
     const index = Math.round(i * ratio);
-    const s = Math.max(-1, Math.min(1, buffer[index]));
+    const s = Math.max(-1, Math.min(1, buffer[index]!));
     result[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
   }
 
