@@ -40,7 +40,7 @@ export default function AssetsPage() {
     queryKey: ["images", page],
     queryFn: () =>
       api.get<{ data: GeneratedImage[]; meta: any }>(
-        `/images?page=${page}&limit=12`,
+        `/images?page=${page}&limit=8`,
       ),
     staleTime: 0,
     refetchOnMount: "always",
