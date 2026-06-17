@@ -13,10 +13,30 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const token = localStorage.getItem("admin_token");
     if (!token) {
       router.replace("/login");
-    } else {
-      setIsAuthenticated(true);
+      return;
     }
-    setIsLoading(false);
+
+    // Decode JWT to check role
+    try {
+      const parts = token.split(".");
+      if (parts.length !== 3 || !parts[1]) {
+        localStorage.removeItem("admin_token");
+        router.replace("/login");
+        return;
+      }
+      const payload = JSON.parse(atob(parts[1]));
+      if (payload.role !== "ADMIN") {
+        localStorage.removeItem("admin_token");
+        router.replace("/login");
+        return;
+      }
+      setIsAuthenticated(true);
+    } catch {
+      localStorage.removeItem("admin_token");
+      router.replace("/login");
+    } finally {
+      setIsLoading(false);
+    }
   }, [router, pathname]);
 
   if (isLoading) {

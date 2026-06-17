@@ -19,18 +19,18 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await api.post("/auth/login", { email, password });
+      const response = await api.post("/admin/login", { email, password });
       const token =
         response.data?.data?.accessToken || response.data?.accessToken;
       if (!token) {
-        setError("Invalid response from server");
+        setError("Invalid credentials");
         return;
       }
       localStorage.setItem("admin_token", token);
       document.cookie = `admin_token=${encodeURIComponent(token)}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
       router.push("/");
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Login failed");
+    } catch {
+      setError("Invalid credentials");
     } finally {
       setLoading(false);
     }
