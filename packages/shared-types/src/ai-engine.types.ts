@@ -8,6 +8,8 @@ export type AIProvider =
   | "ideogram"
   | "siliconflow"
   | "z-image-turbo"
+  | "deepseek-v4"
+  | "deepseek-v4-pro"
   | "mock";
 
 export type AIModel =
@@ -21,7 +23,9 @@ export type AIModel =
   | "ideogram-v2"
   | "gemini-2.5-flash"
   | "gemini-2.5-flash-image"
-  | "Z-Image-Turbo";
+  | "Z-Image-Turbo"
+  | "deepseek-ai/DeepSeek-V4-Flash"
+  | "deepseek-ai/DeepSeek-V4-Pro";
 
 export type AITaskType =
   | "image-generation"

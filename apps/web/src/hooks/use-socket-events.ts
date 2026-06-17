@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useGenerationStore } from "@/store/generation.store";
+import { useTranslatorStore } from "@/store/translator.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { connectSocket } from "@/lib/socket";
 import type { ToolJobUpdatePayload } from "@creator-hub/shared-types";
@@ -11,6 +12,11 @@ export function useSocketEvents() {
   const setRevealing = useGenerationStore((s) => s.setRevealing);
   const setReady = useGenerationStore((s) => s.setReady);
   const setFailed = useGenerationStore((s) => s.setFailed);
+
+  const translatorSetRevealing = useTranslatorStore((s) => s.setRevealing);
+  const translatorSetReady = useTranslatorStore((s) => s.setReady);
+  const translatorSetFailed = useTranslatorStore((s) => s.setFailed);
+
   const fetchBalance = useCreditsStore((s) => s.fetchBalance);
   const attachedRef = useRef(false);
 
@@ -23,21 +29,49 @@ export function useSocketEvents() {
       attachedRef.current = true;
 
       socket.on("tool_job_updated", (data: ToolJobUpdatePayload) => {
-        const store = useGenerationStore.getState();
-        if (store.toolId !== data.toolId) return;
-
         if (data.status === "completed") {
-          const payload = data.payload as { url?: string; imageId?: string };
+          const payload = data.payload as {
+            url?: string;
+            content?: string;
+            imageId?: string;
+            translationId?: string;
+          };
+
           if (payload.url) {
-            setRevealing(payload.url, payload.imageId || "");
-            setReady();
-            fetchBalance();
-            toast.success("Thumbnail ready!");
+            const genStore = useGenerationStore.getState();
+            if (genStore.toolId === data.toolId) {
+              setRevealing(payload.url, payload.imageId || "");
+              setReady();
+              fetchBalance();
+              toast.success("Generation ready!");
+            }
+          } else if (payload.content) {
+            const transStore = useTranslatorStore.getState();
+            if (data.toolId === "content-translator") {
+              translatorSetRevealing(
+                payload.content,
+                payload.translationId || "",
+              );
+              translatorSetReady();
+              fetchBalance();
+              toast.success("Translation ready!");
+            }
           }
         } else if (data.status === "failed") {
           const payload = data.payload as { error?: string };
-          setFailed(payload.error || "Generation failed");
-          toast.error(payload.error || "Generation failed");
+          const genStore = useGenerationStore.getState();
+          const transStore = useTranslatorStore.getState();
+
+          if (
+            data.toolId === "content-translator" &&
+            transStore.status === "GENERATING"
+          ) {
+            translatorSetFailed(payload.error || "Translation failed");
+            toast.error(payload.error || "Translation failed");
+          } else if (genStore.toolId === data.toolId) {
+            setFailed(payload.error || "Generation failed");
+            toast.error(payload.error || "Generation failed");
+          }
         }
       });
     }
@@ -54,5 +88,13 @@ export function useSocketEvents() {
       socket.off("tool_job_updated");
       attachedRef.current = false;
     };
-  }, [setReady, setFailed, fetchBalance]);
+  }, [
+    setRevealing,
+    setReady,
+    setFailed,
+    translatorSetRevealing,
+    translatorSetReady,
+    translatorSetFailed,
+    fetchBalance,
+  ]);
 }

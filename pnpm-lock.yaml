@@ -121,6 +121,12 @@ importers:
       '@creator-hub/billing':
         specifier: workspace:*
         version: link:../../packages/billing
+      '@creator-hub/content-translator':
+        specifier: workspace:*
+        version: link:../../tools/content-translator
+      '@creator-hub/content-translator-backend':
+        specifier: workspace:*
+        version: link:../../tools/content-translator/backend
       '@creator-hub/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -754,6 +760,99 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.0
         version: 19.2.3(@types/react@19.2.17)
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
+  tools/content-translator:
+    dependencies:
+      '@creator-hub/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
+      '@creator-hub/shared-utils':
+        specifier: workspace:*
+        version: link:../../packages/shared-utils
+      '@creator-hub/tool-sdk':
+        specifier: workspace:*
+        version: link:../../packages/tool-sdk
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
+  tools/content-translator/backend:
+    dependencies:
+      '@creator-hub/ai-engine':
+        specifier: workspace:*
+        version: link:../../../packages/ai-engine
+      '@creator-hub/auth':
+        specifier: workspace:*
+        version: link:../../../packages/auth
+      '@creator-hub/billing':
+        specifier: workspace:*
+        version: link:../../../packages/billing
+      '@creator-hub/database':
+        specifier: workspace:*
+        version: link:../../../packages/database
+      '@creator-hub/domain-events':
+        specifier: workspace:*
+        version: link:../../../packages/domain-events
+      '@creator-hub/shared-types':
+        specifier: workspace:*
+        version: link:../../../packages/shared-types
+      '@creator-hub/shared-utils':
+        specifier: workspace:*
+        version: link:../../../packages/shared-utils
+      '@nestjs/bullmq':
+        specifier: ^11.0.0
+        version: 11.0.4(@nestjs/common@11.1.26(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.26)(bullmq@5.78.0)
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.26(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      bullmq:
+        specifier: ^5.0.0
+        version: 5.78.0
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../../packages/typescript-config
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.42
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
+  tools/content-translator/frontend:
+    dependencies:
+      '@creator-hub/shared-types':
+        specifier: workspace:*
+        version: link:../../../packages/shared-types
+      '@creator-hub/ui':
+        specifier: workspace:*
+        version: link:../../../packages/ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.101.0(react@19.2.7)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.7
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../../packages/typescript-config
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.42
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.17
       typescript:
         specifier: ^5.5.0
         version: 5.9.3

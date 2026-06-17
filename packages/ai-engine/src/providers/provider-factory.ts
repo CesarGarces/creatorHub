@@ -6,6 +6,10 @@ import { StabilityAIProvider } from "./stability-ai.provider";
 import { FluxProvider } from "./flux.provider";
 import { SiliconFlowProvider } from "./siliconflow.provider";
 import { ZImageTurboProvider } from "./z-image-turbo.provider";
+import {
+  DeepSeekV4FlashProvider,
+  DeepSeekV4ProProvider,
+} from "./deepseek-v4.provider";
 import { MockImageProvider } from "./mock-image.provider";
 import { Logger } from "@creator-hub/shared-utils";
 import type { AIProviderInterface } from "./provider.interface";
@@ -28,6 +32,8 @@ export class ProviderFactory implements OnModuleInit {
       new FluxProvider(),
       new SiliconFlowProvider(),
       new ZImageTurboProvider(),
+      new DeepSeekV4FlashProvider(),
+      new DeepSeekV4ProProvider(),
     ];
 
     // In development without SiliconFlow key, register mock as fallback

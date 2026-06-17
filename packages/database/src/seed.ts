@@ -117,6 +117,24 @@ async function main() {
       isActive: true,
       supportedTasks: ["thumbnail"],
     },
+    {
+      slug: "deepseek-v4",
+      name: "DeepSeek V4 Flash",
+      model: "deepseek-ai/DeepSeek-V4-Flash",
+      tier: "FREE" as const,
+      costPerCredit: 5,
+      isActive: true,
+      supportedTasks: ["translator"],
+    },
+    {
+      slug: "deepseek-v4-pro",
+      name: "DeepSeek V4 Pro",
+      model: "deepseek-ai/DeepSeek-V4-Pro",
+      tier: "PRO" as const,
+      costPerCredit: 10,
+      isActive: true,
+      supportedTasks: ["translator"],
+    },
   ];
 
   for (const p of providers) {

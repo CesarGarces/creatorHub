@@ -1,0 +1,29 @@
+{
+  "name": "@creator-hub/content-translator-backend",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "echo 'ok'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@creator-hub/ai-engine": "workspace:*",
+    "@creator-hub/auth": "workspace:*",
+    "@creator-hub/billing": "workspace:*",
+    "@creator-hub/database": "workspace:*",
+    "@creator-hub/domain-events": "workspace:*",
+    "@creator-hub/shared-types": "workspace:*",
+    "@creator-hub/shared-utils": "workspace:*",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/bullmq": "^11.0.0",
+    "bullmq": "^5.0.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0"
+  }
+}

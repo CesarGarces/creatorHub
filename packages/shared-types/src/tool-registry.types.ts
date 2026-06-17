@@ -28,6 +28,7 @@ export type ToolCategory =
   | "analytics"
   | "design"
   | "writing"
+  | "translator"
   | "other";
 
 export interface ToolRoute {

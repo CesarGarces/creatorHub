@@ -17,7 +17,9 @@ export type EventName =
   | "storage.file.uploaded"
   | "storage.file.deleted"
   | "thumbnail.completed"
-  | "thumbnail.failed";
+  | "thumbnail.failed"
+  | "translation.completed"
+  | "translation.failed";
 
 export interface BaseEvent {
   id: string;
@@ -98,6 +100,24 @@ export interface ThumbnailFailedEvent {
 export interface ThumbnailReadyPayload {
   url: string;
   imageId: string;
+}
+
+export interface TranslationCompletedEvent {
+  userId: string;
+  translationId: string;
+  content: string;
+}
+
+export interface TranslationFailedEvent {
+  userId: string;
+  error: string;
+  rawError?: string;
+  jobId?: string;
+}
+
+export interface TranslationReadyPayload {
+  content: string;
+  translationId: string;
 }
 
 export interface ToolJobUpdatePayload {

@@ -25,6 +25,8 @@
     "@creator-hub/storage": "workspace:*",
     "@creator-hub/thumbnail-generator": "workspace:*",
     "@creator-hub/thumbnail-generator-backend": "workspace:*",
+    "@creator-hub/content-translator": "workspace:*",
+    "@creator-hub/content-translator-backend": "workspace:*",
     "@creator-hub/tool-sdk": "workspace:*",
     "@nestjs/bullmq": "^11.0.0",
     "@nestjs/common": "^11.0.0",
