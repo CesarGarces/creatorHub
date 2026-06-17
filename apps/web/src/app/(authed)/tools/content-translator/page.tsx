@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button, Badge, LoadingSpinner } from "@creator-hub/ui";
 import { useCreditsStore } from "@/store/credits.store";
 import { useTranslatorStore } from "@/store/translator.store";
+import { useLiveSpeechToText } from "@/hooks/use-live-speech-to-text";
 import api from "@/lib/api";
 import { TopBar } from "@/components/layout/top-bar";
 import { LiquidEtherBackground } from "@/components/animations";
@@ -53,11 +54,17 @@ export default function ContentTranslatorPage() {
     provider,
     outputText,
     error: translationError,
+    isListening,
+    liveTranscript,
+    liveTranscriptFinal,
     setInputText,
     setTargetLanguage,
     setProvider,
     startTranslation,
     setFailed,
+    setListening,
+    appendLiveTranscript,
+    commitLiveTranscript,
     reset,
   } = useTranslatorStore();
 
@@ -73,6 +80,56 @@ export default function ContentTranslatorPage() {
   const isProcessing = status === "GENERATING" || status === "REVEALING";
   const selectedProvider = providers.find((p) => p.id === provider);
   const selectedLanguage = LANGUAGES.find((l) => l.code === targetLanguage);
+
+  const displayText = inputText + (liveTranscript ? " " + liveTranscript : "");
+
+  const handlePartialTranscript = useCallback(
+    (text: string, isFinal: boolean) => {
+      console.log("[STT:partial]", isFinal ? "(final)" : "(interim)", text);
+      appendLiveTranscript(text, isFinal);
+    },
+    [appendLiveTranscript],
+  );
+
+  const handleUtteranceEnd = useCallback(() => {
+    commitLiveTranscript();
+  }, [commitLiveTranscript]);
+
+  const handleSTTResult = useCallback(
+    (_fullTranscript: string, _durationMs: number, _credits: number) => {
+      setListening(false);
+      commitLiveTranscript();
+      fetchBalance();
+    },
+    [setListening, commitLiveTranscript, fetchBalance],
+  );
+
+  const handleSTTError = useCallback(
+    (error: string) => {
+      setListening(false);
+      toast.error(error);
+    },
+    [setListening],
+  );
+
+  const { startListening, stopListening, isSupported } = useLiveSpeechToText({
+    language: targetLanguage,
+    onPartialTranscript: handlePartialTranscript,
+    onUtteranceEnd: handleUtteranceEnd,
+    onResult: handleSTTResult,
+    onError: handleSTTError,
+  });
+
+  const toggleMic = useCallback(async () => {
+    if (isListening) {
+      setListening(false);
+      stopListening();
+    } else {
+      reset();
+      setListening(true);
+      await startListening();
+    }
+  }, [isListening, stopListening, setListening, reset, startListening]);
 
   useEffect(() => {
     fetchBalance();
@@ -197,6 +254,56 @@ export default function ContentTranslatorPage() {
 
         {/* Header controls */}
         <div className="relative z-30 flex items-center gap-3 px-6 py-3 border-b border-border bg-bg/80 backdrop-blur-sm flex-shrink-0">
+          {/* Mic button — first in the bar */}
+          {isSupported && (
+            <button
+              type="button"
+              onClick={toggleMic}
+              disabled={isProcessing}
+              className={`relative flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                isListening
+                  ? "border-red-500/50 bg-red-500/15 text-red-400"
+                  : "border-border bg-surface-elevated text-text-muted hover:text-text hover:border-primary/50 hover:bg-primary/5"
+              }`}
+              title={isListening ? "Stop recording" : "Start voice input"}
+            >
+              {isListening ? (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                </svg>
+              ) : (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" x2="12" y1="19" y2="22" />
+                </svg>
+              )}
+              <span className="text-xs">
+                {isListening ? "Listening..." : "Voice"}
+              </span>
+              {isListening && (
+                <>
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
+                  <span className="text-[10px] text-red-400/80 ml-0.5">
+                    +1 cr/min
+                  </span>
+                </>
+              )}
+            </button>
+          )}
+
           <div className="relative" ref={langDropdownRef}>
             <button
               type="button"
@@ -400,7 +507,7 @@ export default function ContentTranslatorPage() {
             )}
           </div>
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
             <Button
               variant="glow"
               size="lg"
@@ -438,9 +545,17 @@ export default function ContentTranslatorPage() {
             </div>
             <div className="flex-1 relative">
               <textarea
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="Paste or type the text you want to translate..."
+                value={displayText}
+                onChange={(e) => {
+                  if (!isListening) {
+                    setInputText(e.target.value);
+                  }
+                }}
+                placeholder={
+                  isListening
+                    ? "Speak now..."
+                    : "Paste or type the text you want to translate..."
+                }
                 disabled={isProcessing}
                 className="absolute inset-0 w-full h-full resize-none bg-transparent px-5 py-4 text-sm text-text placeholder:text-text-dim outline-none disabled:opacity-50 disabled:cursor-not-allowed"
               />

@@ -10,6 +10,7 @@ import { BillingModule } from "@creator-hub/billing";
 import { StorageModule } from "@creator-hub/storage";
 import { AnalyticsModule } from "@creator-hub/analytics";
 import { DomainEventsModule } from "@creator-hub/domain-events";
+import { STTEngineModule } from "@creator-hub/stt-engine";
 import { ToolSdkModule } from "./tool-sdk.module";
 
 import { AuthController } from "./modules/auth/auth.controller";
@@ -52,6 +53,7 @@ import { ContentTranslatorModule } from "@creator-hub/content-translator-backend
     StorageModule,
     AnalyticsModule,
     DomainEventsModule,
+    STTEngineModule,
     ToolSdkModule,
     AdminModule,
 

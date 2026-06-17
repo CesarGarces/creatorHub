@@ -142,6 +142,9 @@ importers:
       '@creator-hub/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@creator-hub/stt-engine':
+        specifier: workspace:*
+        version: link:../../packages/stt-engine
       '@creator-hub/thumbnail-generator':
         specifier: workspace:*
         version: link:../../tools/thumbnail-generator
@@ -610,6 +613,9 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.42
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
@@ -657,6 +663,37 @@ importers:
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.42
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
+  packages/stt-engine:
+    dependencies:
+      '@creator-hub/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@creator-hub/shared-utils':
+        specifier: workspace:*
+        version: link:../shared-utils
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.26(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      ws:
+        specifier: ^8.18.0
+        version: 8.21.0
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.42
+      '@types/ws':
+        specifier: ^8.5.0
+        version: 8.18.1
+      socket.io:
+        specifier: ^4.8.0
+        version: 4.8.3
       typescript:
         specifier: ^5.5.0
         version: 5.9.3

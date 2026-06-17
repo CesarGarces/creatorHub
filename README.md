@@ -9,7 +9,7 @@ Creator Hub es una plataforma donde los creadores de contenido pueden acceder a 
 **Herramientas disponibles:**
 
 - **Thumbnail Generator** — Genera miniaturas con IA (Z-Image-Turbo, SiliconFlow FLUX.2-pro, OpenAI, Gemini, Stability AI)
-- **Content Translator** — Traduce contenido entre idiomas con IA (DeepSeek V4 Flash, DeepSeek V4 Pro)
+- **Content Translator** — Traduce contenido entre idiomas con IA (DeepSeek V4 Flash, DeepSeek V4 Pro). Incluye speech-to-text en tiempo real con Deepgram Nova-3 para dictado por voz.
 
 **Herramientas en desarrollo:**
 
@@ -22,17 +22,17 @@ Creator Hub es una plataforma donde los creadores de contenido pueden acceder a 
 
 ## Stack
 
-| Capa             | Tecnología                                                                         |
-| ---------------- | ---------------------------------------------------------------------------------- |
-| Frontend         | Next.js 16, React 19, Zustand, TanStack Query, TailwindCSS                         |
-| Backend          | NestJS 11, TypeScript, Prisma ORM                                                  |
-| Base de datos    | PostgreSQL 16                                                                      |
-| Cola de mensajes | Redis + BullMQ                                                                     |
-| Storage          | Cloudflare R2 (prod) / MinIO (dev)                                                 |
-| WebSocket        | Socket.IO                                                                          |
-| Domain Events    | Redis Pub/Sub (ioredis)                                                            |
-| AI               | SiliconFlow (Z-Image-Turbo, FLUX.2-pro, DeepSeek V4), OpenAI, Gemini, Stability AI |
-| Monorepo         | Turborepo + pnpm workspaces                                                        |
+| Capa             | Tecnología                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------- |
+| Frontend         | Next.js 16, React 19, Zustand, TanStack Query, TailwindCSS                                         |
+| Backend          | NestJS 11, TypeScript, Prisma ORM                                                                  |
+| Base de datos    | PostgreSQL 16                                                                                      |
+| Cola de mensajes | Redis + BullMQ                                                                                     |
+| Storage          | Cloudflare R2 (prod) / MinIO (dev)                                                                 |
+| WebSocket        | Socket.IO                                                                                          |
+| Domain Events    | Redis Pub/Sub (ioredis)                                                                            |
+| AI               | SiliconFlow (Z-Image-Turbo, FLUX.2-pro, DeepSeek V4), OpenAI, Gemini, Stability AI, Deepgram (STT) |
+| Monorepo         | Turborepo + pnpm workspaces                                                                        |
 
 ## Arquitectura
 
@@ -44,6 +44,7 @@ creator-hub/
 ├── packages/
 │   ├── auth/             # JWT + Passport
 │   ├── ai-engine/        # Multi-provider AI abstraction (tier-aware)
+│   ├── stt-engine/       # Speech-to-text streaming (Deepgram, Mock)
 │   ├── billing/          # Sistema de créditos (free + purchased)
 │   ├── storage/          # R2/MinIO abstraction
 │   ├── analytics/        # Tracking de uso
@@ -294,11 +295,12 @@ Los proveedores de IA se administran desde la base de datos (`Provider`). El run
 
 ### Proveedores gratuitos (tier: free)
 
-| Proveedor             | Modelo                         | Dimensiones soportadas              | Costo |
-| --------------------- | ------------------------------ | ----------------------------------- | ----- |
-| **Z-Image-Turbo**     | `Tongyi-MAI/Z-Image-Turbo`     | 1024x1024, 1280x720, 720x1280, etc. | 1 cr  |
-| **SiliconFlow**       | `black-forest-labs/FLUX.2-pro` | 1024x1024 (ignora image_size)       | 1 cr  |
-| **DeepSeek V4 Flash** | `deepseek-ai/DeepSeek-V4`      | Text generation / translation       | 5 cr  |
+| Proveedor             | Modelo                         | Dimensiones soportadas              | Costo    |
+| --------------------- | ------------------------------ | ----------------------------------- | -------- |
+| **Z-Image-Turbo**     | `Tongyi-MAI/Z-Image-Turbo`     | 1024x1024, 1280x720, 720x1280, etc. | 1 cr     |
+| **SiliconFlow**       | `black-forest-labs/FLUX.2-pro` | 1024x1024 (ignora image_size)       | 1 cr     |
+| **DeepSeek V4 Flash** | `deepseek-ai/DeepSeek-V4`      | Text generation / translation       | 5 cr     |
+| **Deepgram (STT)**    | Nova-3                         | Speech-to-text (streaming)          | 1 cr/min |
 
 ### Proveedores de pago (tier: pro)
 
@@ -375,6 +377,7 @@ Para agregar una nueva tool (ej: `content-translator`):
 | `@creator-hub/shared-types`  | `ToolJobUpdatePayload`, event interfaces           | ✅ Genérico |
 | `@creator-hub/storage`       | `uploadBuffer()`, `getPresignedDownloadUrl()`      | ✅ Genérico |
 | `@creator-hub/ai-engine`     | Multi-provider AI abstraction (tier-aware)         | ✅ Genérico |
+| `@creator-hub/stt-engine`    | STT streaming with provider registry               | ✅ Genérico |
 | `@creator-hub/billing`       | Credit system (free + purchased, marketing events) | ✅ Genérico |
 | `@creator-hub/ui`            | Button, Badge, Skeleton, etc.                      | ✅ Genérico |
 | `@creator-hub/ui`            | shadcn-style component library (Radix + Tailwind)  | ✅ Genérico |
@@ -561,6 +564,14 @@ GET    /api/v1/tools/thumbnail-generator/images          # Imágenes del usuario
 POST   /api/v1/tools/content-translator/translate       # Traducir contenido (text, targetLanguage, provider)
 GET    /api/v1/tools/content-translator/jobs/:id/status  # Estado del job
 
+# WebSocket events — Speech-to-Text (Content Translator)
+Emit    stt:start → { language?, userId }               # Iniciar sesión STT
+Emit    stt:chunk → { sessionId, audio }                 # Chunk de audio PCM (linear16)
+Emit    stt:end → { sessionId }                          # Finalizar sesión y facturar
+On      stt:transcript → { transcript, isFinal }         # Transcripción parcial/final
+On      stt:done → { sessionId, transcript, durationMs } # Sesión completada
+On      stt:error → { code, message }                    # Error o créditos insuficientes
+
 GET    /api/v1/credits/balance        # Saldo (freeCredits, purchasedCredits, plan)
 GET    /api/v1/credits/marketing-events  # Eventos de marketing del usuario
 GET    /api/v1/credits/plans          # Planes de suscripción
@@ -595,7 +606,9 @@ pnpm install
 ## Comandos
 
 ```sh
-pnpm dev              # Correr todo (frontend + backend)
+pnpm dev              # Correr frontend + landing + admin (excluye API)
+pnpm dev:api          # Correr solo la API (nest start --watch)
+pnpm dev:all          # Correr todo incluyendo API
 pnpm build            # Build completo
 pnpm lint             # Lint
 pnpm test             # Tests

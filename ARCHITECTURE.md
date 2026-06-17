@@ -693,6 +693,9 @@ POST   /api/v1/admin/tools/toggle    # Enable/disable tool
 | `image.generated`           | Thumbnail             | Storage, Notify       | Save & notify      |
 | `translation.completed`     | ContentTranslator     | Notify                | Deliver result     |
 | `translation.failed`        | ContentTranslator     | Notify                | Error handling     |
+| `stt:transcript`            | AppGateway            | Frontend              | Live transcript    |
+| `stt:done`                  | AppGateway            | Frontend              | Session complete   |
+| `stt:error`                 | AppGateway            | Frontend              | Session error      |
 
 ### Event-Driven Flow Example — Thumbnail
 
@@ -759,6 +762,94 @@ User clicks "Translate" in Content Translator
     │
     └──► Frontend shows translated text, updates credit balance
 ```
+
+### Event-Driven Flow Example — STT Streaming (Content Translator)
+
+```
+User clicks Mic button in Content Translator
+    │
+    ├──► Frontend: useLiveSpeechToText checks plan tier
+    │       ├──► FREE tier: creditCostPerUse = 1 credit/minute, minCreditsForSTT = 5
+    │       └──► PRO tier: creditCostPerUse = 2 credits/minute, minCreditsForSTT = 10
+    │
+    ├──► Frontend: waitForConnection() — ensures WebSocket connected
+    │
+    ├──► Frontend: AudioContext.createSampleRate(16000)
+    │       ├──► navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } })
+    │       ├──► ScriptProcessorNode for real-time PCM capture
+    │       └──► downsampleBuffer() — Float32 → Int16, linear16 encoding
+    │
+    ├──► WebSocket: "stt:start" → { language?, userId }
+    │       │
+    │       ├──► STTEngineService.startSession()
+    │       │       ├──► STTSessionManager.createSession()
+    │       │       │       ├──► Create DeepgramProvider (or MockSTTProvider)
+    │       │       │       ├──► Connect to wss://api.deepgram.com/v1/listen
+    │       │       │       │       ├──► Model: nova-3
+    │       │       │       │       ├──► Encoding: linear16
+    │       │       │       │       ├──► Sample rate: 16000
+    │       │       │       │       ├──► Channels: 1
+    │       │       │       │       └──► Smart format: true
+    │       │       │       ├──► Start 3-minute hard timeout
+    │       │       │       └──► Return session
+    │       │       └──► CreditService.deductMinCredits(userId, 5)
+    │       │
+    │       └──► Returns { session, sessionId }
+    │
+    ├──► AudioContext captures audio → ScriptProcessorNode callback
+    │       │
+    │       ├──► downsampleBuffer() → Int16Array (linear16 PCM)
+    │       │
+    │       └──► WebSocket: "stt:chunk" → { sessionId, audio }
+    │               │
+    │               └──► STTEngineService.writeAudioChunk()
+    │                       ├──► SessionManager.getSession(sessionId)
+    │                       └──► DeepgramProvider.sendAudio(buffer)
+    │
+    ├──► Deepgram → Partial transcript
+    │       │
+    │       └──► WebSocket: "stt:transcript" → { transcript, isFinal: false }
+    │               └──► Frontend: translatorStore.appendLiveTranscript(transcript)
+    │                       └──► liveTranscript += text (word-by-word)
+    │
+    ├──► Deepgram → Final transcript (sentence complete)
+    │       │
+    │       └──► WebSocket: "stt:transcript" → { transcript, isFinal: true }
+    │               └──► Frontend: translatorStore.commitLiveTranscript(transcript)
+    │                       ├──► liveTranscriptFinal += text (committed)
+    │                       └──► liveTranscript = "" (reset for next chunk)
+    │
+    ├──► User clicks Mic again (stop) or 3-min timeout fires
+    │       │
+    │       ├──► Frontend: AudioContext.close() + ScriptProcessorNode disconnect
+    │       │
+    │       ├──► WebSocket: "stt:end" → { sessionId }
+    │       │       │
+    │       │       ├──► STTEngineService.endSession()
+    │       │       │       ├──► DeepgramProvider.close()
+    │       │       │       ├──► Stop hard timeout
+    │       │       │       ├──► Calculate duration, billable minutes
+    │       │       │       └──► Return transcript
+    │       │       │
+    │       │       └──► CreditService.deductForDuration(userId, duration, creditCostPerMinute)
+    │       │
+    │       ├──► WebSocket: "stt:done" → { sessionId, transcript, durationMs }
+    │       │
+    │       └──► Frontend: sourceText = finalTranscript (ready for translation)
+    │
+    └──► User can now click "Translate" → normal Content Translator flow
+```
+
+### STT Event Types
+
+| Event            | Producer    | Consumer    | Purpose                         |
+| ---------------- | ----------- | ----------- | ------------------------------- |
+| `stt:start`      | Frontend    | API Gateway | Start STT session               |
+| `stt:chunk`      | Frontend    | API Gateway | Stream audio chunk to Deepgram  |
+| `stt:transcript` | API Gateway | Frontend    | Partial/final transcript update |
+| `stt:end`        | Frontend    | API Gateway | End session, bill remaining     |
+| `stt:done`       | API Gateway | Frontend    | Final transcript + duration     |
+| `stt:error`      | API Gateway | Frontend    | Session error or credit issue   |
 
 ---
 

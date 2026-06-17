@@ -74,6 +74,17 @@ export function useSocketEvents() {
           }
         }
       });
+
+      socket.on("stt:result", () => {
+        fetchBalance();
+      });
+
+      socket.on("stt:error", (data: { code: string; message: string }) => {
+        if (data.code === "INSUFFICIENT_CREDITS") {
+          toast.error(data.message);
+          useTranslatorStore.getState().setListening(false);
+        }
+      });
     }
 
     if (socket.connected) {
@@ -86,6 +97,8 @@ export function useSocketEvents() {
     return () => {
       socket.off("connect", attach);
       socket.off("tool_job_updated");
+      socket.off("stt:result");
+      socket.off("stt:error");
       attachedRef.current = false;
     };
   }, [

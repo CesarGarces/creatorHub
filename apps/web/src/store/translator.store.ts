@@ -17,6 +17,10 @@ export interface TranslatorState {
   translationId: string | null;
   error: string | null;
 
+  isListening: boolean;
+  liveTranscript: string;
+  liveTranscriptFinal: string;
+
   setInputText: (text: string) => void;
   setTargetLanguage: (lang: string) => void;
   setProvider: (provider: string) => void;
@@ -24,6 +28,9 @@ export interface TranslatorState {
   setRevealing: (content: string, translationId: string) => void;
   setReady: () => void;
   setFailed: (error: string) => void;
+  setListening: (listening: boolean) => void;
+  appendLiveTranscript: (text: string, isFinal: boolean) => void;
+  commitLiveTranscript: () => void;
   reset: () => void;
 }
 
@@ -36,6 +43,10 @@ export const useTranslatorStore = create<TranslatorState>()((set, get) => ({
   outputText: null,
   translationId: null,
   error: null,
+
+  isListening: false,
+  liveTranscript: "",
+  liveTranscriptFinal: "",
 
   setInputText: (inputText) => set({ inputText }),
   setTargetLanguage: (targetLanguage) => set({ targetLanguage }),
@@ -67,6 +78,38 @@ export const useTranslatorStore = create<TranslatorState>()((set, get) => ({
     set({ status: "FAILED", error });
   },
 
+  setListening: (isListening) => set({ isListening }),
+
+  appendLiveTranscript: (text: string, isFinal: boolean) => {
+    const state = get();
+    if (isFinal) {
+      const newFinal = state.liveTranscriptFinal
+        ? state.liveTranscriptFinal + " " + text
+        : text;
+      set({
+        liveTranscriptFinal: newFinal,
+        liveTranscript: "",
+        inputText: newFinal,
+      });
+    } else {
+      set({ liveTranscript: text });
+    }
+  },
+
+  commitLiveTranscript: () => {
+    const state = get();
+    if (state.liveTranscript) {
+      const newFinal = state.liveTranscriptFinal
+        ? state.liveTranscriptFinal + " " + state.liveTranscript
+        : state.liveTranscript;
+      set({
+        liveTranscriptFinal: newFinal,
+        liveTranscript: "",
+        inputText: newFinal,
+      });
+    }
+  },
+
   reset: () => {
     set({
       status: "IDLE",
@@ -74,6 +117,9 @@ export const useTranslatorStore = create<TranslatorState>()((set, get) => ({
       translationId: null,
       error: null,
       jobId: null,
+      liveTranscript: "",
+      liveTranscriptFinal: "",
+      isListening: false,
     });
   },
 }));

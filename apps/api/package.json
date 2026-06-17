@@ -23,6 +23,7 @@
     "@creator-hub/shared-types": "workspace:*",
     "@creator-hub/shared-utils": "workspace:*",
     "@creator-hub/storage": "workspace:*",
+    "@creator-hub/stt-engine": "workspace:*",
     "@creator-hub/thumbnail-generator": "workspace:*",
     "@creator-hub/thumbnail-generator-backend": "workspace:*",
     "@creator-hub/content-translator": "workspace:*",

@@ -33,7 +33,8 @@ export type AITaskType =
   | "image-variation"
   | "text-generation"
   | "text-analysis"
-  | "trend-analysis";
+  | "trend-analysis"
+  | "speech-to-text";
 
 export interface AIRequest {
   taskType: AITaskType;
