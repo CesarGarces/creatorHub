@@ -33,7 +33,6 @@ export default function CreditPurchaseForm() {
 
           const poll = async () => {
             try {
-              // @ts-expect-error testing mock
               const statusRes = await api.get<{ status: string }>(
                 `/credits/status/${gatewayTxId}`,
               );
