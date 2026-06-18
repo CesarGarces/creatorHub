@@ -114,25 +114,6 @@ export class CreditsController {
       description: `Purchase ${credits} credits - ${plan.name}`,
     });
 
-    // Record a pending transaction referencing the gateway transaction id for idempotency
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { freeCredits: true, purchasedCredits: true },
-    });
-    const balance = (user?.freeCredits || 0) + (user?.purchasedCredits || 0);
-
-    await prisma.creditTransaction.create({
-      data: {
-        userId,
-        amount: credits,
-        type: "PURCHASE",
-        description: `Pending purchase via ${gatewayType}`,
-        provider: gatewayType,
-        referenceId: checkout.gatewayTxId,
-        balance,
-      },
-    });
-
     return {
       redirectUrl: checkout.paymentUrl,
       gatewayTxId: checkout.gatewayTxId,

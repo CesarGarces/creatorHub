@@ -36,7 +36,7 @@ export default function CreditPurchaseForm() {
               const statusRes = await api.get<{ status: string }>(
                 `/credits/status/${gatewayTxId}`,
               );
-              if (statusRes?.status && statusRes.status !== "PENDING") {
+              if (statusRes?.status === "COMPLETED") {
                 await fetchBalance();
                 localStorage.removeItem("pendingCreditPurchase");
                 return;
