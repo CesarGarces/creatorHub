@@ -41,6 +41,24 @@ export class CreditsController {
     return this.billingService.getPlans();
   }
 
+  @Get("transactions")
+  async getTransactions(@CurrentUser("id") userId: string) {
+    const txns = await prisma.creditTransaction.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+    return txns.map((tx) => ({
+      id: tx.id,
+      amount: tx.amount,
+      type: tx.type,
+      description: tx.description,
+      provider: tx.provider,
+      balance: tx.balance,
+      createdAt: tx.createdAt,
+    }));
+  }
+
   @Post("subscribe")
   async subscribe(
     @CurrentUser("id") userId: string,
