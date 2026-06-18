@@ -2,7 +2,7 @@ import {
   IsString,
   IsNotEmpty,
   IsEnum,
-  IsInt,
+  IsNumber,
   Min,
   IsBoolean,
   IsOptional,
@@ -32,8 +32,8 @@ export class CreateProviderDto {
   @IsEnum(ProviderTierDto)
   tier!: ProviderTierDto;
 
-  @IsInt()
-  @Min(1)
+  @IsNumber()
+  @Min(0.01)
   costPerCredit!: number;
 
   @IsBoolean()

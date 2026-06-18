@@ -141,9 +141,12 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
           <Input
             name="costPerCredit"
             type="number"
-            min={1}
+            min={0.01}
+            step="0.01"
             value={form.costPerCredit}
-            onChange={(e) => updateField("costPerCredit", e.target.value)}
+            onChange={(e) =>
+              updateField("costPerCredit", parseFloat(e.target.value) || 0)
+            }
             required
           />
         </div>
