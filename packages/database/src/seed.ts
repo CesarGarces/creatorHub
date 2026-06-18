@@ -5,13 +5,28 @@ async function main() {
   // Create tools (upsert to avoid duplicates on re-run)
   await prisma.tool.upsert({
     where: { id: "thumbnail-generator" },
-    update: {},
+    update: { icon: "🎨" },
     create: {
       id: "thumbnail-generator",
       name: "Thumbnail Generator",
       description: "AI-powered thumbnail generation for YouTube videos",
       category: "image",
       creditsPerUse: 1,
+      icon: "🎨",
+    },
+  });
+
+  await prisma.tool.upsert({
+    where: { id: "content-translator" },
+    update: { icon: "🌐" },
+    create: {
+      id: "content-translator",
+      name: "Content Translator",
+      description:
+        "Translate content across multiple languages with AI precision",
+      category: "translator",
+      creditsPerUse: 1,
+      icon: "🌐",
     },
   });
 

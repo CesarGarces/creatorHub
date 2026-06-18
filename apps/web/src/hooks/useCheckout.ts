@@ -1,34 +1,40 @@
 import { useState } from "react";
 import api from "@/lib/api";
 
-export type CheckoutResponse = {
-  redirectUrl?: string;
-  gatewayUrl?: string;
-  gatewayTxId?: string | null;
+export type CheckoutResult = {
+  preferenceId: string | null;
+  gatewayTxId: string | null;
+  redirectUrl: string | null;
+};
+
+type CheckoutOptions = {
+  onSuccess?: (data: CheckoutResult) => void;
+  onError?: (err: unknown) => void;
 };
 
 export default function useCheckout() {
   const [loadingPlanId, setLoadingPlanId] = useState<string | null>(null);
 
-  async function checkout(planId: string) {
+  async function checkout(planId: string, options?: CheckoutOptions) {
     setLoadingPlanId(planId);
     try {
-      const res = await api.post<CheckoutResponse>("/credits/checkout", {
-        planId,
-      });
-      const redirectUrl = (res as any).redirectUrl || (res as any).gatewayUrl;
-      const gatewayTxId = (res as any).gatewayTxId || null;
-      if (redirectUrl) {
-        try {
-          localStorage.setItem(
-            "pendingCreditPurchase",
-            JSON.stringify({ planId, gatewayTxId, createdAt: Date.now() }),
-          );
-        } catch {}
-        window.location.href = redirectUrl;
-      } else {
-        throw new Error("No redirect URL returned from checkout");
-      }
+      const res = await api.post<{
+        redirectUrl?: string;
+        gatewayTxId?: string;
+        preferenceId?: string;
+      }>("/credits/checkout", { planId });
+
+      const result: CheckoutResult = {
+        preferenceId: res.preferenceId || null,
+        gatewayTxId: res.gatewayTxId || null,
+        redirectUrl: res.redirectUrl || null,
+      };
+
+      options?.onSuccess?.(result);
+      return result;
+    } catch (err) {
+      options?.onError?.(err);
+      throw err;
     } finally {
       setLoadingPlanId(null);
     }

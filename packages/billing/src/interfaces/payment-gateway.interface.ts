@@ -16,6 +16,7 @@ export interface CreateCheckoutDto {
 export interface CheckoutResponse {
   paymentUrl: string; // URL to redirect the user
   gatewayTxId: string; // unique id from the gateway
+  preferenceId?: string; // MercadoPago preference id for embedded checkout
 }
 
 export interface WebhookVerificationResult {

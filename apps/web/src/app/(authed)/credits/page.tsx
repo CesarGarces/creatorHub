@@ -6,10 +6,18 @@ import api from "@/lib/api";
 import { Card, CardContent, CardHeader, Button, Badge } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { useCreditsStore } from "@/store/credits.store";
+import useCheckout from "@/hooks/useCheckout";
+import { CheckoutModal } from "@/components/billing/CheckoutModal";
 
 export default function CreditsPage() {
-  const [loadingPlanId, setLoadingPlanId] = useState<string | null>(null);
   const { balance } = useCreditsStore();
+  const { checkout, loadingPlanId } = useCheckout();
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activePreferenceId, setActivePreferenceId] = useState<string | null>(
+    null,
+  );
+  const [selectedPlan, setSelectedPlan] = useState({ name: "", price: "" });
 
   const { data: plans } = useQuery({
     queryKey: ["plans"],
@@ -21,31 +29,32 @@ export default function CreditsPage() {
     queryFn: () => api.get<any[]>("/credits/transactions"),
   });
 
-  const handleSubscription = async (planId: string) => {
-    setLoadingPlanId(planId);
+  const handleSubscribe = async (plan: {
+    id: string;
+    name: string;
+    price: number;
+  }) => {
+    setSelectedPlan({
+      name: plan.name,
+      price: `$${((plan.price || 0) / 100).toFixed(2)}/mo`,
+    });
+    setModalOpen(true);
+    setActivePreferenceId(null);
+
     try {
-      const res = await api.post<{
-        redirectUrl?: string;
-        gatewayTxId?: string;
-        gatewayUrl?: string;
-      }>("/credits/checkout", { planId });
-      const redirectUrl = (res as any).redirectUrl || (res as any).gatewayUrl;
-      const gatewayTxId = (res as any).gatewayTxId || null;
-      if (redirectUrl) {
-        try {
-          localStorage.setItem(
-            "pendingCreditPurchase",
-            JSON.stringify({ planId, gatewayTxId, createdAt: Date.now() }),
-          );
-        } catch {}
-        window.location.href = redirectUrl;
-      } else {
-        console.error("No redirect URL returned from checkout");
+      const result = await checkout(plan.id, {
+        onSuccess: (data) => {
+          if (data.preferenceId) {
+            setActivePreferenceId(data.preferenceId);
+          }
+        },
+        onError: () => setModalOpen(false),
+      });
+      if (!result.preferenceId && result.redirectUrl) {
+        window.location.href = result.redirectUrl;
       }
-    } catch (err) {
-      console.error("Checkout failed", err);
-    } finally {
-      setLoadingPlanId(null);
+    } catch {
+      setModalOpen(false);
     }
   };
 
@@ -57,21 +66,76 @@ export default function CreditsPage() {
           { label: "Credits" },
         ]}
       />
-      <div className="p-6 space-y-8 max-w-5xl animate-fade-in">
-        {/* Balance Card */}
-        <div className="rounded-xl border border-border bg-surface p-8 text-center">
-          <p className="text-sm font-medium text-text-muted uppercase tracking-wider">
-            Current Balance
-          </p>
-          <p className="mt-2 text-5xl font-bold text-text">
-            ⚡ {balance.toLocaleString()}
-          </p>
-          <p className="mt-1 text-sm text-text-dim">
-            Lifetime: {(balance + 3760).toLocaleString()} credits earned
-          </p>
-          <Button variant="glow" size="lg" className="mt-6">
-            Buy More Credits
-          </Button>
+      <div className="p-6 space-y-8 max-w-6xl mx-auto animate-fade-in">
+        {/* Balance + Transaction History row */}
+        <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
+          {/* Balance Card */}
+          <div className="rounded-xl border border-border bg-surface p-8 flex flex-col items-center justify-center text-center">
+            <p className="text-sm font-medium text-text-muted uppercase tracking-wider">
+              Current Balance
+            </p>
+            <p className="mt-3 text-5xl font-bold text-text">
+              ⚡ {balance.toLocaleString()}
+            </p>
+            <p className="mt-1 text-sm text-text-dim">
+              Lifetime: {(balance + 3760).toLocaleString()} credits earned
+            </p>
+            <Button variant="glow" size="lg" className="mt-6">
+              Buy More Credits
+            </Button>
+          </div>
+
+          {/* Transaction History */}
+          <div className="rounded-xl border border-border bg-surface flex flex-col">
+            <div className="px-5 py-4 border-b border-border">
+              <h2 className="text-sm font-semibold text-text uppercase tracking-wider">
+                Transaction History
+              </h2>
+            </div>
+            <div className="flex-1 divide-y divide-border overflow-y-auto max-h-80">
+              {transactions?.map((tx: any) => (
+                <div
+                  key={tx.id}
+                  className="flex items-center justify-between px-5 py-3.5 hover:bg-surface-elevated/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold ${
+                        tx.type === "USAGE"
+                          ? "bg-error/10 text-error"
+                          : tx.type === "PURCHASE"
+                            ? "bg-secondary/10 text-secondary"
+                            : "bg-primary/10 text-primary"
+                      }`}
+                    >
+                      {tx.type === "USAGE" ? "↓" : "↑"}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-text">
+                        {tx.description || tx.type}
+                      </p>
+                      <p className="text-xs text-text-dim">
+                        {new Date(tx.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-sm font-semibold tabular-nums ${
+                      tx.amount < 0 ? "text-error" : "text-secondary"
+                    }`}
+                  >
+                    {tx.amount > 0 ? "+" : ""}
+                    {tx.amount} credits
+                  </span>
+                </div>
+              ))}
+              {!transactions && (
+                <div className="px-5 py-8 text-center text-sm text-text-dim">
+                  No transactions yet
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Plans */}
@@ -126,9 +190,8 @@ export default function CreditsPage() {
                     variant={plan.price === 0 ? "secondary" : "primary"}
                     {...(plan.price > 0 ? { "data-test": "buy-plan" } : {})}
                     className="w-full"
-                    onClick={() =>
-                      plan.price > 0 && handleSubscription(plan.id)
-                    }
+                    disabled={loadingPlanId === plan.id}
+                    onClick={() => plan.price > 0 && handleSubscribe(plan)}
                   >
                     {loadingPlanId === plan.id
                       ? "Procesando…"
@@ -141,57 +204,15 @@ export default function CreditsPage() {
             ))}
           </div>
         </div>
-
-        {/* Transaction History */}
-        <div>
-          <h2 className="text-lg font-semibold text-text mb-4">
-            Transaction History
-          </h2>
-          <div className="rounded-xl border border-border bg-surface divide-y divide-border">
-            {transactions?.map((tx: any) => (
-              <div
-                key={tx.id}
-                className="flex items-center justify-between px-5 py-4"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm ${
-                      tx.type === "USAGE"
-                        ? "bg-error/10 text-error"
-                        : tx.type === "PURCHASE"
-                          ? "bg-secondary/10 text-secondary"
-                          : "bg-primary/10 text-primary"
-                    }`}
-                  >
-                    {tx.type === "USAGE" ? "↓" : "↑"}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-text">
-                      {tx.description || tx.type}
-                    </p>
-                    <p className="text-xs text-text-dim">
-                      {new Date(tx.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <span
-                  className={`text-sm font-semibold ${
-                    tx.amount < 0 ? "text-error" : "text-secondary"
-                  }`}
-                >
-                  {tx.amount > 0 ? "+" : ""}
-                  {tx.amount} credits
-                </span>
-              </div>
-            ))}
-            {!transactions && (
-              <div className="px-5 py-8 text-center text-sm text-text-dim">
-                No transactions yet
-              </div>
-            )}
-          </div>
-        </div>
       </div>
+
+      <CheckoutModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        preferenceId={activePreferenceId}
+        planName={selectedPlan.name}
+        price={selectedPlan.price}
+      />
     </>
   );
 }

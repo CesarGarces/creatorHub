@@ -92,7 +92,9 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         `MercadoPago preference created ${gatewayTxId} for user ${data.userId}`,
       );
 
-      return { paymentUrl, gatewayTxId };
+      const preferenceId = (resp as any).id?.toString() || gatewayTxId;
+
+      return { paymentUrl, gatewayTxId, preferenceId };
     } catch (err) {
       this.logger.error(
         "Mercado Pago SDK error creating preference",

@@ -47,6 +47,7 @@ export class CreditsController {
       where: { userId },
       orderBy: { createdAt: "desc" },
       take: 50,
+      include: { tool: { select: { name: true, icon: true } } },
     });
     return txns.map((tx) => ({
       id: tx.id,
@@ -55,6 +56,8 @@ export class CreditsController {
       description: tx.description,
       provider: tx.provider,
       balance: tx.balance,
+      toolName: tx.tool?.name || null,
+      toolIcon: tx.tool?.icon || null,
       createdAt: tx.createdAt,
     }));
   }
@@ -117,6 +120,7 @@ export class CreditsController {
     return {
       redirectUrl: checkout.paymentUrl,
       gatewayTxId: checkout.gatewayTxId,
+      preferenceId: checkout.preferenceId,
     };
   }
 

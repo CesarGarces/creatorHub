@@ -16,6 +16,7 @@
     "@creator-hub/shared-types": "workspace:*",
     "@creator-hub/shared-utils": "workspace:*",
     "@creator-hub/ui": "workspace:*",
+    "@mercadopago/sdk-react": "^1.0.7",
     "@tanstack/react-query": "^5.0.0",
     "framer-motion": "^12.40.0",
     "gsap": "^3.15.0",
