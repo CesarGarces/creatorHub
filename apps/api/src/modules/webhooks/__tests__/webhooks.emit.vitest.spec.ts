@@ -76,7 +76,6 @@ describe("Webhooks -> CreditBilling -> Gateway emit", () => {
       .set("Content-Type", "application/json");
 
     expect(res.status).toBe(200);
-    // @ts-expect-error testing mock
     const { mockEventPublisher } = (app as any).locals;
     expect(mockEventPublisher.publish).toHaveBeenCalledWith(
       "payment:success",
