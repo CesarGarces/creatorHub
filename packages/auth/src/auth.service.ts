@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  BadRequestException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { prisma } from "@creator-hub/database";
@@ -63,6 +64,44 @@ export class AuthService {
     return this.generateTokens(user);
   }
 
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.passwordHash) {
+      throw new BadRequestException("No password set for this account");
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException("Current password is incorrect");
+    }
+
+    if (newPassword.length < 8) {
+      throw new BadRequestException(
+        "New password must be at least 8 characters",
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    return { message: "Password updated successfully" };
+  }
+
+  async updateProfile(userId: string, name: string) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { name },
+    });
+    return { message: "Profile updated successfully" };
+  }
+
   async validateOAuth(
     provider: string,
     providerAccountId: string,
@@ -113,7 +152,12 @@ export class AuthService {
     return this.generateTokens(user);
   }
 
-  private generateTokens(user: { id: string; email: string; role: string }) {
+  private generateTokens(user: {
+    id: string;
+    email: string;
+    role: string;
+    name?: string | null;
+  }) {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
@@ -127,6 +171,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         role: user.role,
+        name: user.name || null,
       },
     };
   }

@@ -19,6 +19,7 @@ interface Transaction {
   balance: number;
   toolName: string | null;
   toolIcon: string | null;
+  model: string | null;
   createdAt: string;
 }
 
@@ -159,6 +160,11 @@ export default function HistoryPage() {
                   </p>
                   <p className="text-xs text-text-dim">
                     {item.toolName || "Tool"}
+                    {item.model && (
+                      <span className="ml-1.5 text-text-dim/60">
+                        · {item.model}
+                      </span>
+                    )}
                   </p>
                 </div>
                 <span className="text-xs text-text-dim whitespace-nowrap">

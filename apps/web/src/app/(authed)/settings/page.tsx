@@ -1,11 +1,115 @@
 "use client";
 
-import { Card, CardContent, CardHeader, Input, Button } from "@creator-hub/ui";
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Input,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { useAuthStore } from "@/store/auth.store";
+import api from "@/lib/api";
+import { Pencil, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
+
+function PasswordInput({
+  label,
+  value,
+  onChange,
+  autoComplete,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete?: string;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        label={label}
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoComplete={autoComplete}
+        className="pr-10"
+      />
+      <button
+        type="button"
+        onClick={() => setShow(!show)}
+        className="absolute right-3 top-[38px] text-text-dim hover:text-text-muted transition-colors"
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
+
+  // Password
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // Profile
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileName, setProfileName] = useState(
+    user?.name || user?.email?.split("@")[0] || "",
+  );
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  const handleProfileSave = async () => {
+    setProfileLoading(true);
+    try {
+      await api.patch("/auth/profile", { name: profileName });
+      setUser({ ...user!, name: profileName });
+      toast.success("Name updated successfully");
+      setProfileOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update name");
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters");
+      return;
+    }
+    setPwLoading(true);
+    try {
+      await api.post("/auth/change-password", {
+        currentPassword,
+        newPassword,
+      });
+      toast.success("Password updated successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setConfirmOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to change password");
+    } finally {
+      setPwLoading(false);
+    }
+  };
+
+  const displayName = user?.name || user?.email?.split("@")[0] || "U";
 
   return (
     <>
@@ -15,7 +119,7 @@ export default function SettingsPage() {
           { label: "Settings" },
         ]}
       />
-      <div className="p-6 space-y-8 max-w-3xl animate-fade-in">
+      <div className="p-6 space-y-8 max-w-3xl mx-auto animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-text">Settings</h1>
           <p className="mt-1 text-text-muted">
@@ -31,63 +135,71 @@ export default function SettingsPage() {
               Update your personal information
             </p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white text-xl font-bold">
-                {user?.email?.[0]?.toUpperCase() || "U"}
+          <CardContent>
+            <div className="flex flex-col items-center text-center">
+              <div className="relative">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-white text-2xl font-bold">
+                  {displayName[0]?.toUpperCase()}
+                </div>
+                <button
+                  onClick={() => {
+                    setProfileName(
+                      user?.name || user?.email?.split("@")[0] || "",
+                    );
+                    setProfileOpen(true);
+                  }}
+                  className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-surface-elevated border border-border text-text-muted hover:text-primary hover:border-primary transition-colors"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
               </div>
-              <Button variant="secondary" size="sm">
-                Change Avatar
-              </Button>
+              <p className="mt-3 text-base font-medium text-text">
+                {displayName}
+              </p>
+              <p className="text-sm text-text-dim">{user?.email}</p>
             </div>
-            <Input label="Name" defaultValue={user?.email?.split("@")[0]} />
-            <Input label="Email" type="email" defaultValue={user?.email} />
-            <Button variant="primary">Save Changes</Button>
           </CardContent>
         </Card>
 
-        {/* Preferences */}
+        {/* Change Password */}
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold text-text">Preferences</h2>
-            <p className="text-sm text-text-muted">Customize your experience</p>
+            <h2 className="text-lg font-semibold text-text">Change Password</h2>
+            <p className="text-sm text-text-muted">
+              Update your password to keep your account secure
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-muted">
-                Default AI Provider
-              </label>
-              <select className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-primary">
-                <option>OpenAI (DALL-E 3)</option>
-                <option>Flux</option>
-                <option>Stability AI</option>
-                <option>Gemini</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-muted">
-                Default Style
-              </label>
-              <select className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-primary">
-                <option>Bold & Colorful</option>
-                <option>Minimalist</option>
-                <option>Gaming</option>
-                <option>Cinematic</option>
-              </select>
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <p className="text-sm font-medium text-text">
-                  Email Notifications
-                </p>
-                <p className="text-xs text-text-muted">
-                  Receive updates about your generations
-                </p>
-              </div>
-              <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-primary transition-colors">
-                <span className="inline-block h-4 w-4 translate-x-6 rounded-full bg-white transition-transform" />
-              </button>
-            </div>
+            <PasswordInput
+              label="Current Password"
+              value={currentPassword}
+              onChange={setCurrentPassword}
+              autoComplete="current-password"
+            />
+            <PasswordInput
+              label="New Password"
+              value={newPassword}
+              onChange={setNewPassword}
+              autoComplete="new-password"
+            />
+            <PasswordInput
+              label="Confirm New Password"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              autoComplete="new-password"
+            />
+            <Button
+              variant="primary"
+              disabled={
+                !currentPassword ||
+                !newPassword ||
+                !confirmPassword ||
+                pwLoading
+              }
+              onClick={() => setConfirmOpen(true)}
+            >
+              Change Password
+            </Button>
           </CardContent>
         </Card>
 
@@ -112,6 +224,76 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Profile Edit Modal */}
+      <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
+        <DialogContent
+          className="sm:max-w-md"
+          onClose={() => setProfileOpen(false)}
+        >
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 pb-6 space-y-4">
+            <Input
+              label="Name"
+              value={profileName}
+              onChange={(e) => setProfileName(e.target.value)}
+            />
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setProfileOpen(false)}
+                disabled={profileLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleProfileSave}
+                isLoading={profileLoading}
+                disabled={!profileName.trim()}
+              >
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Password Modal */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent
+          className="sm:max-w-md"
+          onClose={() => setConfirmOpen(false)}
+        >
+          <DialogHeader>
+            <DialogTitle>Confirm Password Change</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 pb-6 space-y-4">
+            <p className="text-sm text-text-muted">
+              Are you sure you want to change your password? You will need to
+              use the new password for future logins.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setConfirmOpen(false)}
+                disabled={pwLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handlePasswordChange}
+                isLoading={pwLoading}
+              >
+                Yes, Change Password
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

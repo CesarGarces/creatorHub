@@ -3,9 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { cn, Tooltip, Separator, CreditDisplay, Avatar } from "@creator-hub/ui";
+import { cn, Tooltip, Separator, Avatar } from "@creator-hub/ui";
 import { useAuthStore } from "@/store/auth.store";
-import { useCreditsStore } from "@/store/credits.store";
 
 interface NavItem {
   label: string;
@@ -44,7 +43,6 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const { balance } = useCreditsStore();
 
   const handleLogout = () => {
     logout();
@@ -141,20 +139,12 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-border p-3 space-y-3">
-        {!collapsed && (
-          <CreditDisplay
-            balance={balance}
-            size="sm"
-            className="w-full justify-center"
-          />
-        )}
-        <Separator />
         <div className="flex items-center gap-3">
-          <Avatar name={user?.email || "User"} size="sm" />
+          <Avatar name={user?.name || user?.email || "User"} size="sm" />
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-text truncate">
-                {user?.email?.split("@")[0]}
+                {user?.name || user?.email?.split("@")[0]}
               </p>
               <p className="text-xs text-text-dim truncate">{user?.email}</p>
             </div>

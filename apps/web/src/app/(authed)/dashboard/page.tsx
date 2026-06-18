@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth.store";
 import { useToolsStore } from "@/store/tools.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { ToolCard, CreditDisplay, EmptyState, Badge } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { CommandPalette } from "@/components/layout/command-palette";
+import api from "@/lib/api";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -16,12 +18,41 @@ function getGreeting(): string {
   return "Good evening";
 }
 
+function formatTimeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = 60_000;
+  const hr = 3_600_000;
+  if (diff < min) return "Just now";
+  if (diff < hr) return `${Math.floor(diff / min)}m ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / hr)}h ago`;
+  return `${Math.floor(diff / 86_400_000)}d ago`;
+}
+
+interface Transaction {
+  id: string;
+  amount: number;
+  type: string;
+  description: string;
+  toolName: string | null;
+  toolIcon: string | null;
+  createdAt: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { tools, fetchTools } = useToolsStore();
   const { balance, fetchBalance } = useCreditsStore();
   const [cmdOpen, setCmdOpen] = useState(false);
+
+  const { data: transactions } = useQuery({
+    queryKey: ["transactions"],
+    queryFn: () => api.get<Transaction[]>("/credits/transactions"),
+  });
+
+  const recentActivity = (transactions || [])
+    .filter((tx) => tx.type === "USAGE")
+    .slice(0, 3);
 
   useEffect(() => {
     fetchTools();
@@ -73,7 +104,7 @@ export default function DashboardPage() {
         {/* Greeting */}
         <div>
           <h1 className="text-2xl font-bold text-text">
-            {getGreeting()}, {user?.email?.split("@")[0]} 👋
+            {getGreeting()}, {user?.name || user?.email?.split("@")[0]} 👋
           </h1>
           <p className="mt-1 text-text-muted">What will you create today?</p>
         </div>
@@ -158,50 +189,30 @@ export default function DashboardPage() {
             </button>
           </div>
           <div className="rounded-xl border border-border bg-surface divide-y divide-border">
-            <div className="flex items-center gap-4 px-5 py-3.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-light text-sm">
-                🖼️
+            {recentActivity.map((tx) => (
+              <div key={tx.id} className="flex items-center gap-4 px-5 py-3.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-elevated text-sm">
+                  {tx.toolIcon || "🔧"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-text truncate">
+                    {tx.description}
+                  </p>
+                  <p className="text-xs text-text-dim">
+                    {formatTimeAgo(tx.createdAt)} · {Math.abs(tx.amount)}{" "}
+                    credits
+                  </p>
+                </div>
+                <Badge variant="primary" size="sm">
+                  {tx.toolName || "Tool"}
+                </Badge>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text truncate">
-                  Gaming thumbnail with neon lights
-                </p>
-                <p className="text-xs text-text-dim">
-                  2 minutes ago · 10 credits
-                </p>
+            ))}
+            {recentActivity.length === 0 && (
+              <div className="px-5 py-8 text-center text-sm text-text-dim">
+                No activity yet
               </div>
-              <Badge variant="primary" size="sm">
-                Thumbnail
-              </Badge>
-            </div>
-            <div className="flex items-center gap-4 px-5 py-3.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-light text-sm">
-                📝
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text truncate">
-                  React tutorial script
-                </p>
-                <p className="text-xs text-text-dim">1 hour ago · 8 credits</p>
-              </div>
-              <Badge variant="accent" size="sm">
-                Script
-              </Badge>
-            </div>
-            <div className="flex items-center gap-4 px-5 py-3.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary-light text-sm">
-                🎬
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text truncate">
-                  Top 10 React hooks for 2024
-                </p>
-                <p className="text-xs text-text-dim">3 hours ago · 5 credits</p>
-              </div>
-              <Badge variant="secondary" size="sm">
-                Title
-              </Badge>
-            </div>
+            )}
           </div>
         </div>
 

@@ -58,6 +58,7 @@ export interface StoredUser {
   id: string;
   email: string;
   role: string;
+  name?: string;
 }
 
 export function setStoredUser(user: StoredUser): void {

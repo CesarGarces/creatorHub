@@ -1,6 +1,15 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from "@nestjs/common";
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+} from "@nestjs/common";
 import { AuthService } from "@creator-hub/auth";
-import { Public } from "@creator-hub/auth";
+import { Public, CurrentUser, JwtAuthGuard } from "@creator-hub/auth";
 import { IsEmail, IsString, MinLength } from "class-validator";
 
 class RegisterDto {
@@ -23,6 +32,20 @@ class LoginDto {
   password!: string;
 }
 
+class ChangePasswordDto {
+  @IsString()
+  currentPassword!: string;
+
+  @IsString()
+  @MinLength(8)
+  newPassword!: string;
+}
+
+class UpdateProfileDto {
+  @IsString()
+  name!: string;
+}
+
 @Controller("auth")
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -38,5 +61,28 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto.email, dto.password);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("change-password")
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @CurrentUser("id") userId: string,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(
+      userId,
+      dto.currentPassword,
+      dto.newPassword,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch("profile")
+  async updateProfile(
+    @CurrentUser("id") userId: string,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(userId, dto.name);
   }
 }

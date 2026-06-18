@@ -49,17 +49,37 @@ export class CreditsController {
       take: 50,
       include: { tool: { select: { name: true, icon: true } } },
     });
-    return txns.map((tx) => ({
-      id: tx.id,
-      amount: tx.amount,
-      type: tx.type,
-      description: tx.description,
-      provider: tx.provider,
-      balance: tx.balance,
-      toolName: tx.tool?.name || null,
-      toolIcon: tx.tool?.icon || null,
-      createdAt: tx.createdAt,
-    }));
+
+    const txnIds = txns.map((tx) => tx.id);
+
+    const logs = await prisma.aIRequestLog.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: { model: true, provider: true, createdAt: true, toolId: true },
+    });
+
+    return txns.map((tx) => {
+      const matchingLog = logs.find(
+        (l) =>
+          l.toolId === tx.toolId &&
+          Math.abs(
+            new Date(l.createdAt).getTime() - new Date(tx.createdAt).getTime(),
+          ) < 30_000,
+      );
+      return {
+        id: tx.id,
+        amount: tx.amount,
+        type: tx.type,
+        description: tx.description,
+        provider: tx.provider,
+        balance: tx.balance,
+        toolName: tx.tool?.name || tx.toolId || null,
+        toolIcon: tx.tool?.icon || null,
+        model: matchingLog?.model || null,
+        createdAt: tx.createdAt,
+      };
+    });
   }
 
   @Post("subscribe")
@@ -115,6 +135,34 @@ export class CreditsController {
       currency: "USD",
       creditsToBuy: credits,
       description: `Purchase ${credits} credits - ${plan.name}`,
+    });
+
+    return {
+      redirectUrl: checkout.paymentUrl,
+      gatewayTxId: checkout.gatewayTxId,
+      preferenceId: checkout.preferenceId,
+    };
+  }
+
+  @Post("custom-checkout")
+  async customCheckout(
+    @CurrentUser("id") userId: string,
+    @Body("amount") amount: number,
+  ) {
+    if (!amount || amount < 10) {
+      throw new Error("Minimum amount is $10");
+    }
+
+    const credits = Math.floor(amount); // 1 dollar = 1 credit
+    const gatewayType = PaymentGateway.MERCADO_PAGO;
+    const paymentGateway = this.paymentRegistry.getGateway(gatewayType);
+
+    const checkout = await paymentGateway.createCheckoutSession({
+      userId,
+      amount,
+      currency: "USD",
+      creditsToBuy: credits,
+      description: `Purchase ${credits} credits`,
     });
 
     return {

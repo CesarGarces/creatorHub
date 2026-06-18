@@ -9,10 +9,10 @@ import {
 } from "@creator-hub/ui";
 import { initMercadoPago, Wallet } from "@mercadopago/sdk-react";
 
-if (typeof window !== "undefined") {
-  initMercadoPago(process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || "", {
-    locale: "es-CO",
-  });
+const MP_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || "";
+
+if (typeof window !== "undefined" && MP_KEY) {
+  initMercadoPago(MP_KEY, { locale: "es-CO" });
 }
 
 interface CheckoutModalProps {
@@ -21,6 +21,7 @@ interface CheckoutModalProps {
   preferenceId: string | null;
   planName: string;
   price: string;
+  title?: string;
 }
 
 export function CheckoutModal({
@@ -29,6 +30,7 @@ export function CheckoutModal({
   preferenceId,
   planName,
   price,
+  title = "Complete Payment",
 }: CheckoutModalProps) {
   useEffect(() => {
     if (!isOpen) return;
@@ -46,7 +48,7 @@ export function CheckoutModal({
         onClose={onClose}
       >
         <DialogHeader>
-          <DialogTitle>Complete Subscription</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col items-center my-6 mx-6 p-5 rounded-lg bg-surface-elevated/50 border border-border">
@@ -56,7 +58,7 @@ export function CheckoutModal({
         </div>
 
         <div className="mx-6 pb-6">
-          {preferenceId ? (
+          {preferenceId && MP_KEY ? (
             <Wallet
               initialization={{ preferenceId }}
               customization={{
@@ -70,7 +72,9 @@ export function CheckoutModal({
             />
           ) : (
             <div className="text-center py-4 text-text-dim text-sm animate-pulse">
-              Preparing secure payment environment...
+              {!MP_KEY
+                ? "Payment configuration missing. Please contact support."
+                : "Preparing secure payment environment..."}
             </div>
           )}
         </div>

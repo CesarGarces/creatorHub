@@ -1,9 +1,20 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import api from "@/lib/api";
-import { Card, CardContent, CardHeader, Button, Badge } from "@creator-hub/ui";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Button,
+  Badge,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Input,
+} from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { useCreditsStore } from "@/store/credits.store";
 import useCheckout from "@/hooks/useCheckout";
@@ -19,6 +30,10 @@ export default function CreditsPage() {
   );
   const [selectedPlan, setSelectedPlan] = useState({ name: "", price: "" });
 
+  const [buyModalOpen, setBuyModalOpen] = useState(false);
+  const [buyAmount, setBuyAmount] = useState("10");
+  const [buyLoading, setBuyLoading] = useState(false);
+
   const { data: plans } = useQuery({
     queryKey: ["plans"],
     queryFn: () => api.get<any[]>("/credits/plans"),
@@ -28,6 +43,13 @@ export default function CreditsPage() {
     queryKey: ["transactions"],
     queryFn: () => api.get<any[]>("/credits/transactions"),
   });
+
+  const lifetimeEarned = useMemo(() => {
+    if (!transactions) return balance;
+    return transactions
+      .filter((tx) => tx.amount > 0)
+      .reduce((sum, tx) => sum + tx.amount, 0);
+  }, [transactions, balance]);
 
   const handleSubscribe = async (plan: {
     id: string;
@@ -58,6 +80,34 @@ export default function CreditsPage() {
     }
   };
 
+  const handleBuyCredits = async () => {
+    const amount = parseFloat(buyAmount);
+    if (isNaN(amount) || amount < 10) return;
+
+    setBuyLoading(true);
+    try {
+      const res = await api.post<{
+        redirectUrl?: string;
+        gatewayTxId?: string;
+        preferenceId?: string;
+      }>("/credits/custom-checkout", { amount });
+
+      if (res.preferenceId) {
+        setSelectedPlan({
+          name: "Credit Purchase",
+          price: `$${amount.toFixed(2)}`,
+        });
+        setActivePreferenceId(res.preferenceId);
+        setBuyModalOpen(false);
+        setModalOpen(true);
+      }
+    } catch (err) {
+      console.error("Checkout failed", err);
+    } finally {
+      setBuyLoading(false);
+    }
+  };
+
   return (
     <>
       <TopBar
@@ -78,9 +128,17 @@ export default function CreditsPage() {
               ⚡ {balance.toLocaleString()}
             </p>
             <p className="mt-1 text-sm text-text-dim">
-              Lifetime: {(balance + 3760).toLocaleString()} credits earned
+              Lifetime: {lifetimeEarned.toLocaleString()} credits earned
             </p>
-            <Button variant="glow" size="lg" className="mt-6">
+            <Button
+              variant="glow"
+              size="lg"
+              className="mt-6"
+              onClick={() => {
+                setBuyAmount("10");
+                setBuyModalOpen(true);
+              }}
+            >
               Buy More Credits
             </Button>
           </div>
@@ -212,7 +270,59 @@ export default function CreditsPage() {
         preferenceId={activePreferenceId}
         planName={selectedPlan.name}
         price={selectedPlan.price}
+        title="Pay as you go"
       />
+
+      {/* Buy Credits Modal */}
+      <Dialog open={buyModalOpen} onOpenChange={setBuyModalOpen}>
+        <DialogContent
+          className="sm:max-w-md"
+          onClose={() => setBuyModalOpen(false)}
+        >
+          <DialogHeader>
+            <DialogTitle>Buy Credits</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 pb-6 space-y-4">
+            <p className="text-sm text-text-muted">
+              Enter the amount in dollars (minimum $10). Each dollar equals 1
+              credit.
+            </p>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium">
+                $
+              </span>
+              <Input
+                type="number"
+                min={10}
+                step="1"
+                value={buyAmount}
+                onChange={(e) => setBuyAmount(e.target.value)}
+                className="pl-7"
+              />
+            </div>
+            <p className="text-xs text-text-dim">
+              You will receive {Math.floor(parseFloat(buyAmount) || 0)} credits
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setBuyModalOpen(false)}
+                disabled={buyLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleBuyCredits}
+                isLoading={buyLoading}
+                disabled={parseFloat(buyAmount) < 10 || buyLoading}
+              >
+                Pay ${(parseFloat(buyAmount) || 0).toFixed(2)}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

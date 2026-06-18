@@ -69,15 +69,6 @@ export class MercadoPagoStrategy implements IPaymentGateway {
           ],
           external_reference: data.userId,
           ...(notificationUrl ? { notification_url: notificationUrl } : {}),
-          back_urls: {
-            success:
-              process.env.FRONTEND_URL ||
-              "https://app.creatorhub.local/success",
-            failure:
-              process.env.FRONTEND_URL ||
-              "https://app.creatorhub.local/failure",
-          },
-          auto_return: "approved",
         },
       });
 
