@@ -137,13 +137,13 @@ The platform should feel:
 ### Primary
 
 ```css
-#7C3AED
+#00bbd9
 ```
 
 ### Secondary
 
 ```css
-#22C55E
+#9f7aea
 ```
 
 ### Accent

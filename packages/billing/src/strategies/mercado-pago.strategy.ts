@@ -56,6 +56,9 @@ export class MercadoPagoStrategy implements IPaymentGateway {
           ? `${process.env.API_URL.replace(/\/$/, "")}/api/v1/webhooks/mercado-pago`
           : undefined);
 
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      const cleanFrontendUrl = frontendUrl.replace(/\/$/, "");
+
       const resp = await preference.create({
         body: {
           items: [
@@ -69,6 +72,12 @@ export class MercadoPagoStrategy implements IPaymentGateway {
           ],
           external_reference: data.userId,
           ...(notificationUrl ? { notification_url: notificationUrl } : {}),
+          back_urls: {
+            success: `${cleanFrontendUrl}/checkout/success`,
+            failure: `${cleanFrontendUrl}/dashboard/credits`,
+            pending: `${cleanFrontendUrl}/dashboard/credits`,
+          },
+          auto_return: "approved",
         },
       });
 

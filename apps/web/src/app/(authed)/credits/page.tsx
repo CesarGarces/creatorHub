@@ -94,7 +94,7 @@ export default function CreditsPage() {
 
       if (res.preferenceId) {
         setSelectedPlan({
-          name: "Credit Purchase",
+          name: "Pay as you go",
           price: `$${amount.toFixed(2)}`,
         });
         setActivePreferenceId(res.preferenceId);
@@ -270,7 +270,7 @@ export default function CreditsPage() {
         preferenceId={activePreferenceId}
         planName={selectedPlan.name}
         price={selectedPlan.price}
-        title="Pay as you go"
+        title="Get started now"
       />
 
       {/* Buy Credits Modal */}
