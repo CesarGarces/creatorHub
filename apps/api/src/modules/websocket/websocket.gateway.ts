@@ -47,13 +47,69 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
           "",
         );
 
+      const refreshToken = client.handshake.auth?.refreshToken as string;
+
       if (!token) {
         this.logger.warn("Connection rejected: no token provided");
         client.disconnect();
         return;
       }
 
-      const payload = this.jwtService.verify(token);
+      let payload: any;
+
+      try {
+        payload = await this.jwtService.verifyAsync(token);
+      } catch (err: any) {
+        // If access token expired, attempt to validate refresh token (if provided)
+        if (err?.name === "TokenExpiredError" && refreshToken) {
+          try {
+            const refreshPayload =
+              await this.jwtService.verifyAsync(refreshToken);
+
+            // Issue a short-lived replacement access token and notify client
+            const newAccess = this.jwtService.sign(
+              {
+                sub: refreshPayload.sub,
+                email: refreshPayload.email,
+                role: refreshPayload.role,
+              },
+              { expiresIn: "15m" },
+            );
+
+            client.emit("auth:refreshed", { accessToken: newAccess });
+            payload = refreshPayload;
+            this.logger.log("Access token refreshed via refreshToken", {
+              socketId: client.id,
+              userId: refreshPayload.sub,
+            });
+          } catch (err2: any) {
+            this.logger.warn("Connection rejected: invalid refresh token", {
+              error: err2?.message,
+            });
+            try {
+              client.emit("auth_error", {
+                code: "INVALID_REFRESH_TOKEN",
+                message: err2?.message,
+              });
+            } catch {}
+            client.disconnect();
+            return;
+          }
+        } else {
+          this.logger.warn("Connection rejected: invalid token", {
+            error: err?.message,
+          });
+          try {
+            client.emit("auth_error", {
+              code: "INVALID_TOKEN",
+              message: err?.message,
+            });
+          } catch {}
+          client.disconnect();
+          return;
+        }
+      }
+
       const user = await prisma.user.findUnique({
         where: { id: payload.sub },
         select: {
@@ -69,6 +125,12 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (!user || !user.isActive) {
         this.logger.warn("Connection rejected: user not found or inactive");
+        try {
+          client.emit("auth_error", {
+            code: "USER_INACTIVE",
+            message: "User not found or inactive",
+          });
+        } catch {}
         client.disconnect();
         return;
       }
@@ -82,9 +144,15 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         socketId: client.id,
       });
     } catch (error) {
-      this.logger.warn("Connection rejected: invalid token", {
+      this.logger.warn("Connection rejected: unexpected error", {
         error: (error as Error).message,
       });
+      try {
+        client.emit("auth_error", {
+          code: "UNEXPECTED_ERROR",
+          message: (error as Error).message,
+        });
+      } catch {}
       client.disconnect();
     }
   }

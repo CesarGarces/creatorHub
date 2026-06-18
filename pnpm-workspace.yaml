@@ -9,6 +9,7 @@ allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
   '@scarf/scarf': true
+  cypress: true
   esbuild: true
   msgpackr-extract: true
   prisma: true

@@ -1,4 +1,5 @@
 const TOKEN_KEY = "ch_access_token";
+const REFRESH_KEY = "ch_refresh_token";
 const USER_KEY = "ch_user";
 
 const COOKIE_OPTIONS = {
@@ -39,6 +40,18 @@ export function getAccessToken(): string | null {
 
 export function removeAccessToken(): void {
   removeCookie(TOKEN_KEY);
+}
+
+export function setRefreshToken(token: string): void {
+  setCookie(REFRESH_KEY, token, 30);
+}
+
+export function getRefreshToken(): string | null {
+  return getCookie(REFRESH_KEY);
+}
+
+export function removeRefreshToken(): void {
+  removeCookie(REFRESH_KEY);
 }
 
 export interface StoredUser {

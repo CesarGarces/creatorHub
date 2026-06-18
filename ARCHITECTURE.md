@@ -15,12 +15,13 @@
 6. [API Design](#6-api-design)
 7. [Event Architecture](#7-event-architecture)
 8. [Credit System](#8-credit-system)
-9. [Storage System](#9-storage-system)
-10. [Authentication](#10-authentication)
-11. [Testing Strategy](#11-testing-strategy)
-12. [CI/CD Strategy](#12-cicd-strategy)
-13. [Scalability Roadmap](#13-scalability-roadmap)
-14. [Creating a New Tool](#14-creating-a-new-tool)
+9. [Payment Gateway](#9-payment-gateway)
+10. [Storage System](#10-storage-system)
+11. [Authentication](#11-authentication)
+12. [Testing Strategy](#12-testing-strategy)
+13. [CI/CD Strategy](#13-cicd-strategy)
+14. [Scalability Roadmap](#14-scalability-roadmap)
+15. [Creating a New Tool](#15-creating-a-new-tool)
 
 ---
 
@@ -46,6 +47,7 @@
 │  ┌──────────┬──────────┬───────┴───────┬──────────┬──────────┐     │
 │  │  Auth    │ AI Engine│   Billing     │ Storage  │Analytics │     │
 │  │ Package  │ Package  │   Package     │ Package  │ Package  │     │
+│  │          │          │   + Payments  │          │          │     │
 │  └──────────┴──────────┴───────────────┴──────────┴──────────┘     │
 │                                │                                    │
 │                    ┌───────────┴───────────┐                        │
@@ -118,7 +120,8 @@ creator-hub/
 │       │       ├── images/
 │       │       ├── ai/             # DB-driven provider metadata
 │       │       ├── admin/
-│       │       └── webhooks/
+│       │       ├── webhooks/       # Payment gateway webhooks
+│       │       └── websocket/      # WebSocket gateway + payment listener
 │       ├── test/
 │       │   └── jest-e2e.json
 │       └── nest-cli.json
@@ -130,7 +133,7 @@ creator-hub/
 │   │       ├── ai-engine.types.ts
 │   │       ├── user.types.ts
 │   │       ├── credit.types.ts
-│   │       ├── event.types.ts
+│   │       ├── event.types.ts          # + PaymentSuccessEvent
 │   │       └── api.types.ts
 │   │
 │   ├── shared-utils/          # Pure utility functions
@@ -150,7 +153,7 @@ creator-hub/
 │   │
 │   ├── auth/                  # JWT + Passport auth
 │   ├── ai-engine/             # Multi-provider AI abstraction
-│   ├── billing/               # Credits & subscriptions
+│   ├── billing/               # Credits, subscriptions, payment gateways (Strategy pattern)
 │   ├── storage/               # S3/MinIO abstraction
 │   ├── analytics/             # Usage tracking
 │   ├── ui/                    # Shared React components
@@ -589,6 +592,7 @@ The `AIController` exposes DB-driven provider metadata:
 - **No `CreditBalance` model** — Credits live directly on `User` as `freeCredits` + `purchasedCredits`
 - **`UserPlan` enum** — `FREE`, `PAY_AS_YOU_GO`, `PREMIUM`
 - **`UserRole` enum** — `USER`, `ADMIN`
+- **`PaymentGateway` enum** — `MERCADO_PAGO`, `PAYPAL` (used in `CreditTransaction.provider`)
 - **`MarketingEvent`** — Tracks credit threshold events for conversion analytics
 - **`Provider` model** — Metadata de proveedores IA (slug, name, model, tier, costPerCredit, isActive, supportedTasks, config)
 - **`GeneratedImage.providerId`** — Relación con `Provider`; `isProModel` se deriva del tier del proveedor
@@ -623,6 +627,12 @@ GET    /api/v1/credits/balance       # Get balance (freeCredits, purchasedCredit
 GET    /api/v1/credits/marketing-events  # Marketing events for user
 GET    /api/v1/credits/plans         # List subscription plans
 POST   /api/v1/credits/subscribe     # Subscribe to plan
+POST   /api/v1/credits/checkout      # Create checkout session (gateway, planId)
+GET    /api/v1/credits/status/:gatewayTxId  # Transaction status
+
+# Payment webhooks (no auth — verified by gateway signature)
+POST   /api/v1/webhooks/mercado-pago # MercadoPago webhook (HMAC verification)
+POST   /api/v1/webhooks/paypal       # PayPal webhook (planned)
 
 # Admin module
 GET    /api/v1/admin/dashboard/stats       # General stats
@@ -682,20 +692,22 @@ POST   /api/v1/admin/tools/toggle    # Enable/disable tool
 
 ### Event Types
 
-| Event                       | Producer              | Consumer              | Purpose            |
-| --------------------------- | --------------------- | --------------------- | ------------------ |
-| `tool.used`                 | All tools             | Analytics, Credits    | Track usage        |
-| `credits.deducted`          | CreditService         | Notifications         | Alert user         |
-| `credits.depleted`          | CreditService         | Notifications         | Prompt purchase    |
-| `marketing.credit_depleted` | CreditService         | MarketingEventHandler | Marketing events   |
-| `marketing.threshold`       | MarketingEventHandler | MarketingEvent DB     | Threshold tracking |
-| `ai.request.completed`      | AIEngine              | Analytics, Billing    | Track costs        |
-| `image.generated`           | Thumbnail             | Storage, Notify       | Save & notify      |
-| `translation.completed`     | ContentTranslator     | Notify                | Deliver result     |
-| `translation.failed`        | ContentTranslator     | Notify                | Error handling     |
-| `stt:transcript`            | AppGateway            | Frontend              | Live transcript    |
-| `stt:done`                  | AppGateway            | Frontend              | Session complete   |
-| `stt:error`                 | AppGateway            | Frontend              | Session error      |
+| Event                       | Producer              | Consumer              | Purpose                 |
+| --------------------------- | --------------------- | --------------------- | ----------------------- |
+| `tool.used`                 | All tools             | Analytics, Credits    | Track usage             |
+| `credits.deducted`          | CreditService         | Notifications         | Alert user              |
+| `credits.depleted`          | CreditService         | Notifications         | Prompt purchase         |
+| `marketing.credit_depleted` | CreditService         | MarketingEventHandler | Marketing events        |
+| `marketing.threshold`       | MarketingEventHandler | MarketingEvent DB     | Threshold tracking      |
+| `payment:success`           | CreditBillingService  | PaymentListener       | Real-time credit update |
+| `ai.request.completed`      | AIEngine              | Analytics, Billing    | Track costs             |
+| `image.generated`           | Thumbnail             | Storage, Notify       | Save & notify           |
+| `translation.completed`     | ContentTranslator     | Notify                | Deliver result          |
+| `translation.failed`        | ContentTranslator     | Notify                | Error handling          |
+| `payment:success`           | CreditBillingService  | PaymentListener       | Notify user via WS      |
+| `stt:transcript`            | AppGateway            | Frontend              | Live transcript         |
+| `stt:done`                  | AppGateway            | Frontend              | Session complete        |
+| `stt:error`                 | AppGateway            | Frontend              | Session error           |
 
 ### Event-Driven Flow Example — Thumbnail
 
@@ -949,7 +961,228 @@ User credits are **read-only** in admin. Soft delete prevents accidental data lo
 
 ---
 
-## 9. Storage System
+## 9. Payment Gateway
+
+### Architecture — Strategy Pattern
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    PaymentRegistryService                           │
+│  (Orchestrator — resolves strategy by PaymentGateway enum)          │
+├─────────────────────────────────────────────────────────────────────┤
+│  getGateway(type) → IPaymentGateway                                │
+│  listSupported() → PaymentGateway[]                                 │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
+           ┌───────────────────┼───────────────────┐
+           │                   │                   │
+   ┌───────▼──────┐   ┌───────▼──────┐   ┌───────▼──────┐
+   │ MercadoPago  │   │   PayPal     │   │   Stripe     │
+   │   Strategy   │   │  (Planned)   │   │  (Planned)   │
+   ├──────────────┤   ├──────────────┤   ├──────────────┤
+   │ COP payments │   │ USD payments │   │ Multi-curr   │
+   │ HMAC verify  │   │ Webhook verify│  │ Webhook verify│
+   └──────────────┘   └──────────────┘   └──────────────┘
+           │                   │                   │
+           └───────────────────┴───────────────────┘
+                               │
+               ┌───────────────▼───────────────┐
+               │     IPaymentGateway           │
+               │     (Contract/Interface)       │
+               ├───────────────────────────────┤
+               │ getGatewayType()              │
+               │ createCheckoutSession(dto)    │
+               │ verifyWebhook(headers, body)  │
+               └───────────────────────────────┘
+```
+
+### Package Structure
+
+```
+packages/billing/src/
+├── interfaces/
+│   └── payment-gateway.interface.ts    # IPaymentGateway, DTOs, enums
+├── strategies/
+│   └── mercado-pago.strategy.ts        # MercadoPago SDK adapter
+├── services/
+│   ├── payment-registry.service.ts     # Strategy registry (Map<Gateway, Strategy>)
+│   └── credit-billing.service.ts       # Idempotent reconciliation + Redis event
+└── billing.module.ts                   # DI: strategies → factory → registry
+```
+
+### Interface Contract
+
+```typescript
+// IPaymentGateway — every strategy MUST implement this
+interface IPaymentGateway {
+  getGatewayType(): PaymentGateway;
+  createCheckoutSession(data: CreateCheckoutDto): Promise<CheckoutResponse>;
+  verifyWebhook(
+    headers: any,
+    body: any,
+    rawBody?: Buffer,
+  ): Promise<WebhookVerificationResult>;
+}
+
+// DTOs
+interface CreateCheckoutDto {
+  userId: string;
+  amount: number;
+  currency: "COP" | "USD";
+  creditsToBuy: number;
+  description: string;
+}
+
+interface CheckoutResponse {
+  paymentUrl: string; // Redirect user to pay
+  gatewayTxId: string; // Unique ID from gateway (for idempotency)
+}
+
+interface WebhookVerificationResult {
+  isValid: boolean;
+  gatewayTxId: string;
+  status: "SUCCESSFUL" | "FAILED" | "PENDING";
+  metadata?: Record<string, any>;
+}
+```
+
+### Payment Flow
+
+```
+                    ┌──────────┐
+                    │ Frontend │
+                    └────┬─────┘
+                         │
+          POST /api/v1/credits/checkout
+          { planId, gateway: "MERCADO_PAGO" }
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │     CreditsController        │
+          │  1. Lookup SubscriptionPlan  │
+          │  2. Resolve gateway strategy │
+          │  3. Record pending txn in DB │
+          └──────────────┬───────────────┘
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │ MercadoPagoStrategy          │
+          │ .createCheckoutSession()     │
+          │  → SDK: preferences.create() │
+          │  → Returns init_point URL    │
+          └──────────────┬───────────────┘
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │  Return { redirectUrl }      │
+          │  → Frontend redirects user   │
+          └──────────────────────────────┘
+
+                    ┌──────────┐
+                    │ MercadoPago │
+                    │ (External)  │
+                    └────┬────────┘
+                         │
+              POST /api/v1/webhooks/mercado-pago
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │    WebhooksController        │
+          │  1. Resolve gateway strategy │
+          │  2. strategy.verifyWebhook() │
+          │     (HMAC signature check)   │
+          └──────────────┬───────────────┘
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │  CreditBillingService        │
+          │  .reconcilePayment()         │
+          │  1. Idempotency check        │
+          │  2. CreditService.addCredits │
+          │  3. Create CreditTransaction │
+          │  4. Publish payment:success  │
+          └──────────────┬───────────────┘
+                         │
+                    Redis Pub/Sub
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │  PaymentListenerService      │
+          │  (apps/api)                  │
+          │  subscribe → emitToUser()    │
+          └──────────────┬───────────────┘
+                         │
+                    WebSocket
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │  Frontend                    │
+          │  socket.on("payment:success")│
+          │  → Update credit balance     │
+          └──────────────────────────────┘
+```
+
+### Webhook Security — HMAC Verification
+
+MercadoPago firma cada webhook con un secret compartido. La verificación usa HMAC-SHA256:
+
+```
+1. Extract x-signature header → "ts=1718642940,v1=abcdef..."
+2. Build manifest: "id:{gatewayTxId};ts:{timestamp};"
+3. Compute HMAC-SHA256(secret, manifest)
+4. Compare with timing-safe comparison (crypto.timingSafeEqual)
+5. If valid → process payment; if invalid → reject (400)
+```
+
+Fallbacks (in order):
+
+1. **HMAC verification** (preferred, production)
+2. **API fetch** — query MercadoPago API to verify payment status
+3. **Dev mode** — allow processing without verification (NODE_ENV !== 'production')
+
+### Idempotency
+
+`CreditBillingService.reconcilePayment()` checks for existing `CreditTransaction` with the same `referenceId` before processing. Duplicate webhooks are safely ignored.
+
+### Event Integration
+
+After successful reconciliation, the billing service publishes a `payment:success` event via Redis pub/sub (`DomainEventPublisher`). A `PaymentListenerService` in the API subscribes to this event and forwards it to the user via WebSocket (`AppGateway.emitToUser()`).
+
+This avoids circular dependencies between `@creator-hub/billing` (package) and `apps/api` (app).
+
+### Adding a New Gateway
+
+```typescript
+// 1. Create strategy implementing IPaymentGateway
+@Injectable()
+export class StripeStrategy implements IPaymentGateway {
+  getGatewayType() { return PaymentGateway.STRIPE; }
+  async createCheckoutSession(data) { /* Stripe SDK */ }
+  async verifyWebhook(headers, body, rawBody?) { /* Stripe signature */ }
+}
+
+// 2. Add to PaymentGateway enum
+export enum PaymentGateway {
+  MERCADO_PAGO = 'MERCADO_PAGO',
+  PAYPAL = 'PAYPAL',
+  STRIPE = 'STRIP',    // ← new
+}
+
+// 3. Register in billing.module.ts
+{
+  provide: PAYMENT_GATEWAYS,
+  useFactory: (mp, paypal, stripe) => [mp, paypal, stripe],
+  inject: [MercadoPagoStrategy, PayPalStrategy, StripeStrategy],
+}
+
+// 4. Frontend sends gateway: "STRIPE" in checkout request — done.
+```
+
+No controller changes, no database changes, no service changes required.
+
+---
+
+## 10. Storage System
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -988,7 +1221,7 @@ bucket/
 
 ---
 
-## 10. Authentication
+## 11. Authentication
 
 ```
 ┌────────┐          ┌─────────┐          ┌──────────┐
@@ -1018,7 +1251,7 @@ Auth Flow:
 
 ---
 
-## 11. Testing Strategy
+## 12. Testing Strategy
 
 ### Test Pyramid
 
@@ -1069,7 +1302,7 @@ tools/thumbnail-generator/
 
 ---
 
-## 12. CI/CD Strategy
+## 13. CI/CD Strategy
 
 ### GitHub Actions Workflow
 
@@ -1119,7 +1352,7 @@ Commit → Lint → TypeCheck → Unit Tests → Build → Integration Tests →
 
 ---
 
-## 13. Scalability Roadmap
+## 14. Scalability Roadmap
 
 ### Phase 1: MVP (0 → 100 users)
 
@@ -1201,7 +1434,7 @@ Queue-bound?
 
 ---
 
-## 14. Creating a New Tool
+## 15. Creating a New Tool
 
 ### Tool Checklist (< 1 hour)
 

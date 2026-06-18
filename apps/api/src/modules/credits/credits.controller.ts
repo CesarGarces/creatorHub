@@ -1,5 +1,10 @@
-import { Controller, Get, Post, Body, UseGuards } from "@nestjs/common";
-import { CreditService, BillingService } from "@creator-hub/billing";
+import { Controller, Get, Post, Body, UseGuards, Param } from "@nestjs/common";
+import {
+  CreditService,
+  BillingService,
+  PaymentRegistryService,
+} from "@creator-hub/billing";
+import { PaymentGateway } from "@creator-hub/billing";
 import { JwtAuthGuard, CurrentUser } from "@creator-hub/auth";
 import { prisma } from "@creator-hub/database";
 
@@ -9,6 +14,7 @@ export class CreditsController {
   constructor(
     private creditService: CreditService,
     private billingService: BillingService,
+    private paymentRegistry: PaymentRegistryService,
   ) {}
 
   @Get("balance")
@@ -57,5 +63,83 @@ export class CreditsController {
       metadata: e.metadata as Record<string, unknown> | null,
       createdAt: e.createdAt,
     }));
+  }
+
+  @Post("checkout")
+  async checkout(
+    @CurrentUser("id") userId: string,
+    @Body("planId") planId: string,
+    @Body("gateway") gateway?: string,
+  ) {
+    // Find plan (subscription plan used as credit pack)
+    const plan = await prisma.subscriptionPlan.findUnique({
+      where: { id: planId },
+    });
+    if (!plan) throw new Error("Plan not found");
+
+    const credits = plan.creditsPerMonth || 0;
+    const priceCents = plan.price || 0;
+    const amount = (priceCents || 0) / 100; // convert to units expected by gateways
+
+    const gatewayType =
+      gateway === "PAYPAL"
+        ? PaymentGateway.PAYPAL
+        : PaymentGateway.MERCADO_PAGO;
+
+    const paymentGateway = this.paymentRegistry.getGateway(gatewayType);
+
+    const checkout = await paymentGateway.createCheckoutSession({
+      userId,
+      amount,
+      currency: "USD",
+      creditsToBuy: credits,
+      description: `Purchase ${credits} credits - ${plan.name}`,
+    });
+
+    // Record a pending transaction referencing the gateway transaction id for idempotency
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { freeCredits: true, purchasedCredits: true },
+    });
+    const balance = (user?.freeCredits || 0) + (user?.purchasedCredits || 0);
+
+    await prisma.creditTransaction.create({
+      data: {
+        userId,
+        amount: credits,
+        type: "PURCHASE",
+        description: `Pending purchase via ${gatewayType}`,
+        provider: gatewayType,
+        referenceId: checkout.gatewayTxId,
+        balance,
+      },
+    });
+
+    return {
+      redirectUrl: checkout.paymentUrl,
+      gatewayTxId: checkout.gatewayTxId,
+    };
+  }
+
+  @Get("status/:gatewayTxId")
+  async status(
+    @CurrentUser("id") userId: string,
+    @Param("gatewayTxId") gatewayTxId: string,
+  ) {
+    const txn = await prisma.creditTransaction.findFirst({
+      where: { referenceId: gatewayTxId, userId },
+    });
+    if (!txn) return { status: "UNKNOWN" };
+
+    const isPending = txn.description?.toLowerCase().includes("pending");
+    return {
+      status: isPending ? "PENDING" : "COMPLETED",
+      transaction: {
+        id: txn.id,
+        amount: txn.amount,
+        balance: txn.balance,
+        createdAt: txn.createdAt,
+      },
+    };
   }
 }

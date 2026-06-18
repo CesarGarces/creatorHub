@@ -1,5 +1,12 @@
 import { io, Socket } from "socket.io-client";
-import { getAccessToken } from "@/lib/cookie";
+import {
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+  removeAccessToken,
+  removeRefreshToken,
+} from "@/lib/cookie";
+import { toast } from "sonner";
 
 let socket: Socket | null = null;
 
@@ -8,6 +15,7 @@ export function getSocket(): Socket {
   if (socket) return socket;
 
   const token = getAccessToken();
+  const refreshToken = getRefreshToken();
   if (!token) {
     console.error("[Socket] No access token found in cookies");
     throw new Error("No access token available for WebSocket connection");
@@ -22,7 +30,7 @@ export function getSocket(): Socket {
   const apiUrl = rawUrl.replace(/\/api\/v1\/?$/, "");
   console.log("[Socket] Creating socket connection to", apiUrl);
   socket = io(apiUrl, {
-    auth: { token },
+    auth: { token, refreshToken },
     transports: ["websocket"],
     reconnection: true,
     reconnectionDelay: 1000,
@@ -33,6 +41,36 @@ export function getSocket(): Socket {
 
   socket.on("connect_error", (err) => {
     console.error("[Socket] Connection error:", err.message);
+  });
+
+  // Update client storage and socket auth when server refreshes the access token
+  socket.on("auth:refreshed", (data: { accessToken: string }) => {
+    try {
+      console.log("[Socket] Received auth:refreshed, updating local token");
+      setAccessToken(data.accessToken);
+      if (socket) socket.auth = { ...socket.auth, token: data.accessToken };
+    } catch (err) {
+      console.error("[Socket] Failed to apply refreshed token", err);
+    }
+  });
+
+  socket.on("auth_error", (err: { code?: string; message?: string }) => {
+    console.error(
+      "[Socket] Authentication error from server:",
+      err?.message || err,
+    );
+    toast.error("Tu sesión ha expirado. Redirigiendo al login...");
+    // Cleanup local credentials
+    try {
+      removeAccessToken();
+      removeRefreshToken();
+    } catch {}
+
+    // Force disconnect and redirect to login
+    disconnectSocket();
+    setTimeout(() => {
+      if (typeof window !== "undefined") window.location.href = "/auth/login";
+    }, 1200);
   });
 
   return socket;

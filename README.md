@@ -31,6 +31,7 @@ Creator Hub es una plataforma donde los creadores de contenido pueden acceder a 
 | Storage          | Cloudflare R2 (prod) / MinIO (dev)                                                                 |
 | WebSocket        | Socket.IO                                                                                          |
 | Domain Events    | Redis Pub/Sub (ioredis)                                                                            |
+| Payment Gateway  | MercadoPago (Strategy Pattern), PayPal (planned)                                                   |
 | AI               | SiliconFlow (Z-Image-Turbo, FLUX.2-pro, DeepSeek V4), OpenAI, Gemini, Stability AI, Deepgram (STT) |
 | Monorepo         | Turborepo + pnpm workspaces                                                                        |
 
@@ -117,6 +118,65 @@ Estos eventos se almacenan en la tabla `MarketingEvent` y se usan para:
 - Mostrar alertas en la UI (modal de upgrade cuando credits = 0)
 - Logging para futuras integraciones de email/push notifications
 - Analytics de conversión Free → Paid
+
+### Online Payments (Strategy Pattern)
+
+El sistema de pagos en línea usa el patrón **Strategy** para soportar múltiples pasarelas de pago sin acoplar el código a un proveedor específico.
+
+#### Paquete `@creator-hub/billing`
+
+```
+packages/billing/src/
+├── interfaces/
+│   └── payment-gateway.interface.ts    # IPaymentGateway contract
+├── strategies/
+│   └── mercado-pago.strategy.ts        # MercadoPago adapter
+├── services/
+│   ├── payment-registry.service.ts     # Gateway registry (strategy switcher)
+│   └── credit-billing.service.ts       # Reconciliation + WebSocket notification
+└── billing.module.ts                   # DI wiring
+```
+
+#### Flujo de pago
+
+```
+1. Frontend → POST /api/v1/credits/checkout { planId, gateway }
+2. CreditsController → lookup plan → resolve gateway via PaymentRegistryService
+3. MercadoPagoStrategy.createCheckoutSession() → returns { paymentUrl, gatewayTxId }
+4. Controller records pending CreditTransaction in DB
+5. Returns redirectUrl to frontend → user pays on MercadoPago
+6. MercadoPago sends webhook → POST /api/v1/webhooks/mercado-pago
+7. WebhooksController → MercadoPagoStrategy.verifyWebhook() (HMAC validation)
+8. CreditBillingService.reconcilePayment() → add credits + emit payment:success via Redis
+9. PaymentListenerService → forwards event to user via WebSocket
+```
+
+#### Agregar una nueva pasarela
+
+```typescript
+// 1. Crear strategy que implemente IPaymentGateway
+@Injectable()
+export class StripeStrategy implements IPaymentGateway {
+  getGatewayType() { return PaymentGateway.STRIPE; }
+  async createCheckoutSession(data: CreateCheckoutDto) { /* ... */ }
+  async verifyWebhook(headers, body, rawBody?) { /* ... */ }
+}
+
+// 2. Registrar en billing.module.ts
+{
+  provide: PAYMENT_GATEWAYS,
+  useFactory: (mp: MercadoPagoStrategy, stripe: StripeStrategy) => [mp, stripe],
+  inject: [MercadoPagoStrategy, StripeStrategy],
+}
+```
+
+#### Variables de entorno (pagos)
+
+```env
+MERCADO_PAGO_ACCESS_TOKEN=""
+MERCADO_PAGO_WEBHOOK_SECRET=""
+# MP_NOTIFICATION_URL=""  # Opcional - defaults to ${API_URL}/api/v1/webhooks/mercado-pago
+```
 
 ### Selección de proveedor
 
@@ -411,6 +471,20 @@ pnpm db:migrate
 pnpm dev
 ```
 
+## Tests
+
+All automated tests in the monorepo use Vitest as the standard runner. Jest has been removed from the workspace to avoid duplicated test runners and extraneous devDependencies. Run tests across the repo with:
+
+```sh
+pnpm -w test
+```
+
+Run a single package tests (example):
+
+```sh
+pnpm --filter @creator-hub/api test
+```
+
 ## Variables de entorno
 
 ```env
@@ -437,9 +511,15 @@ OPENAI_API_KEY=""
 GEMINI_API_KEY=""
 STABILITY_AI_API_KEY=""
 
+# MercadoPago (Gateway de pagos)
+MERCADO_PAGO_ACCESS_TOKEN=""
+MERCADO_PAGO_WEBHOOK_SECRET=""
+
 # App
-NEXT_PUBLIC_API_URL="http://localhost:3001"
+NEXT_PUBLIC_API_URL="http://localhost:4000"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+API_URL="http://localhost:4000"
+FRONTEND_URL="http://localhost:3000"
 ```
 
 > **Nota:** En desarrollo sin `SILICONFLOW_API_KEY`, se registra automáticamente un `MockImageProvider` que genera imágenes de prueba.
@@ -576,6 +656,10 @@ GET    /api/v1/credits/balance        # Saldo (freeCredits, purchasedCredits, pl
 GET    /api/v1/credits/marketing-events  # Eventos de marketing del usuario
 GET    /api/v1/credits/plans          # Planes de suscripción
 POST   /api/v1/credits/subscribe      # Suscribirse a un plan
+POST   /api/v1/credits/checkout       # Crear sesión de pago (gateway, planId)
+GET    /api/v1/credits/status/:gatewayTxId  # Estado de transacción
+
+POST   /api/v1/webhooks/mercado-pago  # Webhook de MercadoPago (verificación HMAC)
 ```
 
 ## Sistema de créditos

@@ -19,10 +19,12 @@ import { ToolsController } from "./modules/tools/tools.controller";
 import { ImagesController } from "./modules/images/images.controller";
 import { AdminModule } from "./modules/admin/admin.module";
 import { AIController } from "./modules/ai/ai.controller";
+import { WebhooksController } from "./modules/webhooks/webhooks.controller";
 
 import { WebsocketModule } from "./modules/websocket/websocket.module";
 import { ThumbnailListenerModule } from "./modules/thumbnail-listener/thumbnail-listener.module";
 import { TranslationListenerModule } from "./modules/translation-listener/translation-listener.module";
+import { PaymentListenerModule } from "./modules/payment-listener/payment-listener.module";
 
 // Import tools (registers them via registerTool)
 import "@creator-hub/thumbnail-generator";
@@ -61,6 +63,7 @@ import { ContentTranslatorModule } from "@creator-hub/content-translator-backend
     WebsocketModule,
     ThumbnailListenerModule,
     TranslationListenerModule,
+    PaymentListenerModule,
 
     // Tools (registered automatically via ToolSdkModule)
     ThumbnailGeneratorModule,
@@ -72,6 +75,7 @@ import { ContentTranslatorModule } from "@creator-hub/content-translator-backend
     ToolsController,
     ImagesController,
     AIController,
+    WebhooksController,
   ],
 })
 export class AppModule {}

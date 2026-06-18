@@ -1,20 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import api from "@/lib/api";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  Button,
-  Badge,
-  CreditDisplay,
-} from "@creator-hub/ui";
+import { Card, CardContent, CardHeader, Button, Badge } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { useCreditsStore } from "@/store/credits.store";
 
 export default function CreditsPage() {
-  const { balance, fetchBalance } = useCreditsStore();
+  const [loadingPlanId, setLoadingPlanId] = useState<string | null>(null);
+  const { balance } = useCreditsStore();
 
   const { data: plans } = useQuery({
     queryKey: ["plans"],
@@ -25,6 +20,34 @@ export default function CreditsPage() {
     queryKey: ["transactions"],
     queryFn: () => api.get<any[]>("/credits/transactions"),
   });
+
+  const handleSubscription = async (planId: string) => {
+    setLoadingPlanId(planId);
+    try {
+      const res = await api.post<{
+        redirectUrl?: string;
+        gatewayTxId?: string;
+        gatewayUrl?: string;
+      }>("/credits/checkout", { planId });
+      const redirectUrl = (res as any).redirectUrl || (res as any).gatewayUrl;
+      const gatewayTxId = (res as any).gatewayTxId || null;
+      if (redirectUrl) {
+        try {
+          localStorage.setItem(
+            "pendingCreditPurchase",
+            JSON.stringify({ planId, gatewayTxId, createdAt: Date.now() }),
+          );
+        } catch {}
+        window.location.href = redirectUrl;
+      } else {
+        console.error("No redirect URL returned from checkout");
+      }
+    } catch (err) {
+      console.error("Checkout failed", err);
+    } finally {
+      setLoadingPlanId(null);
+    }
+  };
 
   return (
     <>
@@ -101,9 +124,17 @@ export default function CreditsPage() {
                 <div className="p-6 pt-0">
                   <Button
                     variant={plan.price === 0 ? "secondary" : "primary"}
+                    {...(plan.price > 0 ? { "data-test": "buy-plan" } : {})}
                     className="w-full"
+                    onClick={() =>
+                      plan.price > 0 && handleSubscription(plan.id)
+                    }
                   >
-                    {plan.price === 0 ? "Current Plan" : "Subscribe"}
+                    {loadingPlanId === plan.id
+                      ? "Procesando…"
+                      : plan.price === 0
+                        ? "Current Plan"
+                        : "Subscribe"}
                   </Button>
                 </div>
               </Card>

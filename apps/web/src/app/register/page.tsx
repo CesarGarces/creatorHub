@@ -50,6 +50,7 @@ export default function RegisterPage() {
             <Input
               label="Name"
               type="text"
+              name="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="John Doe"
@@ -57,6 +58,7 @@ export default function RegisterPage() {
             <Input
               label="Email"
               type="email"
+              name="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
@@ -65,6 +67,7 @@ export default function RegisterPage() {
             <Input
               label="Password"
               type="password"
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"

@@ -19,7 +19,8 @@ export type EventName =
   | "thumbnail.completed"
   | "thumbnail.failed"
   | "translation.completed"
-  | "translation.failed";
+  | "translation.failed"
+  | "payment.success";
 
 export interface BaseEvent {
   id: string;
@@ -126,6 +127,15 @@ export interface ToolJobUpdatePayload {
   status: "completed" | "failed";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: any;
+}
+
+export interface PaymentSuccessEvent {
+  userId: string;
+  gatewayTxId: string;
+  amount: number;
+  balance: number;
+  gateway: string;
+  timestamp: Date;
 }
 
 export type PlatformEvent =

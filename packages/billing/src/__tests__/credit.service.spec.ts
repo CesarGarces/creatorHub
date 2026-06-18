@@ -1,48 +1,48 @@
 import { CreditService } from "../credit.service";
 import { prisma } from "@creator-hub/database";
 
-jest.mock("@creator-hub/database", () => ({
+vi.mock("@creator-hub/database", () => ({
   prisma: {
     user: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
     },
     creditTransaction: {
-      create: jest.fn(),
+      create: vi.fn(),
     },
     tool: {
-      findUnique: jest.fn(),
+      findUnique: vi.fn(),
     },
-    $transaction: jest.fn(async (fn: (tx: any) => Promise<any>) => fn(prisma)),
+    $transaction: vi.fn(async (fn: (tx: any) => Promise<any>) => fn(prisma)),
   },
 }));
 
-jest.mock("@creator-hub/shared-utils", () => ({
-  Logger: jest.fn().mockImplementation(() => ({
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
+vi.mock("@creator-hub/shared-utils", () => ({
+  Logger: vi.fn().mockImplementation(() => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
   })),
 }));
 
 describe("CreditService", () => {
   let service: CreditService;
   const mockQueue = {
-    add: jest.fn().mockResolvedValue({}),
+    add: vi.fn().mockResolvedValue({}),
   };
   const mockEventEmitter = {
-    emit: jest.fn(),
+    emit: vi.fn(),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     service = new CreditService(mockQueue as any, mockEventEmitter as any);
   });
 
   describe("getBalance", () => {
     it("should return combined balance when user exists", async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
         freeCredits: 50,
         purchasedCredits: 100,
@@ -58,7 +58,7 @@ describe("CreditService", () => {
     });
 
     it("should return 0 when user has no balance record", async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.user.findUnique as any).mockResolvedValue(null);
 
       const balance = await service.getBalance("user-999");
 
@@ -102,7 +102,7 @@ describe("CreditService", () => {
 
   describe("deduct", () => {
     it("should deduct credits successfully using freeCredits first", async () => {
-      (prisma.user.findUnique as jest.Mock)
+      (prisma.user.findUnique as any)
         .mockResolvedValueOnce({
           id: "user-1",
           freeCredits: 80,
@@ -113,8 +113,8 @@ describe("CreditService", () => {
           freeCredits: 70,
           purchasedCredits: 20,
         });
-      (prisma.tool.findUnique as jest.Mock).mockResolvedValue({ id: "tool-1" });
-      (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
+      (prisma.tool.findUnique as any).mockResolvedValue({ id: "tool-1" });
+      (prisma.creditTransaction.create as any).mockResolvedValue({});
 
       const result = await service.deduct("user-1", 10, "tool-1", "Test usage");
 
@@ -129,7 +129,7 @@ describe("CreditService", () => {
     });
 
     it("should split deduction across free and purchased credits", async () => {
-      (prisma.user.findUnique as jest.Mock)
+      (prisma.user.findUnique as any)
         .mockResolvedValueOnce({
           id: "user-1",
           freeCredits: 5,
@@ -140,8 +140,8 @@ describe("CreditService", () => {
           freeCredits: 0,
           purchasedCredits: 15,
         });
-      (prisma.tool.findUnique as jest.Mock).mockResolvedValue(null);
-      (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
+      (prisma.tool.findUnique as any).mockResolvedValue(null);
+      (prisma.creditTransaction.create as any).mockResolvedValue({});
 
       const result = await service.deduct("user-1", 10);
 
@@ -187,7 +187,7 @@ describe("CreditService", () => {
     });
 
     it("should validate toolId exists before deducting", async () => {
-      (prisma.user.findUnique as jest.Mock)
+      (prisma.user.findUnique as any)
         .mockResolvedValueOnce({
           id: "user-1",
           freeCredits: 80,
@@ -198,8 +198,8 @@ describe("CreditService", () => {
           freeCredits: 70,
           purchasedCredits: 20,
         });
-      (prisma.tool.findUnique as jest.Mock).mockResolvedValue({ id: "tool-1" });
-      (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
+      (prisma.tool.findUnique as any).mockResolvedValue({ id: "tool-1" });
+      (prisma.creditTransaction.create as any).mockResolvedValue({});
 
       await service.deduct("user-1", 10, "tool-1");
 
@@ -209,7 +209,7 @@ describe("CreditService", () => {
     });
 
     it("should set toolId to null when tool does not exist", async () => {
-      (prisma.user.findUnique as jest.Mock)
+      (prisma.user.findUnique as any)
         .mockResolvedValueOnce({
           id: "user-1",
           freeCredits: 80,
@@ -220,8 +220,8 @@ describe("CreditService", () => {
           freeCredits: 70,
           purchasedCredits: 20,
         });
-      (prisma.tool.findUnique as jest.Mock).mockResolvedValue(null);
-      (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
+      (prisma.tool.findUnique as any).mockResolvedValue(null);
+      (prisma.creditTransaction.create as any).mockResolvedValue({});
 
       await service.deduct("user-1", 10, "nonexistent-tool");
 
@@ -235,13 +235,13 @@ describe("CreditService", () => {
 
   describe("addCredits", () => {
     it("should add purchased credits and create transaction", async () => {
-      (prisma.user.update as jest.Mock).mockResolvedValue({});
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      (prisma.user.update as any).mockResolvedValue({});
+      (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
         freeCredits: 100,
         purchasedCredits: 200,
       });
-      (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
+      (prisma.creditTransaction.create as any).mockResolvedValue({});
 
       await service.addCredits("user-1", 100, "Purchase", "PURCHASE");
 
@@ -263,13 +263,13 @@ describe("CreditService", () => {
     });
 
     it("should add free credits for non-PURCHASE types", async () => {
-      (prisma.user.update as jest.Mock).mockResolvedValue({});
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      (prisma.user.update as any).mockResolvedValue({});
+      (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
         freeCredits: 150,
         purchasedCredits: 0,
       });
-      (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
+      (prisma.creditTransaction.create as any).mockResolvedValue({});
 
       await service.addCredits("user-1", 50, "Bonus credits");
 

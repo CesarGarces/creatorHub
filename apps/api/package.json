@@ -9,8 +9,7 @@
     "start": "node dist/main",
     "start:prod": "node dist/main",
     "lint": "eslint .",
-    "test": "jest",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test": "vitest --run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -18,6 +17,8 @@
     "@creator-hub/analytics": "workspace:*",
     "@creator-hub/auth": "workspace:*",
     "@creator-hub/billing": "workspace:*",
+    "@creator-hub/content-translator": "workspace:*",
+    "@creator-hub/content-translator-backend": "workspace:*",
     "@creator-hub/database": "workspace:*",
     "@creator-hub/domain-events": "workspace:*",
     "@creator-hub/shared-types": "workspace:*",
@@ -26,8 +27,6 @@
     "@creator-hub/stt-engine": "workspace:*",
     "@creator-hub/thumbnail-generator": "workspace:*",
     "@creator-hub/thumbnail-generator-backend": "workspace:*",
-    "@creator-hub/content-translator": "workspace:*",
-    "@creator-hub/content-translator-backend": "workspace:*",
     "@creator-hub/tool-sdk": "workspace:*",
     "@nestjs/bullmq": "^11.0.0",
     "@nestjs/common": "^11.0.0",
@@ -42,6 +41,7 @@
     "@nestjs/websockets": "^11.0.0",
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^2.4.3",
+    "body-parser": "^2.3.0",
     "bullmq": "^5.0.0",
     "class-transformer": "^0.5.0",
     "class-validator": "^0.14.0",
@@ -58,14 +58,15 @@
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
     "@repo/typescript-config": "workspace:*",
+    "@types/body-parser": "^1.19.6",
     "@types/express": "^4.17.0",
-    "@types/jest": "^29.0.0",
     "@types/node": "^20.0.0",
-    "jest": "^29.0.0",
+    "@types/supertest": "6.0.3",
+    "express": "4.18.2",
     "supertest": "^6.0.0",
-    "ts-jest": "^29.0.0",
     "ts-node": "^10.0.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "1.0.0"
   }
 }

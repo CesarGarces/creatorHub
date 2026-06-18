@@ -7,7 +7,9 @@ import {
   setStoredUser,
   getStoredUser,
   removeStoredUser,
+  setRefreshToken,
 } from "@/lib/cookie";
+import { connectSocket } from "@/lib/socket";
 
 interface User {
   id: string;
@@ -44,16 +46,27 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   login: async (email, password) => {
     set({ isLoading: true });
     try {
-      const res = await api.post<{ accessToken: string; user: User }>(
-        "/auth/login",
-        {
-          email,
-          password,
-        },
-      );
+      const res = await api.post<{
+        accessToken: string;
+        refreshToken?: string;
+        user: User;
+      }>("/auth/login", {
+        email,
+        password,
+      });
       setAccessToken(res.accessToken);
+      if (res.refreshToken) {
+        setRefreshToken(res.refreshToken);
+      }
       setStoredUser(res.user);
       set({ user: res.user, token: res.accessToken });
+
+      // Initialize WebSocket with saved tokens (handshake reads cookies)
+      try {
+        connectSocket();
+      } catch (err) {
+        console.warn("Failed to connect socket after login:", err);
+      }
     } finally {
       set({ isLoading: false });
     }
@@ -62,17 +75,28 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   register: async (email, password, name) => {
     set({ isLoading: true });
     try {
-      const res = await api.post<{ accessToken: string; user: User }>(
-        "/auth/register",
-        {
-          email,
-          password,
-          name,
-        },
-      );
+      const res = await api.post<{
+        accessToken: string;
+        refreshToken?: string;
+        user: User;
+      }>("/auth/register", {
+        email,
+        password,
+        name,
+      });
       setAccessToken(res.accessToken);
+      if (res.refreshToken) {
+        setRefreshToken(res.refreshToken);
+      }
       setStoredUser(res.user);
       set({ user: res.user, token: res.accessToken });
+
+      // Initialize WebSocket with saved tokens (handshake reads cookies)
+      try {
+        connectSocket();
+      } catch (err) {
+        console.warn("Failed to connect socket after register:", err);
+      }
     } finally {
       set({ isLoading: false });
     }

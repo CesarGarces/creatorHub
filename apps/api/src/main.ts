@@ -1,10 +1,22 @@
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
+import * as bodyParser from "body-parser";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Disable built-in body parser so we can capture raw body for webhook verification
+  const app = await NestFactory.create(AppModule, { bodyParser: false as any });
+
+  // Attach raw body to requests for signature verification (used by webhook endpoints)
+  const rawBodySaver = (req: any, res: any, buf: Buffer) => {
+    if (buf && buf.length) {
+      req.rawBody = buf;
+    }
+  };
+
+  app.use(bodyParser.json({ verify: rawBodySaver }));
+  app.use(bodyParser.urlencoded({ extended: true, verify: rawBodySaver }));
 
   const config = new DocumentBuilder()
     .setTitle("Creator Hub API")
