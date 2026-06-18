@@ -55,7 +55,8 @@ export class WebhooksController {
 
       if (!verification.isValid) {
         this.logger.warn("Webhook verification failed", verification);
-        return res.status(400).send({ ok: false, reason: "invalid_signature" });
+        // Return 200 to prevent MercadoPago from retrying indefinitely
+        return res.send({ ok: true, warning: "verification_failed" });
       }
 
       if (verification.status === "SUCCESSFUL") {

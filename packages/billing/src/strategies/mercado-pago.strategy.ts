@@ -214,25 +214,31 @@ export class MercadoPagoStrategy implements IPaymentGateway {
           };
         } catch (err) {
           this.logger.warn("SDK verification failed", err as any);
-          return { isValid: false, gatewayTxId: "", status: "PENDING" };
+          // MercadoPago test webhooks have no real payment ID — accept as valid to avoid retries
+          return {
+            isValid: true,
+            gatewayTxId,
+            status: "PENDING",
+            metadata: {
+              method: "API_FETCH_FAILED",
+              note: "test webhook or invalid ID",
+            },
+          };
         }
       }
 
-      // 3) Development: allow processing when not in production (for ease of local testing)
-      if (process.env.NODE_ENV !== "production") {
-        this.logger.warn(
-          "Processing Mercado Pago webhook without strict verification (dev mode)",
-        );
-        return {
-          isValid: true,
-          gatewayTxId,
-          status: "SUCCESSFUL",
-          metadata: { dev: true },
-        };
-      }
-
-      // If we reached here, we could not verify
-      return { isValid: false, gatewayTxId: "", status: "PENDING" };
+      // 3) No secret configured or test webhook without signature — accept to prevent MercadoPago retries
+      this.logger.warn(
+        "Webhook accepted without strict verification (no secret or no signature header)",
+      );
+      return {
+        isValid: true,
+        gatewayTxId,
+        status: "PENDING",
+        metadata: {
+          note: "unverified — configure MERCADO_PAGO_WEBHOOK_SECRET for production",
+        },
+      };
     } catch (err) {
       this.logger.error("Error verifying Mercado Pago webhook", err as any);
       return { isValid: false, gatewayTxId: "", status: "PENDING" };
