@@ -11,7 +11,7 @@ import {
   WebhookVerificationResult,
   PaymentGateway,
 } from "../interfaces/payment-gateway.interface";
-import * as mercadopago from "mercadopago";
+import { MercadoPagoConfig, Preference, Payment } from "mercadopago";
 
 @Injectable()
 export class MercadoPagoStrategy implements IPaymentGateway {
@@ -21,13 +21,18 @@ export class MercadoPagoStrategy implements IPaymentGateway {
     return PaymentGateway.MERCADO_PAGO;
   }
 
+  private getClient() {
+    const accessToken =
+      process.env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN;
+    if (!accessToken) return null;
+    return new MercadoPagoConfig({ accessToken });
+  }
+
   async createCheckoutSession(
     data: CreateCheckoutDto,
   ): Promise<CheckoutResponse> {
-    // Configure SDK with access token
-    const accessToken =
-      process.env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN;
-    if (!accessToken) {
+    const client = this.getClient();
+    if (!client) {
       if (process.env.NODE_ENV === "production") {
         this.logger.error(
           "MERCADO_PAGO_ACCESS_TOKEN not configured in production",
@@ -43,42 +48,44 @@ export class MercadoPagoStrategy implements IPaymentGateway {
     }
 
     try {
-      if (mercadopago.configurations.setAccessToken) {
-        mercadopago.configurations.setAccessToken(accessToken);
-      } else {
-        (mercadopago as any).configure({ access_token: accessToken });
-      }
+      const preference = new Preference(client);
 
-      const preference: any = {
-        items: [
-          {
-            id: `credits_${data.creditsToBuy}`,
-            title: data.description,
-            quantity: 1,
-            currency_id: data.currency,
-            unit_price: Number(data.amount),
+      const notificationUrl =
+        process.env.MP_NOTIFICATION_URL ||
+        (process.env.API_URL
+          ? `${process.env.API_URL.replace(/\/$/, "")}/api/v1/webhooks/mercado-pago`
+          : undefined);
+
+      const resp = await preference.create({
+        body: {
+          items: [
+            {
+              id: `credits_${data.creditsToBuy}`,
+              title: data.description,
+              quantity: 1,
+              currency_id: data.currency,
+              unit_price: Number(data.amount),
+            },
+          ],
+          external_reference: data.userId,
+          ...(notificationUrl ? { notification_url: notificationUrl } : {}),
+          back_urls: {
+            success:
+              process.env.FRONTEND_URL ||
+              "https://app.creatorhub.local/success",
+            failure:
+              process.env.FRONTEND_URL ||
+              "https://app.creatorhub.local/failure",
           },
-        ],
-        external_reference: data.userId,
-        notification_url:
-          process.env.MP_NOTIFICATION_URL ||
-          (process.env.API_URL &&
-            `${process.env.API_URL.replace(/\/$/, "")}/api/v1/webhooks/mercado-pago`),
-        back_urls: {
-          success:
-            process.env.FRONTEND_URL || "https://app.creatorhub.local/success",
-          failure:
-            process.env.FRONTEND_URL || "https://app.creatorhub.local/failure",
+          auto_return: "approved",
         },
-        auto_return: "approved",
-      };
+      });
 
-      const resp: any = await mercadopago.preferences.create(preference);
-      const pref = resp && resp.body ? resp.body : resp;
-      const gatewayTxId = pref.id || `mp_pref_${crypto.randomUUID()}`;
+      const gatewayTxId =
+        (resp as any).id?.toString() || `mp_pref_${crypto.randomUUID()}`;
       const paymentUrl =
-        pref.init_point ||
-        pref.sandbox_init_point ||
+        (resp as any).init_point ||
+        (resp as any).sandbox_init_point ||
         `https://www.mercadopago.com/checkout/v1/redirect?pref_id=${gatewayTxId}`;
 
       this.logger.log(
@@ -91,7 +98,6 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         "Mercado Pago SDK error creating preference",
         err as any,
       );
-      // In production, surface as Service Unavailable so UI can handle gracefully
       if (process.env.NODE_ENV === "production") {
         throw new ServiceUnavailableException(
           "Could not create Mercado Pago preference",
@@ -115,7 +121,7 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         process.env.MERCADO_PAGO_WEBHOOK_SECRET ||
         process.env.MP_WEBHOOK_SECRET;
 
-      // 1) Preferred: HMAC signature verification using provided secret and header 'x-signature'
+      // 1) Preferred: HMAC signature verification
       const signatureHeader =
         headers["x-signature"] ||
         headers["x-meli-signature"] ||
@@ -123,7 +129,6 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         headers["x-hub-signature"];
 
       if (secret && signatureHeader) {
-        // Signature may be like: "ts=1718642940,v1=abcdef..."
         const parts = String(signatureHeader)
           .split(",")
           .map((p) => p.trim());
@@ -132,7 +137,6 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         const ts = tsPart ? tsPart.split("=")[1] : undefined;
         const v1 = v1Part ? v1Part.split("=")[1] : undefined;
 
-        // if signature header present but missing required pieces, fail fast
         if (!ts || !v1 || !gatewayTxId) {
           this.logger.warn(
             "Malformed signature header or missing gateway transaction id",
@@ -141,20 +145,16 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         }
 
         if (ts && v1 && gatewayTxId) {
-          // Manifest recommended: join id and timestamp in a deterministic way
           const manifest = `id:${gatewayTxId};ts:${ts};`;
           const computed = crypto
             .createHmac("sha256", secret)
             .update(manifest)
             .digest("hex");
-          // debug logging removed
-          // compare as raw hex bytes
           const compBuf = Buffer.from(computed, "hex");
           const v1Buf = Buffer.from(v1, "hex");
           let isValid =
             compBuf.length === v1Buf.length &&
             crypto.timingSafeEqual(compBuf, v1Buf);
-          // fallback to direct string equality for compatibility with alternate encodings
           if (!isValid) {
             isValid = computed === v1;
           }
@@ -177,25 +177,15 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         }
       }
 
-      // 2) Fallback: verify via Mercado Pago API (best-effort) when access token is configured
-      const accessToken =
-        process.env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN;
-      if (accessToken && gatewayTxId) {
+      // 2) Fallback: verify via Mercado Pago API
+      const client = this.getClient();
+      if (client && gatewayTxId) {
         try {
-          if (mercadopago.configurations.setAccessToken) {
-            mercadopago.configurations.setAccessToken(accessToken);
-          } else {
-            (mercadopago as any).configure({ access_token: accessToken });
-          }
-
-          const paymentResp: any = await (mercadopago.payment
-            ? mercadopago.payment.get(gatewayTxId)
-            : (mercadopago as any).payments.get(gatewayTxId));
-          const payment =
-            paymentResp && paymentResp.body ? paymentResp.body : paymentResp;
+          const paymentClient = new Payment(client);
+          const payment = await paymentClient.get({ id: gatewayTxId });
           const statusStr = (
-            payment?.status ||
-            payment?.collection_status ||
+            (payment as any)?.status ||
+            (payment as any)?.collection_status ||
             ""
           )
             .toString()
@@ -214,7 +204,6 @@ export class MercadoPagoStrategy implements IPaymentGateway {
           };
         } catch (err) {
           this.logger.warn("SDK verification failed", err as any);
-          // MercadoPago test webhooks have no real payment ID — accept as valid to avoid retries
           return {
             isValid: true,
             gatewayTxId,
@@ -227,7 +216,7 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         }
       }
 
-      // 3) No secret configured or test webhook without signature — accept to prevent MercadoPago retries
+      // 3) No secret or test webhook — accept
       this.logger.warn(
         "Webhook accepted without strict verification (no secret or no signature header)",
       );
@@ -255,11 +244,7 @@ export class MercadoPagoStrategy implements IPaymentGateway {
       clean.includes("paid")
     )
       return "SUCCESSFUL";
-    if (
-      clean.includes("rejected") ||
-      clean.includes("cancelled") ||
-      clean.includes("cancelled")
-    )
+    if (clean.includes("rejected") || clean.includes("cancelled"))
       return "FAILED";
     return "PENDING";
   }
