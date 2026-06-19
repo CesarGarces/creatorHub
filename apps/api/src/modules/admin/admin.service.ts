@@ -9,6 +9,10 @@ import { prisma } from "@creator-hub/database";
 import * as bcrypt from "bcryptjs";
 import { CreateProviderDto, UpdateProviderDto } from "./dto/provider.dto";
 import { CreateUserDto, UpdateUserDto } from "./dto/user.dto";
+import {
+  CreateCreditPlanDto,
+  UpdateCreditPlanDto,
+} from "./dto/credit-plan.dto";
 
 @Injectable()
 export class AdminService {
@@ -465,5 +469,85 @@ export class AdminService {
     return Array.from(grouped.entries())
       .map(([month, count]) => ({ month, count }))
       .sort((a, b) => a.month.localeCompare(b.month));
+  }
+
+  // ──────────────────────────────────────────────
+  // Credit Plans
+  // ──────────────────────────────────────────────
+
+  async findAllCreditPlans(): Promise<any> {
+    return prisma.creditPlan.findMany({
+      orderBy: [{ sortOrder: "asc" }, { usdAmount: "asc" }],
+    });
+  }
+
+  async findCreditPlanById(id: string): Promise<any> {
+    const plan = await prisma.creditPlan.findUnique({ where: { id } });
+    if (!plan) throw new NotFoundException("Credit plan not found");
+    return plan;
+  }
+
+  async findCreditPlanBySlug(slug: string): Promise<any> {
+    const plan = await prisma.creditPlan.findUnique({ where: { slug } });
+    if (!plan) throw new NotFoundException("Credit plan not found");
+    return plan;
+  }
+
+  async createCreditPlan(dto: CreateCreditPlanDto): Promise<any> {
+    const existing = await prisma.creditPlan.findUnique({
+      where: { slug: dto.slug },
+    });
+    if (existing) {
+      throw new BadRequestException(
+        `Credit plan with slug "${dto.slug}" already exists`,
+      );
+    }
+
+    return prisma.creditPlan.create({
+      data: {
+        slug: dto.slug,
+        name: dto.name,
+        description: dto.description,
+        usdAmount: dto.usdAmount,
+        creditsGiven: dto.creditsGiven,
+        isActive: dto.isActive ?? true,
+        sortOrder: dto.sortOrder ?? 0,
+      },
+    });
+  }
+
+  async updateCreditPlan(id: string, dto: UpdateCreditPlanDto): Promise<any> {
+    await this.findCreditPlanById(id);
+
+    if (dto.slug) {
+      const existing = await prisma.creditPlan.findFirst({
+        where: { slug: dto.slug, id: { not: id } },
+      });
+      if (existing) {
+        throw new BadRequestException(
+          `Credit plan with slug "${dto.slug}" already exists`,
+        );
+      }
+    }
+
+    return prisma.creditPlan.update({
+      where: { id },
+      data: {
+        ...(dto.slug !== undefined && { slug: dto.slug }),
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.usdAmount !== undefined && { usdAmount: dto.usdAmount }),
+        ...(dto.creditsGiven !== undefined && {
+          creditsGiven: dto.creditsGiven,
+        }),
+        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+        ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
+      },
+    });
+  }
+
+  async deleteCreditPlan(id: string): Promise<any> {
+    await this.findCreditPlanById(id);
+    return prisma.creditPlan.delete({ where: { id } });
   }
 }

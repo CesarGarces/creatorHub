@@ -34,10 +34,12 @@ export default function CreditsPage() {
   const [buyAmount, setBuyAmount] = useState("10");
   const [buyLoading, setBuyLoading] = useState(false);
 
-  const { data: plans } = useQuery({
+  const { data: allPlans } = useQuery({
     queryKey: ["plans"],
     queryFn: () => api.get<any[]>("/credits/plans"),
   });
+
+  const plans = allPlans?.filter((p) => p.slug !== "PAY_AS_YOU_GO");
 
   const { data: transactions } = useQuery({
     queryKey: ["transactions"],
@@ -54,11 +56,12 @@ export default function CreditsPage() {
   const handleSubscribe = async (plan: {
     id: string;
     name: string;
-    price: number;
+    usdAmount: number;
+    creditsGiven: number;
   }) => {
     setSelectedPlan({
       name: plan.name,
-      price: `$${((plan.price || 0) / 100).toFixed(2)}/mo`,
+      price: `$${plan.usdAmount.toFixed(2)}`,
     });
     setModalOpen(true);
     setActivePreferenceId(null);
@@ -198,16 +201,14 @@ export default function CreditsPage() {
 
         {/* Plans */}
         <div>
-          <h2 className="text-lg font-semibold text-text mb-4">
-            Subscription Plans
-          </h2>
+          <h2 className="text-lg font-semibold text-text mb-4">Credit Plans</h2>
           <div className="grid gap-6 md:grid-cols-3">
             {plans?.map((plan: any) => (
               <Card
                 key={plan.id}
                 className="flex flex-col relative overflow-hidden"
               >
-                {plan.price > 0 && (
+                {plan.slug === "STARTER" && (
                   <div className="absolute top-0 right-0">
                     <Badge
                       variant="primary"
@@ -222,40 +223,29 @@ export default function CreditsPage() {
                     {plan.name}
                   </h3>
                   <p className="text-3xl font-bold text-text">
-                    ${((plan.price || 0) / 100).toFixed(2)}
-                    <span className="text-sm font-normal text-text-muted">
-                      /mo
-                    </span>
+                    ${plan.usdAmount.toFixed(2)}
                   </p>
                   <p className="text-sm text-text-muted">
-                    {plan.creditsPerMonth} credits/month
+                    {plan.creditsGiven.toLocaleString()} credits
                   </p>
                 </CardHeader>
                 <CardContent className="flex-1">
-                  <ul className="space-y-3">
-                    {plan.features?.map((f: string, i: number) => (
-                      <li
-                        key={i}
-                        className="flex items-center gap-2 text-sm text-text-muted"
-                      >
-                        <span className="text-secondary">✓</span> {f}
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="text-sm text-text-muted">{plan.description}</p>
+                  <p className="mt-3 text-xs text-text-dim">
+                    ${((plan.usdAmount / plan.creditsGiven) * 100).toFixed(1)}¢
+                    per credit
+                  </p>
                 </CardContent>
                 <div className="p-6 pt-0">
                   <Button
-                    variant={plan.price === 0 ? "secondary" : "primary"}
-                    {...(plan.price > 0 ? { "data-test": "buy-plan" } : {})}
+                    variant="primary"
                     className="w-full"
                     disabled={loadingPlanId === plan.id}
-                    onClick={() => plan.price > 0 && handleSubscribe(plan)}
+                    onClick={() => handleSubscribe(plan)}
                   >
                     {loadingPlanId === plan.id
-                      ? "Procesando…"
-                      : plan.price === 0
-                        ? "Current Plan"
-                        : "Subscribe"}
+                      ? "Procesando..."
+                      : "Buy Credits"}
                   </Button>
                 </div>
               </Card>
@@ -284,8 +274,8 @@ export default function CreditsPage() {
           </DialogHeader>
           <div className="px-6 pb-6 space-y-4">
             <p className="text-sm text-text-muted">
-              Enter the amount in dollars (minimum $10). Each dollar equals 1
-              credit.
+              Enter the amount in dollars (minimum $10). Credits are calculated
+              based on the Pay as you go plan rate.
             </p>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium">
@@ -301,7 +291,8 @@ export default function CreditsPage() {
               />
             </div>
             <p className="text-xs text-text-dim">
-              You will receive {Math.floor(parseFloat(buyAmount) || 0)} credits
+              You will receive approximately{" "}
+              {Math.floor((parseFloat(buyAmount) || 0) * 100)} credits
             </p>
             <div className="flex justify-end gap-3">
               <Button

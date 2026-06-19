@@ -50,12 +50,26 @@ export class CreditBillingService {
       raw?.resource?.amount ||
       raw?.transaction_amount ||
       0;
-    const credits = Math.floor(amountValue || 0);
 
     if (!userId) {
       this.logger.warn(
         "Cannot reconcile payment without external_reference (userId)",
       );
+      return false;
+    }
+
+    // Look up PAY_AS_YOU_GO plan for credit conversion rate
+    const paygPlan = await prisma.creditPlan.findUnique({
+      where: { slug: "PAY_AS_YOU_GO" },
+    });
+
+    // Calculate credits based on the plan's conversion rate
+    const credits = paygPlan
+      ? Math.floor((amountValue / paygPlan.usdAmount) * paygPlan.creditsGiven)
+      : Math.floor(amountValue * 100); // fallback: 100 credits per dollar
+
+    if (credits <= 0) {
+      this.logger.warn(`Calculated 0 credits for payment ${referenceId}`);
       return false;
     }
 

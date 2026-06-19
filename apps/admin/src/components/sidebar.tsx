@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Cpu, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, Cpu, Users, CreditCard, LogOut } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/providers", label: "Providers", icon: Cpu },
   { href: "/users", label: "Users", icon: Users },
+  { href: "/credit-plans", label: "Credit Plans", icon: CreditCard },
 ];
 
 export function Sidebar() {

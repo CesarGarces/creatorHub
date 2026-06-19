@@ -29,6 +29,10 @@ import {
   UserPlanDto,
   UserRoleDto,
 } from "./dto/user.dto";
+import {
+  CreateCreditPlanDto,
+  UpdateCreditPlanDto,
+} from "./dto/credit-plan.dto";
 
 @Controller("admin")
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -172,5 +176,39 @@ export class AdminController {
     @Query("months", new DefaultValuePipe(12), ParseIntPipe) months: number,
   ): Promise<any> {
     return this.adminService.getRegistrationsByMonth(months);
+  }
+
+  // ──────────────────────────────────────────────
+  // Credit Plans
+  // ──────────────────────────────────────────────
+
+  @Get("credit-plans")
+  async getCreditPlans(): Promise<any> {
+    return this.adminService.findAllCreditPlans();
+  }
+
+  @Get("credit-plans/:id")
+  async getCreditPlan(@Param("id") id: string): Promise<any> {
+    return this.adminService.findCreditPlanById(id);
+  }
+
+  @Post("credit-plans")
+  async createCreditPlan(
+    @Body(ValidationPipe) dto: CreateCreditPlanDto,
+  ): Promise<any> {
+    return this.adminService.createCreditPlan(dto);
+  }
+
+  @Put("credit-plans/:id")
+  async updateCreditPlan(
+    @Param("id") id: string,
+    @Body(ValidationPipe) dto: UpdateCreditPlanDto,
+  ): Promise<any> {
+    return this.adminService.updateCreditPlan(id, dto);
+  }
+
+  @Delete("credit-plans/:id")
+  async deleteCreditPlan(@Param("id") id: string): Promise<any> {
+    return this.adminService.deleteCreditPlan(id);
   }
 }

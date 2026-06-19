@@ -161,6 +161,19 @@ model CreditTransaction {
   tool Tool? @relation(fields: [toolId], references: [id])
 }
 
+model CreditPlan {
+  id           String   @id @default(cuid())
+  slug         String   @unique // PAY_AS_YOU_GO, STARTER, PRO
+  name         String   // Display name: "Pay as you go", "Starter", "Pro"
+  description  String?
+  usdAmount    Float    // Price in USD (e.g., 10.0, 25.0, 50.0)
+  creditsGiven Int      // Credits given on purchase (e.g., 1000, 2700, 6000)
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0) // display order on the pricing page
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 enum CreditTransactionType {
   PURCHASE
   USAGE

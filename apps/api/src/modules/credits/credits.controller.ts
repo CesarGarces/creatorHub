@@ -112,15 +112,14 @@ export class CreditsController {
     @Body("planId") planId: string,
     @Body("gateway") gateway?: string,
   ) {
-    // Find plan (subscription plan used as credit pack)
-    const plan = await prisma.subscriptionPlan.findUnique({
+    // Find credit plan (admin-configurable)
+    const plan = await prisma.creditPlan.findUnique({
       where: { id: planId },
     });
     if (!plan) throw new Error("Plan not found");
 
-    const credits = plan.creditsPerMonth || 0;
-    const priceCents = plan.price || 0;
-    const amount = (priceCents || 0) / 100; // convert to units expected by gateways
+    const credits = plan.creditsGiven;
+    const amount = plan.usdAmount;
 
     const gatewayType =
       gateway === "PAYPAL"
@@ -134,7 +133,7 @@ export class CreditsController {
       amount,
       currency: "USD",
       creditsToBuy: credits,
-      description: `Purchase ${credits} credits - ${plan.name}`,
+      description: `${credits} credits - ${plan.name}`,
     });
 
     return {
@@ -153,7 +152,16 @@ export class CreditsController {
       throw new Error("Minimum amount is $10");
     }
 
-    const credits = Math.floor(amount); // 1 dollar = 1 credit
+    // Look up PAY_AS_YOU_GO plan for credit conversion rate
+    const paygPlan = await prisma.creditPlan.findUnique({
+      where: { slug: "PAY_AS_YOU_GO" },
+    });
+
+    // Calculate credits: (amount / plan price) * plan credits
+    const credits = paygPlan
+      ? Math.floor((amount / paygPlan.usdAmount) * paygPlan.creditsGiven)
+      : Math.floor(amount * 100); // fallback: 100 credits per dollar
+
     const gatewayType = PaymentGateway.MERCADO_PAGO;
     const paymentGateway = this.paymentRegistry.getGateway(gatewayType);
 
@@ -162,7 +170,7 @@ export class CreditsController {
       amount,
       currency: "USD",
       creditsToBuy: credits,
-      description: `Purchase ${credits} credits`,
+      description: `${credits} credits`,
     });
 
     return {

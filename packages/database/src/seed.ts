@@ -76,6 +76,50 @@ async function main() {
     });
   }
 
+  // ──────────────────────────────────────────────
+  // CREDIT PLANS (admin-configurable pay-as-you-go)
+  // ──────────────────────────────────────────────
+  const creditPlans = [
+    {
+      slug: "PAY_AS_YOU_GO",
+      name: "Pay as you go",
+      description: "Buy credits anytime, no commitment",
+      usdAmount: 10.0,
+      creditsGiven: 1000,
+      sortOrder: 0,
+    },
+    {
+      slug: "STARTER",
+      name: "Starter",
+      description: "Best value for getting started",
+      usdAmount: 25.0,
+      creditsGiven: 2700,
+      sortOrder: 1,
+    },
+    {
+      slug: "PRO",
+      name: "Pro",
+      description: "Maximum credits for power users",
+      usdAmount: 50.0,
+      creditsGiven: 6000,
+      sortOrder: 2,
+    },
+  ];
+
+  for (const cp of creditPlans) {
+    await prisma.creditPlan.upsert({
+      where: { slug: cp.slug },
+      update: {
+        name: cp.name,
+        description: cp.description,
+        usdAmount: cp.usdAmount,
+        creditsGiven: cp.creditsGiven,
+        sortOrder: cp.sortOrder,
+      },
+      create: cp,
+    });
+  }
+
   // Seed AI providers
   const providers = [
     {

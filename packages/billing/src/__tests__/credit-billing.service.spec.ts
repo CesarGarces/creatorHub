@@ -8,6 +8,9 @@ vi.mock("@creator-hub/database", () => ({
       findFirst: vi.fn(),
       create: vi.fn(),
     },
+    creditPlan: {
+      findUnique: vi.fn(),
+    },
     $transaction: vi.fn(async (fn: (tx: any) => Promise<any>) => fn(prisma)),
   },
 }));
@@ -62,6 +65,11 @@ describe("CreditBillingService (notifications)", () => {
 
   it("creates transaction and emits payment:success on successful reconciliation", async () => {
     (prisma.creditTransaction.findFirst as jest.Mock).mockResolvedValue(null);
+    (prisma.creditPlan.findUnique as jest.Mock).mockResolvedValue({
+      slug: "PAY_AS_YOU_GO",
+      usdAmount: 10.0,
+      creditsGiven: 1000,
+    });
     (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({
       id: "txn-123",
     });
@@ -79,7 +87,7 @@ describe("CreditBillingService (notifications)", () => {
     expect(mockEventPublisher.publish).toHaveBeenCalledWith("payment:success", {
       userId: "user-42",
       gatewayTxId: "mp_abc",
-      amount: 120,
+      amount: 12000, // 120 / 10 * 1000 = 12000 credits
       balance: 200,
       gateway: PaymentGateway.MERCADO_PAGO,
       timestamp: expect.any(Date),

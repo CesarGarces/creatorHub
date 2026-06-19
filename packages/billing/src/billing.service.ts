@@ -7,8 +7,9 @@ export class BillingService {
   private logger = new Logger("BillingService");
 
   async getPlans() {
-    return prisma.subscriptionPlan.findMany({
+    return prisma.creditPlan.findMany({
       where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { usdAmount: "asc" }],
     });
   }
 
