@@ -1,41 +1,105 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-import CreditPurchaseForm from "@/components/credit-purchase/CreditPurchaseForm";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { vi, describe, it, expect, beforeEach } from "vitest";
+import { renderWithProviders } from "./test-utils";
+import CreditsPage from "@/components/credit-purchase/CreditPurchaseForm";
 
 vi.mock("@/lib/api", () => ({
   default: {
-    get: vi
-      .fn()
-      .mockResolvedValue([
-        { id: "plan_basic", name: "Basic", priceCents: 500, credits: 50 },
-      ]),
-    post: vi.fn().mockResolvedValue({
-      redirectUrl: "https://checkout.example/123",
-      gatewayTxId: "mp_pref_123",
-    }),
+    get: vi.fn(),
+    post: vi.fn(),
   },
 }));
 
+vi.mock("@/components/layout/top-bar", () => ({
+  TopBar: () => <div data-testid="topbar" />,
+}));
+
+vi.mock("@/store/credits.store", () => ({
+  useCreditsStore: Object.assign(
+    vi.fn(() => ({
+      balance: 0,
+      freeCredits: 0,
+      purchasedCredits: 0,
+      plan: "FREE",
+      isLoading: false,
+      error: null,
+    })),
+    {
+      getState: vi.fn(() => ({
+        balance: 0,
+        freeCredits: 0,
+        purchasedCredits: 0,
+        plan: "FREE",
+        isLoading: false,
+        error: null,
+      })),
+    },
+  ),
+}));
+
+const mockCheckout = vi.fn().mockResolvedValue({
+  redirectUrl: "https://mp.com/checkout",
+  gatewayTxId: "mp_123",
+});
+
+vi.mock("@/hooks/useCheckout", () => ({
+  default: vi.fn(() => ({
+    checkout: mockCheckout,
+    loadingPlanId: null,
+  })),
+}));
+
+import api from "@/lib/api";
+
 describe("CreditPurchaseForm integration", () => {
-  it("fetches plans and redirects on buy", async () => {
-    const originalLocation = window.location;
-    // @ts-expect-error testing mock
-    delete window.location;
-    // @ts-expect-error testing mock
-    window.location = { href: "" } as any;
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    render(<CreditPurchaseForm />);
+  it("loads plans and shows them on screen", async () => {
+    (api.get as any).mockImplementation((url: string) => {
+      if (url === "/credits/plans")
+        return Promise.resolve([
+          { id: "p1", name: "Starter", usdAmount: 25, creditsGiven: 2700 },
+        ]);
+      if (url === "/credits/transactions") return Promise.resolve([]);
+      return Promise.resolve([]);
+    });
 
-    expect(await screen.findByText("Comprar créditos")).toBeTruthy();
-    const buyButton = await screen.findByText("Comprar");
-    fireEvent.click(buyButton);
+    renderWithProviders(<CreditsPage />);
 
-    // allow promises to resolve
-    await new Promise((r) => setTimeout(r, 50));
+    await waitFor(() => {
+      expect(screen.getByText("Starter")).toBeTruthy();
+    });
+  });
 
-    expect(window.location.href).toBe("https://checkout.example/123");
+  it("opens buy modal and calls API on Pay button", async () => {
+    (api.get as any).mockImplementation((url: string) => {
+      if (url === "/credits/plans") return Promise.resolve([]);
+      if (url === "/credits/transactions") return Promise.resolve([]);
+      return Promise.resolve([]);
+    });
+    (api.post as any).mockResolvedValue({
+      redirectUrl: "https://mp.com/pay",
+      gatewayTxId: "mp_456",
+    });
 
-    // restore
-    window.location = originalLocation;
+    renderWithProviders(<CreditsPage />);
+
+    fireEvent.click(screen.getByText("Buy More Credits"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Buy Credits")).toBeTruthy();
+    });
+
+    const payButton = screen.getByRole("button", { name: /Pay \$/i });
+    fireEvent.click(payButton);
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith("/credits/custom-checkout", {
+        amount: 10,
+      });
+    });
   });
 });

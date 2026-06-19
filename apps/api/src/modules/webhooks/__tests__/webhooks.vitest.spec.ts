@@ -73,7 +73,7 @@ describe("WebhooksController (express integration)", () => {
     expect(callArgs[2]).toEqual(payload);
   });
 
-  it("rejects invalid signature with 400", async () => {
+  it("rejects invalid signature but returns 200 to prevent MP retries", async () => {
     // arrange: next verification will be invalid
     mockVerify.mockResolvedValueOnce({ isValid: false });
     const payload = { data: { id: "mp_tx_123" } };
@@ -83,7 +83,7 @@ describe("WebhooksController (express integration)", () => {
       .set("x-signature", "ts=123,v1=bad")
       .send(payload);
 
-    expect(res.status).toBe(400);
-    expect(res.body).toEqual({ ok: false, reason: "invalid_signature" });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true, warning: "verification_failed" });
   });
 });

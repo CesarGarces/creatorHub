@@ -1,47 +1,105 @@
 import React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import CreditPurchaseForm from "@/components/credit-purchase/CreditPurchaseForm";
-import { vi } from "vitest";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { vi, describe, it, expect, beforeEach } from "vitest";
+import { renderWithProviders } from "./test-utils";
+import CreditsPage from "@/components/credit-purchase/CreditPurchaseForm";
 
-vi.mock("@/lib/api", () => {
-  return {
-    default: {
-      get: vi
-        .fn()
-        .mockResolvedValue([
-          { id: "p1", name: "Starter", priceCents: 500, credits: 50 },
-        ]),
-      post: vi
-        .fn()
-        .mockResolvedValue({ redirectUrl: "https://example.com/checkout" }),
+vi.mock("@/lib/api", () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+  },
+}));
+
+vi.mock("@/components/layout/top-bar", () => ({
+  TopBar: () => <div data-testid="topbar" />,
+}));
+
+vi.mock("@/store/credits.store", () => ({
+  useCreditsStore: Object.assign(
+    vi.fn(() => ({
+      balance: 500,
+      freeCredits: 100,
+      purchasedCredits: 400,
+      plan: "STARTER",
+      isLoading: false,
+      error: null,
+    })),
+    {
+      getState: vi.fn(() => ({
+        balance: 500,
+        freeCredits: 100,
+        purchasedCredits: 400,
+        plan: "STARTER",
+        isLoading: false,
+        error: null,
+      })),
     },
-  };
-});
+  ),
+}));
+
+vi.mock("@/hooks/useCheckout", () => ({
+  default: vi.fn(() => ({
+    checkout: vi
+      .fn()
+      .mockResolvedValue({ redirectUrl: "https://mp.com/checkout" }),
+    loadingPlanId: null,
+  })),
+}));
+
+import api from "@/lib/api";
 
 describe("CreditPurchaseForm", () => {
-  it("renders plans and starts checkout", async () => {
-    render(<CreditPurchaseForm />);
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    expect(screen.getByText(/Loading plans/i)).toBeTruthy();
+  it("renders balance and buy button", async () => {
+    (api.get as any).mockImplementation((url: string) => {
+      if (url === "/credits/plans") return Promise.resolve([]);
+      if (url === "/credits/transactions") return Promise.resolve([]);
+      return Promise.resolve([]);
+    });
 
-    await waitFor(() => expect(screen.getByText(/Starter/)).toBeTruthy());
+    renderWithProviders(<CreditsPage />);
 
-    const buy = screen.getByRole("button", { name: /Comprar/i });
+    expect(screen.getByText("Current Balance")).toBeTruthy();
+    expect(screen.getByText("Buy More Credits")).toBeTruthy();
+  });
 
-    // prevent jsdom navigation by mocking window.location
-    const origLocation = window.location;
-    // @ts-expect-error testing mock
-    delete window.location;
-    // @ts-expect-error testing mock
-    window.location = { href: "" };
+  it("displays plans from API", async () => {
+    (api.get as any).mockImplementation((url: string) => {
+      if (url === "/credits/plans")
+        return Promise.resolve([
+          { id: "p1", name: "Starter", usdAmount: 25, creditsGiven: 2700 },
+          { id: "p2", name: "Pro", usdAmount: 50, creditsGiven: 6000 },
+        ]);
+      if (url === "/credits/transactions") return Promise.resolve([]);
+      return Promise.resolve([]);
+    });
 
-    fireEvent.click(buy);
+    renderWithProviders(<CreditsPage />);
 
-    // since we mocked post to return redirectUrl, ensure button becomes disabled
-    await waitFor(() => expect((buy as HTMLButtonElement).disabled).toBe(true));
+    await waitFor(() => {
+      expect(screen.getByText("Starter")).toBeTruthy();
+      expect(screen.getByText("Pro")).toBeTruthy();
+    });
+  });
 
-    // restore
-    // @ts-expect-error testing mock
-    window.location = origLocation;
+  it("opens buy credits modal when clicking Buy More Credits", async () => {
+    (api.get as any).mockImplementation((url: string) => {
+      if (url === "/credits/plans") return Promise.resolve([]);
+      if (url === "/credits/transactions") return Promise.resolve([]);
+      return Promise.resolve([]);
+    });
+
+    renderWithProviders(<CreditsPage />);
+
+    fireEvent.click(screen.getByText("Buy More Credits"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Buy Credits")).toBeTruthy();
+      expect(screen.getByText(/Enter the amount in dollars/i)).toBeTruthy();
+    });
   });
 });

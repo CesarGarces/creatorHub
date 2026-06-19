@@ -1,24 +1,63 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-import express from "express";
-import bodyParser from "body-parser";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { vi, describe, it, expect, beforeAll, afterAll } from "vitest";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const express = require("express") as any;
 import type { Server } from "http";
+import { renderWithProviders } from "./test-utils";
 
-// Start an express server with real endpoints
+vi.mock("@/components/layout/top-bar", () => ({
+  TopBar: () => <div data-testid="topbar" />,
+}));
+
+vi.mock("@/store/credits.store", () => ({
+  useCreditsStore: Object.assign(
+    vi.fn(() => ({
+      balance: 0,
+      freeCredits: 0,
+      purchasedCredits: 0,
+      plan: "FREE",
+      isLoading: false,
+      error: null,
+    })),
+    {
+      getState: vi.fn(() => ({
+        balance: 0,
+        freeCredits: 0,
+        purchasedCredits: 0,
+        plan: "FREE",
+        isLoading: false,
+        error: null,
+      })),
+    },
+  ),
+}));
+
+vi.mock("@/hooks/useCheckout", () => ({
+  default: vi.fn(() => ({
+    checkout: vi.fn(),
+    loadingPlanId: null,
+  })),
+}));
+
 async function startApi() {
   const app = express();
-  app.use(bodyParser.json());
+  app.use(express.json());
 
-  app.get("/api/v1/credits/plans", (_req, res) => {
+  app.get("/api/v1/credits/plans", (_req: any, res: any) => {
     res.json([
-      { id: "plan_basic", name: "Basic", priceCents: 500, credits: 50 },
+      { id: "plan_basic", name: "Basic", usdAmount: 10, creditsGiven: 1000 },
     ]);
   });
 
-  app.post("/api/v1/credits/checkout", (req, res) => {
-    // simulate backend creating checkout and returning redirect
-    const { planId } = req.body;
-    if (!planId) return res.status(400).json({ error: "missing planId" });
+  app.get("/api/v1/credits/transactions", (_req: any, res: any) => {
+    res.json([]);
+  });
+
+  app.post("/api/v1/credits/custom-checkout", (req: any, res: any) => {
+    const { amount } = req.body;
+    if (!amount || amount < 10)
+      return res.status(400).json({ error: "minimum $10" });
     return res.json({
       redirectUrl: "https://checkout.example/123",
       gatewayTxId: "mp_pref_123",
@@ -27,8 +66,8 @@ async function startApi() {
 
   return new Promise<{ server: Server; url: string }>((resolve) => {
     const server = app.listen(0, () => {
-      // @ts-expect-error testing mock
-      const port = server.address().port;
+      const address = server.address();
+      const port = typeof address === "object" && address ? address.port : 0;
       resolve({ server, url: `http://127.0.0.1:${port}` });
     });
   });
@@ -44,10 +83,6 @@ describe("CreditPurchaseForm E2E", () => {
     server = s.server;
     url = s.url;
     process.env.NEXT_PUBLIC_API_URL = `${url}/api/v1`;
-    // reload module cache for api client
-    Object.keys(require.cache).forEach((k) => {
-      if (k.includes("/apps/web/src/lib/api.ts")) delete require.cache[k];
-    });
   });
 
   afterAll(async () => {
@@ -55,28 +90,22 @@ describe("CreditPurchaseForm E2E", () => {
     await new Promise((r) => server.close(() => r(null)));
   });
 
-  it("fetches plans and redirects to checkout (real HTTP)", async () => {
-    // import component after env is set
-    const { default: CreditPurchaseForm } =
+  it("loads plans from real API and opens buy modal", async () => {
+    // Must import after env is set and cache is cleared
+    vi.resetModules();
+    const { default: CreditsPage } =
       await import("@/components/credit-purchase/CreditPurchaseForm");
 
-    const originalLocation = window.location;
-    // @ts-expect-error testing mock
-    delete window.location;
-    // @ts-expect-error testing mock
-    window.location = { href: "" } as any;
+    renderWithProviders(<CreditsPage />);
 
-    render(React.createElement(CreditPurchaseForm));
+    await waitFor(() => {
+      expect(screen.getByText("Basic")).toBeTruthy();
+    });
 
-    expect(await screen.findByText("Comprar créditos")).toBeTruthy();
-    const buyButton = await screen.findByText("Comprar");
-    fireEvent.click(buyButton);
+    fireEvent.click(screen.getByText("Buy More Credits"));
 
-    // allow network + navigation
-    await new Promise((r) => setTimeout(r, 100));
-
-    expect(window.location.href).toBe("https://checkout.example/123");
-
-    window.location = originalLocation;
+    await waitFor(() => {
+      expect(screen.getByText("Buy Credits")).toBeTruthy();
+    });
   });
 });
