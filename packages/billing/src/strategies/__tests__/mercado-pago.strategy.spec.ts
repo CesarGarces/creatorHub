@@ -18,6 +18,7 @@ vi.mock("mercadopago", () => {
 
 import { MercadoPagoStrategy } from "../mercado-pago.strategy";
 import * as crypto from "crypto";
+import { Payment } from "mercadopago";
 
 describe("MercadoPagoStrategy (webhook verification)", () => {
   const strategy = new MercadoPagoStrategy();
@@ -117,5 +118,214 @@ describe("MercadoPagoStrategy (webhook verification)", () => {
       body,
     );
     expect(res.isValid).toBe(false);
+  });
+
+  describe("mapPaymentStatus - MercadoPago status mapping", () => {
+    it("maps 'approved' to SUCCESSFUL via API fetch", async () => {
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
+      const mockPaymentClient = {
+        get: vi.fn().mockResolvedValue({ status: "approved" }),
+      };
+      (Payment as any).mockImplementation(() => mockPaymentClient);
+
+      const res = await strategy.verifyWebhook(
+        {},
+        { data: { id: "mp_status_test" } },
+      );
+
+      expect(res.isValid).toBe(true);
+      expect(res.status).toBe("SUCCESSFUL");
+    });
+
+    it("maps 'rejected' to FAILED via API fetch", async () => {
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
+      const mockPaymentClient = {
+        get: vi.fn().mockResolvedValue({ status: "rejected" }),
+      };
+      (Payment as any).mockImplementation(() => mockPaymentClient);
+
+      const res = await strategy.verifyWebhook(
+        {},
+        { data: { id: "mp_rejected" } },
+      );
+
+      expect(res.isValid).toBe(true);
+      expect(res.status).toBe("FAILED");
+    });
+
+    it("maps 'pending' to PENDING via API fetch", async () => {
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
+      const mockPaymentClient = {
+        get: vi.fn().mockResolvedValue({ status: "pending" }),
+      };
+      (Payment as any).mockImplementation(() => mockPaymentClient);
+
+      const res = await strategy.verifyWebhook(
+        {},
+        { data: { id: "mp_pending" } },
+      );
+
+      expect(res.isValid).toBe(true);
+      expect(res.status).toBe("PENDING");
+    });
+
+    it("maps 'in_process' to PENDING via API fetch", async () => {
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
+      const mockPaymentClient = {
+        get: vi.fn().mockResolvedValue({ status: "in_process" }),
+      };
+      (Payment as any).mockImplementation(() => mockPaymentClient);
+
+      const res = await strategy.verifyWebhook(
+        {},
+        { data: { id: "mp_in_process" } },
+      );
+
+      expect(res.isValid).toBe(true);
+      expect(res.status).toBe("PENDING");
+    });
+
+    it("maps 'cancelled' to FAILED via API fetch", async () => {
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
+      const mockPaymentClient = {
+        get: vi.fn().mockResolvedValue({ status: "cancelled" }),
+      };
+      (Payment as any).mockImplementation(() => mockPaymentClient);
+
+      const res = await strategy.verifyWebhook(
+        {},
+        { data: { id: "mp_cancelled" } },
+      );
+
+      expect(res.isValid).toBe(true);
+      expect(res.status).toBe("FAILED");
+    });
+
+    it("maps 'expired' to FAILED via API fetch", async () => {
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
+      const mockPaymentClient = {
+        get: vi.fn().mockResolvedValue({ status: "expired" }),
+      };
+      (Payment as any).mockImplementation(() => mockPaymentClient);
+
+      const res = await strategy.verifyWebhook(
+        {},
+        { data: { id: "mp_expired" } },
+      );
+
+      expect(res.isValid).toBe(true);
+      expect(res.status).toBe("FAILED");
+    });
+
+    it("maps 'paid' to SUCCESSFUL via API fetch", async () => {
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
+      const mockPaymentClient = {
+        get: vi.fn().mockResolvedValue({ status: "paid" }),
+      };
+      (Payment as any).mockImplementation(() => mockPaymentClient);
+
+      const res = await strategy.verifyWebhook({}, { data: { id: "mp_paid" } });
+
+      expect(res.isValid).toBe(true);
+      expect(res.status).toBe("SUCCESSFUL");
+    });
+
+    it("returns PENDING for unknown status via API fetch", async () => {
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
+      const mockPaymentClient = {
+        get: vi.fn().mockResolvedValue({ status: "unknown_status" }),
+      };
+      (Payment as any).mockImplementation(() => mockPaymentClient);
+
+      const res = await strategy.verifyWebhook(
+        {},
+        { data: { id: "mp_unknown" } },
+      );
+
+      expect(res.isValid).toBe(true);
+      expect(res.status).toBe("PENDING");
+    });
+  });
+
+  describe("HMAC + API fetch integration", () => {
+    it("fetches real payment status from API after HMAC verification", async () => {
+      process.env.MERCADO_PAGO_WEBHOOK_SECRET = "test-secret";
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
+      const gatewayTxId = "mp_hmac_api_1";
+      const ts = Math.floor(Date.now() / 1000).toString();
+      const manifest = `id:${gatewayTxId};ts:${ts};`;
+      const v1 = crypto
+        .createHmac("sha256", process.env.MERCADO_PAGO_WEBHOOK_SECRET!)
+        .update(manifest)
+        .digest("hex");
+
+      const mockPaymentClient = {
+        get: vi.fn().mockResolvedValue({ status: "approved" }),
+      };
+      (Payment as any).mockImplementation(() => mockPaymentClient);
+
+      const res = await strategy.verifyWebhook(
+        { "x-signature": `ts=${ts},v1=${v1}` },
+        { data: { id: gatewayTxId }, type: "payment" },
+        Buffer.from("raw"),
+      );
+
+      expect(res.isValid).toBe(true);
+      expect(res.status).toBe("SUCCESSFUL");
+      expect(mockPaymentClient.get).toHaveBeenCalledWith({ id: gatewayTxId });
+    });
+
+    it("returns FAILED when HMAC valid but payment is rejected", async () => {
+      process.env.MERCADO_PAGO_WEBHOOK_SECRET = "test-secret";
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
+      const gatewayTxId = "mp_hmac_rejected";
+      const ts = Math.floor(Date.now() / 1000).toString();
+      const manifest = `id:${gatewayTxId};ts:${ts};`;
+      const v1 = crypto
+        .createHmac("sha256", process.env.MERCADO_PAGO_WEBHOOK_SECRET!)
+        .update(manifest)
+        .digest("hex");
+
+      const mockPaymentClient = {
+        get: vi.fn().mockResolvedValue({ status: "rejected" }),
+      };
+      (Payment as any).mockImplementation(() => mockPaymentClient);
+
+      const res = await strategy.verifyWebhook(
+        { "x-signature": `ts=${ts},v1=${v1}` },
+        { data: { id: gatewayTxId }, type: "payment" },
+        Buffer.from("raw"),
+      );
+
+      expect(res.isValid).toBe(true);
+      expect(res.status).toBe("FAILED");
+    });
+
+    it("falls back to action-based status when API fetch fails after HMAC", async () => {
+      process.env.MERCADO_PAGO_WEBHOOK_SECRET = "test-secret";
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
+      const gatewayTxId = "mp_hmac_api_fail";
+      const ts = Math.floor(Date.now() / 1000).toString();
+      const manifest = `id:${gatewayTxId};ts:${ts};`;
+      const v1 = crypto
+        .createHmac("sha256", process.env.MERCADO_PAGO_WEBHOOK_SECRET!)
+        .update(manifest)
+        .digest("hex");
+
+      const mockPaymentClient = {
+        get: vi.fn().mockRejectedValue(new Error("API error")),
+      };
+      (Payment as any).mockImplementation(() => mockPaymentClient);
+
+      const res = await strategy.verifyWebhook(
+        { "x-signature": `ts=${ts},v1=${v1}` },
+        { data: { id: gatewayTxId }, action: "payment.created" },
+        Buffer.from("raw"),
+      );
+
+      expect(res.isValid).toBe(true);
+      // Falls back to action-based: "payment.created" doesn't contain "approved" or "rejected"
+      expect(res.status).toBe("PENDING");
+    });
   });
 });

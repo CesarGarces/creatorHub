@@ -55,7 +55,7 @@ describe("WebhooksController (express integration)", () => {
       .send(payload);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ ok: true });
+    expect(res.body).toEqual({ ok: true, status: "SUCCESSFUL" });
 
     expect(mockPaymentRegistry.getGateway).toHaveBeenCalledTimes(1);
     expect(mockPaymentRegistry.getGateway).toHaveBeenCalledWith(

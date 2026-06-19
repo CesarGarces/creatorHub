@@ -16,21 +16,12 @@ interface Transaction {
   type: string;
   description: string;
   provider: string | null;
+  referenceId: string | null;
   balance: number;
   toolName: string | null;
   toolIcon: string | null;
   model: string | null;
   createdAt: string;
-}
-
-function getToolColor(name: string | null) {
-  if (!name) return "bg-surface-elevated text-text-dim";
-  const key = name.toLowerCase().replace(/\s+/g, "-");
-  const map: Record<string, string> = {
-    "thumbnail-generator": "bg-secondary/10 text-secondary",
-    "content-translator": "bg-warning/10 text-warning",
-  };
-  return map[key] || "bg-surface-elevated text-text-dim";
 }
 
 function formatDate(iso: string) {
@@ -56,7 +47,7 @@ export default function HistoryPage() {
 
   const usageHistory = useMemo(() => {
     if (!transactions) return [];
-    return transactions.filter((tx) => tx.type === "USAGE");
+    return transactions;
   }, [transactions]);
 
   const filtered = useMemo(() => {
@@ -71,10 +62,34 @@ export default function HistoryPage() {
     );
   }, [usageHistory, timeFilter]);
 
-  const totalCredits = useMemo(
-    () => filtered.reduce((sum, h) => sum + Math.abs(h.amount), 0),
-    [filtered],
-  );
+  function getTransactionColor(tx: Transaction) {
+    if (tx.type === "USAGE") return "bg-error/10 text-error";
+    if (tx.type === "PURCHASE") return "bg-success/10 text-success";
+    return "bg-primary/10 text-primary";
+  }
+
+  function getTransactionIcon(tx: Transaction) {
+    if (tx.type === "USAGE") return tx.toolIcon || "🔧";
+    if (tx.type === "PURCHASE") return "💰";
+    return "🎁";
+  }
+
+  function getPaymentStatusBadge(tx: Transaction) {
+    if (tx.type !== "PURCHASE" || !tx.referenceId) return null;
+    const isPending = tx.description?.toLowerCase().includes("pending");
+    if (isPending) {
+      return (
+        <span className="inline-flex items-center rounded-full border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning">
+          Pending
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center rounded-full border border-success/30 bg-success/10 px-1.5 py-0.5 text-[10px] font-medium text-success">
+        Completed
+      </span>
+    );
+  }
 
   return (
     <>
@@ -112,7 +127,7 @@ export default function HistoryPage() {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="rounded-xl border border-border bg-surface p-4 text-center">
             <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
-              Total Usage
+              Total Transactions
             </p>
             <p className="mt-1 text-2xl font-bold text-text">
               {filtered.length}
@@ -123,15 +138,19 @@ export default function HistoryPage() {
               Credits Spent
             </p>
             <p className="mt-1 text-2xl font-bold text-error">
-              -{totalCredits}
+              {filtered
+                .filter((h) => h.amount < 0)
+                .reduce((sum, h) => sum + Math.abs(h.amount), 0)}
             </p>
           </div>
           <div className="rounded-xl border border-border bg-surface p-4 text-center">
             <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
-              Tools Used
+              Credits Earned
             </p>
-            <p className="mt-1 text-2xl font-bold text-text">
-              {new Set(filtered.map((h) => h.toolName)).size}
+            <p className="mt-1 text-2xl font-bold text-success">
+              {filtered
+                .filter((h) => h.amount > 0)
+                .reduce((sum, h) => sum + h.amount, 0)}
             </p>
           </div>
         </div>
@@ -140,7 +159,7 @@ export default function HistoryPage() {
         <div className="rounded-xl border border-border bg-surface flex flex-col">
           <div className="px-5 py-4 border-b border-border">
             <h2 className="text-sm font-semibold text-text uppercase tracking-wider">
-              Usage
+              Activity
             </h2>
           </div>
           <div className="divide-y divide-border overflow-y-auto max-h-[28rem]">
@@ -150,16 +169,23 @@ export default function HistoryPage() {
                 className="flex items-center gap-4 px-5 py-3.5 hover:bg-surface-elevated/50 transition-colors"
               >
                 <div
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm ${getToolColor(item.toolName)}`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm ${getTransactionColor(item)}`}
                 >
-                  {item.toolIcon || "🔧"}
+                  {getTransactionIcon(item)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-text truncate">
-                    {item.description}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-text truncate">
+                      {item.description}
+                    </p>
+                    {getPaymentStatusBadge(item)}
+                  </div>
                   <p className="text-xs text-text-dim">
-                    {item.toolName || "Tool"}
+                    {item.type === "USAGE"
+                      ? item.toolName || "Tool"
+                      : item.type === "PURCHASE"
+                        ? "Purchase"
+                        : "Bonus"}
                     {item.model && (
                       <span className="ml-1.5 text-text-dim/60">
                         · {item.model}
@@ -170,14 +196,19 @@ export default function HistoryPage() {
                 <span className="text-xs text-text-dim whitespace-nowrap">
                   {formatDate(item.createdAt)}
                 </span>
-                <span className="text-sm font-semibold tabular-nums text-error min-w-[5rem] text-right">
-                  -{Math.abs(item.amount)} cr
+                <span
+                  className={`text-sm font-semibold tabular-nums min-w-[5rem] text-right ${
+                    item.amount < 0 ? "text-error" : "text-success"
+                  }`}
+                >
+                  {item.amount > 0 ? "+" : ""}
+                  {Math.abs(item.amount)} cr
                 </span>
               </div>
             ))}
             {filtered.length === 0 && (
               <div className="px-5 py-12 text-center text-sm text-text-dim">
-                No usage in this period
+                No activity in this period
               </div>
             )}
           </div>

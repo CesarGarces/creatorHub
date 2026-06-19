@@ -165,8 +165,51 @@ export class MercadoPagoStrategy implements IPaymentGateway {
             return { isValid: false, gatewayTxId: "", status: "PENDING" };
           }
 
-          const status = this.mapStatus(
-            body?.action || body?.type || body?.topic || "",
+          // Fetch actual payment status from MercadoPago API
+          const client = this.getClient();
+          if (client) {
+            try {
+              const paymentClient = new Payment(client);
+              const payment = await paymentClient.get({ id: gatewayTxId });
+              const paymentAny = payment as any;
+              const mpStatus = (
+                paymentAny?.status ||
+                paymentAny?.collection_status ||
+                ""
+              )
+                .toString()
+                .toLowerCase();
+              const status = this.mapPaymentStatus(mpStatus);
+              this.logger.log(
+                `HMAC verified + API status for ${gatewayTxId}: ${mpStatus} -> ${status}`,
+              );
+              return {
+                isValid: true,
+                gatewayTxId,
+                status,
+                metadata: {
+                  method: "HMAC_API",
+                  mpStatus,
+                  raw: body,
+                  payment,
+                },
+              };
+            } catch (err) {
+              this.logger.warn(
+                `HMAC valid but API fetch failed for ${gatewayTxId}, falling back to action-based status`,
+                err as any,
+              );
+            }
+          }
+
+          // Fallback: use action-based status if API fetch fails
+          const action = body?.action || body?.type || body?.topic || "";
+          const status = this.mapPaymentStatus(
+            action.includes("approved") || action.includes("paid")
+              ? "approved"
+              : action.includes("rejected")
+                ? "rejected"
+                : "pending",
           );
           return {
             isValid: true,
@@ -183,19 +226,18 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         try {
           const paymentClient = new Payment(client);
           const payment = await paymentClient.get({ id: gatewayTxId });
-          const statusStr = (
-            (payment as any)?.status ||
-            (payment as any)?.collection_status ||
+          const paymentAny = payment as any;
+          const mpStatus = (
+            paymentAny?.status ||
+            paymentAny?.collection_status ||
             ""
           )
             .toString()
             .toLowerCase();
-          const status =
-            statusStr.includes("approved") || statusStr.includes("paid")
-              ? "SUCCESSFUL"
-              : statusStr.includes("rejected")
-                ? "FAILED"
-                : "PENDING";
+          const status = this.mapPaymentStatus(mpStatus);
+          this.logger.log(
+            `API verification for ${gatewayTxId}: ${mpStatus} -> ${status}`,
+          );
           return {
             isValid: true,
             gatewayTxId,
@@ -205,7 +247,7 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         } catch (err) {
           this.logger.warn("SDK verification failed", err as any);
           return {
-            isValid: true,
+            isValid: false,
             gatewayTxId,
             status: "PENDING",
             metadata: {
@@ -234,18 +276,15 @@ export class MercadoPagoStrategy implements IPaymentGateway {
     }
   }
 
-  private mapStatus(action: string): WebhookVerificationResult["status"] {
-    if (!action) return "PENDING";
-    const clean = action.toString().toLowerCase();
-    if (clean.includes("opened") || clean.includes("created")) return "PENDING";
-    if (
-      clean.includes("payment") ||
-      clean.includes("approved") ||
-      clean.includes("paid")
-    )
-      return "SUCCESSFUL";
-    if (clean.includes("rejected") || clean.includes("cancelled"))
+  private mapPaymentStatus(
+    paymentStatus: string,
+  ): WebhookVerificationResult["status"] {
+    if (!paymentStatus) return "PENDING";
+    const s = paymentStatus.toString().toLowerCase();
+    if (s === "approved" || s === "paid") return "SUCCESSFUL";
+    if (s === "rejected" || s === "cancelled" || s === "expired")
       return "FAILED";
+    // in_process, pending, authorized, in_mediation, refunded, charged_back
     return "PENDING";
   }
 }

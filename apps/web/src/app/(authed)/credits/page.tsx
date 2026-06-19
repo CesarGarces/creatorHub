@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import {
   Card,
@@ -20,8 +21,71 @@ import { useCreditsStore } from "@/store/credits.store";
 import useCheckout from "@/hooks/useCheckout";
 import { CheckoutModal } from "@/components/billing/CheckoutModal";
 
+function PaymentStatusModal({
+  status,
+  onClose,
+}: {
+  status: "success" | "failed" | "pending" | null;
+  onClose: () => void;
+}) {
+  if (!status) return null;
+
+  const config = {
+    success: {
+      icon: "✅",
+      title: "Payment Successful",
+      message:
+        "Your credits have been added to your account. You are ready to create!",
+      bgColor: "bg-success/10",
+      borderColor: "border-success/30",
+      textColor: "text-success",
+    },
+    failed: {
+      icon: "❌",
+      title: "Payment Failed",
+      message:
+        "We could not process your payment. Please try again or use a different method.",
+      bgColor: "bg-error/10",
+      borderColor: "border-error/30",
+      textColor: "text-error",
+    },
+    pending: {
+      icon: "⏳",
+      title: "Processing Payment",
+      message: "We are verifying your payment. Credits will be added shortly.",
+      bgColor: "bg-warning/10",
+      borderColor: "border-warning/30",
+      textColor: "text-warning",
+    },
+  };
+
+  const c = config[status];
+
+  return (
+    <Dialog open={!!status} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md" onClose={onClose}>
+        <div
+          className={`flex flex-col items-center p-6 rounded-lg ${c.bgColor} border ${c.borderColor}`}
+        >
+          <span className="text-4xl mb-3">{c.icon}</span>
+          <DialogTitle className={`text-lg font-semibold ${c.textColor}`}>
+            {c.title}
+          </DialogTitle>
+          <p className="mt-2 text-sm text-text-muted text-center">
+            {c.message}
+          </p>
+          <Button variant="primary" className="mt-4" onClick={onClose}>
+            {status === "success" ? "Start Creating" : "Try Again"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function CreditsPage() {
-  const { balance } = useCreditsStore();
+  const searchParams = useSearchParams();
+  const { balance, fetchBalance } = useCreditsStore();
   const { checkout, loadingPlanId } = useCheckout();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -33,6 +97,93 @@ export default function CreditsPage() {
   const [buyModalOpen, setBuyModalOpen] = useState(false);
   const [buyAmount, setBuyAmount] = useState("10");
   const [buyLoading, setBuyLoading] = useState(false);
+
+  // Payment status modal
+  const [paymentStatus, setPaymentStatus] = useState<
+    "success" | "failed" | "pending" | null
+  >(null);
+  const processedParamsRef = useRef(false);
+
+  // Check URL params from MercadoPago redirect
+  useEffect(() => {
+    if (processedParamsRef.current) return;
+
+    const collectionStatus = searchParams.get("collection_status");
+    const status = searchParams.get("status");
+    const paymentStatusParam = collectionStatus || status;
+
+    if (paymentStatusParam) {
+      processedParamsRef.current = true;
+
+      if (paymentStatusParam === "approved") {
+        setPaymentStatus("success");
+        fetchBalance();
+      } else if (
+        paymentStatusParam === "rejected" ||
+        paymentStatusParam === "failed"
+      ) {
+        setPaymentStatus("failed");
+      } else {
+        setPaymentStatus("pending");
+      }
+
+      // Clean all MercadoPago params from URL to prevent re-showing on refresh
+      const cleanUrl = new URL(window.location.href);
+      const mpParams = [
+        "collection_status",
+        "status",
+        "payment_id",
+        "collection_id",
+        "preference_id",
+        "merchant_order_id",
+      ];
+      mpParams.forEach((p) => cleanUrl.searchParams.delete(p));
+      window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
+    }
+  }, [searchParams, fetchBalance]);
+
+  // Listen for WebSocket payment events
+  useEffect(() => {
+    const handlePaymentEvent = (event: CustomEvent) => {
+      const { status } = event.detail || {};
+      if (status === "success") {
+        setPaymentStatus("success");
+        fetchBalance();
+      } else if (status === "failed") {
+        setPaymentStatus("failed");
+      } else if (status === "pending") {
+        setPaymentStatus("pending");
+      }
+    };
+
+    window.addEventListener(
+      "payment:success",
+      handlePaymentEvent as EventListener,
+    );
+    window.addEventListener(
+      "payment:failed",
+      handlePaymentEvent as EventListener,
+    );
+    window.addEventListener(
+      "payment:pending",
+      handlePaymentEvent as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "payment:success",
+        handlePaymentEvent as EventListener,
+      );
+      window.removeEventListener(
+        "payment:failed",
+        handlePaymentEvent as EventListener,
+      );
+      window.removeEventListener(
+        "payment:pending",
+        handlePaymentEvent as EventListener,
+      );
+    };
+  }, [fetchBalance]);
 
   const { data: allPlans } = useQuery({
     queryKey: ["plans"],
@@ -111,6 +262,28 @@ export default function CreditsPage() {
     }
   };
 
+  function getPaymentStatusBadge(tx: any) {
+    if (tx.type !== "PURCHASE" || !tx.referenceId) return null;
+    if (tx.description?.toLowerCase().includes("pending")) {
+      return (
+        <Badge
+          variant="outline"
+          className="bg-warning/10 text-warning border-warning/30 text-[10px]"
+        >
+          Pending
+        </Badge>
+      );
+    }
+    return (
+      <Badge
+        variant="outline"
+        className="bg-success/10 text-success border-success/30 text-[10px]"
+      >
+        Completed
+      </Badge>
+    );
+  }
+
   return (
     <>
       <TopBar
@@ -172,9 +345,12 @@ export default function CreditsPage() {
                       {tx.type === "USAGE" ? "↓" : "↑"}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-text">
-                        {tx.description || tx.type}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-text">
+                          {tx.description || tx.type}
+                        </p>
+                        {getPaymentStatusBadge(tx)}
+                      </div>
                       <p className="text-xs text-text-dim">
                         {new Date(tx.createdAt).toLocaleDateString()}
                       </p>
@@ -314,6 +490,12 @@ export default function CreditsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Status Modal */}
+      <PaymentStatusModal
+        status={paymentStatus}
+        onClose={() => setPaymentStatus(null)}
+      />
     </>
   );
 }

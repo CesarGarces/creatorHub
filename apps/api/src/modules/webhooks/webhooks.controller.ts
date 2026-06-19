@@ -59,19 +59,18 @@ export class WebhooksController {
         return res.send({ ok: true, warning: "verification_failed" });
       }
 
-      if (verification.status === "SUCCESSFUL") {
-        const ok = await this.creditBilling.reconcilePayment(
-          gatewayEnum as any,
-          verification as any,
-          body || rawBody,
-        );
-        if (!ok) {
-          this.logger.warn("Reconciliation failed for webhook", verification);
-          return res.status(500).send({ ok: false });
-        }
+      // Process all statuses: SUCCESSFUL (add credits), FAILED (notify), PENDING (notify)
+      const ok = await this.creditBilling.reconcilePayment(
+        gatewayEnum as any,
+        verification as any,
+        body || rawBody,
+      );
+      if (!ok) {
+        this.logger.warn("Reconciliation failed for webhook", verification);
+        return res.status(500).send({ ok: false });
       }
 
-      return res.send({ ok: true });
+      return res.send({ ok: true, status: verification.status });
     } catch (err) {
       this.logger.error("Error handling webhook", err as any);
       return res.status(500).send({ ok: false });

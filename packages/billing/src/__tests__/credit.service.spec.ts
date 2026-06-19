@@ -285,5 +285,59 @@ describe("CreditService", () => {
         }),
       });
     });
+
+    it("should include provider and referenceId when options provided", async () => {
+      (prisma.user.update as any).mockResolvedValue({});
+      // After increment: 100 + 200 + 500 = 800
+      (prisma.user.findUnique as any).mockResolvedValue({
+        id: "user-1",
+        freeCredits: 100,
+        purchasedCredits: 700,
+      });
+      (prisma.creditTransaction.create as any).mockResolvedValue({});
+
+      await service.addCredits(
+        "user-1",
+        500,
+        "Payment MERCADO_PAGO - mp_test_123",
+        "PURCHASE",
+        { provider: "MERCADO_PAGO", referenceId: "mp_test_123" },
+      );
+
+      expect(prisma.creditTransaction.create).toHaveBeenCalledWith({
+        data: {
+          userId: "user-1",
+          amount: 500,
+          type: "PURCHASE",
+          description: "Payment MERCADO_PAGO - mp_test_123",
+          balance: 800,
+          provider: "MERCADO_PAGO",
+          referenceId: "mp_test_123",
+        },
+      });
+    });
+
+    it("should not include provider/referenceId when options not provided", async () => {
+      (prisma.user.update as any).mockResolvedValue({});
+      // After increment: 100 + 200 + 100 = 400
+      (prisma.user.findUnique as any).mockResolvedValue({
+        id: "user-1",
+        freeCredits: 200,
+        purchasedCredits: 200,
+      });
+      (prisma.creditTransaction.create as any).mockResolvedValue({});
+
+      await service.addCredits("user-1", 100, "Bonus", "BONUS");
+
+      expect(prisma.creditTransaction.create).toHaveBeenCalledWith({
+        data: {
+          userId: "user-1",
+          amount: 100,
+          type: "BONUS",
+          description: "Bonus",
+          balance: 400,
+        },
+      });
+    });
   });
 });

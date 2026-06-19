@@ -100,6 +100,7 @@ export class CreditService {
     amount: number,
     description: string,
     type: "PURCHASE" | "BONUS" | "SUBSCRIPTION" | "PROMOTION" = "BONUS",
+    options?: { provider?: string; referenceId?: string },
   ): Promise<void> {
     await prisma.$transaction(async (tx) => {
       const field = type === "PURCHASE" ? "purchasedCredits" : "freeCredits";
@@ -122,6 +123,8 @@ export class CreditService {
           type,
           description,
           balance: newBalance,
+          ...(options?.provider ? { provider: options.provider } : {}),
+          ...(options?.referenceId ? { referenceId: options.referenceId } : {}),
         },
       });
     });

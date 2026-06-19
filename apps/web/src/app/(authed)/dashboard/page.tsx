@@ -35,6 +35,8 @@ interface Transaction {
   description: string;
   toolName: string | null;
   toolIcon: string | null;
+  provider: string | null;
+  referenceId: string | null;
   createdAt: string;
 }
 
@@ -50,9 +52,19 @@ export default function DashboardPage() {
     queryFn: () => api.get<Transaction[]>("/credits/transactions"),
   });
 
-  const recentActivity = (transactions || [])
-    .filter((tx) => tx.type === "USAGE")
-    .slice(0, 3);
+  const recentActivity = (transactions || []).slice(0, 5);
+
+  function getPaymentStatusInfo(tx: Transaction) {
+    if (tx.type !== "PURCHASE" || !tx.referenceId) return null;
+    const isPending = tx.description?.toLowerCase().includes("pending");
+    return {
+      isPending,
+      label: isPending ? "Pending" : "Completed",
+      color: isPending
+        ? "bg-warning/10 text-warning border-warning/30"
+        : "bg-success/10 text-success border-success/30",
+    };
+  }
 
   useEffect(() => {
     fetchTools();
@@ -189,25 +201,56 @@ export default function DashboardPage() {
             </button>
           </div>
           <div className="rounded-xl border border-border bg-surface divide-y divide-border">
-            {recentActivity.map((tx) => (
-              <div key={tx.id} className="flex items-center gap-4 px-5 py-3.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-elevated text-sm">
-                  {tx.toolIcon || "🔧"}
+            {recentActivity.map((tx) => {
+              const paymentStatus = getPaymentStatusInfo(tx);
+              return (
+                <div
+                  key={tx.id}
+                  className="flex items-center gap-4 px-5 py-3.5"
+                >
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm ${
+                      tx.type === "USAGE"
+                        ? "bg-surface-elevated"
+                        : tx.type === "PURCHASE"
+                          ? "bg-success/10 text-success"
+                          : "bg-primary/10 text-primary"
+                    }`}
+                  >
+                    {tx.type === "USAGE"
+                      ? tx.toolIcon || "🔧"
+                      : tx.type === "PURCHASE"
+                        ? "💰"
+                        : "🎁"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-text truncate">
+                        {tx.description}
+                      </p>
+                      {paymentStatus && (
+                        <span
+                          className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${paymentStatus.color}`}
+                        >
+                          {paymentStatus.label}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-text-dim">
+                      {formatTimeAgo(tx.createdAt)} · {Math.abs(tx.amount)}{" "}
+                      credits
+                    </p>
+                  </div>
+                  <Badge variant="primary" size="sm">
+                    {tx.type === "USAGE"
+                      ? tx.toolName || "Tool"
+                      : tx.type === "PURCHASE"
+                        ? "Purchase"
+                        : "Bonus"}
+                  </Badge>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-text truncate">
-                    {tx.description}
-                  </p>
-                  <p className="text-xs text-text-dim">
-                    {formatTimeAgo(tx.createdAt)} · {Math.abs(tx.amount)}{" "}
-                    credits
-                  </p>
-                </div>
-                <Badge variant="primary" size="sm">
-                  {tx.toolName || "Tool"}
-                </Badge>
-              </div>
-            ))}
+              );
+            })}
             {recentActivity.length === 0 && (
               <div className="px-5 py-8 text-center text-sm text-text-dim">
                 No activity yet

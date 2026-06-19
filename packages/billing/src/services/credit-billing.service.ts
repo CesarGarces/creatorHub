@@ -9,7 +9,11 @@ import {
   DomainEventPublisher,
   DOMAIN_EVENT_PUBLISHER,
 } from "@creator-hub/domain-events";
-import type { PaymentSuccessEvent } from "@creator-hub/shared-types";
+import type {
+  PaymentSuccessEvent,
+  PaymentFailedEvent,
+  PaymentPendingEvent,
+} from "@creator-hub/shared-types";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 
 @Injectable()
@@ -35,9 +39,72 @@ export class CreditBillingService {
     raw: any,
   ) {
     if (!verification.isValid) return false;
-    if (verification.status !== "SUCCESSFUL") return false;
 
     const referenceId = verification.gatewayTxId;
+
+    // Handle FAILED status - record the failed attempt, do NOT add credits
+    if (verification.status === "FAILED") {
+      this.logger.warn(`Payment ${referenceId} failed. Status: FAILED`);
+      try {
+        const event: PaymentFailedEvent = {
+          userId:
+            raw?.external_reference ||
+            raw?.data?.external_reference ||
+            "unknown",
+          gatewayTxId: referenceId,
+          reason: "Payment rejected by gateway",
+          gateway,
+          timestamp: new Date(),
+        };
+        await this.eventPublisher.publish("payment:failed", event);
+      } catch (err) {
+        this.logger.warn("Failed to emit payment:failed event", err as any);
+      }
+      return false;
+    }
+
+    // Handle PENDING status - record that payment is being processed
+    if (verification.status === "PENDING") {
+      this.logger.log(
+        `Payment ${referenceId} is pending. Waiting for confirmation.`,
+      );
+      // Extract userId for the pending event
+      let pendingUserId =
+        raw?.external_reference || raw?.data?.external_reference;
+      if (!pendingUserId && referenceId) {
+        const mpClient = this.getMercadoPagoClient();
+        if (mpClient) {
+          try {
+            const paymentClient = new Payment(mpClient);
+            const payment = await paymentClient.get({ id: referenceId });
+            pendingUserId = (payment as any)?.external_reference;
+          } catch (err) {
+            this.logger.warn(
+              `Failed to fetch pending payment ${referenceId} details`,
+              err as any,
+            );
+          }
+        }
+      }
+      if (pendingUserId) {
+        try {
+          const event: PaymentPendingEvent = {
+            userId: pendingUserId,
+            gatewayTxId: referenceId,
+            reason: "Payment in process - awaiting confirmation",
+            gateway,
+            timestamp: new Date(),
+          };
+          await this.eventPublisher.publish("payment:pending", event);
+        } catch (err) {
+          this.logger.warn("Failed to emit payment:pending event", err as any);
+        }
+      }
+      return true; // Return true so we don't return 500 to MercadoPago
+    }
+
+    // Handle SUCCESSFUL status - add credits
+    if (verification.status !== "SUCCESSFUL") return false;
 
     // Idempotency: if we've already recorded a purchase with this reference, ignore
     const existing = await prisma.creditTransaction.findFirst({
@@ -128,28 +195,13 @@ export class CreditBillingService {
     );
 
     try {
-      await prisma.$transaction(async (tx) => {
-        await this.creditService.addCredits(
-          userId!,
-          credits,
-          `Purchase via ${gateway}`,
-          "PURCHASE",
-        );
-
-        const balance = await this.creditService.getBalance(userId!);
-
-        await tx.creditTransaction.create({
-          data: {
-            userId: userId!,
-            amount: credits,
-            type: "PURCHASE",
-            description: `Payment ${gateway}`,
-            provider: gateway,
-            referenceId,
-            balance: balance || 0,
-          },
-        });
-      });
+      await this.creditService.addCredits(
+        userId!,
+        credits,
+        `Payment ${gateway} - ${referenceId}`,
+        "PURCHASE",
+        { provider: gateway, referenceId },
+      );
 
       // Emit real-time notification
       try {

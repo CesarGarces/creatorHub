@@ -20,7 +20,9 @@ export type EventName =
   | "thumbnail.failed"
   | "translation.completed"
   | "translation.failed"
-  | "payment.success";
+  | "payment.success"
+  | "payment.failed"
+  | "payment.pending";
 
 export interface BaseEvent {
   id: string;
@@ -134,6 +136,22 @@ export interface PaymentSuccessEvent {
   gatewayTxId: string;
   amount: number;
   balance: number;
+  gateway: string;
+  timestamp: Date;
+}
+
+export interface PaymentFailedEvent {
+  userId: string;
+  gatewayTxId: string;
+  reason: string;
+  gateway: string;
+  timestamp: Date;
+}
+
+export interface PaymentPendingEvent {
+  userId: string;
+  gatewayTxId: string;
+  reason: string;
   gateway: string;
   timestamp: Date;
 }
