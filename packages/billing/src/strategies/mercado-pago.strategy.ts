@@ -121,12 +121,20 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         process.env.MERCADO_PAGO_WEBHOOK_SECRET ||
         process.env.MP_WEBHOOK_SECRET;
 
+      this.logger.log(
+        `verifyWebhook: gatewayTxId=${gatewayTxId}, hasSecret=${!!secret}, hasRawBody=${!!_rawBody}`,
+      );
+
       // 1) Preferred: HMAC signature verification
       const signatureHeader =
         headers["x-signature"] ||
         headers["x-meli-signature"] ||
         headers["x-mercadopago-signature"] ||
         headers["x-hub-signature"];
+
+      this.logger.log(
+        `verifyWebhook: hasSignatureHeader=${!!signatureHeader}, headerKeys=${JSON.stringify(Object.keys(headers).filter((k) => k.startsWith("x-")))}`,
+      );
 
       if (secret && signatureHeader) {
         const parts = String(signatureHeader)
@@ -200,6 +208,10 @@ export class MercadoPagoStrategy implements IPaymentGateway {
                 err as any,
               );
             }
+          } else {
+            this.logger.warn(
+              `HMAC valid but no API client (MERCADO_PAGO_ACCESS_TOKEN not set). gatewayTxId=${gatewayTxId}`,
+            );
           }
 
           // Fallback: use action-based status if API fetch fails

@@ -37,6 +37,10 @@ export class WebhooksController {
     const rawBody = (req as any).rawBody as Buffer | undefined;
     const headers = req.headers || {};
 
+    this.logger.log(
+      `Webhook received: gateway=${gateway}, hasRawBody=${!!rawBody}, bodyKeys=${JSON.stringify(Object.keys(body || {}))}, body=${JSON.stringify(body)?.slice(0, 500)}`,
+    );
+
     // Map gateway path segment to PaymentGateway enum value (e.g. 'mercado-pago' -> MERCADO_PAGO)
     const gwKey = gateway.toUpperCase().replace(/-/g, "_");
     const gatewayEnum = (PaymentGateway as any)[gwKey] as PaymentGateway;
@@ -53,6 +57,10 @@ export class WebhooksController {
         rawBody,
       );
 
+      this.logger.log(
+        `Verification result: isValid=${verification.isValid}, status=${verification.status}, gatewayTxId=${verification.gatewayTxId}`,
+      );
+
       if (!verification.isValid) {
         this.logger.warn("Webhook verification failed", verification);
         // Return 200 to prevent MercadoPago from retrying indefinitely
@@ -65,6 +73,9 @@ export class WebhooksController {
         verification as any,
         body || rawBody,
       );
+
+      this.logger.log(`Reconcile result: ok=${ok}`);
+
       if (!ok) {
         this.logger.warn("Reconciliation failed for webhook", verification);
         return res.status(500).send({ ok: false });
