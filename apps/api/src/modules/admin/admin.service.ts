@@ -245,7 +245,7 @@ export class AdminService {
         name: dto.name,
         passwordHash,
         role: dto.role ?? "USER",
-        plan: dto.plan ?? "FREE",
+        plan: (dto.plan ?? "FREE") as any,
         freeCredits: dto.freeCredits ?? 100,
         purchasedCredits: dto.purchasedCredits ?? 0,
         isActive: dto.isActive ?? true,
@@ -309,7 +309,7 @@ export class AdminService {
           passwordHash: await bcrypt.hash(dto.password, 12),
         }),
         ...(dto.role !== undefined && { role: dto.role }),
-        ...(dto.plan !== undefined && { plan: dto.plan }),
+        ...(dto.plan !== undefined && { plan: dto.plan as any }),
         ...(dto.freeCredits !== undefined && { freeCredits: dto.freeCredits }),
         ...(dto.purchasedCredits !== undefined && {
           purchasedCredits: dto.purchasedCredits,

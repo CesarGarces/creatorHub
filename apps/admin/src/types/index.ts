@@ -17,7 +17,7 @@ export interface User {
   email: string;
   name: string | null;
   role: "USER" | "ADMIN";
-  plan: "FREE" | "PAY_AS_YOU_GO" | "PREMIUM";
+  plan: "FREE" | "PAY_AS_YOU_GO" | "STARTER" | "PRO";
   freeCredits: number;
   purchasedCredits: number;
   totalCredits: number;

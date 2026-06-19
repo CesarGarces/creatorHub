@@ -57,7 +57,8 @@ export class ProviderRegistry {
 
     if (
       user.purchasedCredits > 0 ||
-      user.plan === "PREMIUM" ||
+      user.plan === "STARTER" ||
+      user.plan === "PRO" ||
       user.plan === "PAY_AS_YOU_GO"
     ) {
       const proProviders = this.getProProviders();

@@ -11,6 +11,7 @@ export interface CreateCheckoutDto {
   currency: Currency;
   creditsToBuy: number;
   description: string;
+  planSlug?: string;
 }
 
 export interface CheckoutResponse {

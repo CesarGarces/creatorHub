@@ -73,6 +73,7 @@ export class MercadoPagoStrategy implements IPaymentGateway {
           metadata: {
             user_id: data.userId,
             credits: data.creditsToBuy,
+            plan_slug: data.planSlug || "",
           },
           ...(notificationUrl ? { notification_url: notificationUrl } : {}),
           back_urls: {

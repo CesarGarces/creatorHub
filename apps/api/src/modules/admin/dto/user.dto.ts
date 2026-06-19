@@ -19,7 +19,8 @@ export enum UserRoleDto {
 export enum UserPlanDto {
   FREE = "FREE",
   PAY_AS_YOU_GO = "PAY_AS_YOU_GO",
-  PREMIUM = "PREMIUM",
+  STARTER = "STARTER",
+  PRO = "PRO",
 }
 
 export class CreateUserDto {

@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "UserPlan" ADD VALUE 'STARTER';
+ALTER TYPE "UserPlan" ADD VALUE 'PRO';

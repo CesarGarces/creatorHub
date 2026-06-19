@@ -37,8 +37,10 @@ export class BillingService {
       planId === "free"
         ? "FREE"
         : planId === "pro"
-          ? "PREMIUM"
-          : "PAY_AS_YOU_GO";
+          ? "PRO"
+          : planId === "starter"
+            ? "STARTER"
+            : "PAY_AS_YOU_GO";
 
     await prisma.user.update({
       where: { id: userId },

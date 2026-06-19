@@ -134,6 +134,7 @@ export class CreditsController {
       currency: "USD",
       creditsToBuy: credits,
       description: `${credits} credits - ${plan.name}`,
+      planSlug: plan.slug,
     });
 
     return {
@@ -171,6 +172,7 @@ export class CreditsController {
       currency: "USD",
       creditsToBuy: credits,
       description: `${credits} credits`,
+      planSlug: "PAY_AS_YOU_GO",
     });
 
     return {

@@ -48,7 +48,8 @@ enum UserRole {
 enum UserPlan {
   FREE
   PAY_AS_YOU_GO
-  PREMIUM
+  STARTER
+  PRO
 }
 
 model Account {

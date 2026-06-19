@@ -220,6 +220,7 @@ export class CreditBillingService {
       let userId: string | undefined;
       let amountValue = 0;
       let creditsFromMetadata: number | null = null;
+      let planSlugFromMetadata: string | null = null;
 
       // Try to get from raw body first (in case some gateways send it directly)
       userId =
@@ -249,13 +250,16 @@ export class CreditBillingService {
               amountValue = paymentAny.transaction_amount || 0;
             }
 
-            // Read credits from preference metadata (stored at checkout time)
+            // Read credits and plan from preference metadata (stored at checkout time)
             if (paymentAny.metadata?.credits) {
               creditsFromMetadata = Number(paymentAny.metadata.credits);
             }
+            if (paymentAny.metadata?.plan_slug) {
+              planSlugFromMetadata = String(paymentAny.metadata.plan_slug);
+            }
 
             this.logger.log(
-              `Fetched payment ${referenceId} from MP API: userId=${userId}, amount=${amountValue}, creditsFromMetadata=${creditsFromMetadata}`,
+              `Fetched payment ${referenceId} from MP API: userId=${userId}, amount=${amountValue}, creditsFromMetadata=${creditsFromMetadata}, planSlug=${planSlugFromMetadata}`,
             );
           } catch (err) {
             this.logger.error(
@@ -318,9 +322,27 @@ export class CreditBillingService {
 
       // Add credits and create transaction atomically
       const field = "purchasedCredits";
+      const userUpdateData: any = { [field]: { increment: credits } };
+
+      // Update user's plan based on the credit plan they purchased
+      if (planSlugFromMetadata) {
+        const planMap: Record<string, string> = {
+          PAY_AS_YOU_GO: "PAY_AS_YOU_GO",
+          STARTER: "STARTER",
+          PRO: "PRO",
+        };
+        const newUserPlan = planMap[planSlugFromMetadata];
+        if (newUserPlan) {
+          userUpdateData.plan = newUserPlan;
+          this.logger.log(
+            `Updating user ${userId} plan to ${newUserPlan} (from plan_slug=${planSlugFromMetadata})`,
+          );
+        }
+      }
+
       await tx.user.update({
         where: { id: userId },
-        data: { [field]: { increment: credits } },
+        data: userUpdateData,
       });
 
       const updated = await tx.user.findUnique({ where: { id: userId } });
