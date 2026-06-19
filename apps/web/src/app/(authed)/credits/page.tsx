@@ -191,6 +191,17 @@ export default function CreditsPage() {
   });
 
   const plans = allPlans?.filter((p) => p.slug !== "PAY_AS_YOU_GO");
+  const paygPlan = allPlans?.find((p) => p.slug === "PAY_AS_YOU_GO");
+
+  // Calculate credits for custom amount using the real PAY_AS_YOU_GO plan rate
+  const calculatedCredits = useMemo(() => {
+    const amount = parseFloat(buyAmount) || 0;
+    if (amount <= 0) return 0;
+    if (paygPlan) {
+      return Math.floor((amount / paygPlan.usdAmount) * paygPlan.creditsGiven);
+    }
+    return Math.floor(amount * 100);
+  }, [buyAmount, paygPlan]);
 
   const { data: transactions } = useQuery({
     queryKey: ["transactions"],
@@ -468,7 +479,7 @@ export default function CreditsPage() {
             </div>
             <p className="text-xs text-text-dim">
               You will receive approximately{" "}
-              {Math.floor((parseFloat(buyAmount) || 0) * 100)} credits
+              {calculatedCredits.toLocaleString()} credits
             </p>
             <div className="flex justify-end gap-3">
               <Button

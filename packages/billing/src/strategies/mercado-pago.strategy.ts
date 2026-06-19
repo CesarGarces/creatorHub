@@ -70,6 +70,10 @@ export class MercadoPagoStrategy implements IPaymentGateway {
             },
           ],
           external_reference: data.userId,
+          metadata: {
+            user_id: data.userId,
+            credits: data.creditsToBuy,
+          },
           ...(notificationUrl ? { notification_url: notificationUrl } : {}),
           back_urls: {
             success: `${frontendUrl}/credits`,
@@ -109,21 +113,58 @@ export class MercadoPagoStrategy implements IPaymentGateway {
     }
   }
 
+  private extractGatewayTxId(body: any): string {
+    // New webhook format: { data: { id: "123" } }
+    if (body?.data?.id) return String(body.data.id);
+
+    // Old IPN format: { resource: "123", topic: "payment" }
+    if (body?.topic === "payment" && body?.resource) {
+      const r = String(body.resource);
+      if (/^\d+$/.test(r)) return r;
+    }
+
+    // Old IPN format: { resource: "https://api.mercadolibre.com/merchant_orders/...", topic: "merchant_order" }
+    if (body?.resource && typeof body.resource === "string") {
+      const match = body.resource.match(/\/(\d+)(?:\?|$)/);
+      if (match) return match[1];
+    }
+
+    // Fallback: body.id, body.payment_id
+    if (body?.id && typeof body.id === "string" && /^\d+$/.test(body.id)) {
+      return body.id;
+    }
+    if (body?.payment_id) return String(body.payment_id);
+
+    return "";
+  }
+
   async verifyWebhook(
     headers: any,
     body: any,
     _rawBody?: Buffer,
   ): Promise<WebhookVerificationResult> {
     try {
-      const gatewayTxId =
-        body?.data?.id || body?.id || body?.resource?.id || "";
+      const gatewayTxId = this.extractGatewayTxId(body);
       const secret =
         process.env.MERCADO_PAGO_WEBHOOK_SECRET ||
         process.env.MP_WEBHOOK_SECRET;
 
       this.logger.log(
-        `verifyWebhook: gatewayTxId=${gatewayTxId}, hasSecret=${!!secret}, hasRawBody=${!!_rawBody}`,
+        `verifyWebhook: gatewayTxId=${gatewayTxId}, bodyType=${body?.topic || body?.type || "unknown"}, hasSecret=${!!secret}`,
       );
+
+      // If no gatewayTxId extracted, this is a notification we can't process (e.g. merchant_order)
+      if (!gatewayTxId) {
+        this.logger.log(
+          `No extractable payment ID from webhook (topic=${body?.topic}). Acknowledging.`,
+        );
+        return {
+          isValid: true,
+          gatewayTxId: "",
+          status: "PENDING",
+          metadata: { note: "non-payment webhook, acknowledged" },
+        };
+      }
 
       // 1) Preferred: HMAC signature verification
       const signatureHeader =
@@ -132,9 +173,7 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         headers["x-mercadopago-signature"] ||
         headers["x-hub-signature"];
 
-      this.logger.log(
-        `verifyWebhook: hasSignatureHeader=${!!signatureHeader}, headerKeys=${JSON.stringify(Object.keys(headers).filter((k) => k.startsWith("x-")))}`,
-      );
+      let hmacVerified = false;
 
       if (secret && signatureHeader) {
         const parts = String(signatureHeader)
@@ -145,14 +184,7 @@ export class MercadoPagoStrategy implements IPaymentGateway {
         const ts = tsPart ? tsPart.split("=")[1] : undefined;
         const v1 = v1Part ? v1Part.split("=")[1] : undefined;
 
-        if (!ts || !v1 || !gatewayTxId) {
-          this.logger.warn(
-            "Malformed signature header or missing gateway transaction id",
-          );
-          return { isValid: false, gatewayTxId: "", status: "PENDING" };
-        }
-
-        if (ts && v1 && gatewayTxId) {
+        if (ts && v1) {
           const manifest = `id:${gatewayTxId};ts:${ts};`;
           const computed = crypto
             .createHmac("sha256", secret)
@@ -160,81 +192,39 @@ export class MercadoPagoStrategy implements IPaymentGateway {
             .digest("hex");
           const compBuf = Buffer.from(computed, "hex");
           const v1Buf = Buffer.from(v1, "hex");
-          let isValid =
+          let sigValid =
             compBuf.length === v1Buf.length &&
             crypto.timingSafeEqual(compBuf, v1Buf);
-          if (!isValid) {
-            isValid = computed === v1;
-          }
-          if (!isValid) {
-            this.logger.warn(
-              `Firma de webhook inválida para tx ${gatewayTxId}`,
-            );
-            return { isValid: false, gatewayTxId: "", status: "PENDING" };
+          if (!sigValid) {
+            sigValid = computed === v1;
           }
 
-          // Fetch actual payment status from MercadoPago API
-          const client = this.getClient();
-          if (client) {
-            try {
-              const paymentClient = new Payment(client);
-              const payment = await paymentClient.get({ id: gatewayTxId });
-              const paymentAny = payment as any;
-              const mpStatus = (
-                paymentAny?.status ||
-                paymentAny?.collection_status ||
-                ""
-              )
-                .toString()
-                .toLowerCase();
-              const status = this.mapPaymentStatus(mpStatus);
-              this.logger.log(
-                `HMAC verified + API status for ${gatewayTxId}: ${mpStatus} -> ${status}`,
-              );
-              return {
-                isValid: true,
-                gatewayTxId,
-                status,
-                metadata: {
-                  method: "HMAC_API",
-                  mpStatus,
-                  raw: body,
-                  payment,
-                },
-              };
-            } catch (err) {
-              this.logger.warn(
-                `HMAC valid but API fetch failed for ${gatewayTxId}, falling back to action-based status`,
-                err as any,
-              );
-            }
+          if (sigValid) {
+            hmacVerified = true;
+            this.logger.log(`HMAC signature verified for ${gatewayTxId}`);
           } else {
             this.logger.warn(
-              `HMAC valid but no API client (MERCADO_PAGO_ACCESS_TOKEN not set). gatewayTxId=${gatewayTxId}`,
+              `HMAC signature invalid for ${gatewayTxId}. Falling back to API verification.`,
             );
           }
-
-          // Fallback: use action-based status if API fetch fails
-          const action = body?.action || body?.type || body?.topic || "";
-          const status = this.mapPaymentStatus(
-            action.includes("approved") || action.includes("paid")
-              ? "approved"
-              : action.includes("rejected")
-                ? "rejected"
-                : "pending",
+        } else {
+          this.logger.warn(
+            "Malformed signature header (missing ts or v1). Falling back to API.",
           );
-          return {
-            isValid: true,
-            gatewayTxId,
-            status,
-            metadata: { method: "HMAC", raw: body },
-          };
         }
+      } else if (!secret) {
+        this.logger.warn(
+          "No MERCADO_PAGO_WEBHOOK_SECRET configured. Using API verification only.",
+        );
+      } else {
+        this.logger.warn(
+          "No signature header present. Using API verification only.",
+        );
       }
 
-      // 2) Fallback: verify via Mercado Pago API
+      // 2) Always verify via MercadoPago API (primary method, or fallback if HMAC failed)
       const client = this.getClient();
-      if (client && gatewayTxId) {
+      if (client) {
         try {
           const paymentClient = new Payment(client);
           const payment = await paymentClient.get({ id: gatewayTxId });
@@ -248,39 +238,57 @@ export class MercadoPagoStrategy implements IPaymentGateway {
             .toLowerCase();
           const status = this.mapPaymentStatus(mpStatus);
           this.logger.log(
-            `API verification for ${gatewayTxId}: ${mpStatus} -> ${status}`,
+            `API verification for ${gatewayTxId}: mpStatus=${mpStatus} -> ${status}, hmacVerified=${hmacVerified}`,
           );
           return {
             isValid: true,
             gatewayTxId,
             status,
-            metadata: { method: "API_FETCH", payment },
+            metadata: {
+              method: hmacVerified ? "HMAC_API" : "API_FETCH",
+              mpStatus,
+              hmacVerified,
+              raw: body,
+              payment,
+            },
           };
         } catch (err) {
-          this.logger.warn("SDK verification failed", err as any);
+          this.logger.error(`API fetch failed for ${gatewayTxId}`, err as any);
           return {
             isValid: false,
             gatewayTxId,
             status: "PENDING",
             metadata: {
               method: "API_FETCH_FAILED",
-              note: "test webhook or invalid ID",
+              hmacVerified,
+              error: (err as any)?.message,
             },
           };
         }
       }
 
-      // 3) No secret or test webhook — accept
+      // 3) No API client configured — accept if HMAC was valid
+      if (hmacVerified) {
+        this.logger.log(
+          `HMAC verified but no API client. Accepting webhook for ${gatewayTxId}.`,
+        );
+        return {
+          isValid: true,
+          gatewayTxId,
+          status: "PENDING",
+          metadata: { method: "HMAC_ONLY", hmacVerified: true },
+        };
+      }
+
+      // 4) Nothing worked — reject
       this.logger.warn(
-        "Webhook accepted without strict verification (no secret or no signature header)",
+        `Cannot verify webhook for ${gatewayTxId}: no HMAC, no API client.`,
       );
       return {
-        isValid: true,
+        isValid: false,
         gatewayTxId,
         status: "PENDING",
-        metadata: {
-          note: "unverified — configure MERCADO_PAGO_WEBHOOK_SECRET for production",
-        },
+        metadata: { note: "unverifiable" },
       };
     } catch (err) {
       this.logger.error("Error verifying Mercado Pago webhook", err as any);

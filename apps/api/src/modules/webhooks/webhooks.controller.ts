@@ -20,10 +20,33 @@ import {
 export class WebhooksController {
   private readonly logger = new Logger(WebhooksController.name);
 
+  // In-flight dedup: payment IDs currently being processed
+  private readonly processing = new Map<string, number>();
+
   constructor(
     private readonly paymentRegistry: PaymentRegistryService,
     private readonly creditBilling: CreditBillingService,
   ) {}
+
+  private isProcessing(gatewayTxId: string): boolean {
+    if (!gatewayTxId) return false;
+    const ts = this.processing.get(gatewayTxId);
+    if (!ts) return false;
+    // Expire after 30s (safety net)
+    if (Date.now() - ts > 30_000) {
+      this.processing.delete(gatewayTxId);
+      return false;
+    }
+    return true;
+  }
+
+  private markProcessing(gatewayTxId: string) {
+    if (gatewayTxId) this.processing.set(gatewayTxId, Date.now());
+  }
+
+  private markDone(gatewayTxId: string) {
+    if (gatewayTxId) this.processing.delete(gatewayTxId);
+  }
 
   @Post(":gateway")
   @HttpCode(HttpStatus.OK)
@@ -67,12 +90,28 @@ export class WebhooksController {
         return res.send({ ok: true, warning: "verification_failed" });
       }
 
+      const gatewayTxId = verification.gatewayTxId;
+
+      // Deduplicate: skip if this payment ID is already being processed
+      if (this.isProcessing(gatewayTxId)) {
+        this.logger.log(
+          `Skipping duplicate webhook for payment ${gatewayTxId} (already processing)`,
+        );
+        return res.send({ ok: true, status: "duplicate" });
+      }
+      this.markProcessing(gatewayTxId);
+
       // Process all statuses: SUCCESSFUL (add credits), FAILED (notify), PENDING (notify)
-      const ok = await this.creditBilling.reconcilePayment(
-        gatewayEnum as any,
-        verification as any,
-        body || rawBody,
-      );
+      let ok = false;
+      try {
+        ok = await this.creditBilling.reconcilePayment(
+          gatewayEnum as any,
+          verification as any,
+          body || rawBody,
+        );
+      } finally {
+        this.markDone(gatewayTxId);
+      }
 
       this.logger.log(`Reconcile result: ok=${ok}`);
 

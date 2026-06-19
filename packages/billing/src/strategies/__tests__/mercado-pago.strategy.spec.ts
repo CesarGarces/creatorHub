@@ -65,59 +65,62 @@ describe("MercadoPagoStrategy (webhook verification)", () => {
     expect(res.status).toBe("SUCCESSFUL");
   });
 
-  it("accepts webhook when no secret and no access token (unverified)", async () => {
+  it("rejects webhook when no secret and no access token (unverifiable)", async () => {
     delete process.env.MERCADO_PAGO_WEBHOOK_SECRET;
     delete process.env.MP_ACCESS_TOKEN;
     delete process.env.MERCADO_PAGO_ACCESS_TOKEN;
     const body = { data: { id: "mp_tx_999" }, type: "payment" };
     const res = await strategy.verifyWebhook({}, body);
-    expect(res.isValid).toBe(true);
+    expect(res.isValid).toBe(false);
     expect(res.status).toBe("PENDING");
   });
 
-  it("rejects when signature header missing required parts", async () => {
+  it("falls through to API when signature header is malformed", async () => {
     process.env.MERCADO_PAGO_WEBHOOK_SECRET = "test-secret";
     process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
     const gatewayTxId = "mp_tx_123";
     const signatureHeader = `v1=deadbeef`;
     const body = { data: { id: gatewayTxId }, type: "payment" };
+
+    const mockPaymentClient = {
+      get: vi.fn().mockResolvedValue({ status: "approved" }),
+    };
+    (Payment as any).mockImplementation(() => mockPaymentClient);
+
     const res = await strategy.verifyWebhook(
       { "x-signature": signatureHeader },
       body,
     );
-    expect(res.isValid).toBe(false);
+    expect(res.isValid).toBe(true);
+    expect(res.status).toBe("SUCCESSFUL");
   });
 
-  it("rejects when v1 does not match computed HMAC", async () => {
+  it("falls through to API when HMAC does not match", async () => {
     process.env.MERCADO_PAGO_WEBHOOK_SECRET = "test-secret";
     process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
     const gatewayTxId = "mp_tx_123";
     const ts = Math.floor(Date.now() / 1000).toString();
     const signatureHeader = `ts=${ts},v1=invalidhex`;
     const body = { data: { id: gatewayTxId }, type: "payment" };
+
+    const mockPaymentClient = {
+      get: vi.fn().mockResolvedValue({ status: "approved" }),
+    };
+    (Payment as any).mockImplementation(() => mockPaymentClient);
+
     const res = await strategy.verifyWebhook(
       { "x-signature": signatureHeader },
       body,
     );
-    expect(res.isValid).toBe(false);
+    expect(res.isValid).toBe(true);
+    expect(res.status).toBe("SUCCESSFUL");
   });
 
-  it("rejects when body has no gateway tx id", async () => {
-    process.env.MERCADO_PAGO_WEBHOOK_SECRET = "test-secret";
-    process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
-    const ts = Math.floor(Date.now() / 1000).toString();
-    const manifest = `id:;ts:${ts};`;
-    const v1 = crypto
-      .createHmac("sha256", process.env.MERCADO_PAGO_WEBHOOK_SECRET!)
-      .update(manifest)
-      .digest("hex");
-    const signatureHeader = `ts=${ts},v1=${v1}`;
+  it("acknowledges body with no gateway tx id", async () => {
     const body = { foo: "bar" };
-    const res = await strategy.verifyWebhook(
-      { "x-signature": signatureHeader },
-      body,
-    );
-    expect(res.isValid).toBe(false);
+    const res = await strategy.verifyWebhook({}, body);
+    expect(res.isValid).toBe(true);
+    expect(res.gatewayTxId).toBe("");
   });
 
   describe("mapPaymentStatus - MercadoPago status mapping", () => {
@@ -301,7 +304,7 @@ describe("MercadoPagoStrategy (webhook verification)", () => {
       expect(res.status).toBe("FAILED");
     });
 
-    it("falls back to action-based status when API fetch fails after HMAC", async () => {
+    it("rejects when API fetch fails even if HMAC is valid", async () => {
       process.env.MERCADO_PAGO_WEBHOOK_SECRET = "test-secret";
       process.env.MERCADO_PAGO_ACCESS_TOKEN = "fake-token";
       const gatewayTxId = "mp_hmac_api_fail";
@@ -323,8 +326,7 @@ describe("MercadoPagoStrategy (webhook verification)", () => {
         Buffer.from("raw"),
       );
 
-      expect(res.isValid).toBe(true);
-      // Falls back to action-based: "payment.created" doesn't contain "approved" or "rejected"
+      expect(res.isValid).toBe(false);
       expect(res.status).toBe("PENDING");
     });
   });

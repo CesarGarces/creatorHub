@@ -205,122 +205,161 @@ export class CreditBillingService {
     // Handle SUCCESSFUL status - add credits
     if (verification.status !== "SUCCESSFUL") return false;
 
-    // Idempotency: if we've already recorded a purchase with this reference, ignore
-    const existing = await prisma.creditTransaction.findFirst({
-      where: { referenceId },
-    });
-    if (existing) {
-      this.logger.log(`Payment already reconciled: ${referenceId}`);
-      return true;
-    }
+    // Idempotency + credit addition in a single transaction to prevent double-processing
+    const result = await prisma.$transaction(async (tx) => {
+      const existing = await tx.creditTransaction.findFirst({
+        where: { referenceId },
+      });
+      if (existing) {
+        this.logger.log(`Payment already reconciled: ${referenceId}`);
+        return { skipped: true };
+      }
 
-    // MercadoPago webhook only sends { action, data: { id } }
-    // We need to fetch full payment details from the API
-    let userId: string | undefined;
-    let amountValue = 0;
+      // MercadoPago webhook only sends { action, data: { id } }
+      // We need to fetch full payment details from the API
+      let userId: string | undefined;
+      let amountValue = 0;
+      let creditsFromMetadata: number | null = null;
 
-    // Try to get from raw body first (in case some gateways send it directly)
-    userId =
-      raw?.external_reference ||
-      raw?.data?.external_reference ||
-      raw?.resource?.external_reference;
-    amountValue =
-      raw?.transaction_amount ||
-      raw?.amount ||
-      raw?.data?.amount ||
-      raw?.resource?.amount ||
-      0;
+      // Try to get from raw body first (in case some gateways send it directly)
+      userId =
+        raw?.external_reference ||
+        raw?.data?.external_reference ||
+        raw?.resource?.external_reference;
+      amountValue =
+        raw?.transaction_amount ||
+        raw?.amount ||
+        raw?.data?.amount ||
+        raw?.resource?.amount ||
+        0;
 
-    // If not found in raw body, fetch from MercadoPago API
-    if (!userId || !amountValue) {
-      const mpClient = this.getMercadoPagoClient();
-      if (mpClient && referenceId) {
-        try {
-          const paymentClient = new Payment(mpClient);
-          const payment = await paymentClient.get({ id: referenceId });
-          const paymentAny = payment as any;
+      // If not found in raw body, fetch from MercadoPago API
+      if (!userId || !amountValue) {
+        const mpClient = this.getMercadoPagoClient();
+        if (mpClient && referenceId) {
+          try {
+            const paymentClient = new Payment(mpClient);
+            const payment = await paymentClient.get({ id: referenceId });
+            const paymentAny = payment as any;
 
-          if (!userId) {
-            userId = paymentAny.external_reference;
+            if (!userId) {
+              userId = paymentAny.external_reference;
+            }
+            if (!amountValue) {
+              amountValue = paymentAny.transaction_amount || 0;
+            }
+
+            // Read credits from preference metadata (stored at checkout time)
+            if (paymentAny.metadata?.credits) {
+              creditsFromMetadata = Number(paymentAny.metadata.credits);
+            }
+
+            this.logger.log(
+              `Fetched payment ${referenceId} from MP API: userId=${userId}, amount=${amountValue}, creditsFromMetadata=${creditsFromMetadata}`,
+            );
+          } catch (err) {
+            this.logger.error(
+              `Failed to fetch payment ${referenceId} from MP API`,
+              err as any,
+            );
           }
-          if (!amountValue) {
-            amountValue = paymentAny.transaction_amount || 0;
-          }
-
-          this.logger.log(
-            `Fetched payment ${referenceId} from MP API: userId=${userId}, amount=${amountValue}`,
-          );
-        } catch (err) {
-          this.logger.error(
-            `Failed to fetch payment ${referenceId} from MP API`,
-            err as any,
-          );
         }
       }
-    }
 
-    if (!userId) {
-      this.logger.warn(
-        `Cannot reconcile payment ${referenceId}: userId not found`,
+      if (!userId) {
+        this.logger.warn(
+          `Cannot reconcile payment ${referenceId}: userId not found`,
+        );
+        return { skipped: false };
+      }
+
+      if (!amountValue || amountValue <= 0) {
+        this.logger.warn(
+          `Cannot reconcile payment ${referenceId}: invalid amount ${amountValue}`,
+        );
+        return { skipped: false };
+      }
+
+      // Prefer credits from metadata (exact amount from checkout time)
+      // Fallback: calculate from plan (only works correctly if amount is in USD)
+      let credits: number;
+      if (creditsFromMetadata && creditsFromMetadata > 0) {
+        credits = creditsFromMetadata;
+        this.logger.log(
+          `Using credits from metadata for ${referenceId}: ${credits}`,
+        );
+      } else {
+        // Fallback: look up PAY_AS_YOU_GO plan for credit conversion rate
+        const paygPlan = await tx.creditPlan.findUnique({
+          where: { slug: "PAY_AS_YOU_GO" },
+        });
+
+        // NOTE: amountValue from MP may be in ARS (seller currency), not USD
+        // This fallback is only accurate if amount is in USD
+        credits = paygPlan
+          ? Math.floor(
+              (amountValue / paygPlan.usdAmount) * paygPlan.creditsGiven,
+            )
+          : Math.floor(amountValue * 100);
+
+        this.logger.warn(
+          `Credits from metadata missing for ${referenceId}, fell back to calculation: ${credits} (amount=${amountValue})`,
+        );
+      }
+
+      if (credits <= 0) {
+        this.logger.warn(`Calculated 0 credits for payment ${referenceId}`);
+        return { skipped: false };
+      }
+
+      this.logger.log(
+        `Reconciling payment ${referenceId}: userId=${userId}, amount=${amountValue}, credits=${credits}`,
       );
-      return false;
-    }
 
-    if (!amountValue || amountValue <= 0) {
-      this.logger.warn(
-        `Cannot reconcile payment ${referenceId}: invalid amount ${amountValue}`,
-      );
-      return false;
-    }
+      // Add credits and create transaction atomically
+      const field = "purchasedCredits";
+      await tx.user.update({
+        where: { id: userId },
+        data: { [field]: { increment: credits } },
+      });
 
-    // Look up PAY_AS_YOU_GO plan for credit conversion rate
-    const paygPlan = await prisma.creditPlan.findUnique({
-      where: { slug: "PAY_AS_YOU_GO" },
+      const updated = await tx.user.findUnique({ where: { id: userId } });
+      const newBalance =
+        (updated?.freeCredits || 0) + (updated?.purchasedCredits || 0);
+
+      await tx.creditTransaction.create({
+        data: {
+          userId,
+          amount: credits,
+          type: "PURCHASE",
+          description: `Payment ${gateway} - ${referenceId}`,
+          balance: newBalance,
+          provider: gateway,
+          referenceId,
+        },
+      });
+
+      return { skipped: false, userId, credits, referenceId };
     });
 
-    // Calculate credits based on the plan's conversion rate
-    // amountValue from MP is in the currency of the preference (USD in our case)
-    const credits = paygPlan
-      ? Math.floor((amountValue / paygPlan.usdAmount) * paygPlan.creditsGiven)
-      : Math.floor(amountValue * 100);
+    if (result.skipped) return true;
+    if (!result.userId || !result.credits) return false;
 
-    if (credits <= 0) {
-      this.logger.warn(`Calculated 0 credits for payment ${referenceId}`);
-      return false;
-    }
-
-    this.logger.log(
-      `Reconciling payment ${referenceId}: userId=${userId}, amount=${amountValue}, credits=${credits}`,
-    );
-
+    // Emit real-time notification
     try {
-      await this.creditService.addCredits(
-        userId!,
-        credits,
-        `Payment ${gateway} - ${referenceId}`,
-        "PURCHASE",
-        { provider: gateway, referenceId },
-      );
-
-      // Emit real-time notification
-      try {
-        const balanceAfter = await this.creditService.getBalance(userId!);
-        const event: PaymentSuccessEvent = {
-          userId: userId!,
-          gatewayTxId: referenceId,
-          amount: credits,
-          balance: balanceAfter || 0,
-          gateway,
-          timestamp: new Date(),
-        };
-        await this.eventPublisher.publish("payment:success", event);
-      } catch (err) {
-        this.logger.warn("Failed to emit payment success event", err as any);
-      }
-      return true;
+      const balanceAfter = await this.creditService.getBalance(result.userId);
+      const event: PaymentSuccessEvent = {
+        userId: result.userId,
+        gatewayTxId: result.referenceId,
+        amount: result.credits,
+        balance: balanceAfter || 0,
+        gateway,
+        timestamp: new Date(),
+      };
+      await this.eventPublisher.publish("payment:success", event);
     } catch (err) {
-      this.logger.error("Error reconciling payment", err as any);
-      return false;
+      this.logger.warn("Failed to emit payment success event", err as any);
     }
+    return true;
   }
 }
