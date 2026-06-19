@@ -10,6 +10,7 @@ import {
   DOMAIN_EVENT_PUBLISHER,
 } from "@creator-hub/domain-events";
 import type { PaymentSuccessEvent } from "@creator-hub/shared-types";
+import { MercadoPagoConfig, Payment } from "mercadopago";
 
 @Injectable()
 export class CreditBillingService {
@@ -20,6 +21,13 @@ export class CreditBillingService {
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private readonly eventPublisher: DomainEventPublisher,
   ) {}
+
+  private getMercadoPagoClient() {
+    const accessToken =
+      process.env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN;
+    if (!accessToken) return null;
+    return new MercadoPagoConfig({ accessToken });
+  }
 
   async reconcilePayment(
     gateway: PaymentGateway,
@@ -40,20 +48,61 @@ export class CreditBillingService {
       return true;
     }
 
-    const userId =
+    // MercadoPago webhook only sends { action, data: { id } }
+    // We need to fetch full payment details from the API
+    let userId: string | undefined;
+    let amountValue = 0;
+
+    // Try to get from raw body first (in case some gateways send it directly)
+    userId =
       raw?.external_reference ||
       raw?.data?.external_reference ||
       raw?.resource?.external_reference;
-    const amountValue =
+    amountValue =
+      raw?.transaction_amount ||
       raw?.amount ||
       raw?.data?.amount ||
       raw?.resource?.amount ||
-      raw?.transaction_amount ||
       0;
+
+    // If not found in raw body, fetch from MercadoPago API
+    if (!userId || !amountValue) {
+      const mpClient = this.getMercadoPagoClient();
+      if (mpClient && referenceId) {
+        try {
+          const paymentClient = new Payment(mpClient);
+          const payment = await paymentClient.get({ id: referenceId });
+          const paymentAny = payment as any;
+
+          if (!userId) {
+            userId = paymentAny.external_reference;
+          }
+          if (!amountValue) {
+            amountValue = paymentAny.transaction_amount || 0;
+          }
+
+          this.logger.log(
+            `Fetched payment ${referenceId} from MP API: userId=${userId}, amount=${amountValue}`,
+          );
+        } catch (err) {
+          this.logger.error(
+            `Failed to fetch payment ${referenceId} from MP API`,
+            err as any,
+          );
+        }
+      }
+    }
 
     if (!userId) {
       this.logger.warn(
-        "Cannot reconcile payment without external_reference (userId)",
+        `Cannot reconcile payment ${referenceId}: userId not found`,
+      );
+      return false;
+    }
+
+    if (!amountValue || amountValue <= 0) {
+      this.logger.warn(
+        `Cannot reconcile payment ${referenceId}: invalid amount ${amountValue}`,
       );
       return false;
     }
@@ -64,30 +113,34 @@ export class CreditBillingService {
     });
 
     // Calculate credits based on the plan's conversion rate
+    // amountValue from MP is in the currency of the preference (USD in our case)
     const credits = paygPlan
       ? Math.floor((amountValue / paygPlan.usdAmount) * paygPlan.creditsGiven)
-      : Math.floor(amountValue * 100); // fallback: 100 credits per dollar
+      : Math.floor(amountValue * 100);
 
     if (credits <= 0) {
       this.logger.warn(`Calculated 0 credits for payment ${referenceId}`);
       return false;
     }
 
+    this.logger.log(
+      `Reconciling payment ${referenceId}: userId=${userId}, amount=${amountValue}, credits=${credits}`,
+    );
+
     try {
       await prisma.$transaction(async (tx) => {
-        // Apply credits using CreditService which itself uses transactions for safety
         await this.creditService.addCredits(
-          userId,
+          userId!,
           credits,
           `Purchase via ${gateway}`,
           "PURCHASE",
         );
 
-        const balance = await this.creditService.getBalance(userId);
+        const balance = await this.creditService.getBalance(userId!);
 
         await tx.creditTransaction.create({
           data: {
-            userId,
+            userId: userId!,
             amount: credits,
             type: "PURCHASE",
             description: `Payment ${gateway}`,
@@ -98,20 +151,18 @@ export class CreditBillingService {
         });
       });
 
-      // Emit real-time notification to the user via domain event (Redis pub/sub)
+      // Emit real-time notification
       try {
-        if (userId) {
-          const balanceAfter = await this.creditService.getBalance(userId);
-          const event: PaymentSuccessEvent = {
-            userId,
-            gatewayTxId: referenceId,
-            amount: credits,
-            balance: balanceAfter || 0,
-            gateway,
-            timestamp: new Date(),
-          };
-          await this.eventPublisher.publish("payment:success", event);
-        }
+        const balanceAfter = await this.creditService.getBalance(userId!);
+        const event: PaymentSuccessEvent = {
+          userId: userId!,
+          gatewayTxId: referenceId,
+          amount: credits,
+          balance: balanceAfter || 0,
+          gateway,
+          timestamp: new Date(),
+        };
+        await this.eventPublisher.publish("payment:success", event);
       } catch (err) {
         this.logger.warn("Failed to emit payment success event", err as any);
       }
