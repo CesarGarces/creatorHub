@@ -207,7 +207,6 @@ export default function SettingsPage() {
               label="Current Password"
               value={currentPassword}
               onChange={setCurrentPassword}
-              autoComplete="current-password"
             />
             <PasswordInput
               label="New Password"

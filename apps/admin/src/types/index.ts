@@ -51,8 +51,8 @@ export interface TopUser {
   creditsUsed: number;
 }
 
-export interface RegistrationByMonth {
-  month: string;
+export interface RegistrationByDay {
+  date: string;
   count: number;
 }
 

@@ -46,7 +46,7 @@ creator-hub/
 │   ├── auth/             # JWT + Passport
 │   ├── ai-engine/        # Multi-provider AI abstraction (tier-aware)
 │   ├── stt-engine/       # Speech-to-text streaming (Deepgram, Mock)
-│   ├── billing/          # Sistema de créditos (free + purchased)
+│   ├── billing/          # Sistema de créditos (currentCredits como fuente única)
 │   ├── storage/          # R2/MinIO abstraction
 │   ├── analytics/        # Tracking de uso
 │   ├── database/         # Prisma ORM
@@ -75,14 +75,15 @@ El sistema sigue principios de **Clean Architecture** y **DDD**: cada herramient
 | ----------------- | ------------------- | ------------------------------------------------------ |
 | **FREE**          | 100 créditos gratis | Solo proveedores gratuitos (Z-Image-Turbo, FLUX.2-pro) |
 | **PAY_AS_YOU_GO** | Compra bajo demanda | Todos los proveedores activos                          |
-| **PREMIUM**       | Suscripción mensual | Todos los proveedores activos                          |
+| **STARTER**       | $25 USD / 2700 cr   | Todos los proveedores starter activos                  |
+| **PRO**           | $50 USD / 6000 cr   | Todos los proveedores activos                          |
 
 Los proveedores y sus costos se configuran en la tabla `Provider` de la base de datos. El frontend los consume dinámicamente desde `GET /api/v1/ai/providers`.
 
 ### Flujo de registro
 
 ```
-Registro → User.create(plan=FREE, freeCredits=100)
+Registro → User.create(plan=FREE, currentCredits=100)
          → Subscription.create(planId="free", status=ACTIVE)
 ```
 
@@ -90,16 +91,16 @@ Los usuarios reciben **100 créditos gratis** al registrarse. No se requiere tar
 
 ### Sistema de créditos
 
-El costo por generación depende del proveedor seleccionado y se lee desde la tabla `Provider` (`costPerCredit`). Los créditos se deducen en orden de prioridad:
+El costo por generación depende del proveedor seleccionado y se lee desde la tabla `Provider` (`costPerCredit`). El saldo del usuario se almacena en un solo campo:
 
 ```
-freeCredits → purchasedCredits → Error (sin créditos)
+currentCredits → Error (sin créditos)
 ```
 
-| Campo              | Descripción                                       |
-| ------------------ | ------------------------------------------------- |
-| `freeCredits`      | Créditos gratis del plan FREE (se agotan primero) |
-| `purchasedCredits` | Créditos comprados o de suscripción               |
+| Campo              | Descripción                                               |
+| ------------------ | --------------------------------------------------------- |
+| `currentCredits`   | Saldo total del usuario (gratis + comprados + bonus)      |
+| `purchasedCredits` | Contador informativo de créditos comprados (solo lectura) |
 
 ### Marketing Automation
 
@@ -185,11 +186,11 @@ Frontend
   → GET /api/v1/ai/providers
   → Lista filtrada (isActive=true), ordenada por tier + costo
 
-Usuario FREE + freeCredits > 0
+Usuario FREE + currentCredits > 0
   → Solo proveedores con tier=FREE son seleccionables
   → El backend rechaza peticiones a proveedores PRO
 
-Usuario PAY_AS_YOU_GO / PREMIUM
+Usuario PAY_AS_YOU_GO / STARTER / PRO
   → Todos los proveedores activos disponibles
 ```
 
@@ -284,7 +285,7 @@ El sistema de tareas en segundo plano es **multi-tool y desacoplado**. Cualquier
 │           │                               ▼                           │
 │           │                    ┌────────────────────────┐              │
 │           │                    │ CreditService.deduct() │              │
-│           │                    │ (freeCredits first)    │              │
+│           │                    │ (currentCredits)       │              │
 │           │                    └───────────┬────────────┘              │
 │           │                               │                           │
 │           │                               ▼                           │
@@ -652,7 +653,7 @@ On      stt:transcript → { transcript, isFinal }         # Transcripción parc
 On      stt:done → { sessionId, transcript, durationMs } # Sesión completada
 On      stt:error → { code, message }                    # Error o créditos insuficientes
 
-GET    /api/v1/credits/balance        # Saldo (freeCredits, purchasedCredits, plan)
+GET    /api/v1/credits/balance        # Saldo (balance = currentCredits, plan)
 GET    /api/v1/credits/marketing-events  # Eventos de marketing del usuario
 GET    /api/v1/credits/plans          # Planes de suscripción
 POST   /api/v1/credits/subscribe      # Suscribirse a un plan
@@ -666,12 +667,12 @@ POST   /api/v1/webhooks/mercado-pago  # Webhook de MercadoPago (verificación HM
 
 Los usuarios reciben **100 créditos gratis** al registrarse. El costo por generación depende del proveedor y se obtiene de la tabla `Provider` (`costPerCredit`).
 
-El sistema distingue entre dos tipos de créditos:
+El saldo se almacena en un solo campo `currentCredits` que es la fuente única de verdad:
 
-| Tipo               | Origen                | Prioridad de deducción |
-| ------------------ | --------------------- | ---------------------- |
-| `freeCredits`      | Registro (100 gratis) | Primero                |
-| `purchasedCredits` | Compra o suscripción  | Segundo                |
+| Campo              | Descripción                                               |
+| ------------------ | --------------------------------------------------------- |
+| `currentCredits`   | Saldo total del usuario (gratis + comprados + bonus)      |
+| `purchasedCredits` | Contador informativo de créditos comprados (solo lectura) |
 
 Cuando los créditos llegan a 0, se muestra un **modal de upgrade** con opciones de recarga (mínimo $10 USD).
 

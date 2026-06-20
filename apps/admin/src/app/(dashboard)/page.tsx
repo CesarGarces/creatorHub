@@ -6,36 +6,27 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { UsageChart } from "@/components/dashboard/usage-chart";
 import { RegistrationsChart } from "@/components/dashboard/registrations-chart";
 import { TopUsersTable } from "@/components/dashboard/top-users-table";
-import type {
-  DashboardStats,
-  UsageByProvider,
-  TopUser,
-  RegistrationByMonth,
-} from "@/types";
+import type { DashboardStats, UsageByProvider, TopUser } from "@/types";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [usage, setUsage] = useState<UsageByProvider[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
-  const [registrations, setRegistrations] = useState<RegistrationByMonth[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, usageRes, topUsersRes, registrationsRes] =
-          await Promise.all([
-            api.get("/admin/dashboard/stats"),
-            api.get("/admin/dashboard/usage"),
-            api.get("/admin/dashboard/top-users"),
-            api.get("/admin/dashboard/registrations"),
-          ]);
+        const [statsRes, usageRes, topUsersRes] = await Promise.all([
+          api.get("/admin/dashboard/stats"),
+          api.get("/admin/dashboard/usage"),
+          api.get("/admin/dashboard/top-users"),
+        ]);
 
         setStats(statsRes.data);
         setUsage(usageRes.data?.byProvider || []);
         setTopUsers(topUsersRes.data?.users || []);
-        setRegistrations(registrationsRes.data?.byMonth || []);
       } catch (err: any) {
         setError(
           err.response?.data?.message || "Failed to load dashboard data",
@@ -86,7 +77,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <UsageChart data={usage} />
-        <RegistrationsChart data={registrations} />
+        <RegistrationsChart />
       </div>
 
       <TopUsersTable users={topUsers} />

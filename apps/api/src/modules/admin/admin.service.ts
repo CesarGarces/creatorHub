@@ -399,11 +399,13 @@ export class AdminService {
       take: limit,
     });
 
-    return usage.map((u) => ({
-      toolId: u.toolId,
-      usageCount: u._count.userId,
-      credits: u._sum.credits ?? 0,
-    }));
+    return {
+      byProvider: usage.map((u) => ({
+        toolId: u.toolId,
+        usageCount: u._count.userId,
+        credits: u._sum.credits ?? 0,
+      })),
+    };
   }
 
   async getTopUsers(limit = 10): Promise<any> {
@@ -428,52 +430,60 @@ export class AdminService {
 
     const userMap = new Map(users.map((u) => [u.id, u]));
 
-    return usage.map((u) => {
-      const user = userMap.get(u.userId);
-      return {
-        userId: u.userId,
-        userName: user?.name ?? "Unknown",
-        userEmail: user?.email ?? "Unknown",
-        userPlan: user?.plan ?? "FREE",
-        usageCount: u._count.userId,
-        creditsUsed: Math.abs(u._sum.credits ?? 0),
-      };
-    });
+    return {
+      users: usage.map((u) => {
+        const user = userMap.get(u.userId);
+        return {
+          userId: u.userId,
+          userName: user?.name ?? "Unknown",
+          userEmail: user?.email ?? "Unknown",
+          userPlan: user?.plan ?? "FREE",
+          usageCount: u._count.userId,
+          creditsUsed: Math.abs(u._sum.credits ?? 0),
+        };
+      }),
+    };
   }
 
-  async getRegistrationsByMonth(months = 12): Promise<any> {
-    const now = new Date();
-    const startDate = new Date(
-      now.getFullYear(),
-      now.getMonth() - months + 1,
-      1,
-    );
+  async getRegistrations(from?: string, to?: string): Promise<any> {
+    const endDate = to ? new Date(to) : new Date();
+    endDate.setHours(23, 59, 59, 999);
+
+    const startDate = from ? new Date(from) : new Date(endDate);
     startDate.setHours(0, 0, 0, 0);
 
     const users = await prisma.user.findMany({
-      where: { createdAt: { gte: startDate } },
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
       select: { createdAt: true },
     });
 
     const grouped = new Map<string, number>();
 
-    for (let i = 0; i < months; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`;
       grouped.set(key, 0);
+      current.setDate(current.getDate() + 1);
     }
 
     for (const user of users) {
       const d = user.createdAt;
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       if (grouped.has(key)) {
         grouped.set(key, (grouped.get(key) ?? 0) + 1);
       }
     }
 
-    return Array.from(grouped.entries())
-      .map(([month, count]) => ({ month, count }))
-      .sort((a, b) => a.month.localeCompare(b.month));
+    return {
+      byDay: Array.from(grouped.entries())
+        .map(([date, count]) => ({ date, count }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    };
   }
 
   // ──────────────────────────────────────────────

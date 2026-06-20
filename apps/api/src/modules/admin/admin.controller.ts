@@ -172,10 +172,11 @@ export class AdminController {
   }
 
   @Get("dashboard/registrations")
-  async getRegistrationsByMonth(
-    @Query("months", new DefaultValuePipe(12), ParseIntPipe) months: number,
+  async getRegistrations(
+    @Query("from") from?: string,
+    @Query("to") to?: string,
   ): Promise<any> {
-    return this.adminService.getRegistrationsByMonth(months);
+    return this.adminService.getRegistrations(from, to);
   }
 
   // ──────────────────────────────────────────────

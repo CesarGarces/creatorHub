@@ -478,10 +478,10 @@ When a tool calls `aiEngine.execute(request)`:
 
 Providers are classified by tier in the `Provider` table:
 
-| Tier   | Providers                               | Used By                |
-| ------ | --------------------------------------- | ---------------------- |
-| `free` | Z-Image-Turbo, SiliconFlow (FLUX.2-pro) | FREE plan users        |
-| `pro`  | OpenAI, Gemini, Stability AI, Flux      | PAY_AS_YOU_GO, PREMIUM |
+| Tier   | Providers                               | Used By                     |
+| ------ | --------------------------------------- | --------------------------- |
+| `free` | Z-Image-Turbo, SiliconFlow (FLUX.2-pro) | FREE plan users             |
+| `pro`  | OpenAI, Gemini, Stability AI, Flux      | PAY_AS_YOU_GO, STARTER, PRO |
 
 The `ProviderRegistry` exposes runtime provider instances:
 
@@ -508,8 +508,8 @@ The `AIController` exposes DB-driven provider metadata:
 │ passwordHash             │     │ category               │
 │ role (USER/PREMIUM/ADMIN)│     │ creditsPerUse          │
 │ plan (FREE/PAY_AS_YOU_GO/│     │ status                 │
-│       PREMIUM)           │     │ configSchema (JSON)    │
-│ freeCredits (default 100)│     └────────┬───────────────┘
+│       PREMIUM/STARTER/PRO)│     │ configSchema (JSON)    │
+│ currentCredits (def 100) │     └────────┬───────────────┘
 │ purchasedCredits (def 0) │              │
 │ isActive                 │              │
 │ createdAt                │              │
@@ -589,8 +589,9 @@ The `AIController` exposes DB-driven provider metadata:
 
 ### Key Schema Changes
 
-- **No `CreditBalance` model** — Credits live directly on `User` as `freeCredits` + `purchasedCredits`
-- **`UserPlan` enum** — `FREE`, `PAY_AS_YOU_GO`, `PREMIUM`
+- **No `CreditBalance` model** — Credits live directly on `User` as `currentCredits` (single source of truth)
+- **`purchasedCredits`** — Informational counter only, not used for balance deduction
+- **`UserPlan` enum** — `FREE`, `PAY_AS_YOU_GO`, `PREMIUM`, `STARTER`, `PRO`
 - **`UserRole` enum** — `USER`, `ADMIN`
 - **`PaymentGateway` enum** — `MERCADO_PAGO`, `PAYPAL` (used in `CreditTransaction.provider`)
 - **`MarketingEvent`** — Tracks credit threshold events for conversion analytics
@@ -623,7 +624,7 @@ GET    /api/v1/tools/thumbnail-generator/images     # User's images
 POST   /api/v1/tools/content-translator/translate   # Translate (text, targetLanguage, provider)
 GET    /api/v1/tools/content-translator/jobs/:id/status
 
-GET    /api/v1/credits/balance       # Get balance (freeCredits, purchasedCredits, plan)
+GET    /api/v1/credits/balance       # Get balance (balance = currentCredits, plan)
 GET    /api/v1/credits/marketing-events  # Marketing events for user
 GET    /api/v1/credits/plans         # List subscription plans
 POST   /api/v1/credits/subscribe     # Subscribe to plan
@@ -869,10 +870,10 @@ User clicks Mic button in Content Translator
 
 ### Credit Types
 
-| Field              | Description                           | Deduction Priority |
-| ------------------ | ------------------------------------- | ------------------ |
-| `freeCredits`      | 100 free credits on registration      | First              |
-| `purchasedCredits` | Credits from purchase or subscription | Second             |
+| Field              | Description                                               | Deduction |
+| ------------------ | --------------------------------------------------------- | --------- |
+| `currentCredits`   | Saldo total del usuario (gratis + comprados + bonus)      | Se usa    |
+| `purchasedCredits` | Contador informativo de créditos comprados (solo lectura) | No se usa |
 
 ### Flow
 
@@ -884,8 +885,8 @@ User clicks Mic button in Content Translator
                            ▼
                     ┌──────────────┐
                     │  User        │
-                    │  freeCredits │
-                    │  = 100       │
+                    │  current     │
+                    │  Credits=100 │
                     └──────┬───────┘
                            │
          ┌─────────────────┼─────────────────┐
@@ -903,8 +904,8 @@ User clicks Mic button in Content Translator
 ```
 User requests tool usage
     │
-    ├──► Check totalCredits (freeCredits + purchasedCredits)
-    │      ├──► Sufficient? → Deduct (freeCredits first, then purchasedCredits)
+    ├──► Check currentCredits
+    │      ├──► Sufficient? → Deduct (decrement currentCredits)
     │      │                  ├──► Execute tool
     │      │                  ├──► Record CreditTransaction
     │      │                  └──► Check thresholds → MarketingEvent
@@ -942,8 +943,8 @@ Frontend
 
 Backend validation
   → FREE + provider.tier=PRO → Error (upgrade required)
-  → FREE + provider.tier=FREE + totalCredits >= costPerCredit → OK
-  → PAY_AS_YOU_GO / PREMIUM + totalCredits >= costPerCredit → OK
+  → FREE + provider.tier=FREE + currentCredits >= costPerCredit → OK
+  → PAY_AS_YOU_GO / STARTER / PRO + currentCredits >= costPerCredit → OK
 ```
 
 ### Admin Management
@@ -957,7 +958,7 @@ AdminController
   └── Users CRUD (soft delete via isActive)
 ```
 
-User credits are **read-only** in admin. Soft delete prevents accidental data loss and preserves historical records.
+User credits are **editable** in admin. Soft delete prevents accidental data loss and preserves historical records.
 
 ---
 
