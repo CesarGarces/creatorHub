@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -64,7 +65,8 @@ function PasswordInput({
 }
 
 export default function SettingsPage() {
-  const { user, setUser } = useAuthStore();
+  const router = useRouter();
+  const { user, setUser, logout } = useAuthStore();
   const { balance, plan, fetchBalance } = useCreditsStore();
 
   // Password
@@ -80,6 +82,11 @@ export default function SettingsPage() {
     user?.name || user?.email?.split("@")[0] || "",
   );
   const [profileLoading, setProfileLoading] = useState(false);
+
+  // Delete Account
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     fetchBalance();
@@ -123,6 +130,24 @@ export default function SettingsPage() {
       toast.error(err.message || "Failed to change password");
     } finally {
       setPwLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== "ELIMINAR") {
+      toast.error('Type "ELIMINAR" to confirm');
+      return;
+    }
+    setDeleteLoading(true);
+    try {
+      await api.delete("/auth/account");
+      toast.success("Account deleted successfully");
+      logout();
+      router.push("/login");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete account");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -249,7 +274,14 @@ export default function SettingsPage() {
                   Permanently delete your account and all data
                 </p>
               </div>
-              <Button variant="danger" size="sm">
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => {
+                  setDeleteConfirmation("");
+                  setDeleteOpen(true);
+                }}
+              >
                 Delete Account
               </Button>
             </div>
@@ -321,6 +353,51 @@ export default function SettingsPage() {
                 isLoading={pwLoading}
               >
                 Yes, Change Password
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Account Modal */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent
+          className="sm:max-w-md"
+          onClose={() => setDeleteOpen(false)}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-error">Delete Account</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 pb-6 space-y-4">
+            <p className="text-sm text-text-muted">
+              This action is irreversible. All your data will be permanently
+              deleted including your images and account information.
+            </p>
+            <p className="text-sm text-text-muted">
+              Type <span className="font-bold text-error">ELIMINAR</span> to
+              confirm.
+            </p>
+            <Input
+              label="Confirmation"
+              value={deleteConfirmation}
+              onChange={(e) => setDeleteConfirmation(e.target.value)}
+              placeholder="ELIMINAR"
+            />
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleteLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDeleteAccount}
+                isLoading={deleteLoading}
+                disabled={deleteConfirmation !== "ELIMINAR"}
+              >
+                Delete Account
               </Button>
             </div>
           </div>

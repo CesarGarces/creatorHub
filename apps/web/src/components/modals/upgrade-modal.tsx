@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Badge,
@@ -23,6 +24,7 @@ const creditPacks = [
 ];
 
 export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
+  const router = useRouter();
   const [selectedPack, setSelectedPack] = useState<string>("pack-10");
 
   return (
@@ -92,7 +94,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             size="lg"
             className="w-full"
             onClick={() => {
-              window.location.href = "/pricing";
+              router.push("/pricing");
             }}
           >
             Or Subscribe for Unlimited

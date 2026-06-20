@@ -30,9 +30,13 @@ export function TopBar({
 }: TopBarProps) {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const { balance, isLoading: creditsLoading } = useCreditsStore();
+  const {
+    balance,
+    isLoading: creditsLoading,
+    isHydrated: creditsHydrated,
+  } = useCreditsStore();
 
-  const lowCredits = !creditsLoading && balance < 50;
+  const lowCredits = creditsHydrated && !creditsLoading && balance < 50;
   const notifications: {
     id: string;
     message: string;

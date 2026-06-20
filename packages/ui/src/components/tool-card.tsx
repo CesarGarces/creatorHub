@@ -52,10 +52,6 @@ export function ToolCard({
         )}
       </div>
       <div className="mt-4 flex items-center gap-3">
-        <span className="flex items-center gap-1 text-xs text-text-dim">
-          <span className="text-secondary">⚡</span>
-          {credits} credits/use
-        </span>
         {isPremium && (
           <span className="rounded-full bg-warning-light px-2 py-0.5 text-xs text-warning font-medium">
             Premium

@@ -8,10 +8,14 @@ import { JwtService } from "@nestjs/jwt";
 import { prisma } from "@creator-hub/database";
 import * as bcrypt from "bcryptjs";
 import type { JwtPayload } from "./interfaces/jwt-payload.interface";
+import { StorageService } from "@creator-hub/storage";
 
 @Injectable()
 export class AuthService {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    private storageService: StorageService,
+  ) {}
 
   async register(email: string, password: string, name?: string) {
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -100,6 +104,98 @@ export class AuthService {
       data: { name },
     });
     return { message: "Profile updated successfully" };
+  }
+
+  async getMe(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        plan: true,
+        currentCredits: true,
+        purchasedCredits: true,
+        avatarUrl: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("User not found");
+    }
+
+    return user;
+  }
+
+  async deleteAccount(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, avatarUrl: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException("User not found");
+    }
+
+    const generatedImages = await prisma.generatedImage.findMany({
+      where: { userId },
+      select: { url: true, storageProvider: true },
+    });
+
+    const bucket = this.storageService.getDefaultBucket();
+    const deletePromises: Promise<void>[] = [];
+
+    for (const image of generatedImages) {
+      const key = this.extractKeyFromUrl(image.url, bucket);
+      if (key) {
+        deletePromises.push(
+          this.storageService.delete(key, bucket).catch((error: unknown) => {
+            console.warn(`Failed to delete image ${key}:`, error);
+          }),
+        );
+      }
+    }
+
+    if (user.avatarUrl && !user.avatarUrl.startsWith("http")) {
+      const avatarKey = this.extractKeyFromUrl(user.avatarUrl, bucket);
+      if (avatarKey) {
+        deletePromises.push(
+          this.storageService
+            .delete(avatarKey, bucket)
+            .catch((error: unknown) => {
+              console.warn(`Failed to delete avatar ${avatarKey}:`, error);
+            }),
+        );
+      }
+    }
+
+    await Promise.all(deletePromises);
+
+    await prisma.user.delete({ where: { id: userId } });
+
+    return { message: "Account deleted successfully" };
+  }
+
+  private extractKeyFromUrl(url: string, bucket: string): string | null {
+    if (url.startsWith("http")) {
+      try {
+        const parsed = new URL(url);
+        const pathParts = parsed.pathname.split("/").filter(Boolean);
+        if (pathParts.length >= 2) {
+          return pathParts.slice(1).join("/");
+        }
+      } catch {
+        return null;
+      }
+    }
+
+    if (url.startsWith(`${bucket}/`)) {
+      return url.slice(bucket.length + 1);
+    }
+
+    return null;
   }
 
   async validateOAuth(

@@ -44,7 +44,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.42)(jsdom@22.1.0(supports-color@8.1.1))(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
+        version: 1.6.1(@types/node@20.19.42)(jsdom@22.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
 
   apps/admin:
     dependencies:
@@ -111,7 +111,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.0.0
-        version: 1.6.1(@types/node@20.19.42)(jsdom@22.1.0(supports-color@8.1.1))(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
+        version: 1.6.1(@types/node@20.19.42)(jsdom@22.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
 
   apps/api:
     dependencies:
@@ -201,7 +201,7 @@ importers:
         version: 2.4.3
       body-parser:
         specifier: ^2.3.0
-        version: 2.3.0(supports-color@8.1.1)
+        version: 2.3.0
       bullmq:
         specifier: ^5.0.0
         version: 5.78.0
@@ -399,7 +399,7 @@ importers:
         version: 10.5.0(postcss@8.5.15)
       body-parser:
         specifier: ^2.3.0
-        version: 2.3.0(supports-color@8.1.1)
+        version: 2.3.0
       cypress:
         specifier: ^15.17.0
         version: 15.17.0
@@ -408,7 +408,7 @@ importers:
         version: 4.18.2
       jsdom:
         specifier: ^22.1.0
-        version: 22.1.0(supports-color@8.1.1)
+        version: 22.1.0
       postcss:
         specifier: ^8.0.0
         version: 8.5.15
@@ -420,7 +420,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.0.0
-        version: 1.6.1(@types/node@20.19.42)(jsdom@22.1.0(supports-color@8.1.1))(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
+        version: 1.6.1(@types/node@20.19.42)(jsdom@22.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
 
   packages/ai-engine:
     dependencies:
@@ -498,6 +498,9 @@ importers:
       '@creator-hub/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      '@creator-hub/storage':
+        specifier: workspace:*
+        version: link:../storage
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.26(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -583,7 +586,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.42)(jsdom@22.1.0(supports-color@8.1.1))(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
+        version: 1.6.1(@types/node@20.19.42)(jsdom@22.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
 
   packages/database:
     dependencies:
@@ -9170,7 +9173,7 @@ snapshots:
     dependencies:
       follow-redirects: 1.16.0
       form-data: 4.0.5
-      https-proxy-agent: 5.0.1(supports-color@8.1.1)
+      https-proxy-agent: 5.0.1
       proxy-from-env: 2.1.0
     transitivePeerDependencies:
       - debug
@@ -9221,7 +9224,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  body-parser@2.3.0(supports-color@8.1.1):
+  body-parser@2.3.0:
     dependencies:
       bytes: 3.1.2
       content-type: 2.0.0
@@ -10054,7 +10057,7 @@ snapshots:
   express@5.2.1:
     dependencies:
       accepts: 2.0.0
-      body-parser: 2.3.0(supports-color@8.1.1)
+      body-parser: 2.3.0
       content-disposition: 1.1.0
       content-type: 1.0.5
       cookie: 0.7.2
@@ -10410,7 +10413,7 @@ snapshots:
       statuses: 2.0.2
       toidentifier: 1.0.1
 
-  http-proxy-agent@5.0.0(supports-color@8.1.1):
+  http-proxy-agent@5.0.0:
     dependencies:
       '@tootallnate/once': 2.0.1
       agent-base: 6.0.2
@@ -10424,7 +10427,7 @@ snapshots:
       jsprim: 2.0.2
       sshpk: 1.18.0
 
-  https-proxy-agent@5.0.1(supports-color@8.1.1):
+  https-proxy-agent@5.0.1:
     dependencies:
       agent-base: 6.0.2
       debug: 4.4.3(supports-color@8.1.1)
@@ -10631,7 +10634,7 @@ snapshots:
 
   jsbn@0.1.1: {}
 
-  jsdom@22.1.0(supports-color@8.1.1):
+  jsdom@22.1.0:
     dependencies:
       abab: 2.0.6
       cssstyle: 3.0.0
@@ -10640,8 +10643,8 @@ snapshots:
       domexception: 4.0.0
       form-data: 4.0.5
       html-encoding-sniffer: 3.0.0
-      http-proxy-agent: 5.0.0(supports-color@8.1.1)
-      https-proxy-agent: 5.0.1(supports-color@8.1.1)
+      http-proxy-agent: 5.0.0
+      https-proxy-agent: 5.0.1
       is-potential-custom-element-name: 1.0.1
       nwsapi: 2.2.24
       parse5: 7.3.0
@@ -11785,13 +11788,13 @@ snapshots:
       '@socket.io/component-emitter': 3.1.2
       debug: 4.4.3(supports-color@8.1.1)
       engine.io-client: 6.6.5(supports-color@8.1.1)
-      socket.io-parser: 4.2.6(supports-color@8.1.1)
+      socket.io-parser: 4.2.6
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  socket.io-parser@4.2.6(supports-color@8.1.1):
+  socket.io-parser@4.2.6:
     dependencies:
       '@socket.io/component-emitter': 3.1.2
       debug: 4.4.3(supports-color@8.1.1)
@@ -11806,7 +11809,7 @@ snapshots:
       debug: 4.4.3(supports-color@8.1.1)
       engine.io: 6.6.8
       socket.io-adapter: 2.5.7
-      socket.io-parser: 4.2.6(supports-color@8.1.1)
+      socket.io-parser: 4.2.6
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -12279,7 +12282,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.42
-      jsdom: 22.1.0(supports-color@8.1.1)
+      jsdom: 22.1.0
     transitivePeerDependencies:
       - less
       - lightningcss
@@ -12290,7 +12293,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@1.6.1(@types/node@20.19.42)(jsdom@22.1.0(supports-color@8.1.1))(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0):
+  vitest@1.6.1(@types/node@20.19.42)(jsdom@22.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0):
     dependencies:
       '@vitest/expect': 1.6.1
       '@vitest/runner': 1.6.1
@@ -12314,7 +12317,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.42
-      jsdom: 22.1.0(supports-color@8.1.1)
+      jsdom: 22.1.0
     transitivePeerDependencies:
       - less
       - lightningcss

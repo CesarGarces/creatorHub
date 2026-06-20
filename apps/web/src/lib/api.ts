@@ -1,7 +1,31 @@
-import { getAccessToken } from "@/lib/cookie";
+import {
+  getAccessToken,
+  removeAccessToken,
+  removeRefreshToken,
+  removeStoredUser,
+} from "@/lib/cookie";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+
+let isHandling401 = false;
+
+function handleUnauthorized() {
+  if (isHandling401) return;
+  isHandling401 = true;
+
+  removeAccessToken();
+  removeRefreshToken();
+  removeStoredUser();
+
+  if (typeof window !== "undefined") {
+    window.location.href = "/login";
+  }
+
+  setTimeout(() => {
+    isHandling401 = false;
+  }, 1000);
+}
 
 interface ApiOptions extends RequestInit {
   params?: Record<string, string>;
@@ -27,6 +51,11 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
       ...fetchOptions.headers,
     },
   });
+
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new ApiError(401, "Session expired");
+  }
 
   if (!response.ok) {
     let errorMessage = `Request failed (${response.status})`;

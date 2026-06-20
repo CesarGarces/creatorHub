@@ -59,6 +59,7 @@ export default function ThumbnailGeneratorPage() {
     balance,
     plan,
     isLoading: creditsLoading,
+    isHydrated: creditsHydrated,
     fetchBalance,
   } = useCreditsStore();
   const [providers, setProviders] = useState<ProviderFromApi[]>([]);
@@ -115,10 +116,15 @@ export default function ThumbnailGeneratorPage() {
   }, []);
 
   useEffect(() => {
-    if (!creditsLoading && balance === 0 && plan === "FREE") {
+    if (
+      creditsHydrated &&
+      !creditsLoading &&
+      balance === 0 &&
+      plan === "FREE"
+    ) {
       setShowUpgradeModal(true);
     }
-  }, [creditsLoading, balance, plan]);
+  }, [creditsHydrated, creditsLoading, balance, plan]);
 
   useEffect(() => {
     api
@@ -483,6 +489,7 @@ export default function ThumbnailGeneratorPage() {
               isLoading={isProcessing}
               disabled={
                 !prompt.trim() ||
+                !creditsHydrated ||
                 balance < (selectedProvider?.costPerCredit ?? 1) ||
                 isProcessing
               }
@@ -490,40 +497,44 @@ export default function ThumbnailGeneratorPage() {
             >
               {isProcessing ? "Generating..." : "Generate Thumbnail"}
             </Button>
-            {balance < (selectedProvider?.costPerCredit ?? 1) && (
-              <p className="mt-2 text-xs text-error text-center">
-                Insufficient credits.{" "}
-                <button
-                  onClick={() => router.push("/credits")}
-                  className="underline cursor-pointer"
-                >
-                  Buy more
-                </button>
-              </p>
-            )}
+            {creditsHydrated &&
+              balance < (selectedProvider?.costPerCredit ?? 1) && (
+                <p className="mt-2 text-xs text-error text-center">
+                  Insufficient credits.{" "}
+                  <button
+                    onClick={() => router.push("/credits")}
+                    className="underline cursor-pointer"
+                  >
+                    Buy more
+                  </button>
+                </p>
+              )}
           </div>
 
-          {!creditsLoading && balance === 0 && plan === "FREE" && (
-            <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-warning">⚠️</span>
-                <span className="text-sm font-medium text-warning">
-                  No credits left
-                </span>
+          {creditsHydrated &&
+            !creditsLoading &&
+            balance === 0 &&
+            plan === "FREE" && (
+              <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-warning">⚠️</span>
+                  <span className="text-sm font-medium text-warning">
+                    No credits left
+                  </span>
+                </div>
+                <p className="text-xs text-text-muted">
+                  Upgrade to Pro or buy credit packs to continue generating.
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setShowUpgradeModal(true)}
+                >
+                  Recharge (Min. $10)
+                </Button>
               </div>
-              <p className="text-xs text-text-muted">
-                Upgrade to Pro or buy credit packs to continue generating.
-              </p>
-              <Button
-                variant="primary"
-                size="sm"
-                className="w-full"
-                onClick={() => setShowUpgradeModal(true)}
-              >
-                Recharge (Min. $10)
-              </Button>
-            </div>
-          )}
+            )}
         </div>
 
         {/* Center - Preview */}

@@ -66,6 +66,7 @@ export default function ContentTranslatorPage() {
     balance,
     plan,
     isLoading: creditsLoading,
+    isHydrated: creditsHydrated,
     fetchBalance,
   } = useCreditsStore();
   const {
@@ -208,6 +209,7 @@ export default function ContentTranslatorPage() {
 
   useEffect(() => {
     if (
+      creditsHydrated &&
       !creditsLoading &&
       balance === 0 &&
       plan === "FREE" &&
@@ -215,7 +217,7 @@ export default function ContentTranslatorPage() {
     ) {
       setShowUpgradeModal(true);
     }
-  }, [creditsLoading, balance, plan, status]);
+  }, [creditsHydrated, creditsLoading, balance, plan, status]);
 
   useEffect(() => {
     api
@@ -570,6 +572,7 @@ export default function ContentTranslatorPage() {
               size="lg"
               disabled={
                 !inputText.trim() ||
+                !creditsHydrated ||
                 balance < (selectedProvider?.costPerCredit ?? 1) ||
                 isProcessing
               }
@@ -691,7 +694,8 @@ export default function ContentTranslatorPage() {
           </div>
         </div>
 
-        {balance < (selectedProvider?.costPerCredit ?? 1) &&
+        {creditsHydrated &&
+          balance < (selectedProvider?.costPerCredit ?? 1) &&
           status === "IDLE" && (
             <div className="relative z-10 px-6 py-2">
               <p className="text-xs text-error text-center">

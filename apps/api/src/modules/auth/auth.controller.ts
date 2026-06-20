@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Patch,
+  Delete,
   Body,
   HttpCode,
   HttpStatus,
@@ -78,11 +79,24 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get("me")
+  async getMe(@CurrentUser("id") userId: string) {
+    return this.authService.getMe(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Patch("profile")
   async updateProfile(
     @CurrentUser("id") userId: string,
     @Body() dto: UpdateProfileDto,
   ) {
     return this.authService.updateProfile(userId, dto.name);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete("account")
+  @HttpCode(HttpStatus.OK)
+  async deleteAccount(@CurrentUser("id") userId: string) {
+    return this.authService.deleteAccount(userId);
   }
 }

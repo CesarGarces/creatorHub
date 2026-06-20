@@ -98,9 +98,7 @@ export default function AssetsPage() {
             title="No assets yet"
             description="Generated images and files will appear here."
             actionLabel="Generate your first thumbnail"
-            onAction={() =>
-              (window.location.href = "/tools/thumbnail-generator")
-            }
+            onAction={() => router.push("/tools/thumbnail-generator")}
           />
         ) : (
           <>

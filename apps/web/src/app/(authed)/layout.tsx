@@ -7,6 +7,7 @@ import { useCreditsStore } from "@/store/credits.store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { useSocketEvents } from "@/hooks/use-socket-events";
 import { useBackgroundPolling } from "@/hooks/use-background-polling";
+import { useSessionValidator } from "@/hooks/use-session-validator";
 
 export default function AuthedLayout({
   children,
@@ -19,6 +20,7 @@ export default function AuthedLayout({
 
   useSocketEvents();
   useBackgroundPolling();
+  useSessionValidator();
 
   useEffect(() => {
     hydrate();

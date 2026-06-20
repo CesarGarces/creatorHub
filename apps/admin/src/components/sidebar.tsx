@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Cpu, Users, CreditCard, LogOut } from "lucide-react";
 
 const navItems = [
@@ -13,11 +13,12 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const handleLogout = () => {
     localStorage.removeItem("admin_token");
     document.cookie = "admin_token=; path=/; max-age=0; SameSite=Lax";
-    window.location.href = "/login";
+    router.push("/login");
   };
 
   return (
