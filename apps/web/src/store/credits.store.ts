@@ -3,7 +3,7 @@ import api from "@/lib/api";
 
 interface CreditsState {
   balance: number;
-  freeCredits: number;
+  currentCredits: number;
   purchasedCredits: number;
   plan: string;
   isLoading: boolean;
@@ -15,7 +15,7 @@ interface CreditsState {
 
 export const useCreditsStore = create<CreditsState>()((set) => ({
   balance: 0,
-  freeCredits: 0,
+  currentCredits: 0,
   purchasedCredits: 0,
   plan: "FREE",
   isLoading: false,
@@ -26,13 +26,13 @@ export const useCreditsStore = create<CreditsState>()((set) => ({
     try {
       const res = await api.get<{
         balance: number;
-        freeCredits: number;
+        currentCredits: number;
         purchasedCredits: number;
         plan: string;
       }>("/credits/balance");
       set({
         balance: res.balance,
-        freeCredits: res.freeCredits,
+        currentCredits: res.currentCredits,
         purchasedCredits: res.purchasedCredits,
         plan: res.plan,
       });

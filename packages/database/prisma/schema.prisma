@@ -20,7 +20,7 @@ model User {
   avatarUrl         String?
   role              UserRole  @default(USER)
   plan              UserPlan  @default(FREE)
-  freeCredits       Int       @default(100)
+  currentCredits    Int       @default(100)
   purchasedCredits  Int       @default(0)
   isActive          Boolean   @default(true)
   lastLoginAt       DateTime?
@@ -48,6 +48,7 @@ enum UserRole {
 enum UserPlan {
   FREE
   PAY_AS_YOU_GO
+  PREMIUM
   STARTER
   PRO
 }

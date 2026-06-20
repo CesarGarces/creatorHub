@@ -347,7 +347,7 @@ export class CreditBillingService {
 
       const updated = await tx.user.findUnique({ where: { id: userId } });
       const newBalance =
-        (updated?.freeCredits || 0) + (updated?.purchasedCredits || 0);
+        (updated?.currentCredits || 0) + (updated?.purchasedCredits || 0);
 
       await tx.creditTransaction.create({
         data: {

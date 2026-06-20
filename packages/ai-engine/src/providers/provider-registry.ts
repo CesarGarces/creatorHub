@@ -44,10 +44,10 @@ export class ProviderRegistry {
 
   getProviderForUser(user: {
     plan: string;
-    freeCredits: number;
+    currentCredits: number;
     purchasedCredits: number;
   }): AIProviderInterface {
-    if (user.plan === "FREE" && user.freeCredits > 0) {
+    if (user.plan === "FREE" && user.currentCredits > 0) {
       const freeProviders = this.getFreeProviders();
       const freeProvider = freeProviders[0];
       if (freeProvider) {

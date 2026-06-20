@@ -65,7 +65,7 @@ describe("AuthService", () => {
           name: "Test User",
           passwordHash: "$2a$12$hashedpassword",
           plan: "FREE",
-          freeCredits: 100,
+          currentCredits: 100,
           purchasedCredits: 0,
         },
       });
@@ -183,7 +183,7 @@ describe("AuthService", () => {
           email: "new@example.com",
           name: "New User",
           plan: "FREE",
-          freeCredits: 100,
+          currentCredits: 100,
           purchasedCredits: 0,
           accounts: {
             create: { provider: "google", providerAccountId: "goog-456" },

@@ -88,7 +88,7 @@ describe("CreditBillingService (notifications)", () => {
       });
       (prisma.user.update as jest.Mock).mockResolvedValue({});
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        freeCredits: 0,
+        currentCredits: 0,
         purchasedCredits: 1000,
       });
       (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
@@ -138,7 +138,7 @@ describe("CreditBillingService (notifications)", () => {
       });
       (prisma.user.update as jest.Mock).mockResolvedValue({});
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        freeCredits: 0,
+        currentCredits: 0,
         purchasedCredits: 500,
       });
       (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
@@ -231,7 +231,7 @@ describe("CreditBillingService (notifications)", () => {
       });
       (prisma.user.update as jest.Mock).mockResolvedValue({});
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        freeCredits: 0,
+        currentCredits: 0,
         purchasedCredits: 12000,
       });
       (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
@@ -287,7 +287,7 @@ describe("CreditBillingService (notifications)", () => {
       });
       (prisma.user.update as jest.Mock).mockResolvedValue({});
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        freeCredits: 0,
+        currentCredits: 0,
         purchasedCredits: 10000,
       });
       (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
@@ -364,7 +364,7 @@ describe("CreditBillingService (notifications)", () => {
     });
     (prisma.user.update as jest.Mock).mockResolvedValue({});
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      freeCredits: 0,
+      currentCredits: 0,
       purchasedCredits: 12000,
     });
     (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({

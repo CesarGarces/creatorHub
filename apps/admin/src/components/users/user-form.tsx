@@ -18,7 +18,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
     password: "",
     role: user?.role ?? "USER",
     plan: user?.plan ?? "FREE",
-    freeCredits: user?.freeCredits ?? 0,
+    currentCredits: user?.currentCredits ?? 0,
     purchasedCredits: user?.purchasedCredits ?? 0,
     isActive: user?.isActive ?? true,
   });
@@ -41,7 +41,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         role: form.role,
         plan: form.plan,
         isActive: form.isActive,
-        freeCredits: form.freeCredits,
+        currentCredits: form.currentCredits,
         purchasedCredits: form.purchasedCredits,
       };
 
@@ -144,14 +144,14 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs text-text-dim">
-              Free Credits
+              Current Credits
             </label>
             <Input
               type="number"
               min={0}
-              value={form.freeCredits}
+              value={form.currentCredits}
               onChange={(e) =>
-                updateField("freeCredits", parseInt(e.target.value) || 0)
+                updateField("currentCredits", parseInt(e.target.value) || 0)
               }
             />
           </div>

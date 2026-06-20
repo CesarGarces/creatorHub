@@ -22,15 +22,15 @@ export class CreditsController {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
-        freeCredits: true,
+        currentCredits: true,
         purchasedCredits: true,
         plan: true,
       },
     });
 
     return {
-      balance: (user?.freeCredits || 0) + (user?.purchasedCredits || 0),
-      freeCredits: user?.freeCredits || 0,
+      balance: (user?.currentCredits || 0) + (user?.purchasedCredits || 0),
+      currentCredits: user?.currentCredits || 0,
       purchasedCredits: user?.purchasedCredits || 0,
       plan: user?.plan || "FREE",
     };

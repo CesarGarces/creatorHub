@@ -188,7 +188,7 @@ export class AdminService {
           name: true,
           role: true,
           plan: true,
-          freeCredits: true,
+          currentCredits: true,
           purchasedCredits: true,
           isActive: true,
           createdAt: true,
@@ -200,7 +200,7 @@ export class AdminService {
 
     const usersWithTotalCredits = data.map((u) => ({
       ...u,
-      totalCredits: u.freeCredits + u.purchasedCredits,
+      totalCredits: u.currentCredits + u.purchasedCredits,
     }));
 
     return {
@@ -218,7 +218,7 @@ export class AdminService {
         name: true,
         role: true,
         plan: true,
-        freeCredits: true,
+        currentCredits: true,
         purchasedCredits: true,
         isActive: true,
         createdAt: true,
@@ -226,7 +226,10 @@ export class AdminService {
       },
     });
     if (!user) throw new NotFoundException("User not found");
-    return { ...user, totalCredits: user.freeCredits + user.purchasedCredits };
+    return {
+      ...user,
+      totalCredits: user.currentCredits + user.purchasedCredits,
+    };
   }
 
   async createUser(dto: CreateUserDto): Promise<any> {
@@ -246,7 +249,7 @@ export class AdminService {
         passwordHash,
         role: dto.role ?? "USER",
         plan: (dto.plan ?? "FREE") as any,
-        freeCredits: dto.freeCredits ?? 100,
+        currentCredits: dto.currentCredits ?? 100,
         purchasedCredits: dto.purchasedCredits ?? 0,
         isActive: dto.isActive ?? true,
       },
@@ -256,7 +259,7 @@ export class AdminService {
         name: true,
         role: true,
         plan: true,
-        freeCredits: true,
+        currentCredits: true,
         purchasedCredits: true,
         isActive: true,
         createdAt: true,
@@ -266,7 +269,7 @@ export class AdminService {
 
     return {
       ...created,
-      totalCredits: created.freeCredits + created.purchasedCredits,
+      totalCredits: created.currentCredits + created.purchasedCredits,
     };
   }
 
@@ -310,7 +313,9 @@ export class AdminService {
         }),
         ...(dto.role !== undefined && { role: dto.role }),
         ...(dto.plan !== undefined && { plan: dto.plan as any }),
-        ...(dto.freeCredits !== undefined && { freeCredits: dto.freeCredits }),
+        ...(dto.currentCredits !== undefined && {
+          currentCredits: dto.currentCredits,
+        }),
         ...(dto.purchasedCredits !== undefined && {
           purchasedCredits: dto.purchasedCredits,
         }),
@@ -322,7 +327,7 @@ export class AdminService {
         name: true,
         role: true,
         plan: true,
-        freeCredits: true,
+        currentCredits: true,
         purchasedCredits: true,
         isActive: true,
         createdAt: true,
@@ -332,7 +337,7 @@ export class AdminService {
 
     return {
       ...updated,
-      totalCredits: updated.freeCredits + updated.purchasedCredits,
+      totalCredits: updated.currentCredits + updated.purchasedCredits,
     };
   }
 
@@ -369,7 +374,7 @@ export class AdminService {
     ]);
 
     const totalCreditsRemaining = await prisma.user.aggregate({
-      _sum: { freeCredits: true, purchasedCredits: true },
+      _sum: { currentCredits: true, purchasedCredits: true },
     });
 
     return {
@@ -380,7 +385,7 @@ export class AdminService {
       activeProviders,
       totalCreditsUsed: Math.abs(totalCreditsUsed._sum.amount ?? 0),
       totalCreditsRemaining:
-        (totalCreditsRemaining._sum.freeCredits ?? 0) +
+        (totalCreditsRemaining._sum.currentCredits ?? 0) +
         (totalCreditsRemaining._sum.purchasedCredits ?? 0),
     };
   }

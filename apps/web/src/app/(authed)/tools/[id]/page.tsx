@@ -22,6 +22,17 @@ const stylePresets = [
   { id: "reaction", label: "Reaction Face", emoji: "😲" },
 ];
 
+const planLabels: Record<
+  string,
+  { label: string; variant: "free" | "primary" | "premium" }
+> = {
+  FREE: { label: "FREE PLAN", variant: "free" },
+  PAY_AS_YOU_GO: { label: "PAY AS YOU GO", variant: "primary" },
+  PREMIUM: { label: "PREMIUM", variant: "premium" },
+  STARTER: { label: "STARTER", variant: "primary" },
+  PRO: { label: "PRO", variant: "premium" },
+};
+
 const aspectRatios = [
   { id: "1:1", label: "1:1", width: 1024, height: 1024, iconClass: "w-8 h-8" },
   { id: "3:4", label: "3:4", width: 768, height: 1024, iconClass: "w-6 h-8" },
@@ -223,9 +234,9 @@ export default function ThumbnailGeneratorPage() {
                 ⚡ {selectedProvider.costPerCredit} credits
               </Badge>
             )}
-            {plan === "FREE" && (
-              <Badge variant="free" size="sm">
-                FREE PLAN
+            {plan && planLabels[plan] && (
+              <Badge variant={planLabels[plan].variant} size="sm">
+                {planLabels[plan].label}
               </Badge>
             )}
           </div>

@@ -19,6 +19,7 @@ export enum UserRoleDto {
 export enum UserPlanDto {
   FREE = "FREE",
   PAY_AS_YOU_GO = "PAY_AS_YOU_GO",
+  PREMIUM = "PREMIUM",
   STARTER = "STARTER",
   PRO = "PRO",
 }
@@ -45,7 +46,7 @@ export class CreateUserDto {
   @IsInt()
   @Min(0)
   @IsOptional()
-  freeCredits?: number;
+  currentCredits?: number;
 
   @IsInt()
   @Min(0)
@@ -82,7 +83,7 @@ class UpdateUserBaseDto {
   @IsInt()
   @Min(0)
   @IsOptional()
-  freeCredits?: number;
+  currentCredits?: number;
 
   @IsInt()
   @Min(0)

@@ -9,7 +9,7 @@ export interface UserProfile {
   avatar?: string;
   role: UserRole;
   plan: UserPlan;
-  freeCredits: number;
+  currentCredits: number;
   purchasedCredits: number;
   createdAt: Date;
 }

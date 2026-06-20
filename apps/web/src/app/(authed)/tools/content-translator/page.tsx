@@ -18,6 +18,17 @@ import { TopBar } from "@/components/layout/top-bar";
 import { LiquidEtherBackground } from "@/components/animations";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
 
+const planLabels: Record<
+  string,
+  { label: string; variant: "free" | "primary" | "premium" }
+> = {
+  FREE: { label: "FREE PLAN", variant: "free" },
+  PAY_AS_YOU_GO: { label: "PAY AS YOU GO", variant: "primary" },
+  PREMIUM: { label: "PREMIUM", variant: "premium" },
+  STARTER: { label: "STARTER", variant: "primary" },
+  PRO: { label: "PRO", variant: "premium" },
+};
+
 const LANGUAGES = [
   { code: "es", label: "Spanish" },
   { code: "en", label: "English" },
@@ -286,9 +297,9 @@ export default function ContentTranslatorPage() {
                 {selectedProvider.costPerCredit} credits
               </Badge>
             )}
-            {plan === "FREE" && (
-              <Badge variant="free" size="sm">
-                FREE PLAN
+            {plan && planLabels[plan] && (
+              <Badge variant={planLabels[plan].variant} size="sm">
+                {planLabels[plan].label}
               </Badge>
             )}
           </div>

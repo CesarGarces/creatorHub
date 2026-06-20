@@ -56,7 +56,7 @@ export class ThumbnailService {
     }
 
     const creditCost = provider.costPerCredit;
-    const totalCredits = user.freeCredits + user.purchasedCredits;
+    const totalCredits = user.currentCredits + user.purchasedCredits;
     if (totalCredits < creditCost) {
       throw new Error(
         "No credits available. Please upgrade your plan or purchase credits.",

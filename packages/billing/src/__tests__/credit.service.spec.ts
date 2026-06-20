@@ -44,7 +44,7 @@ describe("CreditService", () => {
     it("should return combined balance when user exists", async () => {
       (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
-        freeCredits: 50,
+        currentCredits: 50,
         purchasedCredits: 100,
       });
 
@@ -53,7 +53,7 @@ describe("CreditService", () => {
       expect(balance).toBe(150);
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: "user-1" },
-        select: { freeCredits: true, purchasedCredits: true },
+        select: { currentCredits: true, purchasedCredits: true },
       });
     });
 
@@ -70,7 +70,7 @@ describe("CreditService", () => {
     it("should return true when balance is sufficient", async () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
         id: "user-1",
-        freeCredits: 50,
+        currentCredits: 50,
         purchasedCredits: 50,
       });
 
@@ -82,7 +82,7 @@ describe("CreditService", () => {
     it("should return false when balance is insufficient", async () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
         id: "user-1",
-        freeCredits: 5,
+        currentCredits: 5,
         purchasedCredits: 5,
       });
 
@@ -101,16 +101,16 @@ describe("CreditService", () => {
   });
 
   describe("deduct", () => {
-    it("should deduct credits successfully using freeCredits first", async () => {
+    it("should deduct credits successfully using currentCredits first", async () => {
       (prisma.user.findUnique as any)
         .mockResolvedValueOnce({
           id: "user-1",
-          freeCredits: 80,
+          currentCredits: 80,
           purchasedCredits: 20,
         })
         .mockResolvedValueOnce({
           id: "user-1",
-          freeCredits: 70,
+          currentCredits: 70,
           purchasedCredits: 20,
         });
       (prisma.tool.findUnique as any).mockResolvedValue({ id: "tool-1" });
@@ -122,7 +122,7 @@ describe("CreditService", () => {
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: "user-1" },
         data: {
-          freeCredits: { decrement: 10 },
+          currentCredits: { decrement: 10 },
           purchasedCredits: { decrement: 0 },
         },
       });
@@ -132,12 +132,12 @@ describe("CreditService", () => {
       (prisma.user.findUnique as any)
         .mockResolvedValueOnce({
           id: "user-1",
-          freeCredits: 5,
+          currentCredits: 5,
           purchasedCredits: 20,
         })
         .mockResolvedValueOnce({
           id: "user-1",
-          freeCredits: 0,
+          currentCredits: 0,
           purchasedCredits: 15,
         });
       (prisma.tool.findUnique as any).mockResolvedValue(null);
@@ -149,7 +149,7 @@ describe("CreditService", () => {
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: "user-1" },
         data: {
-          freeCredits: { decrement: 5 },
+          currentCredits: { decrement: 5 },
           purchasedCredits: { decrement: 5 },
         },
       });
@@ -158,7 +158,7 @@ describe("CreditService", () => {
     it("should return false and queue credit-depleted when balance is insufficient", async () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
         id: "user-1",
-        freeCredits: 3,
+        currentCredits: 3,
         purchasedCredits: 2,
       });
 
@@ -190,12 +190,12 @@ describe("CreditService", () => {
       (prisma.user.findUnique as any)
         .mockResolvedValueOnce({
           id: "user-1",
-          freeCredits: 80,
+          currentCredits: 80,
           purchasedCredits: 20,
         })
         .mockResolvedValueOnce({
           id: "user-1",
-          freeCredits: 70,
+          currentCredits: 70,
           purchasedCredits: 20,
         });
       (prisma.tool.findUnique as any).mockResolvedValue({ id: "tool-1" });
@@ -212,12 +212,12 @@ describe("CreditService", () => {
       (prisma.user.findUnique as any)
         .mockResolvedValueOnce({
           id: "user-1",
-          freeCredits: 80,
+          currentCredits: 80,
           purchasedCredits: 20,
         })
         .mockResolvedValueOnce({
           id: "user-1",
-          freeCredits: 70,
+          currentCredits: 70,
           purchasedCredits: 20,
         });
       (prisma.tool.findUnique as any).mockResolvedValue(null);
@@ -238,7 +238,7 @@ describe("CreditService", () => {
       (prisma.user.update as any).mockResolvedValue({});
       (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
-        freeCredits: 100,
+        currentCredits: 100,
         purchasedCredits: 200,
       });
       (prisma.creditTransaction.create as any).mockResolvedValue({});
@@ -266,7 +266,7 @@ describe("CreditService", () => {
       (prisma.user.update as any).mockResolvedValue({});
       (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
-        freeCredits: 150,
+        currentCredits: 150,
         purchasedCredits: 0,
       });
       (prisma.creditTransaction.create as any).mockResolvedValue({});
@@ -276,7 +276,7 @@ describe("CreditService", () => {
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: "user-1" },
         data: {
-          freeCredits: { increment: 50 },
+          currentCredits: { increment: 50 },
         },
       });
       expect(prisma.creditTransaction.create).toHaveBeenCalledWith({
@@ -291,7 +291,7 @@ describe("CreditService", () => {
       // After increment: 100 + 200 + 500 = 800
       (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
-        freeCredits: 100,
+        currentCredits: 100,
         purchasedCredits: 700,
       });
       (prisma.creditTransaction.create as any).mockResolvedValue({});
@@ -322,7 +322,7 @@ describe("CreditService", () => {
       // After increment: 100 + 200 + 100 = 400
       (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
-        freeCredits: 200,
+        currentCredits: 200,
         purchasedCredits: 200,
       });
       (prisma.creditTransaction.create as any).mockResolvedValue({});

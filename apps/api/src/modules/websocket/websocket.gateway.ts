@@ -117,7 +117,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
           email: true,
           role: true,
           isActive: true,
-          freeCredits: true,
+          currentCredits: true,
           purchasedCredits: true,
           plan: true,
         },
@@ -196,7 +196,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const user = client.data?.user;
     if (user) {
       const totalCredits =
-        (user.freeCredits || 0) + (user.purchasedCredits || 0);
+        (user.currentCredits || 0) + (user.purchasedCredits || 0);
       if (totalCredits < MIN_CREDITS_FOR_STT) {
         client.emit("stt:error", {
           code: "INSUFFICIENT_CREDITS",
@@ -257,17 +257,19 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         try {
           const user = await prisma.user.findUnique({
             where: { id: userId },
-            select: { freeCredits: true, purchasedCredits: true },
+            select: { currentCredits: true, purchasedCredits: true },
           });
 
           if (user) {
             let remaining = credits;
-            const updates: { freeCredits?: number; purchasedCredits?: number } =
-              {};
+            const updates: {
+              currentCredits?: number;
+              purchasedCredits?: number;
+            } = {};
 
-            const freeDeduct = Math.min(user.freeCredits, remaining);
+            const freeDeduct = Math.min(user.currentCredits, remaining);
             if (freeDeduct > 0) {
-              updates.freeCredits = user.freeCredits - freeDeduct;
+              updates.currentCredits = user.currentCredits - freeDeduct;
               remaining -= freeDeduct;
             }
 
@@ -286,14 +288,14 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
               const updatedUser = await prisma.user.findUnique({
                 where: { id: userId },
-                select: { freeCredits: true, purchasedCredits: true },
+                select: { currentCredits: true, purchasedCredits: true },
               });
 
               this.server.to(userId).emit("credits.deducted", {
-                freeCredits: updatedUser?.freeCredits ?? 0,
+                currentCredits: updatedUser?.currentCredits ?? 0,
                 purchasedCredits: updatedUser?.purchasedCredits ?? 0,
                 totalCredits:
-                  (updatedUser?.freeCredits ?? 0) +
+                  (updatedUser?.currentCredits ?? 0) +
                   (updatedUser?.purchasedCredits ?? 0),
               });
             }

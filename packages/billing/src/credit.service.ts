@@ -17,11 +17,11 @@ export class CreditService {
   async getBalance(userId: string): Promise<number> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { freeCredits: true, purchasedCredits: true },
+      select: { currentCredits: true, purchasedCredits: true },
     });
 
     if (!user) return 0;
-    return user.freeCredits + user.purchasedCredits;
+    return user.currentCredits + user.purchasedCredits;
   }
 
   async deduct(
@@ -36,7 +36,7 @@ export class CreditService {
       return false;
     }
 
-    const totalCredits = user.freeCredits + user.purchasedCredits;
+    const totalCredits = user.currentCredits + user.purchasedCredits;
     if (totalCredits < amount) {
       await this.creditsQueue.add("credit-depleted", {
         userId,
@@ -51,14 +51,14 @@ export class CreditService {
       return false;
     }
 
-    let freeCreditsDeduction = 0;
+    let currentCreditsDeduction = 0;
     let purchasedCreditsDeduction = 0;
 
-    if (user.freeCredits >= amount) {
-      freeCreditsDeduction = amount;
+    if (user.currentCredits >= amount) {
+      currentCreditsDeduction = amount;
     } else {
-      freeCreditsDeduction = user.freeCredits;
-      purchasedCreditsDeduction = amount - user.freeCredits;
+      currentCreditsDeduction = user.currentCredits;
+      purchasedCreditsDeduction = amount - user.currentCredits;
     }
 
     let validToolId: string | null = null;
@@ -71,14 +71,14 @@ export class CreditService {
       await tx.user.update({
         where: { id: userId },
         data: {
-          freeCredits: { decrement: freeCreditsDeduction },
+          currentCredits: { decrement: currentCreditsDeduction },
           purchasedCredits: { decrement: purchasedCreditsDeduction },
         },
       });
 
       const updated = await tx.user.findUnique({ where: { id: userId } });
       const newBalance =
-        (updated?.freeCredits || 0) + (updated?.purchasedCredits || 0);
+        (updated?.currentCredits || 0) + (updated?.purchasedCredits || 0);
 
       await tx.creditTransaction.create({
         data: {
@@ -103,7 +103,7 @@ export class CreditService {
     options?: { provider?: string; referenceId?: string },
   ): Promise<void> {
     await prisma.$transaction(async (tx) => {
-      const field = type === "PURCHASE" ? "purchasedCredits" : "freeCredits";
+      const field = type === "PURCHASE" ? "purchasedCredits" : "currentCredits";
 
       await tx.user.update({
         where: { id: userId },
@@ -114,7 +114,7 @@ export class CreditService {
 
       const updated = await tx.user.findUnique({ where: { id: userId } });
       const newBalance =
-        (updated?.freeCredits || 0) + (updated?.purchasedCredits || 0);
+        (updated?.currentCredits || 0) + (updated?.purchasedCredits || 0);
 
       await tx.creditTransaction.create({
         data: {

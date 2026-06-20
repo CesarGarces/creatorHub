@@ -25,7 +25,7 @@ export class AuthService {
         name,
         passwordHash,
         plan: "FREE",
-        freeCredits: 100,
+        currentCredits: 100,
         purchasedCredits: 0,
       },
     });
@@ -122,7 +122,7 @@ export class AuthService {
           email,
           name,
           plan: "FREE",
-          freeCredits: 100,
+          currentCredits: 100,
           purchasedCredits: 0,
           accounts: {
             create: { provider, providerAccountId },

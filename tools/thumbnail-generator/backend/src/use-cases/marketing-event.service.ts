@@ -20,7 +20,7 @@ export class MarketingEventService {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return;
 
-    const totalCredits = user.freeCredits + user.purchasedCredits;
+    const totalCredits = user.currentCredits + user.purchasedCredits;
 
     for (const threshold of this.THRESHOLDS) {
       if (totalCredits === threshold) {

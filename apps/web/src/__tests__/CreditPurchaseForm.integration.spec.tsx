@@ -19,7 +19,7 @@ vi.mock("@/store/credits.store", () => ({
   useCreditsStore: Object.assign(
     vi.fn(() => ({
       balance: 0,
-      freeCredits: 0,
+      currentCredits: 0,
       purchasedCredits: 0,
       plan: "FREE",
       isLoading: false,
@@ -28,7 +28,7 @@ vi.mock("@/store/credits.store", () => ({
     {
       getState: vi.fn(() => ({
         balance: 0,
-        freeCredits: 0,
+        currentCredits: 0,
         purchasedCredits: 0,
         plan: "FREE",
         isLoading: false,

@@ -46,7 +46,7 @@ describe("AppGateway - WebSocket Auth & Refresh Token Unit Tests", () => {
       email: "c@example.com",
       role: "USER",
       isActive: true,
-      freeCredits: 0,
+      currentCredits: 0,
       purchasedCredits: 0,
       plan: "FREE",
     });

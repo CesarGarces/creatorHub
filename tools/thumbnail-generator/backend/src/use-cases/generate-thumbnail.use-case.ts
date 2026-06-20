@@ -38,7 +38,7 @@ export class GenerateThumbnailUseCase {
       throw new Error("User not found");
     }
 
-    const totalCredits = user.freeCredits + user.purchasedCredits;
+    const totalCredits = user.currentCredits + user.purchasedCredits;
     if (totalCredits <= 0) {
       throw new Error(
         "No credits available. Please upgrade your plan or purchase credits.",
@@ -67,7 +67,7 @@ export class GenerateThumbnailUseCase {
 
   private selectProvider(user: any, requestedProvider?: string): string {
     if (requestedProvider) {
-      if (user.plan === "FREE" && user.freeCredits > 0) {
+      if (user.plan === "FREE" && user.currentCredits > 0) {
         const freeProviders = ["siliconflow", "mock"];
         if (freeProviders.includes(requestedProvider)) {
           return requestedProvider;
@@ -77,7 +77,7 @@ export class GenerateThumbnailUseCase {
       return requestedProvider;
     }
 
-    if (user.plan === "FREE" && user.freeCredits > 0) {
+    if (user.plan === "FREE" && user.currentCredits > 0) {
       return "siliconflow";
     }
 
