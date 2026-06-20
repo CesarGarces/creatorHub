@@ -320,9 +320,11 @@ export class CreditBillingService {
         `Reconciling payment ${referenceId}: userId=${userId}, amount=${amountValue}, credits=${credits}`,
       );
 
-      // Add credits and create transaction atomically
-      const field = "purchasedCredits";
-      const userUpdateData: any = { [field]: { increment: credits } };
+      // Add credits to currentCredits (the single source of truth)
+      const userUpdateData: any = {
+        currentCredits: { increment: credits },
+        purchasedCredits: { increment: credits },
+      };
 
       // Update user's plan based on the credit plan they purchased
       if (planSlugFromMetadata) {
@@ -346,8 +348,7 @@ export class CreditBillingService {
       });
 
       const updated = await tx.user.findUnique({ where: { id: userId } });
-      const newBalance =
-        (updated?.currentCredits || 0) + (updated?.purchasedCredits || 0);
+      const newBalance = updated?.currentCredits || 0;
 
       await tx.creditTransaction.create({
         data: {

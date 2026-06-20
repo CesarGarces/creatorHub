@@ -88,7 +88,7 @@ describe("CreditBillingService (notifications)", () => {
       });
       (prisma.user.update as jest.Mock).mockResolvedValue({});
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        currentCredits: 0,
+        currentCredits: 1000,
         purchasedCredits: 1000,
       });
       (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
@@ -138,7 +138,7 @@ describe("CreditBillingService (notifications)", () => {
       });
       (prisma.user.update as jest.Mock).mockResolvedValue({});
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        currentCredits: 0,
+        currentCredits: 500,
         purchasedCredits: 500,
       });
       (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
@@ -231,7 +231,7 @@ describe("CreditBillingService (notifications)", () => {
       });
       (prisma.user.update as jest.Mock).mockResolvedValue({});
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        currentCredits: 0,
+        currentCredits: 12000,
         purchasedCredits: 12000,
       });
       (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({});
@@ -247,7 +247,10 @@ describe("CreditBillingService (notifications)", () => {
       // Credits should be added atomically in transaction (not via addCredits)
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: "user-ok" },
-        data: { purchasedCredits: { increment: 12000 } },
+        data: {
+          currentCredits: { increment: 12000 },
+          purchasedCredits: { increment: 12000 },
+        },
       });
       expect(prisma.creditTransaction.create).toHaveBeenCalledWith({
         data: {
@@ -307,7 +310,10 @@ describe("CreditBillingService (notifications)", () => {
       // With plan fallback: 100 / 10 * 1000 = 10000 credits
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: "user-meta" },
-        data: { purchasedCredits: { increment: 10000 } },
+        data: {
+          currentCredits: { increment: 10000 },
+          purchasedCredits: { increment: 10000 },
+        },
       });
     });
   });
@@ -364,13 +370,13 @@ describe("CreditBillingService (notifications)", () => {
     });
     (prisma.user.update as jest.Mock).mockResolvedValue({});
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      currentCredits: 0,
+      currentCredits: 12000,
       purchasedCredits: 12000,
     });
     (prisma.creditTransaction.create as jest.Mock).mockResolvedValue({
       id: "txn-123",
     });
-    (mockCreditService.getBalance as jest.Mock).mockResolvedValue(200);
+    (mockCreditService.getBalance as jest.Mock).mockResolvedValue(12000);
 
     const res = await service.reconcilePayment(
       PaymentGateway.MERCADO_PAGO as any,
@@ -384,8 +390,8 @@ describe("CreditBillingService (notifications)", () => {
     expect(mockEventPublisher.publish).toHaveBeenCalledWith("payment:success", {
       userId: "user-42",
       gatewayTxId: "mp_abc",
-      amount: 12000, // 120 / 10 * 1000 = 12000 credits
-      balance: 200,
+      amount: 12000,
+      balance: 12000,
       gateway: PaymentGateway.MERCADO_PAGO,
       timestamp: expect.any(Date),
     });

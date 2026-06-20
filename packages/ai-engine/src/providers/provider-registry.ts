@@ -45,7 +45,6 @@ export class ProviderRegistry {
   getProviderForUser(user: {
     plan: string;
     currentCredits: number;
-    purchasedCredits: number;
   }): AIProviderInterface {
     if (user.plan === "FREE" && user.currentCredits > 0) {
       const freeProviders = this.getFreeProviders();
@@ -56,7 +55,7 @@ export class ProviderRegistry {
     }
 
     if (
-      user.purchasedCredits > 0 ||
+      user.currentCredits > 0 ||
       user.plan === "STARTER" ||
       user.plan === "PRO" ||
       user.plan === "PAY_AS_YOU_GO"

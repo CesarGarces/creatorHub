@@ -41,11 +41,10 @@ describe("CreditService", () => {
   });
 
   describe("getBalance", () => {
-    it("should return combined balance when user exists", async () => {
+    it("should return currentCredits as balance", async () => {
       (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
-        currentCredits: 50,
-        purchasedCredits: 100,
+        currentCredits: 150,
       });
 
       const balance = await service.getBalance("user-1");
@@ -53,7 +52,7 @@ describe("CreditService", () => {
       expect(balance).toBe(150);
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: "user-1" },
-        select: { currentCredits: true, purchasedCredits: true },
+        select: { currentCredits: true },
       });
     });
 
@@ -70,8 +69,7 @@ describe("CreditService", () => {
     it("should return true when balance is sufficient", async () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
         id: "user-1",
-        currentCredits: 50,
-        purchasedCredits: 50,
+        currentCredits: 100,
       });
 
       const result = await service.hasEnoughCredits("user-1", 50);
@@ -83,7 +81,6 @@ describe("CreditService", () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
         id: "user-1",
         currentCredits: 5,
-        purchasedCredits: 5,
       });
 
       const result = await service.hasEnoughCredits("user-1", 50);
@@ -101,17 +98,15 @@ describe("CreditService", () => {
   });
 
   describe("deduct", () => {
-    it("should deduct credits successfully using currentCredits first", async () => {
+    it("should deduct credits from currentCredits", async () => {
       (prisma.user.findUnique as any)
         .mockResolvedValueOnce({
           id: "user-1",
           currentCredits: 80,
-          purchasedCredits: 20,
         })
         .mockResolvedValueOnce({
           id: "user-1",
           currentCredits: 70,
-          purchasedCredits: 20,
         });
       (prisma.tool.findUnique as any).mockResolvedValue({ id: "tool-1" });
       (prisma.creditTransaction.create as any).mockResolvedValue({});
@@ -123,34 +118,6 @@ describe("CreditService", () => {
         where: { id: "user-1" },
         data: {
           currentCredits: { decrement: 10 },
-          purchasedCredits: { decrement: 0 },
-        },
-      });
-    });
-
-    it("should split deduction across free and purchased credits", async () => {
-      (prisma.user.findUnique as any)
-        .mockResolvedValueOnce({
-          id: "user-1",
-          currentCredits: 5,
-          purchasedCredits: 20,
-        })
-        .mockResolvedValueOnce({
-          id: "user-1",
-          currentCredits: 0,
-          purchasedCredits: 15,
-        });
-      (prisma.tool.findUnique as any).mockResolvedValue(null);
-      (prisma.creditTransaction.create as any).mockResolvedValue({});
-
-      const result = await service.deduct("user-1", 10);
-
-      expect(result).toBe(true);
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: "user-1" },
-        data: {
-          currentCredits: { decrement: 5 },
-          purchasedCredits: { decrement: 5 },
         },
       });
     });
@@ -159,7 +126,6 @@ describe("CreditService", () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
         id: "user-1",
         currentCredits: 3,
-        purchasedCredits: 2,
       });
 
       const result = await service.deduct("user-1", 10);
@@ -167,7 +133,7 @@ describe("CreditService", () => {
       expect(result).toBe(false);
       expect(mockQueue.add).toHaveBeenCalledWith("credit-depleted", {
         userId: "user-1",
-        balance: 5,
+        balance: 3,
       });
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         "marketing.credit_depleted",
@@ -191,12 +157,10 @@ describe("CreditService", () => {
         .mockResolvedValueOnce({
           id: "user-1",
           currentCredits: 80,
-          purchasedCredits: 20,
         })
         .mockResolvedValueOnce({
           id: "user-1",
           currentCredits: 70,
-          purchasedCredits: 20,
         });
       (prisma.tool.findUnique as any).mockResolvedValue({ id: "tool-1" });
       (prisma.creditTransaction.create as any).mockResolvedValue({});
@@ -213,12 +177,10 @@ describe("CreditService", () => {
         .mockResolvedValueOnce({
           id: "user-1",
           currentCredits: 80,
-          purchasedCredits: 20,
         })
         .mockResolvedValueOnce({
           id: "user-1",
           currentCredits: 70,
-          purchasedCredits: 20,
         });
       (prisma.tool.findUnique as any).mockResolvedValue(null);
       (prisma.creditTransaction.create as any).mockResolvedValue({});
@@ -234,12 +196,12 @@ describe("CreditService", () => {
   });
 
   describe("addCredits", () => {
-    it("should add purchased credits and create transaction", async () => {
+    it("should add to currentCredits for PURCHASE type and also increment purchasedCredits", async () => {
       (prisma.user.update as any).mockResolvedValue({});
       (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
-        currentCredits: 100,
-        purchasedCredits: 200,
+        currentCredits: 200,
+        purchasedCredits: 100,
       });
       (prisma.creditTransaction.create as any).mockResolvedValue({});
 
@@ -248,6 +210,7 @@ describe("CreditService", () => {
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: "user-1" },
         data: {
+          currentCredits: { increment: 100 },
           purchasedCredits: { increment: 100 },
         },
       });
@@ -257,12 +220,12 @@ describe("CreditService", () => {
           amount: 100,
           type: "PURCHASE",
           description: "Purchase",
-          balance: 300,
+          balance: 200,
         },
       });
     });
 
-    it("should add free credits for non-PURCHASE types", async () => {
+    it("should add to currentCredits for non-PURCHASE types", async () => {
       (prisma.user.update as any).mockResolvedValue({});
       (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
@@ -288,11 +251,10 @@ describe("CreditService", () => {
 
     it("should include provider and referenceId when options provided", async () => {
       (prisma.user.update as any).mockResolvedValue({});
-      // After increment: 100 + 200 + 500 = 800
       (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
-        currentCredits: 100,
-        purchasedCredits: 700,
+        currentCredits: 600,
+        purchasedCredits: 500,
       });
       (prisma.creditTransaction.create as any).mockResolvedValue({});
 
@@ -310,7 +272,7 @@ describe("CreditService", () => {
           amount: 500,
           type: "PURCHASE",
           description: "Payment MERCADO_PAGO - mp_test_123",
-          balance: 800,
+          balance: 600,
           provider: "MERCADO_PAGO",
           referenceId: "mp_test_123",
         },
@@ -319,11 +281,10 @@ describe("CreditService", () => {
 
     it("should not include provider/referenceId when options not provided", async () => {
       (prisma.user.update as any).mockResolvedValue({});
-      // After increment: 100 + 200 + 100 = 400
       (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
-        currentCredits: 200,
-        purchasedCredits: 200,
+        currentCredits: 300,
+        purchasedCredits: 0,
       });
       (prisma.creditTransaction.create as any).mockResolvedValue({});
 
@@ -335,7 +296,7 @@ describe("CreditService", () => {
           amount: 100,
           type: "BONUS",
           description: "Bonus",
-          balance: 400,
+          balance: 300,
         },
       });
     });

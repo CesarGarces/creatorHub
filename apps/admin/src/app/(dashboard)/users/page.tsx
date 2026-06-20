@@ -167,8 +167,8 @@ export default function UsersPage() {
                     <div className="tabular-nums text-text">
                       {user.totalCredits}
                       <span className="ml-1 text-xs text-text-dim">
-                        ({user.currentCredits} current + {user.purchasedCredits}{" "}
-                        purchased)
+                        ({user.currentCredits} available,{" "}
+                        {user.purchasedCredits} purchased)
                       </span>
                     </div>
                   </td>

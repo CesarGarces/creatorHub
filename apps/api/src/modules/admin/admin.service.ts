@@ -200,7 +200,7 @@ export class AdminService {
 
     const usersWithTotalCredits = data.map((u) => ({
       ...u,
-      totalCredits: u.currentCredits + u.purchasedCredits,
+      totalCredits: u.currentCredits,
     }));
 
     return {
@@ -228,7 +228,7 @@ export class AdminService {
     if (!user) throw new NotFoundException("User not found");
     return {
       ...user,
-      totalCredits: user.currentCredits + user.purchasedCredits,
+      totalCredits: user.currentCredits,
     };
   }
 

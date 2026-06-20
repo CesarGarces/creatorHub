@@ -29,7 +29,7 @@ export class CreditsController {
     });
 
     return {
-      balance: (user?.currentCredits || 0) + (user?.purchasedCredits || 0),
+      balance: user?.currentCredits || 0,
       currentCredits: user?.currentCredits || 0,
       purchasedCredits: user?.purchasedCredits || 0,
       plan: user?.plan || "FREE",

@@ -38,7 +38,7 @@ export class GenerateThumbnailUseCase {
       throw new Error("User not found");
     }
 
-    const totalCredits = user.currentCredits + user.purchasedCredits;
+    const totalCredits = user.currentCredits;
     if (totalCredits <= 0) {
       throw new Error(
         "No credits available. Please upgrade your plan or purchase credits.",

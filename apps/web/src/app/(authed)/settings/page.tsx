@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -14,9 +14,21 @@ import {
 } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { useAuthStore } from "@/store/auth.store";
+import { useCreditsStore } from "@/store/credits.store";
 import api from "@/lib/api";
 import { Pencil, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+
+const planLabels: Record<
+  string,
+  { label: string; variant: "free" | "primary" | "premium" }
+> = {
+  FREE: { label: "FREE PLAN", variant: "free" },
+  PAY_AS_YOU_GO: { label: "PAY AS YOU GO", variant: "primary" },
+  PREMIUM: { label: "PREMIUM", variant: "premium" },
+  STARTER: { label: "STARTER", variant: "primary" },
+  PRO: { label: "PRO", variant: "premium" },
+};
 
 function PasswordInput({
   label,
@@ -53,6 +65,7 @@ function PasswordInput({
 
 export default function SettingsPage() {
   const { user, setUser } = useAuthStore();
+  const { balance, plan, fetchBalance } = useCreditsStore();
 
   // Password
   const [currentPassword, setCurrentPassword] = useState("");
@@ -67,6 +80,10 @@ export default function SettingsPage() {
     user?.name || user?.email?.split("@")[0] || "",
   );
   const [profileLoading, setProfileLoading] = useState(false);
+
+  useEffect(() => {
+    fetchBalance();
+  }, [fetchBalance]);
 
   const handleProfileSave = async () => {
     setProfileLoading(true);
@@ -157,6 +174,22 @@ export default function SettingsPage() {
                 {displayName}
               </p>
               <p className="text-sm text-text-dim">{user?.email}</p>
+              <div className="mt-3 flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    planLabels[plan]?.variant === "free"
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                      : planLabels[plan]?.variant === "premium"
+                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+                        : "bg-primary-light text-primary"
+                  }`}
+                >
+                  {planLabels[plan]?.label || plan}
+                </span>
+                <span className="text-sm text-text-muted">
+                  {balance} credits
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>
