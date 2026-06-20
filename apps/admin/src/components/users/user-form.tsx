@@ -134,7 +134,8 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
           >
             <option value="FREE">FREE</option>
             <option value="PAY_AS_YOU_GO">PAY_AS_YOU_GO</option>
-            <option value="PREMIUM">PREMIUM</option>
+            <option value="STARTER">STARTER</option>
+            <option value="PRO">PRO</option>
           </select>
         </div>
       </div>
