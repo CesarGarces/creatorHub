@@ -324,6 +324,7 @@ model GeneratedImage {
   toolId    String?
   fileId    String?
   providerId String?
+  type      GeneratedAssetType @default(IMAGE)
   prompt    String
   negativePrompt String?
   provider  String
@@ -342,6 +343,11 @@ model GeneratedImage {
   tool     Tool?     @relation(fields: [toolId], references: [id])
   file     File?     @relation(fields: [fileId], references: [id])
   providerRef Provider? @relation(fields: [providerId], references: [id])
+}
+
+enum GeneratedAssetType {
+  IMAGE
+  VIDEO
 }
 
 // ──────────────────────────────────────────────

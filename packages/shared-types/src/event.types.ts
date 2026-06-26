@@ -18,6 +18,8 @@ export type EventName =
   | "storage.file.deleted"
   | "thumbnail.completed"
   | "thumbnail.failed"
+  | "video.completed"
+  | "video.failed"
   | "translation.completed"
   | "translation.failed"
   | "payment.success"
@@ -103,6 +105,25 @@ export interface ThumbnailFailedEvent {
 export interface ThumbnailReadyPayload {
   url: string;
   imageId: string;
+}
+
+export interface VideoCompletedEvent {
+  userId: string;
+  key: string;
+  bucket: string;
+  videoId: string;
+}
+
+export interface VideoFailedEvent {
+  userId: string;
+  error: string;
+  rawError?: string;
+  jobId?: string;
+}
+
+export interface VideoReadyPayload {
+  url: string;
+  videoId: string;
 }
 
 export interface TranslationCompletedEvent {

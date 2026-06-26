@@ -31,6 +31,7 @@ export class ImagesController {
     @CurrentUser("id") userId: string,
     @Query("page") page?: string,
     @Query("limit") limit?: string,
+    @Query("type") type?: string,
   ): Promise<{
     data: any[];
     meta: { page: number; limit: number; total: number; totalPages: number };
@@ -39,15 +40,24 @@ export class ImagesController {
     const limitNum = parseInt(limit || "20");
     const skip = (pageNum - 1) * limitNum;
 
+    const where: any = {
+      userId,
+      storageProvider: this.storageService.getProvider(),
+    };
+
+    if (type && ["IMAGE", "VIDEO"].includes(type.toUpperCase())) {
+      where.type = type.toUpperCase();
+    }
+
     const [images, total] = await Promise.all([
       prisma.generatedImage.findMany({
-        where: { userId, storageProvider: this.storageService.getProvider() },
+        where,
         orderBy: { createdAt: "desc" },
         skip,
         take: limitNum,
       }),
       prisma.generatedImage.count({
-        where: { userId, storageProvider: this.storageService.getProvider() },
+        where,
       }),
     ]);
 

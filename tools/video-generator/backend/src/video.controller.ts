@@ -1,0 +1,70 @@
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  BadRequestException,
+  InternalServerErrorException,
+} from "@nestjs/common";
+import { JwtAuthGuard, CurrentUser } from "@creator-hub/auth";
+import { VideoService } from "./video.service";
+
+@Controller("tools/video-generator")
+@UseGuards(JwtAuthGuard)
+export class VideoController {
+  constructor(private videoService: VideoService) {}
+
+  @Post("generate")
+  async generate(
+    @CurrentUser("id") userId: string,
+    @Body()
+    dto: {
+      prompt: string;
+      imageUrl?: string;
+      model?: string;
+      provider?: string;
+      aspectRatio?: string;
+    },
+  ): Promise<{ success: boolean; data: { jobId: string } }> {
+    if (!dto.prompt?.trim()) {
+      throw new BadRequestException("Prompt is required");
+    }
+    try {
+      const result = await this.videoService.generate({
+        userId,
+        prompt: dto.prompt,
+        imageUrl: dto.imageUrl,
+        model: dto.model,
+        provider: dto.provider,
+        aspectRatio: dto.aspectRatio,
+      });
+      return { success: true, data: result };
+    } catch (error) {
+      const message = (error as Error).message || "Video generation failed";
+      if (message.includes("Insufficient credits")) {
+        throw new BadRequestException(message);
+      }
+      throw new InternalServerErrorException(message);
+    }
+  }
+
+  @Get("jobs/:jobId/status")
+  async getJobStatus(
+    @CurrentUser("id") userId: string,
+    @Param("jobId") jobId: string,
+  ): Promise<{ status: string; failedReason?: string }> {
+    return this.videoService.getJobStatus(jobId, userId);
+  }
+
+  @Get("videos")
+  async getVideos(
+    @CurrentUser("id") userId: string,
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+  ): Promise<any> {
+    return this.videoService.getUserVideos(userId, page, limit);
+  }
+}

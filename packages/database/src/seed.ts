@@ -30,6 +30,19 @@ async function main() {
     },
   });
 
+  await prisma.tool.upsert({
+    where: { id: "video-generator" },
+    update: { icon: "🎬" },
+    create: {
+      id: "video-generator",
+      name: "Video Generator",
+      description: "Generate stunning AI videos with Wan AI models",
+      category: "video",
+      creditsPerUse: 50,
+      icon: "🎬",
+    },
+  });
+
   // Create default subscription plans (upsert to avoid duplicates)
   const plans = [
     {
@@ -193,6 +206,15 @@ async function main() {
       costPerCredit: 10,
       isActive: true,
       supportedTasks: ["translator"],
+    },
+    {
+      slug: "siliconflow-video",
+      name: "Wan AI Video",
+      model: "Wan-AI/Wan2.2-T2V-A14B",
+      tier: "FREE" as const,
+      costPerCredit: 50,
+      isActive: true,
+      supportedTasks: ["video"],
     },
   ];
 

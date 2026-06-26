@@ -5,6 +5,7 @@ import { GeminiProvider } from "./gemini.provider";
 import { StabilityAIProvider } from "./stability-ai.provider";
 import { FluxProvider } from "./flux.provider";
 import { SiliconFlowProvider } from "./siliconflow.provider";
+import { SiliconFlowVideoProvider } from "./siliconflow-video.provider";
 import { ZImageTurboProvider } from "./z-image-turbo.provider";
 import {
   DeepSeekV4FlashProvider,
@@ -31,6 +32,7 @@ export class ProviderFactory implements OnModuleInit {
       new StabilityAIProvider(),
       new FluxProvider(),
       new SiliconFlowProvider(),
+      new SiliconFlowVideoProvider(),
       new ZImageTurboProvider(),
       new DeepSeekV4FlashProvider(),
       new DeepSeekV4ProProvider(),

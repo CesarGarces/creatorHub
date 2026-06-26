@@ -9,39 +9,45 @@ import api from "@/lib/api";
 import { Button, EmptyState, ActionConfirmDialog } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 
-interface GeneratedImage {
+interface GeneratedAsset {
   id: string;
   url: string;
   prompt: string;
   provider: string;
   model: string;
+  type: "IMAGE" | "VIDEO";
   width: number;
   height: number;
   credits: number;
   createdAt: string;
 }
 
+type AssetFilter = "all" | "IMAGE" | "VIDEO";
+
 export default function AssetsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
-  const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(
+  const [assetFilter, setAssetFilter] = useState<AssetFilter>("all");
+  const [selectedAsset, setSelectedAsset] = useState<GeneratedAsset | null>(
     null,
   );
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
-    imageId: string | null;
+    assetId: string | null;
   }>({
     isOpen: false,
-    imageId: null,
+    assetId: null,
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["images", page],
-    queryFn: () =>
-      api.get<{ data: GeneratedImage[]; meta: any }>(
-        `/images?page=${page}&limit=8`,
-      ),
+    queryKey: ["images", page, assetFilter],
+    queryFn: () => {
+      const typeParam = assetFilter !== "all" ? `&type=${assetFilter}` : "";
+      return api.get<{ data: GeneratedAsset[]; meta: any }>(
+        `/images?page=${page}&limit=8${typeParam}`,
+      );
+    },
     staleTime: 0,
     refetchOnMount: "always",
   });
@@ -50,21 +56,26 @@ export default function AssetsPage() {
     mutationFn: (id: string) => api.delete(`/images/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["images"] });
-      toast.success("Image deleted");
-      setSelectedImage(null);
+      toast.success("Asset deleted");
+      setSelectedAsset(null);
     },
     onError: (error: any) => {
-      toast.error(error?.message || "Failed to delete image");
+      toast.error(error?.message || "Failed to delete asset");
     },
   });
 
-  const images = data?.data || [];
+  const assets = data?.data || [];
   const meta = data?.meta;
 
   const handleDelete = () => {
-    if (!deleteDialog.imageId) return;
-    deleteMutation.mutate(deleteDialog.imageId);
-    setDeleteDialog({ isOpen: false, imageId: null });
+    if (!deleteDialog.assetId) return;
+    deleteMutation.mutate(deleteDialog.assetId);
+    setDeleteDialog({ isOpen: false, assetId: null });
+  };
+
+  const handleFilterChange = (filter: AssetFilter) => {
+    setAssetFilter(filter);
+    setPage(1);
   };
 
   return (
@@ -79,8 +90,29 @@ export default function AssetsPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-text">Assets</h1>
           <p className="mt-1 text-text-muted">
-            Your generated images and files
+            Your generated images and videos
           </p>
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="flex items-center gap-2 mb-6">
+          {[
+            { id: "all" as AssetFilter, label: "All" },
+            { id: "IMAGE" as AssetFilter, label: "Images" },
+            { id: "VIDEO" as AssetFilter, label: "Videos" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleFilterChange(tab.id)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all cursor-pointer ${
+                assetFilter === tab.id
+                  ? "bg-primary text-white shadow-lg shadow-primary/20"
+                  : "bg-surface-elevated text-text-muted hover:text-text border border-border hover:border-border/80"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {isLoading ? (
@@ -92,37 +124,86 @@ export default function AssetsPage() {
               />
             ))}
           </div>
-        ) : images.length === 0 ? (
+        ) : assets.length === 0 ? (
           <EmptyState
             icon="📁"
             title="No assets yet"
-            description="Generated images and files will appear here."
-            actionLabel="Generate your first thumbnail"
-            onAction={() => router.push("/tools/thumbnail-generator")}
+            description={
+              assetFilter === "all"
+                ? "Generated images and videos will appear here."
+                : assetFilter === "IMAGE"
+                  ? "No images generated yet."
+                  : "No videos generated yet."
+            }
+            actionLabel={
+              assetFilter === "VIDEO"
+                ? "Generate your first video"
+                : "Generate your first thumbnail"
+            }
+            onAction={() =>
+              router.push(
+                assetFilter === "VIDEO"
+                  ? "/tools/video-generator"
+                  : "/tools/thumbnail-generator",
+              )
+            }
           />
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {images.map((img) => (
+              {assets.map((asset) => (
                 <div
-                  key={img.id}
+                  key={asset.id}
                   className="group relative rounded-xl overflow-hidden border border-border bg-surface-elevated cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => setSelectedImage(img)}
+                  onClick={() => setSelectedAsset(asset)}
                 >
-                  <div className="aspect-video">
-                    <img
-                      src={img.url}
-                      alt={img.prompt}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="aspect-video relative">
+                    {asset.type === "VIDEO" ? (
+                      <>
+                        <video
+                          src={asset.url}
+                          className="w-full h-full object-cover"
+                          muted
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                          <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="black"
+                            >
+                              <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <img
+                        src={asset.url}
+                        alt={asset.prompt}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
                   </div>
                   <div className="p-3 space-y-2">
-                    <p className="text-xs text-text-muted line-clamp-2">
-                      {img.prompt}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          asset.type === "VIDEO"
+                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                            : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                        }`}
+                      >
+                        {asset.type === "VIDEO" ? "Video" : "Image"}
+                      </span>
+                      <p className="text-xs text-text-muted line-clamp-1 flex-1">
+                        {asset.prompt}
+                      </p>
+                    </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-text-dim">
-                        {new Date(img.createdAt).toLocaleDateString()}
+                        {new Date(asset.createdAt).toLocaleDateString()}
                       </span>
                       <div
                         className="flex gap-1"
@@ -135,7 +216,7 @@ export default function AssetsPage() {
                           title="Use prompt"
                           onClick={() => {
                             router.push(
-                              `/tools/thumbnail-generator?prompt=${encodeURIComponent(img.prompt)}`,
+                              `/tools/${asset.type === "VIDEO" ? "video-generator" : "thumbnail-generator"}?prompt=${encodeURIComponent(asset.prompt)}`,
                             );
                           }}
                         >
@@ -158,12 +239,12 @@ export default function AssetsPage() {
                           title="Download"
                           onClick={async () => {
                             try {
-                              const res = await fetch(img.url);
+                              const res = await fetch(asset.url);
                               const blob = await res.blob();
                               const url = URL.createObjectURL(blob);
                               const a = document.createElement("a");
                               a.href = url;
-                              a.download = `image-${img.id}.png`;
+                              a.download = `${asset.type === "VIDEO" ? "video" : "image"}-${asset.id}.${asset.type === "VIDEO" ? "mp4" : "png"}`;
                               a.click();
                               URL.revokeObjectURL(url);
                             } catch {
@@ -190,7 +271,7 @@ export default function AssetsPage() {
                           aria-label="Copy link"
                           title="Copy link"
                           onClick={() => {
-                            navigator.clipboard.writeText(img.url);
+                            navigator.clipboard.writeText(asset.url);
                             toast.success("URL copied");
                           }}
                         >
@@ -212,7 +293,10 @@ export default function AssetsPage() {
                           aria-label="Delete asset"
                           title="Delete asset"
                           onClick={() =>
-                            setDeleteDialog({ isOpen: true, imageId: img.id })
+                            setDeleteDialog({
+                              isOpen: true,
+                              assetId: asset.id,
+                            })
                           }
                         >
                           <svg
@@ -263,27 +347,38 @@ export default function AssetsPage() {
         )}
       </div>
 
-      {/* Image Preview Modal */}
-      {selectedImage && (
+      {/* Asset Preview Modal */}
+      {selectedAsset && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
           <div
             className="absolute inset-0 bg-black/80"
-            onClick={() => setSelectedImage(null)}
+            onClick={() => setSelectedAsset(null)}
           />
           <div className="relative z-10 w-full max-w-4xl max-h-[90vh] flex flex-col bg-surface rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-text-muted line-clamp-1">
-                  {selectedImage.prompt}
-                </p>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      selectedAsset.type === "VIDEO"
+                        ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                        : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                    }`}
+                  >
+                    {selectedAsset.type === "VIDEO" ? "Video" : "Image"}
+                  </span>
+                  <p className="text-sm text-text-muted line-clamp-1">
+                    {selectedAsset.prompt}
+                  </p>
+                </div>
                 <p className="text-xs text-text-dim mt-1">
-                  {selectedImage.width}×{selectedImage.height} ·{" "}
-                  {selectedImage.model} ·{" "}
-                  {new Date(selectedImage.createdAt).toLocaleDateString()}
+                  {selectedAsset.width}×{selectedAsset.height} ·{" "}
+                  {selectedAsset.model} ·{" "}
+                  {new Date(selectedAsset.createdAt).toLocaleDateString()}
                 </p>
               </div>
               <button
-                onClick={() => setSelectedImage(null)}
+                onClick={() => setSelectedAsset(null)}
                 className="ml-4 rounded-lg p-2 text-text-muted hover:text-text hover:bg-surface-elevated transition-colors cursor-pointer"
               >
                 <svg
@@ -299,11 +394,19 @@ export default function AssetsPage() {
               </button>
             </div>
             <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-black/50">
-              <img
-                src={selectedImage.url}
-                alt={selectedImage.prompt}
-                className="max-w-full max-h-[70vh] object-contain rounded-lg"
-              />
+              {selectedAsset.type === "VIDEO" ? (
+                <video
+                  src={selectedAsset.url}
+                  controls
+                  className="max-w-full max-h-[70vh] rounded-lg"
+                />
+              ) : (
+                <img
+                  src={selectedAsset.url}
+                  alt={selectedAsset.prompt}
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                />
+              )}
             </div>
             <div className="flex items-center justify-center gap-2 p-4 border-t border-border">
               <Button
@@ -311,7 +414,7 @@ export default function AssetsPage() {
                 size="sm"
                 onClick={() => {
                   router.push(
-                    `/tools/thumbnail-generator?prompt=${encodeURIComponent(selectedImage.prompt)}`,
+                    `/tools/${selectedAsset.type === "VIDEO" ? "video-generator" : "thumbnail-generator"}?prompt=${encodeURIComponent(selectedAsset.prompt)}`,
                   );
                 }}
               >
@@ -333,12 +436,12 @@ export default function AssetsPage() {
                 size="sm"
                 onClick={async () => {
                   try {
-                    const res = await fetch(selectedImage.url);
+                    const res = await fetch(selectedAsset.url);
                     const blob = await res.blob();
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     a.href = url;
-                    a.download = `image-${selectedImage.id}.png`;
+                    a.download = `${selectedAsset.type === "VIDEO" ? "video" : "image"}-${selectedAsset.id}.${selectedAsset.type === "VIDEO" ? "mp4" : "png"}`;
                     a.click();
                     URL.revokeObjectURL(url);
                   } catch {
@@ -364,7 +467,7 @@ export default function AssetsPage() {
                 variant="secondary"
                 size="sm"
                 onClick={() => {
-                  navigator.clipboard.writeText(selectedImage.url);
+                  navigator.clipboard.writeText(selectedAsset.url);
                   toast.success("URL copied");
                 }}
               >
@@ -388,7 +491,7 @@ export default function AssetsPage() {
                 onClick={() =>
                   setDeleteDialog({
                     isOpen: true,
-                    imageId: selectedImage.id,
+                    assetId: selectedAsset.id,
                   })
                 }
               >
@@ -413,10 +516,10 @@ export default function AssetsPage() {
 
       <ActionConfirmDialog
         isOpen={deleteDialog.isOpen}
-        onClose={() => setDeleteDialog({ isOpen: false, imageId: null })}
+        onClose={() => setDeleteDialog({ isOpen: false, assetId: null })}
         onConfirm={handleDelete}
-        title="Delete Image"
-        description="This image will be permanently removed from your gallery. This action cannot be undone."
+        title="Delete Asset"
+        description="This asset will be permanently removed from your gallery. This action cannot be undone."
         confirmLabel="Yes, delete"
         cancelLabel="No, keep it"
         confirmVariant="danger"

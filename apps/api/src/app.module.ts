@@ -25,12 +25,15 @@ import { WebsocketModule } from "./modules/websocket/websocket.module";
 import { ThumbnailListenerModule } from "./modules/thumbnail-listener/thumbnail-listener.module";
 import { TranslationListenerModule } from "./modules/translation-listener/translation-listener.module";
 import { PaymentListenerModule } from "./modules/payment-listener/payment-listener.module";
+import { VideoListenerModule } from "./modules/video-listener/video-listener.module";
 
 // Import tools (registers them via registerTool)
 import "@creator-hub/thumbnail-generator";
 import { ThumbnailGeneratorModule } from "@creator-hub/thumbnail-generator-backend";
 import "@creator-hub/content-translator";
 import { ContentTranslatorModule } from "@creator-hub/content-translator-backend";
+import "@creator-hub/video-generator";
+import { VideoGeneratorModule } from "@creator-hub/video-generator-backend";
 
 @Module({
   imports: [
@@ -64,10 +67,12 @@ import { ContentTranslatorModule } from "@creator-hub/content-translator-backend
     ThumbnailListenerModule,
     TranslationListenerModule,
     PaymentListenerModule,
+    VideoListenerModule,
 
     // Tools (registered automatically via ToolSdkModule)
     ThumbnailGeneratorModule,
     ContentTranslatorModule,
+    VideoGeneratorModule,
   ],
   controllers: [
     AuthController,

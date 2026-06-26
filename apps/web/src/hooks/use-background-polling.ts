@@ -4,11 +4,13 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useGenerationStore } from "@/store/generation.store";
 import { useTranslatorStore } from "@/store/translator.store";
+import { useVideoStore } from "@/store/video.store";
 import { useCreditsStore } from "@/store/credits.store";
 import api from "@/lib/api";
 
 const POLL_INTERVAL = 5_000;
 const TIMEOUT_MS = 60_000;
+const VIDEO_TIMEOUT_MS = 5 * 60_000;
 
 export function useBackgroundPolling() {
   const setRevealing = useGenerationStore((s) => s.setRevealing);
@@ -18,6 +20,11 @@ export function useBackgroundPolling() {
   const translatorSetRevealing = useTranslatorStore((s) => s.setRevealing);
   const translatorSetReady = useTranslatorStore((s) => s.setReady);
   const translatorSetFailed = useTranslatorStore((s) => s.setFailed);
+
+  const videoSetRevealing = useVideoStore((s) => s.setRevealing);
+  const videoSetReady = useVideoStore((s) => s.setReady);
+  const videoSetFailed = useVideoStore((s) => s.setFailed);
+  const videoAddVariation = useVideoStore((s) => s.addVariation);
 
   const fetchBalance = useCreditsStore((s) => s.fetchBalance);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -66,9 +73,30 @@ export function useBackgroundPolling() {
       }
     });
 
+    const unsubVideo = useVideoStore.subscribe((state) => {
+      if (
+        state.status === "GENERATING" &&
+        state.jobId &&
+        state.jobId !== activeJobIdRef.current
+      ) {
+        activeJobIdRef.current = state.jobId;
+        activeToolIdRef.current = "video-generator";
+        startPolling("video-generator", state.jobId);
+      } else if (
+        state.status === "IDLE" ||
+        state.status === "READY" ||
+        state.status === "FAILED"
+      ) {
+        stopPolling();
+        activeJobIdRef.current = null;
+        activeToolIdRef.current = null;
+      }
+    });
+
     return () => {
       unsub();
       unsubTranslator();
+      unsubVideo();
       stopPolling();
     };
   }, []);
@@ -76,20 +104,31 @@ export function useBackgroundPolling() {
   function startPolling(toolId: string, jobId: string) {
     stopPolling();
 
+    const timeout =
+      toolId === "video-generator" ? VIDEO_TIMEOUT_MS : TIMEOUT_MS;
+
     timeoutRef.current = setTimeout(() => {
       const genCurrent = useGenerationStore.getState().status;
       const transCurrent = useTranslatorStore.getState().status;
+      const vidCurrent = useVideoStore.getState().status;
       if (
         genCurrent === "GENERATING" ||
         genCurrent === "REVEALING" ||
         transCurrent === "GENERATING" ||
-        transCurrent === "REVEALING"
+        transCurrent === "REVEALING" ||
+        vidCurrent === "GENERATING" ||
+        vidCurrent === "REVEALING"
       ) {
         if (toolId === "content-translator") {
           translatorSetFailed(
             "Translation timed out. The AI provider may be unavailable.",
           );
           toast.error("Translation timed out. Please try again.");
+        } else if (toolId === "video-generator") {
+          videoSetFailed(
+            "Video generation timed out. The AI provider may be unavailable.",
+          );
+          toast.error("Video generation timed out. Please try again.");
         } else {
           setFailed(
             "Generation timed out. The AI provider may be unavailable.",
@@ -98,17 +137,20 @@ export function useBackgroundPolling() {
         }
         activeJobIdRef.current = null;
       }
-    }, TIMEOUT_MS);
+    }, timeout);
 
     pollingRef.current = setInterval(async () => {
       const genCurrent = useGenerationStore.getState().status;
       const transCurrent = useTranslatorStore.getState().status;
+      const vidCurrent = useVideoStore.getState().status;
       const isGenerating =
         genCurrent === "GENERATING" || genCurrent === "REVEALING";
       const isTranslating =
         transCurrent === "GENERATING" || transCurrent === "REVEALING";
+      const isGeneratingVideo =
+        vidCurrent === "GENERATING" || vidCurrent === "REVEALING";
 
-      if (!isGenerating && !isTranslating) {
+      if (!isGenerating && !isTranslating && !isGeneratingVideo) {
         stopPolling();
         return;
       }
@@ -133,6 +175,18 @@ export function useBackgroundPolling() {
               fetchBalance();
               toast.success("Translation ready!");
             }
+          } else if (toolId === "video-generator") {
+            const videosRes = await api.get<{ data: any[] }>(
+              `/tools/${toolId}/videos?limit=1`,
+            );
+            const latest = videosRes?.data?.[0];
+            if (latest?.url) {
+              videoSetRevealing(latest.url, latest.id);
+              videoAddVariation(latest.url, latest.id);
+              videoSetReady();
+              fetchBalance();
+              toast.success("Video ready!");
+            }
           } else {
             const imagesRes = await api.get<{ data: any[] }>(
               `/tools/${toolId}/images?limit=1`,
@@ -152,6 +206,9 @@ export function useBackgroundPolling() {
           if (toolId === "content-translator") {
             translatorSetFailed(statusRes.failedReason || "Translation failed");
             toast.error(statusRes.failedReason || "Translation failed");
+          } else if (toolId === "video-generator") {
+            videoSetFailed(statusRes.failedReason || "Video generation failed");
+            toast.error(statusRes.failedReason || "Video generation failed");
           } else {
             setFailed(statusRes.failedReason || "Generation failed");
             toast.error(statusRes.failedReason || "Generation failed");
