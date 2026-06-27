@@ -28,6 +28,7 @@ export class ThumbnailController {
       provider?: string;
       width?: number;
       height?: number;
+      imageUrl?: string;
     },
   ): Promise<{ success: boolean; data: { jobId: string } }> {
     if (!dto.prompt?.trim()) {
@@ -43,6 +44,7 @@ export class ThumbnailController {
         provider: dto.provider,
         width: dto.width,
         height: dto.height,
+        imageUrl: dto.imageUrl,
       });
       return { success: true, data: result };
     } catch (error) {

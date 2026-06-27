@@ -66,6 +66,7 @@ export default function ThumbnailGeneratorPage() {
   const [providersLoading, setProvidersLoading] = useState(true);
   const [isProviderOpen, setIsProviderOpen] = useState(false);
   const providerDropdownRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const {
     status,
     resultUrl: imageUrl,
@@ -77,12 +78,14 @@ export default function ThumbnailGeneratorPage() {
     aiProvider,
     width,
     height,
+    sourceImageUrl,
     variations,
     setPrompt,
     setNegativePrompt,
     setStyle,
     setAiProvider,
     setDimensions,
+    setSourceImageUrl,
     startGeneration,
     setRevealing,
     setReady,
@@ -168,10 +171,18 @@ export default function ThumbnailGeneratorPage() {
   const isProcessing = status === "GENERATING" || status === "REVEALING";
 
   const generateMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (payload: {
+      prompt: string;
+      negativePrompt?: string;
+      style?: string;
+      provider?: string;
+      width?: number;
+      height?: number;
+      imageUrl?: string;
+    }) => {
       return api.post<{ success: boolean; data: { jobId: string } }>(
         "/tools/thumbnail-generator/generate",
-        { prompt, negativePrompt, style, provider: aiProvider, width, height },
+        payload,
       );
     },
     onSuccess: (response) => {
@@ -193,9 +204,21 @@ export default function ThumbnailGeneratorPage() {
 
   const handleGenerate = () => {
     if (!prompt.trim()) return;
+    const payload: typeof generateMutation.variables = {
+      prompt,
+      negativePrompt,
+      style,
+      provider: aiProvider,
+      width,
+      height,
+    };
+    if (sourceImageUrl) {
+      payload.imageUrl = sourceImageUrl;
+    }
     reset();
+    setSourceImageUrl(null);
     generateMutation.reset();
-    generateMutation.mutate();
+    generateMutation.mutate(payload);
   };
 
   return (
@@ -480,6 +503,95 @@ export default function ThumbnailGeneratorPage() {
               </>
             )}
           </div>
+
+          {aiProvider === "siliconflow" && (
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-3">
+                Reference Image (optional)
+              </label>
+              {sourceImageUrl ? (
+                <div className="relative group">
+                  <img
+                    src={sourceImageUrl}
+                    alt="Reference"
+                    className="w-full h-40 object-cover rounded-lg border border-border"
+                  />
+                  <button
+                    onClick={() => setSourceImageUrl(null)}
+                    disabled={isProcessing}
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-error/80 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file && file.type.startsWith("image/")) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) =>
+                        setSourceImageUrl(ev.target?.result as string);
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  onClick={() => imageInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center gap-2 h-32 rounded-lg border-2 border-dashed border-border hover:border-primary/50 bg-surface-elevated/50 cursor-pointer transition-all"
+                >
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    className="text-text-dim"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                  </svg>
+                  <span className="text-xs text-text-dim">
+                    Drop an image or click to upload
+                  </span>
+                  <span className="text-[10px] text-text-dim/60">
+                    For image-to-image generation
+                  </span>
+                </div>
+              )}
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) =>
+                      setSourceImageUrl(ev.target?.result as string);
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+            </div>
+          )}
 
           <div className="pt-2">
             <Button

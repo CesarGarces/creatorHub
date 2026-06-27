@@ -95,6 +95,7 @@ export class AIEngineService {
       height?: number;
       userId?: string;
       toolId?: string;
+      imageUrl?: string;
     },
   ): Promise<AIResponse> {
     return this.execute({
@@ -106,6 +107,7 @@ export class AIEngineService {
       parameters: {
         width: options.width || 1024,
         height: options.height || 1024,
+        imageUrl: options.imageUrl,
       },
       userId: options.userId,
       toolId: options.toolId,

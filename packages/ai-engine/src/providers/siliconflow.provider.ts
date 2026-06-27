@@ -10,7 +10,7 @@ import type { ImageGenerationOptions } from "./provider.interface";
 export class SiliconFlowProvider extends AIProviderBase {
   readonly name: AIProvider = "siliconflow";
   readonly supportedTasks: AITaskType[] = ["image-generation"];
-  readonly supportedModels = ["FLUX.2-pro"];
+  readonly supportedModels = ["FLUX.2-pro", "FLUX.1-Kontext-max"];
   readonly tier = "free" as const;
 
   async generate(request: AIRequest): Promise<AIResponse> {
@@ -19,11 +19,28 @@ export class SiliconFlowProvider extends AIProviderBase {
       negativePrompt: request.negativePrompt,
       width: (request.parameters?.width as number) || 1024,
       height: (request.parameters?.height as number) || 1024,
+      imageUrl: request.parameters?.imageUrl as string | undefined,
     });
   }
 
   async generateImage(options: ImageGenerationOptions): Promise<AIResponse> {
-    const image_size = `${options.width || 1024}x${options.height || 1024}`;
+    const isKontext = !!options.imageUrl;
+    const model = isKontext
+      ? "black-forest-labs/FLUX.1-Kontext-max"
+      : "black-forest-labs/FLUX.2-pro";
+
+    const body: Record<string, unknown> = {
+      model,
+      prompt: options.prompt,
+      image_size: `${options.width || 1024}x${options.height || 1024}`,
+    };
+
+    if (isKontext) {
+      body.input_image = options.imageUrl;
+    } else if (options.negativePrompt) {
+      body.negative_prompt = options.negativePrompt;
+    }
+
     const response = await fetch(
       "https://api.siliconflow.com/v1/images/generations",
       {
@@ -32,12 +49,7 @@ export class SiliconFlowProvider extends AIProviderBase {
           Authorization: `Bearer ${this.getApiKey()}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          model: "black-forest-labs/FLUX.2-pro",
-          prompt: options.prompt,
-          negative_prompt: options.negativePrompt,
-          image_size,
-        }),
+        body: JSON.stringify(body),
       },
     );
 
@@ -56,7 +68,7 @@ export class SiliconFlowProvider extends AIProviderBase {
     return {
       id: crypto.randomUUID(),
       provider: this.name,
-      model: "FLUX.2-pro",
+      model: isKontext ? "FLUX.1-Kontext-max" : "FLUX.2-pro",
       output: {
         type: "image",
         url: images[0].url,

@@ -45,6 +45,7 @@ export class ThumbnailProcessor extends WorkerHost {
       width: number;
       height: number;
       creditCost: number;
+      imageUrl?: string;
     }>,
   ): Promise<{ userId: string; key: string; bucket: string; imageId: string }> {
     const {
@@ -58,6 +59,7 @@ export class ThumbnailProcessor extends WorkerHost {
       width,
       height,
       creditCost,
+      imageUrl,
     } = job.data;
 
     this.logger.info(`Processing thumbnail job ${job.id}`, {
@@ -77,6 +79,7 @@ export class ThumbnailProcessor extends WorkerHost {
         height,
         userId,
         toolId: "thumbnail-generator",
+        imageUrl,
       });
     } catch (error) {
       const msg = (error as Error).message || "Unknown AI error";

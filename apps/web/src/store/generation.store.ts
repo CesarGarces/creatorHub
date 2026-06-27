@@ -38,12 +38,14 @@ export interface ThumbnailFormState {
   aiProvider: string;
   width: number;
   height: number;
+  sourceImageUrl: string | null;
 
   setPrompt: (prompt: string) => void;
   setNegativePrompt: (prompt: string) => void;
   setStyle: (style: string) => void;
   setAiProvider: (provider: string) => void;
   setDimensions: (width: number, height: number) => void;
+  setSourceImageUrl: (url: string | null) => void;
 }
 
 // ─── Combined store type ─────────────────────────────────────────────────────
@@ -66,6 +68,7 @@ export const useGenerationStore = create<GenerationStore>()((set, get) => ({
   aiProvider: "z-image-turbo",
   width: 1280,
   height: 720,
+  sourceImageUrl: null,
 
   // Thumbnail form setters
   setPrompt: (prompt) => set({ prompt }),
@@ -73,6 +76,7 @@ export const useGenerationStore = create<GenerationStore>()((set, get) => ({
   setStyle: (style) => set({ style }),
   setAiProvider: (aiProvider) => set({ aiProvider }),
   setDimensions: (width, height) => set({ width, height }),
+  setSourceImageUrl: (sourceImageUrl) => set({ sourceImageUrl }),
 
   // Base actions
   startGeneration: (toolId: string, jobId: string) => {

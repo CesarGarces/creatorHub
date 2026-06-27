@@ -13,6 +13,7 @@ export interface ImageGenerationOptions {
   height?: number;
   numberOfImages?: number;
   model?: string;
+  imageUrl?: string;
 }
 
 export interface AIProviderInterface {

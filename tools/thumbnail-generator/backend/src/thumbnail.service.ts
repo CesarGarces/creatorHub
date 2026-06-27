@@ -34,6 +34,7 @@ export class ThumbnailService {
     provider?: string;
     width?: number;
     height?: number;
+    imageUrl?: string;
   }): Promise<EnqueuedThumbnail> {
     const user = await prisma.user.findUnique({ where: { id: params.userId } });
     if (!user) {
@@ -76,6 +77,7 @@ export class ThumbnailService {
       creditCost,
       width: params.width || 1280,
       height: params.height || 720,
+      imageUrl: params.imageUrl,
     });
 
     this.logger.info(`Thumbnail job enqueued`, {
