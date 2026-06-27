@@ -76,11 +76,13 @@ export default function VideoGeneratorPage() {
     aiProvider,
     aspectRatio,
     model,
+    imageUrl,
     variations,
     setPrompt,
     setAiProvider,
     setAspectRatio,
     setModel,
+    setImageUrl,
     startGeneration,
     setRevealing,
     setReady,
@@ -94,8 +96,12 @@ export default function VideoGeneratorPage() {
   const [isProviderOpen, setIsProviderOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showVariations, setShowVariations] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const providerDropdownRef = useRef<HTMLDivElement>(null);
   const lastCompletedRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isI2V = model === "Wan-AI/Wan2.2-I2V-A14B";
 
   useEffect(() => {
     fetchTools();
@@ -162,12 +168,51 @@ export default function VideoGeneratorPage() {
     }
   }, [status, videoUrl, videoId, addVariation]);
 
+  useEffect(() => {
+    if (model !== "Wan-AI/Wan2.2-I2V-A14B") {
+      setImageUrl(null);
+    }
+  }, [model, setImageUrl]);
+
   const _tool = tools.find((t) => t.id === "video-generator");
   const selectedProvider = providers.find((p) => p.id === aiProvider);
   const isProcessing = status === "GENERATING" || status === "REVEALING";
   const selectedDimensions =
     videoAspectRatios.find((ar) => ar.id === aspectRatio) ||
     videoAspectRatios[0]!;
+
+  const handleFileSelect = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image must be under 10MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImageUrl(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  };
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -178,6 +223,7 @@ export default function VideoGeneratorPage() {
           model,
           provider: aiProvider,
           aspectRatio,
+          imageUrl: isI2V ? imageUrl : undefined,
         },
       );
     },
@@ -200,9 +246,39 @@ export default function VideoGeneratorPage() {
 
   const handleGenerate = () => {
     if (!prompt.trim()) return;
+    if (isI2V && !imageUrl) {
+      toast.error("Please upload a source image for Image-to-Video");
+      return;
+    }
+    const payload = {
+      prompt,
+      model,
+      provider: aiProvider,
+      aspectRatio,
+      imageUrl: isI2V ? imageUrl : undefined,
+    };
     reset();
     generateMutation.reset();
-    generateMutation.mutate();
+    api
+      .post<{ success: boolean; data: { jobId: string } }>(
+        "/tools/video-generator/generate",
+        payload,
+      )
+      .then((response) => {
+        const jobId = response?.data?.jobId;
+        if (!jobId) {
+          toast.error("Generation failed: no job ID returned");
+          return;
+        }
+        lastCompletedRef.current = null;
+        startGeneration("video-generator", jobId);
+      })
+      .catch((error: any) => {
+        const message =
+          error?.message || "Failed to generate video. Please try again.";
+        setFailed(message);
+        toast.error(message);
+      });
   };
 
   return (
@@ -296,6 +372,102 @@ export default function VideoGeneratorPage() {
               ))}
             </div>
           </div>
+
+          {/* Image Upload - Only for I2V model */}
+          {isI2V && (
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-2">
+                Source Image
+              </label>
+              {imageUrl ? (
+                <div className="relative rounded-lg border border-border bg-surface-elevated overflow-hidden">
+                  <img
+                    src={imageUrl}
+                    alt="Source image"
+                    className="w-full h-40 object-contain bg-black/20"
+                  />
+                  <button
+                    onClick={() => setImageUrl(null)}
+                    disabled={isProcessing}
+                    className="absolute top-2 right-2 p-1.5 rounded-md bg-black/60 text-text-muted hover:text-text hover:bg-black/80 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Remove image"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M18 6 6 18" />
+                      <path d="m6 6 12 12" />
+                    </svg>
+                  </button>
+                  <div className="px-3 py-2 border-t border-border">
+                    <p className="text-[11px] text-text-dim truncate">
+                      Image loaded
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 transition-all cursor-pointer ${
+                    isDragOver
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/40 hover:bg-surface-elevated/50"
+                  }`}
+                >
+                  <div
+                    className={`p-2 rounded-lg transition-colors ${isDragOver ? "bg-primary/10" : "bg-surface-elevated"}`}
+                  >
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-text-dim"
+                    >
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7" />
+                      <line x1="16" x2="22" y1="5" y2="5" />
+                      <line x1="19" x2="19" y1="2" y2="8" />
+                      <circle cx="9" cy="9" r="2" />
+                      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                    </svg>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs font-medium text-text-muted">
+                      {isDragOver ? "Drop image here" : "Drag & drop or click"}
+                    </p>
+                    <p className="text-[11px] text-text-dim mt-0.5">
+                      PNG, JPG, WEBP up to 10MB
+                    </p>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileSelect(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-text-muted mb-3">
@@ -476,7 +648,8 @@ export default function VideoGeneratorPage() {
                 !prompt.trim() ||
                 !creditsHydrated ||
                 balance < 50 ||
-                isProcessing
+                isProcessing ||
+                (isI2V && !imageUrl)
               }
               onClick={handleGenerate}
             >

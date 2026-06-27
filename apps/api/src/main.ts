@@ -15,8 +15,14 @@ async function bootstrap() {
     }
   };
 
-  app.use(bodyParser.json({ verify: rawBodySaver }));
-  app.use(bodyParser.urlencoded({ extended: true, verify: rawBodySaver }));
+  app.use(bodyParser.json({ verify: rawBodySaver, limit: "50mb" }));
+  app.use(
+    bodyParser.urlencoded({
+      extended: true,
+      verify: rawBodySaver,
+      limit: "50mb",
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle("Creator Hub API")

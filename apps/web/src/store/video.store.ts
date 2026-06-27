@@ -34,16 +34,18 @@ export interface VideoFormState {
   aiProvider: string;
   aspectRatio: string;
   model: string;
+  imageUrl: string | null;
 
   setPrompt: (prompt: string) => void;
   setAiProvider: (provider: string) => void;
   setAspectRatio: (ratio: string) => void;
   setModel: (model: string) => void;
+  setImageUrl: (url: string | null) => void;
 }
 
 export type VideoStore = BaseVideoState & VideoFormState;
 
-export const useVideoStore = create<VideoStore>()((set, get) => ({
+export const useVideoStore = create<VideoStore>()((set, _get) => ({
   status: "IDLE",
   jobId: null,
   toolId: null,
@@ -56,11 +58,13 @@ export const useVideoStore = create<VideoStore>()((set, get) => ({
   aiProvider: "siliconflow-video",
   aspectRatio: "16:9",
   model: "Wan-AI/Wan2.2-T2V-A14B",
+  imageUrl: null,
 
   setPrompt: (prompt) => set({ prompt }),
   setAiProvider: (aiProvider) => set({ aiProvider }),
   setAspectRatio: (aspectRatio) => set({ aspectRatio }),
   setModel: (model) => set({ model }),
+  setImageUrl: (imageUrl) => set({ imageUrl }),
 
   startGeneration: (toolId, jobId) => {
     set({
@@ -103,6 +107,7 @@ export const useVideoStore = create<VideoStore>()((set, get) => ({
       error: null,
       jobId: null,
       toolId: null,
+      imageUrl: null,
     });
   },
 }));

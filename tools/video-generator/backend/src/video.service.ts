@@ -38,6 +38,11 @@ export class VideoService {
     });
     if (!user) throw new Error("User not found");
 
+    const model = params.model || "Wan-AI/Wan2.2-T2V-A14B";
+    if (model.includes("I2V") && !params.imageUrl) {
+      throw new Error("Image-to-Video model requires a source image");
+    }
+
     const providerSlug = params.provider || "siliconflow-video";
     const provider = await prisma.provider.findUnique({
       where: { slug: providerSlug },

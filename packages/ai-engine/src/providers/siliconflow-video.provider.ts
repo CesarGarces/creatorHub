@@ -57,6 +57,15 @@ export class SiliconFlowVideoProvider extends AIProviderBase {
       submitBody.image = imageUrl;
     }
 
+    console.log(
+      "[SiliconFlowVideo] Submit body:",
+      JSON.stringify({
+        ...submitBody,
+        prompt: submitBody.prompt?.toString().slice(0, 50),
+        image: submitBody.image ? "[present]" : undefined,
+      }),
+    );
+
     const submitRes = await fetch(
       "https://api.siliconflow.com/v1/video/submit",
       {
@@ -113,7 +122,7 @@ export class SiliconFlowVideoProvider extends AIProviderBase {
           },
           body: JSON.stringify({ requestId }),
         });
-      } catch (e) {
+      } catch {
         continue;
       }
 

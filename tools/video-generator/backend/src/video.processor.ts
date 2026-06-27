@@ -69,6 +69,13 @@ export class VideoProcessor extends WorkerHost {
       prompt: prompt.slice(0, 50),
     });
 
+    const resolvedImageUrl = imageUrl;
+    this.logger.info(`Video processor imageUrl check`, {
+      hasImage: !!imageUrl,
+      startsWithData: imageUrl?.startsWith("data:image"),
+      urlPreview: imageUrl ? imageUrl.slice(0, 80) : null,
+    });
+
     const startTime = Date.now();
 
     let result;
@@ -78,7 +85,7 @@ export class VideoProcessor extends WorkerHost {
         provider: provider as any,
         model: model as any,
         prompt,
-        parameters: { imageUrl, width, height },
+        parameters: { imageUrl: resolvedImageUrl, width, height },
         userId,
         toolId: "video-generator",
       });
