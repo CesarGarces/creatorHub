@@ -1,10 +1,58 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useChatStore } from "@/store/chat.store";
 import { cn } from "@creator-hub/ui";
+import type { ChatMessage } from "@creator-hub/shared-types";
+
+interface ParsedMessage {
+  textBefore: string;
+  textAfter: string;
+  action: { toolId: string; params?: Record<string, string> } | null;
+}
+
+function parseToolAction(content: string): ParsedMessage {
+  const jsonBlockRegex =
+    /```json\s*(\{[\s\S]*?"action"\s*:\s*"route_to_tool"[\s\S]*?\})\s*```/;
+  const match = content.match(jsonBlockRegex);
+
+  if (!match) {
+    const rawRegex = /(\{\s*"action"\s*:\s*"route_to_tool"[\s\S]*?\})\s*$/;
+    const rawMatch = content.match(rawRegex);
+    if (rawMatch) {
+      try {
+        const jsonStr = rawMatch[1]!;
+        const parsed = JSON.parse(jsonStr);
+        const idx = content.indexOf(jsonStr);
+        return {
+          textBefore: content.slice(0, idx).trim(),
+          textAfter: "",
+          action: { toolId: parsed.toolId, params: parsed.params },
+        };
+      } catch {}
+    }
+    return { textBefore: content, textAfter: "", action: null };
+  }
+
+  try {
+    const jsonStr = match[1]!;
+    const parsed = JSON.parse(jsonStr);
+    const idx = match.index!;
+    const before = content.slice(0, idx).trim();
+    const after = content.slice(idx + match[0].length).trim();
+    return {
+      textBefore: before,
+      textAfter: after,
+      action: { toolId: parsed.toolId, params: parsed.params },
+    };
+  } catch {
+    return { textBefore: content, textAfter: "", action: null };
+  }
+}
 
 export function ChatWidget() {
+  const router = useRouter();
   const [showSettings, setShowSettings] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipDismissed, setTooltipDismissed] = useState(false);
@@ -244,50 +292,81 @@ export function ChatWidget() {
             </div>
           )}
 
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                "flex",
-                message.role === "user" ? "justify-end" : "justify-start",
-              )}
-            >
+          {messages.map((message) => {
+            const parsed =
+              message.role === "assistant" && message.content
+                ? parseToolAction(message.content)
+                : null;
+
+            return (
               <div
+                key={message.id}
                 className={cn(
-                  "max-w-[85%] rounded-2xl px-3.5 py-2.5",
-                  message.role === "user"
-                    ? "bg-primary text-white rounded-br-md"
-                    : "bg-surface-elevated text-text rounded-bl-md",
+                  "flex",
+                  message.role === "user" ? "justify-end" : "justify-start",
                 )}
               >
-                {message.role === "assistant" && (
-                  <div className="mb-1 flex items-center gap-1">
-                    <SparkleIcon className="h-2.5 w-2.5 text-primary" />
-                    <span className="text-[9px] font-medium uppercase tracking-wider text-text-dim">
-                      AI
-                    </span>
-                  </div>
-                )}
-                <div className="whitespace-pre-wrap text-[13px] leading-relaxed">
-                  {message.content ||
-                    (isStreaming &&
-                    message.role === "assistant" &&
-                    message.id.startsWith("assistant-") ? (
-                      <span className="inline-flex items-center gap-1 text-text-dim">
-                        <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-primary" />
-                        Making...
+                <div
+                  className={cn(
+                    "max-w-[85%] rounded-2xl px-3.5 py-2.5",
+                    message.role === "user"
+                      ? "bg-primary text-white rounded-br-md"
+                      : "bg-surface-elevated text-text rounded-bl-md",
+                  )}
+                >
+                  {message.role === "assistant" && (
+                    <div className="mb-1 flex items-center gap-1">
+                      <SparkleIcon className="h-2.5 w-2.5 text-primary" />
+                      <span className="text-[9px] font-medium uppercase tracking-wider text-text-dim">
+                        AI
                       </span>
-                    ) : null)}
-                  {isStreaming &&
-                    message.role === "assistant" &&
-                    message.id.startsWith("assistant-") &&
-                    message.content && (
-                      <span className="ml-0.5 inline-block h-3.5 w-px animate-pulse bg-text/50" />
-                    )}
+                    </div>
+                  )}
+
+                  {parsed?.action ? (
+                    <>
+                      {parsed.textBefore && (
+                        <div className="whitespace-pre-wrap text-[13px] leading-relaxed">
+                          {parsed.textBefore}
+                        </div>
+                      )}
+                      <ToolActionCard
+                        toolId={parsed.action.toolId}
+                        params={parsed.action.params}
+                        onNavigate={(path) => {
+                          router.push(path);
+                          closeWidget();
+                        }}
+                      />
+                      {parsed.textAfter && (
+                        <div className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed">
+                          {parsed.textAfter}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="whitespace-pre-wrap text-[13px] leading-relaxed">
+                      {message.content ||
+                        (isStreaming &&
+                        message.role === "assistant" &&
+                        message.id.startsWith("assistant-") ? (
+                          <span className="inline-flex items-center gap-1 text-text-dim">
+                            <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-primary" />
+                            Making...
+                          </span>
+                        ) : null)}
+                      {isStreaming &&
+                        message.role === "assistant" &&
+                        message.id.startsWith("assistant-") &&
+                        message.content && (
+                          <span className="ml-0.5 inline-block h-3.5 w-px animate-pulse bg-text/50" />
+                        )}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Input */}
@@ -568,6 +647,62 @@ function SettingsPanel({
   );
 }
 
+/* ─── Tool Action Card ─── */
+
+const TOOL_ROUTES: Record<string, { path: string; label: string }> = {
+  thumbnail: { path: "/tools/thumbnail-generator", label: "Miniatura" },
+  video: { path: "/tools/video-generator", label: "Video" },
+  translator: { path: "/tools/content-translator", label: "Traductor" },
+};
+
+function ToolActionCard({
+  toolId,
+  params,
+  onNavigate,
+}: {
+  toolId: string;
+  params?: Record<string, string>;
+  onNavigate: (path: string) => void;
+}) {
+  const tool = TOOL_ROUTES[toolId] || {
+    path: `/tools/${toolId}`,
+    label: toolId,
+  };
+  const category = params?.category;
+
+  return (
+    <div className="mt-2 overflow-hidden rounded-xl border border-primary/20 bg-primary/5">
+      <div className="px-3.5 py-3">
+        <div className="mb-2 flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15">
+            <SparkleIcon className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div>
+            <p className="text-[12px] font-semibold text-text">
+              Ir a {tool.label}
+            </p>
+            {category && (
+              <p className="text-[10px] text-text-dim">Categoria: {category}</p>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => onNavigate(tool.path)}
+          className={cn(
+            "flex w-full items-center justify-center gap-2 rounded-lg",
+            "bg-primary px-3 py-2 text-[12px] font-semibold text-white",
+            "transition-all hover:brightness-110 active:scale-[0.98]",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+          )}
+        >
+          Abrir herramienta
+          <ArrowIcon className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Icons (SVG, no emojis — ui-ux-pro-max: no-emoji-icons) ─── */
 
 function SparkleIcon({ className }: { className?: string }) {
@@ -674,6 +809,23 @@ function LoaderIcon({ className }: { className?: string }) {
       className={className}
     >
       <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
+  );
+}
+
+function ArrowIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
     </svg>
   );
 }
