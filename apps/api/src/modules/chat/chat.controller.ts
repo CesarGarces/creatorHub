@@ -53,7 +53,8 @@ export class ChatController {
 
   @Delete("sessions/:id")
   async deleteSession(@Param("id") id: string) {
-    return this.chatHistoryService.deleteSession(id);
+    await this.chatHistoryService.deleteSession(id);
+    return { success: true };
   }
 
   @Post("sessions/:id/messages")

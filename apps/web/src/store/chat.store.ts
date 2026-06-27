@@ -38,6 +38,7 @@ interface ChatState {
   activeSessionId: string | null;
   messages: ChatMessage[];
   isStreaming: boolean;
+  isWidgetOpen: boolean;
   settings: ChatSettings;
   availableTools: Array<{
     id: string;
@@ -48,6 +49,8 @@ interface ChatState {
     route?: string;
   }>;
 
+  openWidget: () => void;
+  closeWidget: () => void;
   fetchSessions: () => Promise<void>;
   createSession: (title?: string) => Promise<string>;
   selectSession: (sessionId: string) => Promise<void>;
@@ -64,6 +67,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   activeSessionId: null,
   messages: [],
   isStreaming: false,
+  isWidgetOpen: false,
   settings: {
     defaultModel: "zai-org/GLM-5.2",
     temperature: 0.7,
@@ -71,6 +75,9 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     reasoning: 0.7,
   },
   availableTools: [],
+
+  openWidget: () => set({ isWidgetOpen: true }),
+  closeWidget: () => set({ isWidgetOpen: false }),
 
   fetchSessions: async () => {
     try {

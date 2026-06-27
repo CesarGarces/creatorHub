@@ -46,10 +46,21 @@ export function ChatMessages() {
               </div>
             )}
             <div className="whitespace-pre-wrap text-sm leading-relaxed">
-              {message.content}
+              {message.content ||
+                (isStreaming &&
+                message.role === "assistant" &&
+                message.id.startsWith("assistant-") ? (
+                  <span className="inline-flex items-center gap-1.5 text-text-dim">
+                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                    Making...
+                  </span>
+                ) : (
+                  message.content
+                ))}
               {isStreaming &&
                 message.role === "assistant" &&
-                message.id.startsWith("assistant-") && (
+                message.id.startsWith("assistant-") &&
+                message.content && (
                   <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-text" />
                 )}
             </div>

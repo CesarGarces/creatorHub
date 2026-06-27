@@ -77,7 +77,12 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
     throw new ApiError(response.status, errorMessage);
   }
 
-  return response.json();
+  const contentType = response.headers.get("content-type");
+  if (contentType?.includes("application/json")) {
+    return response.json();
+  }
+  const text = await response.text();
+  return text ? JSON.parse(text) : (undefined as T);
 }
 
 export class ApiError extends Error {
