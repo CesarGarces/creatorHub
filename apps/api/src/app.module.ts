@@ -26,6 +26,7 @@ import { ThumbnailListenerModule } from "./modules/thumbnail-listener/thumbnail-
 import { TranslationListenerModule } from "./modules/translation-listener/translation-listener.module";
 import { PaymentListenerModule } from "./modules/payment-listener/payment-listener.module";
 import { VideoListenerModule } from "./modules/video-listener/video-listener.module";
+import { ChatModule } from "./modules/chat/chat.module";
 
 // Import tools (registers them via registerTool)
 import "@creator-hub/thumbnail-generator";
@@ -68,6 +69,9 @@ import { VideoGeneratorModule } from "@creator-hub/video-generator-backend";
     TranslationListenerModule,
     PaymentListenerModule,
     VideoListenerModule,
+
+    // Chat
+    ChatModule,
 
     // Tools (registered automatically via ToolSdkModule)
     ThumbnailGeneratorModule,

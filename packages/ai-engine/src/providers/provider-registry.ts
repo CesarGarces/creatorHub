@@ -1,6 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import type { AIProviderInterface } from "./provider.interface";
-import type { AIProvider, AITaskType } from "@creator-hub/shared-types";
+import type {
+  AIProvider,
+  AITaskType,
+  AIRequest,
+  AIStreamChunk,
+} from "@creator-hub/shared-types";
 
 @Injectable()
 export class ProviderRegistry {
@@ -78,5 +83,17 @@ export class ProviderRegistry {
 
   isRegistered(name: AIProvider): boolean {
     return this.providers.has(name);
+  }
+
+  getStreamingProviders(): AIProviderInterface[] {
+    return Array.from(this.providers.values()).filter(
+      (p) => typeof p.generateStream === "function",
+    );
+  }
+
+  getStreamingProviderForModel(model: string): AIProviderInterface | undefined {
+    return this.getStreamingProviders().find((p) =>
+      p.supportedModels.includes(model),
+    );
   }
 }

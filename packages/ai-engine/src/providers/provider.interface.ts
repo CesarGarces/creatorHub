@@ -4,6 +4,7 @@ import type {
   AIProvider,
   AITaskType,
   ProviderTier,
+  AIStreamChunk,
 } from "@creator-hub/shared-types";
 
 export interface ImageGenerationOptions {
@@ -24,5 +25,6 @@ export interface AIProviderInterface {
 
   generate(request: AIRequest): Promise<AIResponse>;
   generateImage(options: ImageGenerationOptions): Promise<AIResponse>;
+  generateStream?(request: AIRequest): AsyncGenerator<AIStreamChunk>;
   validateConfig(): boolean;
 }
