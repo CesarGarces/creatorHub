@@ -86,7 +86,7 @@ export class ChatService {
 
       const history =
         await this.historyService.getSessionMessageHistory(sessionId);
-      const systemPrompt = this.routingService.buildSystemPrompt();
+      const systemPrompt = this.routingService.buildSystemPrompt(content);
 
       const model = session.model;
       const provider =

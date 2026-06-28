@@ -10,6 +10,11 @@ Creator Hub es una plataforma donde los creadores de contenido pueden acceder a 
 
 - **Thumbnail Generator** — Genera miniaturas con IA (Z-Image-Turbo, SiliconFlow FLUX.2-pro, OpenAI, Gemini, Stability AI)
 - **Content Translator** — Traduce contenido entre idiomas con IA (DeepSeek V4 Flash, DeepSeek V4 Pro). Incluye speech-to-text en tiempo real con Deepgram Nova-3 para dictado por voz.
+- **Image to Image** — Transforma imágenes existentes con IA (FLUX.2-pro img2img)
+- **Video Generator** — Genera videos con IA desde texto o imágenes
+- **Image to Video** — Convierte imágenes en videos animados con IA
+- **Text to Video** — Genera videos directamente desde descripciones de texto
+- **AI Chat** — Asistente de IA con streaming, routing dinámico de herramientas y acciones integradas (abre tools directamente desde el chat)
 
 **Herramientas en desarrollo:**
 
@@ -22,18 +27,20 @@ Creator Hub es una plataforma donde los creadores de contenido pueden acceder a 
 
 ## Stack
 
-| Capa             | Tecnología                                                                                         |
-| ---------------- | -------------------------------------------------------------------------------------------------- |
-| Frontend         | Next.js 16, React 19, Zustand, TanStack Query, TailwindCSS                                         |
-| Backend          | NestJS 11, TypeScript, Prisma ORM                                                                  |
-| Base de datos    | PostgreSQL 16                                                                                      |
-| Cola de mensajes | Redis + BullMQ                                                                                     |
-| Storage          | Cloudflare R2 (prod) / MinIO (dev)                                                                 |
-| WebSocket        | Socket.IO                                                                                          |
-| Domain Events    | Redis Pub/Sub (ioredis)                                                                            |
-| Payment Gateway  | MercadoPago (Strategy Pattern), PayPal (planned)                                                   |
-| AI               | SiliconFlow (Z-Image-Turbo, FLUX.2-pro, DeepSeek V4), OpenAI, Gemini, Stability AI, Deepgram (STT) |
-| Monorepo         | Turborepo + pnpm workspaces                                                                        |
+| Capa             | Tecnología                                                                                                  |
+| ---------------- | ----------------------------------------------------------------------------------------------------------- |
+| Frontend         | Next.js 16, React 19, Zustand, TanStack Query, TailwindCSS                                                  |
+| Backend          | NestJS 11, TypeScript, Prisma ORM                                                                           |
+| Base de datos    | PostgreSQL 16                                                                                               |
+| Cola de mensajes | Redis + BullMQ                                                                                              |
+| Storage          | Cloudflare R2 (prod) / MinIO (dev)                                                                          |
+| WebSocket        | Socket.IO                                                                                                   |
+| Domain Events    | Redis Pub/Sub (ioredis)                                                                                     |
+| Payment Gateway  | MercadoPago (Strategy Pattern), PayPal (planned)                                                            |
+| AI               | SiliconFlow (Z-Image-Turbo, FLUX.2-pro, DeepSeek V4, GLM-5.2), OpenAI, Gemini, Stability AI, Deepgram (STT) |
+| Chat             | AI Engine streaming (SSE), dynamic tool routing via ToolRegistry                                            |
+| Email            | Resend (provider-agnostic via abstract interface), Handlebars templates                                     |
+| Monorepo         | Turborepo + pnpm workspaces                                                                                 |
 
 ## Arquitectura
 
@@ -43,8 +50,9 @@ creator-hub/
 │   ├── web/              # Next.js frontend
 │   └── api/              # NestJS backend
 ├── packages/
-│   ├── auth/             # JWT + Passport
-│   ├── ai-engine/        # Multi-provider AI abstraction (tier-aware)
+│   ├── auth/             # JWT + Passport + EmailVerifiedGuard
+│   ├── ai-engine/        # Multi-provider AI abstraction (tier-aware) + streaming
+│   ├── email/            # Provider-agnostic email (Resend, Handlebars templates)
 │   ├── stt-engine/       # Speech-to-text streaming (Deepgram, Mock)
 │   ├── billing/          # Sistema de créditos (currentCredits como fuente única)
 │   ├── storage/          # R2/MinIO abstraction
@@ -57,10 +65,15 @@ creator-hub/
 ├── tools/
 │   ├── thumbnail-generator/  # Primera herramienta
 │   │   └── backend/          # BullMQ processor + controller
-│   └── content-translator/   # Traducción de contenido con IA
-│       ├── backend/          # TranslatorProcessor + controller
-│       └── frontend/         # UI full-screen con dos textareas
-└── agents/               # Agentes especializados
+│   ├── content-translator/   # Traducción de contenido con IA
+│   │   ├── backend/          # TranslatorProcessor + controller
+│   │   └── frontend/         # UI full-screen con dos textareas
+│   ├── image-to-image/       # Transformación de imágenes con IA
+│   └── video-generator/      # Generación de video (text-to-video, image-to-video)
+│       └── backend/          # VideoProcessor + controller
+├── agents/               # Agentes especializados
+│   └── chat-agent/       # Chat con routing dinámico de tools
+└── skills/               # Skills del sistema (ver .agents/skills/)
 ```
 
 El sistema sigue principios de **Clean Architecture** y **DDD**: cada herramienta es un bounded context que se registra automáticamente via `ToolRegistry`. Las dependencias apuntan hacia adentro — las herramientas dependen del SDK, nunca al revés.
@@ -504,8 +517,12 @@ AWS_S3_ENDPOINT="http://localhost:9000"
 # Auth
 JWT_SECRET="tu-secret-aqui"
 
+# Email (Resend)
+RESEND_API_KEY=""
+RESEND_FROM_EMAIL="noreply@cesargarces.com"
+
 # AI Providers — Free tier (al menos uno necesario para desarrollo)
-SILICONFLOW_API_KEY=""          # Requerido para Z-Image-Turbo y FLUX.2-pro
+SILICONFLOW_API_KEY=""          # Requerido para Z-Image-Turbo, FLUX.2-pro, GLM-5.2
 
 # AI Providers — Pro tier (opcionales)
 OPENAI_API_KEY=""
@@ -517,9 +534,9 @@ MERCADO_PAGO_ACCESS_TOKEN=""
 MERCADO_PAGO_WEBHOOK_SECRET=""
 
 # App
-NEXT_PUBLIC_API_URL="http://localhost:4000"
+NEXT_PUBLIC_API_URL="http://localhost:3001"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
-API_URL="http://localhost:4000"
+API_URL="http://localhost:3001"
 FRONTEND_URL="http://localhost:3000"
 ```
 
@@ -610,6 +627,106 @@ La UI se construye con componentes estilo **shadcn/ui** en `packages/ui/`. Cada 
 
 Ver `structure.md` para arquitectura detallada de archivos.
 
+---
+
+## Email Verification
+
+### Flujo de verificación
+
+```
+1. Registro → AuthService.register()
+   → Generate 6-digit code + hash + store in DB
+   → Send email via Resend (Handlebars template)
+   → Return { user, accessToken, refreshToken, emailVerified: false }
+
+2. Verificación → POST /api/v1/auth/verify-email
+   → User submits 6-digit code + email
+   → Backend verifies: code matches, not expired (< 10min)
+   → Set emailVerified = true, clear code
+   → Update JWT payload
+
+3. Reenvío → POST /api/v1/auth/resend-verification
+   → Cooldown: 60 seconds between requests
+   → Generates new code, sends new email
+```
+
+### Email Package (`@creator-hub/email`)
+
+Provider-agnostic — swap Resend for AWS SES by implementing one interface:
+
+```
+packages/email/src/
+├── email-provider.interface.ts    # Abstract EmailProvider class
+├── email.service.ts               # Orchestrator (sendVerificationEmail, etc.)
+├── email.module.ts                # NestJS module with factory provider
+├── providers/
+│   └── resend/
+│       └── resend.provider.ts     # Resend implementation
+└── templates/
+    ├── template.helper.ts         # Handlebars template renderer (with cache)
+    └── verification.hbs           # Verification email template
+```
+
+### Variables de entorno (email)
+
+```env
+RESEND_API_KEY="re_..."           # Resend API key
+RESEND_FROM_EMAIL="noreply@cesargarces.com"  # Sender email
+```
+
+---
+
+## AI Chat System
+
+El chat widget es un componente global flotante (bottom-right) que se comunica con el backend via streaming SSE. Descubre tools dinámicamente del `ToolRegistry` — cero cambios de código al agregar nuevas herramientas.
+
+### Arquitectura del Chat
+
+```
+┌─────────────────────────────────────────────────┐
+│           ChatWidget (Bottom-Right FAB)          │
+│  ┌─────────────────────────────────────────┐    │
+│  │  Session tabs + Messages + Settings     │    │
+│  │  Tool action cards (open tools inline)  │    │
+│  └─────────────────────────────────────────┘    │
+└──────────────────────┬──────────────────────────┘
+                       │ POST /api/v1/chat (SSE)
+                       ▼
+┌──────────────────────────────────────────────────┐
+│              ChatService                         │
+│  1. Resolve tool routing (ChatRoutingService)    │
+│  2. Build system prompt with tool registry       │
+│  3. Stream via AI provider.generateStream()      │
+│  4. Persist messages in ChatSession/ChatMessage  │
+└──────────────────────┬───────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────────┐
+│           ChatRoutingService                     │
+│  - Discovers tools from ToolRegistry at runtime  │
+│  - Confidence scoring per tool                   │
+│  - Trigger words per category (thumbnail, video) │
+│  - System prompt: "You have these tools..."      │
+└──────────────────────────────────────────────────┘
+```
+
+### Chat Features
+
+- **Streaming**: SSE via `@Post` + `Readable` (not `@Sse` GET)
+- **Tool Routing**: Dynamic discovery — zero code changes for new tools
+- **Tool Action Cards**: LLM response contains JSON action block → parsed → rendered as clickable card → navigates to tool page
+- **Settings Panel**: Model selection, temperature, max tokens, reasoning sliders
+- **Session Management**: Create, switch, delete sessions
+- **Widget Store**: Global Zustand store (`openWidget()` from any component)
+
+### Variables de entorno (chat)
+
+```env
+SILICONFLOW_API_KEY="..."  # Required for GLM-5.2 (siliconflow)
+```
+
+---
+
 ## API
 
 La API expone endpoints REST bajo `/api/v1`. Documentación interactiva disponible en Swagger.
@@ -617,6 +734,9 @@ La API expone endpoints REST bajo `/api/v1`. Documentación interactiva disponib
 ```
 POST   /api/v1/auth/register          # Registro (asigna FREE + 100 créditos)
 POST   /api/v1/auth/login             # Login
+POST   /api/v1/auth/verify-email      # Verificar código de email (6 dígitos)
+POST   /api/v1/auth/resend-verification  # Reenviar código (cooldown 60s)
+GET    /api/v1/auth/verification-status/:email  # Estado de verificación
 
 GET    /api/v1/tools                  # Listar herramientas
 GET    /api/v1/tools/:id              # Detalle de herramienta
@@ -644,6 +764,13 @@ GET    /api/v1/tools/thumbnail-generator/images          # Imágenes del usuario
 
 POST   /api/v1/tools/content-translator/translate       # Traducir contenido (text, targetLanguage, provider)
 GET    /api/v1/tools/content-translator/jobs/:id/status  # Estado del job
+
+# AI Chat (streaming SSE)
+POST   /api/v1/chat                    # Enviar mensaje (streaming response)
+GET    /api/v1/chat/sessions           # Listar sesiones del usuario
+GET    /api/v1/chat/sessions/:id       # Mensajes de una sesión
+PUT    /api/v1/chat/settings           # Actualizar configuración del chat
+GET    /api/v1/chat/tools              # Listar herramientas disponibles para routing
 
 # WebSocket events — Speech-to-Text (Content Translator)
 Emit    stt:start → { language?, userId }               # Iniciar sesión STT

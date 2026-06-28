@@ -3,6 +3,7 @@ import {
   ConflictException,
   UnauthorizedException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { prisma } from "@creator-hub/database";
@@ -12,16 +13,30 @@ import { StorageService } from "@creator-hub/storage";
 
 @Injectable()
 export class AuthService {
+  private verificationCooldowns = new Map<string, number>();
+
   constructor(
     private jwtService: JwtService,
     private storageService: StorageService,
   ) {}
+
+  private generateVerificationCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  private getVerificationCodeExpiry(): Date {
+    const expiry = new Date();
+    expiry.setMinutes(expiry.getMinutes() + 10);
+    return expiry;
+  }
 
   async register(email: string, password: string, name?: string) {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) throw new ConflictException("Email already registered");
 
     const passwordHash = await bcrypt.hash(password, 12);
+    const verificationCode = this.generateVerificationCode();
+    const verificationExpires = this.getVerificationCodeExpiry();
 
     const user = await prisma.user.create({
       data: {
@@ -31,6 +46,8 @@ export class AuthService {
         plan: "FREE",
         currentCredits: 100,
         purchasedCredits: 0,
+        verificationCode,
+        verificationExpires,
       },
     });
 
@@ -48,7 +65,11 @@ export class AuthService {
       },
     });
 
-    return this.generateTokens(user);
+    return {
+      ...this.generateTokens(user),
+      emailVerified: false,
+      requiresVerification: true,
+    };
   }
 
   async login(email: string, password: string) {
@@ -65,7 +86,11 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
-    return this.generateTokens(user);
+    return {
+      ...this.generateTokens(user),
+      emailVerified: !!user.emailVerified,
+      requiresVerification: !user.emailVerified,
+    };
   }
 
   async changePassword(
@@ -118,6 +143,7 @@ export class AuthService {
         currentCredits: true,
         purchasedCredits: true,
         avatarUrl: true,
+        emailVerified: true,
         createdAt: true,
       },
     });
@@ -176,6 +202,118 @@ export class AuthService {
     await prisma.user.delete({ where: { id: userId } });
 
     return { message: "Account deleted successfully" };
+  }
+
+  async verifyEmail(
+    email: string,
+    code: string,
+  ): Promise<{ message: string; user: Record<string, unknown> }> {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw new BadRequestException("User not found");
+
+    if (user.emailVerified) {
+      return {
+        message: "Email already verified",
+        user: this.sanitizeUser(user),
+      };
+    }
+
+    if (!user.verificationCode || !user.verificationExpires) {
+      throw new BadRequestException(
+        "No verification code pending. Please request a new one.",
+      );
+    }
+
+    if (user.verificationExpires < new Date()) {
+      throw new BadRequestException(
+        "Verification code has expired. Please request a new one.",
+      );
+    }
+
+    if (user.verificationCode !== code) {
+      throw new BadRequestException("Invalid verification code");
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: new Date(),
+        verificationCode: null,
+        verificationExpires: null,
+      },
+    });
+
+    return {
+      message: "Email verified successfully",
+      user: this.sanitizeUser(updated),
+    };
+  }
+
+  async resendVerification(
+    email: string,
+  ): Promise<{ message: string; cooldownSeconds: number }> {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw new BadRequestException("User not found");
+
+    if (user.emailVerified) {
+      throw new BadRequestException("Email is already verified");
+    }
+
+    const now = Date.now();
+    const lastSent = this.verificationCooldowns.get(email);
+    if (lastSent && now - lastSent < 60000) {
+      const remaining = Math.ceil((60000 - (now - lastSent)) / 1000);
+      throw new BadRequestException(
+        `Please wait ${remaining} seconds before requesting a new code`,
+      );
+    }
+
+    const verificationCode = this.generateVerificationCode();
+    const verificationExpires = this.getVerificationCodeExpiry();
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { verificationCode, verificationExpires },
+    });
+
+    this.verificationCooldowns.set(email, now);
+
+    return {
+      message: "Verification code sent",
+      cooldownSeconds: 60,
+    };
+  }
+
+  async getVerificationStatus(
+    email: string,
+  ): Promise<{ verified: boolean; pending: boolean }> {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { emailVerified: true, verificationCode: true },
+    });
+
+    if (!user) throw new BadRequestException("User not found");
+
+    return {
+      verified: !!user.emailVerified,
+      pending: !!user.verificationCode,
+    };
+  }
+
+  private sanitizeUser(user: {
+    id: string;
+    email: string;
+    role: string;
+    name?: string | null;
+    emailVerified?: Date | null;
+  }) {
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name || null,
+      emailVerified: user.emailVerified,
+    };
   }
 
   private extractKeyFromUrl(url: string, bucket: string): string | null {

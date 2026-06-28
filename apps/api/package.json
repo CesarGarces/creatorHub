@@ -21,6 +21,7 @@
     "@creator-hub/content-translator-backend": "workspace:*",
     "@creator-hub/database": "workspace:*",
     "@creator-hub/domain-events": "workspace:*",
+    "@creator-hub/email": "workspace:*",
     "@creator-hub/shared-types": "workspace:*",
     "@creator-hub/shared-utils": "workspace:*",
     "@creator-hub/storage": "workspace:*",

@@ -1248,11 +1248,320 @@ Auth Flow:
 | JWT validation   | passport-jwt                         |
 | Guard            | JwtAuthGuard (global)                |
 | Role check       | RolesGuard                           |
+| Email verified   | EmailVerifiedGuard (admin bypass)    |
+| Email delivery   | Resend (provider-agnostic)           |
 | OAuth ready      | Account model supports Google/GitHub |
+
+### Email Verification Flow
+
+```
+┌────────────┐    POST /auth/register     ┌────────────┐
+│   Frontend │ ──────────────────────────► │   Auth     │
+│            │    { email, password,       │ Controller │
+│            │      firstName, lastName }  └─────┬──────┘
+└────────────┘                                  │
+                                                ▼
+                                     ┌─────────────────────┐
+                                     │    AuthService      │
+                                     │  1. Hash password   │
+                                     │  2. Create User     │
+                                     │  3. Generate code   │
+                                     │  4. Hash code +     │
+                                     │     store in DB     │
+                                     │  5. Send email      │
+                                     └──────────┬──────────┘
+                                                │
+              ┌─────────────────────────────────┼──────────────────────┐
+              │                                 │                      │
+              ▼                                 ▼                      ▼
+     ┌─────────────────┐             ┌──────────────────┐   ┌─────────────────┐
+     │   Email (Resend)│             │  User            │   │  JWT Token      │
+     │   6-digit code  │             │  emailVerified   │   │  emailVerified  │
+     │   expires: 10min│             │  = false         │   │  = false        │
+     └─────────────────┘             └──────────────────┘   └─────────────────┘
+
+              │
+              ▼
+
+     ┌─────────────────┐   POST /auth/verify-email   ┌────────────┐
+     │   Frontend      │ ──────────────────────────► │   Auth     │
+     │   (OTP page)    │   { email, code }           │ Controller │
+     │   6 digit boxes │                             └─────┬──────┘
+     └─────────────────┘                                   │
+                                                           ▼
+                                                ┌─────────────────────┐
+                                                │    AuthService      │
+                                                │  1. Verify code     │
+                                                │  2. Check expiry    │
+                                                │  3. Set emailVerif  │
+                                                │     = true          │
+                                                │  4. Clear code      │
+                                                └──────────┬──────────┘
+                                                           │
+                                                           ▼
+                                                ┌─────────────────────┐
+                                                │  Updated JWT        │
+                                                │  emailVerified=true │
+                                                └─────────────────────┘
+```
+
+### EmailVerifiedGuard
+
+```typescript
+@Injectable()
+export class EmailVerifiedGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+
+    // Admins bypass verification
+    if (user.role === "ADMIN") return true;
+
+    if (!user.emailVerified) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        message: "Email verification required",
+        error: "UNVERIFIED_EMAIL",
+        requiresVerification: true,
+      });
+    }
+    return true;
+  }
+}
+```
+
+### Verification Code Storage
+
+The verification code is stored directly on the `User` model (not a separate table):
+
+| Field                 | Type      | Description               |
+| --------------------- | --------- | ------------------------- |
+| `verificationCode`    | String?   | Hashed 6-digit code       |
+| `verificationExpires` | DateTime? | Expiration time (10 min)  |
+| `emailVerified`       | Boolean   | Whether email is verified |
+
+JWT payload includes `emailVerified` to avoid DB calls in guards.
+
+### Email Package Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    EmailService                              │
+│  (Orchestrator — resolves provider via DI)                   │
+├─────────────────────────────────────────────────────────────┤
+│  sendVerificationEmail(to, firstName, code)                  │
+│  renderTemplate(templateName, data) → Handlebars output     │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+           ┌───────────────────┼───────────────────┐
+           │                   │                   │
+   ┌───────▼──────┐   ┌───────▼──────┐   ┌───────▼──────┐
+   │   Resend     │   │   AWS SES    │   │   SendGrid   │
+   │  (Provider)  │   │  (Planned)   │   │  (Planned)   │
+   ├──────────────┤   ├──────────────┤   ├──────────────┤
+   │ SDK: resend  │   │ SDK: @aws/   │   │ SDK: sendgrid│
+   │ emails.send()│   │ ses-v2       │   │              │
+   └──────────────┘   └──────────────┘   └──────────────┘
+           │                   │                   │
+           └───────────────────┴───────────────────┘
+                               │
+               ┌───────────────▼───────────────┐
+               │     EmailProvider             │
+               │     (Abstract Class)          │
+               ├───────────────────────────────┤
+               │ sendEmail(options)            │
+               │ sendBulkEmail(options)        │
+               └───────────────────────────────┘
+```
+
+### Package Structure
+
+```
+packages/email/src/
+├── email-provider.interface.ts    # Abstract EmailProvider class
+├── email.service.ts               # Orchestrator
+├── email.module.ts                # NestJS module with factory provider
+├── providers/
+│   └── resend/
+│       └── resend.provider.ts     # Resend SDK adapter
+└── templates/
+    ├── template.helper.ts         # Handlebars renderer (with cache)
+    └── verification.hbs           # Verification email template
+```
+
+### Adding a New Email Provider
+
+```typescript
+// 1. Create provider implementing EmailProvider
+@Injectable()
+export class AwsSesProvider extends EmailProvider {
+  async sendEmail(options: SendEmailOptions): Promise<EmailResult> {
+    // AWS SES SDK implementation
+  }
+}
+
+// 2. Register in email.module.ts
+{
+  provide: EMAIL_PROVIDER,
+  useFactory: (configService) => {
+    const provider = configService.get("EMAIL_PROVIDER");
+    if (provider === "ses") return new AwsSesProvider();
+    return new ResendProvider(configService);
+  },
+  inject: [ConfigService],
+}
+```
+
+No service changes required — swap provider via environment variable.
 
 ---
 
-## 12. Testing Strategy
+## 12. AI Chat System
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ChatWidget (Frontend)                     │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  FAB (bottom-right) → Slides panel from right       │    │
+│  │  Session tabs + Message list + Input                 │    │
+│  │  Tool action cards (clickable → navigate to tool)    │    │
+│  │  Settings panel (model, temperature, max tokens)     │    │
+│  └─────────────────────────────────────────────────────┘    │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ POST /api/v1/chat (SSE stream)
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    ChatController                            │
+│  @Post() + @Res() → Readable stream (SSE)                  │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    ChatService                              │
+│  1. Resolve tool routing (ChatRoutingService)               │
+│  2. Build system prompt with available tools                │
+│  3. Stream via AI provider.generateStream()                 │
+│  4. Persist messages in ChatSession/ChatMessage             │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                ┌──────────────┴──────────────┐
+                │                             │
+                ▼                             ▼
+┌───────────────────────────┐  ┌──────────────────────────────┐
+│   ChatRoutingService      │  │   AI Provider (GLM-5.2)      │
+│                           │  │                              │
+│  - ToolRegistry.getActive │  │  generateStream(prompt, opts)│
+│  - Confidence scoring     │  │  → Readable stream of chunks │
+│  - Trigger words          │  │                              │
+│  - System prompt builder  │  │  SiliconFlow SSE API         │
+└───────────────────────────┘  └──────────────────────────────┘
+```
+
+### Dynamic Tool Routing
+
+The chat system discovers tools at runtime from the `ToolRegistry`:
+
+```typescript
+// ChatRoutingService.buildSystemPrompt()
+const tools = await this.toolRegistry.getActive();
+const toolDescriptions = tools
+  .map((t) => `- ${t.name}: ${t.description} [category: ${t.category}]`)
+  .join("\n");
+
+const systemPrompt = `
+You are an AI assistant for Creator Hub.
+You have access to these tools:
+${toolDescriptions}
+
+When a user request matches a tool, wrap the action in a JSON code block:
+\`\`\`json
+{"action":"<tool-id>","params":{...}}
+\`\`\`
+`;
+```
+
+### Tool Action Cards
+
+When the LLM response contains a JSON action block, the frontend parses it and renders a clickable card:
+
+````
+User: "Generate a thumbnail of a sunset"
+  ↓
+LLM: "I'll create that for you!"
+     ```json
+     {"action":"thumbnail-generator","params":{"prompt":"sunset"}}
+     ```
+  ↓
+Frontend parses → renders ToolActionCard
+  ↓
+User clicks card → navigates to /tools/thumbnail-generator?prompt=sunset
+````
+
+### Chat Models (Prisma)
+
+```prisma
+model ChatSession {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  sessionId String
+  role      String   // "user" | "assistant" | "system"
+  content   String
+  toolCalls Json?    // Tool call metadata
+  createdAt DateTime @default(now())
+}
+
+model ChatSettings {
+  id            String @id @default(uuid())
+  userId        String @unique
+  model         String @default("zai-org/GLM-5.2")
+  temperature   Float  @default(0.7)
+  maxTokens     Int    @default(8000)
+  reasoning     Float  @default(0.7)
+}
+```
+
+### Streaming Implementation
+
+The chat uses `@Post` + `Readable` stream (not `@Sse` GET):
+
+```typescript
+@Post()
+@UseGuards(JwtAuthGuard)
+async chat(@Body() dto: ChatDto, @Res() res: Response) {
+  const stream = await this.chatService.streamMessage(dto);
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const readable = new ReadableStream({
+    start(controller) {
+      stream.on("data", (chunk) => {
+        controller.enqueue(`data: ${JSON.stringify(chunk)}\n\n`);
+      });
+      stream.on("end", () => controller.close());
+    },
+  });
+
+  // Pipe to NestJS Response
+  const nodeStream = Readable.fromWeb(readable);
+  nodeStream.pipe(res);
+}
+```
+
+---
+
+## 13. Testing Strategy
 
 ### Test Pyramid
 
@@ -1303,7 +1612,7 @@ tools/thumbnail-generator/
 
 ---
 
-## 13. CI/CD Strategy
+## 14. CI/CD Strategy
 
 ### GitHub Actions Workflow
 
@@ -1353,7 +1662,7 @@ Commit → Lint → TypeCheck → Unit Tests → Build → Integration Tests →
 
 ---
 
-## 14. Scalability Roadmap
+## 15. Scalability Roadmap
 
 ### Phase 1: MVP (0 → 100 users)
 
@@ -1435,7 +1744,7 @@ Queue-bound?
 
 ---
 
-## 15. Creating a New Tool
+## 16. Creating a New Tool
 
 ### Tool Checklist (< 1 hour)
 
@@ -1567,20 +1876,27 @@ export class YourToolService {
 
 ### Architecture Decision Records
 
-| Decision                        | Rationale                                                                                                                                         |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Modular Monolith first**      | Faster iteration, no distributed complexity. Microservices boundaries are well-defined for future split                                           |
-| **Tool SDK for registration**   | Loose coupling: tools don't import the registry directly                                                                                          |
-| **AI Provider pattern**         | Tools switch providers via config, not code changes. Runtime classes + DB metadata (`Provider`) decouple implementation from pricing/availability |
-| **BullMQ for events**           | Redis-backed, supports delays, retries, scheduling. Familiar for NestJS devs                                                                      |
-| **Prisma as ORM**               | Type-safe, auto-generated client, strong migration system                                                                                         |
-| **Zustand over Redux**          | Minimal boilerplate, TypeScript-native, persist middleware built in                                                                               |
-| **React Query**                 | Server state management, caching, deduplication built in                                                                                          |
-| **Credits as abstraction**      | Rate limits, monetization, and abuse prevention unified in one system                                                                             |
-| **pnpm workspaces**             | Faster than npm/yarn, strict dependency isolation                                                                                                 |
-| **S3-compatible storage**       | MinIO for dev, AWS S3 for prod — same interface                                                                                                   |
-| **Admin Panel as separate app** | `apps/admin` isolates admin UI, allows independent deploy and stricter access controls                                                            |
-| **Soft delete for users**       | Prevents data loss, preserves analytics and audit trails                                                                                          |
+| Decision                         | Rationale                                                                                                                                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Modular Monolith first**       | Faster iteration, no distributed complexity. Microservices boundaries are well-defined for future split                                           |
+| **Tool SDK for registration**    | Loose coupling: tools don't import the registry directly                                                                                          |
+| **AI Provider pattern**          | Tools switch providers via config, not code changes. Runtime classes + DB metadata (`Provider`) decouple implementation from pricing/availability |
+| **BullMQ for events**            | Redis-backed, supports delays, retries, scheduling. Familiar for NestJS devs                                                                      |
+| **Prisma as ORM**                | Type-safe, auto-generated client, strong migration system                                                                                         |
+| **Zustand over Redux**           | Minimal boilerplate, TypeScript-native, persist middleware built in                                                                               |
+| **React Query**                  | Server state management, caching, deduplication built in                                                                                          |
+| **Credits as abstraction**       | Rate limits, monetization, and abuse prevention unified in one system                                                                             |
+| **pnpm workspaces**              | Faster than npm/yarn, strict dependency isolation                                                                                                 |
+| **S3-compatible storage**        | MinIO for dev, AWS S3 for prod — same interface                                                                                                   |
+| **Admin Panel as separate app**  | `apps/admin` isolates admin UI, allows independent deploy and stricter access controls                                                            |
+| **Soft delete for users**        | Prevents data loss, preserves analytics and audit trails                                                                                          |
+| **Provider-agnostic email**      | `EmailProvider` abstract class — swap Resend for AWS SES by implementing one interface                                                            |
+| **Verification code on User**    | Short-lived (10min), single user, no extra joins needed vs separate VerificationToken model                                                       |
+| **JWT includes emailVerified**   | Avoids DB call in `EmailVerifiedGuard`                                                                                                            |
+| **Admin bypasses verification**  | `EmailVerifiedGuard` checks `user.role === "ADMIN"` — admins always have full access                                                              |
+| **Dynamic tool routing**         | `ChatRoutingService` queries `ToolRegistry.getActive()` at runtime — zero code changes for new tools                                              |
+| **Chat SSE via POST + Readable** | NestJS `@Sse` creates GET endpoints; frontend sends POST with body. Readable stream for SSE.                                                      |
+| **Store-driven widget open**     | `isWidgetOpen` in Zustand store allows any component to open chat via `openWidget()`                                                              |
 
 ---
 

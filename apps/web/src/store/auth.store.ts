@@ -16,6 +16,7 @@ interface User {
   email: string;
   role: string;
   name?: string;
+  emailVerified?: string | null;
 }
 
 interface AuthState {
@@ -51,6 +52,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         accessToken: string;
         refreshToken?: string;
         user: User;
+        emailVerified?: boolean;
       }>("/auth/login", {
         email,
         password,
@@ -59,8 +61,17 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       if (res.refreshToken) {
         setRefreshToken(res.refreshToken);
       }
-      setStoredUser(res.user);
-      set({ user: res.user, token: res.accessToken });
+      const userWithVerification = {
+        ...res.user,
+        emailVerified:
+          res.emailVerified !== undefined
+            ? res.emailVerified
+              ? new Date().toISOString()
+              : null
+            : res.user.emailVerified,
+      };
+      setStoredUser(userWithVerification);
+      set({ user: userWithVerification, token: res.accessToken });
 
       // Initialize WebSocket with saved tokens (handshake reads cookies)
       try {
@@ -80,6 +91,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         accessToken: string;
         refreshToken?: string;
         user: User;
+        emailVerified?: boolean;
       }>("/auth/register", {
         email,
         password,
@@ -89,8 +101,17 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       if (res.refreshToken) {
         setRefreshToken(res.refreshToken);
       }
-      setStoredUser(res.user);
-      set({ user: res.user, token: res.accessToken });
+      const userWithVerification = {
+        ...res.user,
+        emailVerified:
+          res.emailVerified !== undefined
+            ? res.emailVerified
+              ? new Date().toISOString()
+              : null
+            : res.user.emailVerified,
+      };
+      setStoredUser(userWithVerification);
+      set({ user: userWithVerification, token: res.accessToken });
 
       // Initialize WebSocket with saved tokens (handshake reads cookies)
       try {

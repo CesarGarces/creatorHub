@@ -5,13 +5,16 @@ import {
   Patch,
   Delete,
   Body,
+  Param,
   HttpCode,
   HttpStatus,
   UseGuards,
 } from "@nestjs/common";
 import { AuthService } from "@creator-hub/auth";
 import { Public, CurrentUser, JwtAuthGuard } from "@creator-hub/auth";
-import { IsEmail, IsString, MinLength } from "class-validator";
+import { EmailService } from "@creator-hub/email";
+import { prisma } from "@creator-hub/database";
+import { IsEmail, IsString, MinLength, Length } from "class-validator";
 
 class RegisterDto {
   @IsEmail()
@@ -47,14 +50,49 @@ class UpdateProfileDto {
   name!: string;
 }
 
+class VerifyEmailDto {
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  @Length(6, 6)
+  code!: string;
+}
+
+class ResendVerificationDto {
+  @IsEmail()
+  email!: string;
+}
+
 @Controller("auth")
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private emailService: EmailService,
+  ) {}
 
   @Public()
   @Post("register")
   async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto.email, dto.password, dto.name);
+    const result = await this.authService.register(
+      dto.email,
+      dto.password,
+      dto.name,
+    );
+
+    const user = await prisma.user.findUnique({
+      where: { email: dto.email },
+      select: { verificationCode: true, name: true },
+    });
+
+    if (user?.verificationCode) {
+      await this.emailService.sendVerificationEmail(dto.email, {
+        code: user.verificationCode,
+        userName: user.name || undefined,
+      });
+    }
+
+    return result;
   }
 
   @Public()
@@ -62,6 +100,40 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto.email, dto.password);
+  }
+
+  @Public()
+  @Post("verify-email")
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto.email, dto.code);
+  }
+
+  @Public()
+  @Post("resend-verification")
+  @HttpCode(HttpStatus.OK)
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    const result = await this.authService.resendVerification(dto.email);
+
+    const user = await prisma.user.findUnique({
+      where: { email: dto.email },
+      select: { verificationCode: true, name: true },
+    });
+
+    if (user?.verificationCode) {
+      await this.emailService.sendVerificationEmail(dto.email, {
+        code: user.verificationCode,
+        userName: user.name || undefined,
+      });
+    }
+
+    return result;
+  }
+
+  @Public()
+  @Get("verification-status/:email")
+  async getVerificationStatus(@Param("email") email: string) {
+    return this.authService.getVerificationStatus(email);
   }
 
   @UseGuards(JwtAuthGuard)

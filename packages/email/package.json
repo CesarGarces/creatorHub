@@ -1,0 +1,24 @@
+{
+  "name": "@creator-hub/email",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && cp -r src/templates/*.hbs dist/templates/",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@creator-hub/shared-utils": "workspace:*",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^3.0.0",
+    "handlebars": "^4.7.9",
+    "resend": "^4.8.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0"
+  }
+}

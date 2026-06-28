@@ -9,54 +9,142 @@ export class ChatRoutingService {
 
   constructor(private toolRegistry: ToolRegistry) {}
 
-  buildSystemPrompt(): string {
+  buildSystemPrompt(userMessage?: string): string {
     const tools = this.toolRegistry.getActive();
     const toolDescriptions = tools.map((tool) =>
       this.formatToolDescription(tool),
     );
 
-    return `Eres el asistente de Creator Hub, una plataforma para creadores de contenido.
+    const detectedLanguage = this.detectLanguage(userMessage || "");
+    const languageInstruction =
+      detectedLanguage === "es"
+        ? "Responde en español."
+        : detectedLanguage === "pt"
+          ? "Responda em português."
+          : "Respond in English.";
 
-HERRAMIENTAS DISPONIBLES (usa cuando sea apropiado):
-${toolDescriptions.length > 0 ? toolDescriptions.join("\n\n") : "No hay herramientas disponibles actualmente."}
+    return `You are the Creator Hub assistant, a platform for content creators.
 
-REGLAS:
-1. Cuando el usuario pida algo que coincida con una herramienta, responde con un JSON de acción dentro de un bloque de código markdown:
+AVAILABLE TOOLS (use when appropriate):
+${toolDescriptions.length > 0 ? toolDescriptions.join("\n\n") : "No tools available right now."}
+
+RULES:
+1. When the user requests something that matches a tool, respond with a JSON action inside a markdown code block:
    \`\`\`json
    { "action": "route_to_tool", "toolId": "<id>", "params": { ... } }
    \`\`\`
-   Explica brevemente qué harás y muestra el botón de acción.
-2. Para preguntas generales, responde de forma concisa y útil en markdown.
-3. Sé amable, profesional y directo.
-4. Si no estás seguro de qué herramienta usar, pregunta al usuario.
-5. Puedes combinar información de múltiples herramientas si es necesario.`;
+   Briefly explain what you'll do and show the action button.
+2. For general questions, respond concisely and helpfully in markdown.
+3. Be friendly, professional, and direct.
+4. If you're unsure which tool to use, ask the user.
+5. You can combine information from multiple tools if needed.
+6. ${languageInstruction}`;
   }
 
   private formatToolDescription(tool: ToolManifest): string {
     const categoryMap: Record<string, string> = {
-      thumbnail: "Crear miniaturas/imágenes",
-      video: "Crear videos",
-      translator: "Traducir contenido",
-      title: "Generar títulos",
-      stream: "Herramientas de streaming",
-      social: "Redes sociales",
-      analytics: "Análisis",
-      design: "Diseño",
-      writing: "Escritura",
-      other: "Otros",
+      thumbnail: "Create thumbnails/images",
+      video: "Create videos",
+      translator: "Translate content",
+      title: "Generate titles",
+      stream: "Streaming tools",
+      social: "Social media",
+      analytics: "Analytics",
+      design: "Design",
+      writing: "Writing",
+      other: "Other",
     };
 
     const triggerWords = this.inferTriggerWords(tool);
 
     return `**${tool.name}** (${tool.category})
-   Descripción: ${tool.description}
-   Costo: ${tool.creditsPerUse} créditos
-   Activa cuando: ${triggerWords}
-   Ruta: ${tool.frontend.routes[0]?.path || "N/A"}`;
+   Description: ${tool.description}
+   Cost: ${tool.creditsPerUse} credits
+   Activates when: ${triggerWords}
+   Route: ${tool.frontend.routes[0]?.path || "N/A"}`;
   }
 
   getActiveTools() {
     return this.toolRegistry.getActive();
+  }
+
+  private detectLanguage(text: string): string {
+    const sample = text.toLowerCase().slice(0, 200);
+
+    const spanishWords = [
+      "hola",
+      "que",
+      "como",
+      "para",
+      "por",
+      "una",
+      "los",
+      "las",
+      "del",
+      "está",
+      "necesito",
+      "quiero",
+      "puedo",
+      "tengo",
+      "hacer",
+      "crear",
+      "generar",
+      "video",
+      "imagen",
+      "miniatura",
+      "traducir",
+      "título",
+      "gracias",
+      "por favor",
+      "ayuda",
+      "buenos",
+      "días",
+      "noches",
+    ];
+    const portugueseWords = [
+      "olá",
+      "como",
+      "para",
+      "por",
+      "uma",
+      "os",
+      "as",
+      "do",
+      "da",
+      "está",
+      "preciso",
+      "quero",
+      "posso",
+      "tenho",
+      "fazer",
+      "criar",
+      "gerar",
+      "vídeo",
+      "imagem",
+      "miniatura",
+      "traduzir",
+      "título",
+      "obrigado",
+      "por favor",
+      "ajuda",
+      "bom",
+      "dia",
+      "noite",
+    ];
+
+    let spanishScore = 0;
+    let portugueseScore = 0;
+
+    for (const word of spanishWords) {
+      if (sample.includes(word)) spanishScore++;
+    }
+    for (const word of portugueseWords) {
+      if (sample.includes(word)) portugueseScore++;
+    }
+
+    if (spanishScore > portugueseScore && spanishScore >= 2) return "es";
+    if (portugueseScore > spanishScore && portugueseScore >= 2) return "pt";
+    return "en";
   }
 
   private inferTriggerWords(tool: ToolManifest): string {
@@ -65,29 +153,67 @@ REGLAS:
     switch (tool.category) {
       case "thumbnail":
         triggers.push(
+          "create thumbnail",
+          "generate image",
+          "thumbnail",
+          "video thumbnail",
           "crear miniatura",
           "generar imagen",
-          "thumbnail",
           "imagen para video",
         );
         break;
       case "video":
-        triggers.push("crear video", "generar video", "video", "animación");
+        triggers.push(
+          "create video",
+          "generate video",
+          "video",
+          "animation",
+          "crear video",
+          "generar video",
+          "animación",
+        );
         break;
       case "translator":
-        triggers.push("traducir", "traducción", "translate", "localizar");
+        triggers.push(
+          "translate",
+          "translation",
+          "localize",
+          "traducir",
+          "traducción",
+          "localizar",
+        );
         break;
       case "title":
-        triggers.push("generar título", "título", "nombre para video", "title");
+        triggers.push(
+          "generate title",
+          "title",
+          "video title",
+          "generar título",
+          "título",
+          "nombre para video",
+        );
         break;
       case "stream":
-        triggers.push("stream", "transmitir", "overlay");
+        triggers.push("stream", "broadcast", "overlay", "transmitir", "live");
         break;
       case "social":
-        triggers.push("publicar", "redes sociales", "social");
+        triggers.push(
+          "publish",
+          "social media",
+          "social",
+          "publicar",
+          "redes sociales",
+        );
         break;
       case "analytics":
-        triggers.push("analizar", "estadísticas", "métricas");
+        triggers.push(
+          "analyze",
+          "statistics",
+          "metrics",
+          "analizar",
+          "estadísticas",
+          "métricas",
+        );
         break;
       default:
         triggers.push(tool.name.toLowerCase());
@@ -130,13 +256,46 @@ REGLAS:
     }
 
     const categoryKeywords: Record<string, string[]> = {
-      thumbnail: ["miniatura", "thumbnail", "imagen", "foto", "diseñar"],
-      video: ["video", "animación", "clipe", "grabar"],
-      translator: ["traducir", "traducción", "translate", "idioma"],
-      title: ["título", "title", "nombre", "encabezado"],
-      stream: ["stream", "transmitir", "live", "overlay"],
-      social: ["publicar", "post", "redes", "social"],
-      analytics: ["analizar", "estadísticas", "métricas", "datos"],
+      thumbnail: [
+        "thumbnail",
+        "image",
+        "photo",
+        "design",
+        "miniatura",
+        "imagen",
+        "foto",
+        "diseñar",
+      ],
+      video: [
+        "video",
+        "animation",
+        "clip",
+        "record",
+        "animación",
+        "clipe",
+        "grabar",
+      ],
+      translator: [
+        "translate",
+        "translation",
+        "language",
+        "traducir",
+        "traducción",
+        "idioma",
+      ],
+      title: ["title", "name", "heading", "título", "nombre", "encabezado"],
+      stream: ["stream", "broadcast", "live", "overlay", "transmitir"],
+      social: ["publish", "post", "social", "publicar", "redes"],
+      analytics: [
+        "analyze",
+        "statistics",
+        "metrics",
+        "data",
+        "analizar",
+        "estadísticas",
+        "métricas",
+        "datos",
+      ],
     };
 
     const keywords = categoryKeywords[tool.category] || [];

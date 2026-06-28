@@ -695,7 +695,7 @@ function ToolActionCard({
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
           )}
         >
-          Abrir herramienta
+          Open tool
           <ArrowIcon className="h-3.5 w-3.5" />
         </button>
       </div>

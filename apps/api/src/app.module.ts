@@ -11,6 +11,7 @@ import { StorageModule } from "@creator-hub/storage";
 import { AnalyticsModule } from "@creator-hub/analytics";
 import { DomainEventsModule } from "@creator-hub/domain-events";
 import { STTEngineModule } from "@creator-hub/stt-engine";
+import { EmailModule } from "@creator-hub/email";
 import { ToolSdkModule } from "./tool-sdk.module";
 
 import { AuthController } from "./modules/auth/auth.controller";
@@ -60,6 +61,7 @@ import { VideoGeneratorModule } from "@creator-hub/video-generator-backend";
     AnalyticsModule,
     DomainEventsModule,
     STTEngineModule,
+    EmailModule,
     ToolSdkModule,
     AdminModule,
 

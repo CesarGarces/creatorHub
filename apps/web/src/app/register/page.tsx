@@ -18,7 +18,7 @@ export default function RegisterPage() {
     setError("");
     try {
       await register(email, password, name);
-      router.push("/dashboard");
+      router.push("/auth/verify");
     } catch {
       setError("Registration failed");
     }

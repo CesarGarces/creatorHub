@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background:#0a0a0f; font-family:system-ui,-apple-system,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="480" cellpadding="0" cellspacing="0" style="background:#14141f; border-radius:16px; border:1px solid rgba(255,255,255,0.06); padding:48px 40px;">
+          <tr>
+            <td align="center" style="padding-bottom:32px;">
+              <h1 style="color:#f0f0f5; font-size:24px; margin:0;">Verify your email</h1>
+              {{#if userName}}
+              <p style="color:#8888a0; font-size:14px; margin-top:8px;">Hi {{userName}}, use this code to confirm your account</p>
+              {{else}}
+              <p style="color:#8888a0; font-size:14px; margin-top:8px;">Use this code to confirm your account</p>
+              {{/if}}
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:24px 0;">
+              <div style="background:#1a1a2e; border-radius:12px; padding:20px 32px; display:inline-block;">
+                <span style="color:#ffffff; font-size:32px; font-weight:700; letter-spacing:8px; font-family:monospace;">{{code}}</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding-top:24px;">
+              <p style="color:#666680; font-size:12px; margin:0;">This code expires in 10 minutes.</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding-top:16px;">
+              <p style="color:#444460; font-size:11px; margin:0;">If you didn't create an account, you can safely ignore this email.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

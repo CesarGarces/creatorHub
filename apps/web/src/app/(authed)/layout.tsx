@@ -38,7 +38,14 @@ export default function AuthedLayout({
     }
   }, [isHydrated, user, router]);
 
+  useEffect(() => {
+    if (isHydrated && user && !user.emailVerified) {
+      router.push("/auth/verify");
+    }
+  }, [isHydrated, user, router]);
+
   if (!isHydrated || !user) return null;
+  if (!user.emailVerified) return null;
 
   return <DashboardLayout>{children}</DashboardLayout>;
 }
