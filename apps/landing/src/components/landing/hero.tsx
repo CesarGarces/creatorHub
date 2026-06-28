@@ -1,10 +1,13 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { ArrowRight, Play } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, Play, X } from "lucide-react";
 import { config } from "@/lib/config";
 
 export function Hero() {
+  const [showVideo, setShowVideo] = useState(false);
+
   return (
     <section className="relative pt-32 pb-20 overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(124,58,237,0.12)_0%,_transparent_60%)]" />
@@ -22,7 +25,7 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 text-lg md:text-xl text-text-muted max-w-2xl text-balance">
-            Create thumbnails, scripts, clips, stream games and content ideas
+            Create thumbnails, videos, and translate content across languages
             using AI tools and agents.
           </p>
 
@@ -34,7 +37,10 @@ export function Hero() {
               Start Creating Free
               <ArrowRight size={16} />
             </a>
-            <button className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-text-muted hover:text-text border border-border hover:border-border-subtle rounded-xl transition-colors">
+            <button
+              onClick={() => setShowVideo(true)}
+              className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-text-muted hover:text-text border border-border hover:border-border-subtle rounded-xl transition-colors"
+            >
               <Play size={16} />
               Watch Demo
             </button>
@@ -67,9 +73,9 @@ export function Hero() {
                   title="YouTube Agent"
                   status="online"
                   capabilities={[
-                    "Script Writing",
+                    "Title Generation",
                     "SEO Optimization",
-                    "Content Ideas",
+                    "Content Strategy",
                   ]}
                 />
                 <MockStatsCard />
@@ -79,6 +85,48 @@ export function Hero() {
           <div className="absolute -inset-4 bg-primary/5 blur-3xl rounded-full" />
         </motion.div>
       </div>
+
+      <AnimatePresence>
+        {showVideo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setShowVideo(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-4xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setShowVideo(false)}
+                className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+              <div className="rounded-2xl overflow-hidden border border-border glow-primary">
+                <video
+                  autoPlay
+                  loop
+                  controls
+                  playsInline
+                  className="w-full aspect-video rounded-xl"
+                >
+                  <source
+                    src="https://cesargarces.com/Assets-platform/demo_creator_hub.mp4"
+                    type="video/mp4"
+                  />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -152,11 +200,11 @@ function MockStatsCard() {
           <span className="text-xs font-medium text-text">24</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-xs text-text-muted">Scripts</span>
-          <span className="text-xs font-medium text-text">12</span>
+          <span className="text-xs text-text-muted">Videos</span>
+          <span className="text-xs font-medium text-text">8</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-xs text-text-muted">Ideas</span>
+          <span className="text-xs text-text-muted">Translations</span>
           <span className="text-xs font-medium text-text">48</span>
         </div>
         <div className="mt-2 h-1.5 rounded-full bg-surface-elevated overflow-hidden">

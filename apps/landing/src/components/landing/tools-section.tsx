@@ -1,65 +1,35 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  Image,
-  MessageSquare,
-  Gamepad2,
-  Film,
-  Layers,
-  ArrowRight,
-} from "lucide-react";
+import { Image, Film, Languages, ArrowRight } from "lucide-react";
 
 const tools = [
   {
     icon: Image,
     title: "Thumbnail Generator",
     description:
-      "AI-powered thumbnails for YouTube, Twitch & TikTok. Multiple styles, instant generation.",
+      "Generate professional thumbnails with AI. Supports multiple styles, custom prompts, negative prompts, and adjustable dimensions. Perfect for YouTube, Twitch, and TikTok.",
     color: "text-primary",
     bgColor: "bg-primary/10",
-    badge: "Popular",
-    badgeColor: "bg-primary/20 text-primary",
-  },
-  {
-    icon: MessageSquare,
-    title: "Script Writer",
-    description:
-      "Generate video scripts, hooks, and outlines tailored to your niche and audience.",
-    color: "text-accent",
-    bgColor: "bg-accent/10",
-    badge: "New",
-    badgeColor: "bg-accent/20 text-accent",
-  },
-  {
-    icon: Gamepad2,
-    title: "Stream Games",
-    description:
-      "Interactive chat games for Twitch and YouTube Live. Keep your audience engaged.",
-    color: "text-success",
-    bgColor: "bg-success/10",
-    badge: null,
-    badgeColor: "",
+    credits: "~10 credits",
   },
   {
     icon: Film,
-    title: "Clip Generator",
+    title: "Video Generator",
     description:
-      "Automatically extract the best moments from your streams into shareable clips.",
-    color: "text-warning",
-    bgColor: "bg-warning/10",
-    badge: null,
-    badgeColor: "",
+      "Create videos with AI using Wan AI models. Supports text-to-video and image-to-video, multiple aspect ratios (16:9, 9:16, 1:1). Ideal for short-form and long-form content.",
+    color: "text-accent",
+    bgColor: "bg-accent/10",
+    credits: "50 credits",
   },
   {
-    icon: Layers,
-    title: "Overlay Builder",
+    icon: Languages,
+    title: "Content Translator",
     description:
-      "Design custom stream overlays, alerts, and on-screen elements with AI assistance.",
-    color: "text-error",
-    bgColor: "bg-error/10",
-    badge: "Coming Soon",
-    badgeColor: "bg-error/20 text-error",
+      "Translate your content to multiple languages with AI precision. Expand your global audience with natural, contextual translations in seconds.",
+    color: "text-success",
+    bgColor: "bg-success/10",
+    credits: "~5 credits",
   },
 ];
 
@@ -75,10 +45,10 @@ export function ToolsSection() {
         >
           <p className="text-sm font-medium text-primary mb-3">AI Tools</p>
           <h2 className="text-3xl md:text-4xl font-bold text-text text-balance">
-            Everything you need to create
+            Real tools for real creators
           </h2>
           <p className="mt-4 text-text-muted max-w-2xl mx-auto">
-            A growing toolkit designed for content creators. Each tool is
+            Each tool is designed to solve specific content creation problems,
             powered by state-of-the-art AI models.
           </p>
         </motion.div>
@@ -99,13 +69,9 @@ export function ToolsSection() {
                 >
                   <tool.icon size={22} className={tool.color} />
                 </div>
-                {tool.badge && (
-                  <span
-                    className={`px-2.5 py-0.5 text-[10px] font-medium rounded-full ${tool.badgeColor}`}
-                  >
-                    {tool.badge}
-                  </span>
-                )}
+                <span className="px-2.5 py-0.5 text-[10px] font-medium rounded-full bg-border-subtle text-text-muted">
+                  {tool.credits}
+                </span>
               </div>
               <h3 className="text-base font-semibold text-text mb-2">
                 {tool.title}

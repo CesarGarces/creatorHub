@@ -25,10 +25,10 @@ const agents = [
     title: "Twitch Agent",
     status: "online" as const,
     description:
-      "Grow your Twitch channel. Stream scheduling, raid suggestions, and chat engagement.",
+      "Grow your Twitch channel. Stream scheduling, content strategy, and audience engagement.",
     capabilities: [
       "Stream Planning",
-      "Chat Games",
+      "Content Strategy",
       "Raid Strategy",
       "Clip Highlights",
     ],

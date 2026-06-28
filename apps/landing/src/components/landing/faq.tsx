@@ -8,7 +8,7 @@ const faqs = [
   {
     question: "What is Creator Hub?",
     answer:
-      "Creator Hub is an AI-powered operating system for content creators. It combines AI tools (thumbnail generation, script writing, stream games) with specialized AI agents (YouTube, Twitch, TikTok) to help you create, optimize, and publish content faster.",
+      "Creator Hub is an AI-powered platform for content creators. It combines AI tools (thumbnail generation, video generation, content translation) with specialized AI agents (YouTube, Twitch, TikTok) to help you create, optimize, and publish content faster.",
   },
   {
     question: "Do I need design skills to use the Thumbnail Generator?",
@@ -18,22 +18,22 @@ const faqs = [
   {
     question: "What AI models do you use?",
     answer:
-      "We use a combination of state-of-the-art models including Flux, Stability AI, NanoBanana, and custom fine-tuned models. We're constantly adding new models as they become available.",
+      "We use a combination of state-of-the-art models including Wan AI for video generation, and various LLM providers for text and translation. We're constantly adding new models as they become available.",
   },
   {
-    question: "Can I use Creator Hub for my team?",
+    question: "How does the credit system work?",
     answer:
-      "Yes. Our Team plan includes 5 seats, a shared workspace, brand kits, templates, and analytics. Contact sales for larger teams or custom integrations.",
-  },
-  {
-    question: "Is there a free trial?",
-    answer:
-      "The Free plan gives you 10 thumbnail generations per month and 1 AI agent, forever. The Pro plan includes a 7-day free trial so you can test all features before committing.",
+      "You start with 100 free credits. Each tool costs a different amount: Thumbnail Generator (~10 credits), Video Generator (~50 credits), Content Translator (~5 credits). You can buy more credits anytime with no subscription required.",
   },
   {
     question: "Can I cancel anytime?",
     answer:
-      "Yes. There are no contracts or commitments. Cancel your subscription anytime from your account settings. You'll retain access until the end of your billing period.",
+      "Yes. Since we use a credit-based system with no subscriptions, there's nothing to cancel. Buy credits when you need them, use them at your own pace.",
+  },
+  {
+    question: "What platforms do the AI Agents support?",
+    answer:
+      "Our AI Agents are specialized for YouTube, Twitch, and TikTok. Each agent understands platform-specific best practices and helps you optimize your content for maximum reach and engagement.",
   },
 ];
 

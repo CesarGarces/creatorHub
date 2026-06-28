@@ -33,7 +33,7 @@ export class ChatSettingsService {
       where: { userId },
       create: {
         userId,
-        defaultModel: data.defaultModel || "zai-org/GLM-5.2",
+        defaultModel: data.defaultModel || "deepseek-ai/DeepSeek-V4-Flash",
         temperature: data.temperature ?? 0.7,
         maxTokens: data.maxTokens ?? 8000,
         reasoning: data.reasoning ?? 0.7,
@@ -46,7 +46,7 @@ export class ChatSettingsService {
     return prisma.chatSettings.create({
       data: {
         userId,
-        defaultModel: "zai-org/GLM-5.2",
+        defaultModel: "deepseek-ai/DeepSeek-V4-Flash",
         temperature: 0.7,
         maxTokens: 8000,
         reasoning: 0.7,

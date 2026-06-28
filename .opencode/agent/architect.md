@@ -1,6 +1,6 @@
 ---
 description: Senior software architect responsible for system design and technical decisions.
-model: qwen/qwen3.7-max
+model: qwen/qwen3.7-plus
 ---
 
 # Role

@@ -894,7 +894,7 @@ User clicks Mic button in Content Translator
          ▼                 ▼                 ▼
   ┌────────────┐   ┌──────────────┐   ┌────────────┐
   │ Tool Use   │   │ Purchase     │   │ Upgrade    │
-  │ -1 credit  │   │ +N credits   │   │ Plan       │
+  │ -5 credit  │   │ +N credits   │   │ Plan       │
   │ (flat)     │   │ (purchased)  │   │            │
   └────────────┘   └──────────────┘   └────────────┘
 ```

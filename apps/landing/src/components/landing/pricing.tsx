@@ -2,57 +2,97 @@
 
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
+import { config } from "@/lib/config";
 
 const plans = [
   {
     name: "Free",
     price: "$0",
-    description: "Perfect for trying out Creator Hub",
+    credits: "100 credits",
+    perCredit: "Free 100 credits",
+    description: "Start creating with 100 free credits",
     features: [
-      "10 thumbnail generations / month",
-      "1 AI agent access",
-      "Basic styles only",
+      "Access to free tools",
+      "Basic providers included",
       "Community support",
     ],
-    cta: "Get Started",
+    cta: "Get Started Free",
     ctaStyle: "border border-border hover:border-border-subtle text-text",
     popular: false,
+    href: `${config.appUrl}/register`,
+  },
+  {
+    name: "Pay as you go",
+    price: "$10",
+    credits: "1,000 credits",
+    perCredit: "$1.0¢ per credit",
+    description: "Buy credits anytime, no commitment",
+    features: [
+      "Access to all tools",
+      "Basic providers included",
+      "Community support",
+      "30-day history",
+    ],
+    cta: "Buy Credits",
+    ctaStyle: "border border-border hover:border-border-subtle text-text",
+    popular: false,
+    href: `${config.appUrl}/register`,
+  },
+  {
+    name: "Starter",
+    price: "$25",
+    credits: "2,700 credits",
+    perCredit: "$0.9¢ per credit",
+    description: "Best value for getting started",
+    features: [
+      "All AI Standard providers",
+      "Premium providers included",
+      "Priority support",
+      "Unlimited history",
+      "API access",
+      "Batch generation",
+    ],
+    cta: "Get Starter",
+    ctaStyle: "bg-primary hover:bg-primary-hover text-white glow-primary",
+    popular: true,
+    href: `${config.appUrl}/register`,
   },
   {
     name: "Pro",
-    price: "$19",
-    period: "/month",
-    description: "For creators who publish regularly",
+    price: "$50",
+    credits: "6,000 credits",
+    perCredit: "$0.8¢ per credit",
+    description: "Maximum credits for power users",
     features: [
-      "Unlimited thumbnail generations",
-      "All AI agents",
-      "All styles & custom styles",
-      "Script Writer access",
-      "Stream Games",
-      "Priority support",
-      "API access",
-    ],
-    cta: "Start Pro Trial",
-    ctaStyle: "bg-primary hover:bg-primary-hover text-white glow-primary",
-    popular: true,
-  },
-  {
-    name: "Team",
-    price: "$49",
-    period: "/month",
-    description: "For teams and agencies",
-    features: [
-      "Everything in Pro",
-      "5 team seats",
-      "Shared workspace",
-      "Brand kit & templates",
-      "Analytics dashboard",
+      "All AI Standard + Premium providers",
+      "Everything in Starter",
+      "Lowest cost per credit",
       "Dedicated support",
       "Custom integrations",
+      "Analytics dashboard",
     ],
-    cta: "Contact Sales",
+    cta: "Get Pro",
     ctaStyle: "border border-border hover:border-border-subtle text-text",
     popular: false,
+    href: `${config.appUrl}/register`,
+  },
+];
+
+const toolCosts = [
+  {
+    tool: "Thumbnail Generator",
+    cost: "~10 credits",
+    description: "Per generation",
+  },
+  {
+    tool: "Video Generator",
+    cost: "~50 credits",
+    description: "Per video generated",
+  },
+  {
+    tool: "Content Translator",
+    cost: "~5 credits",
+    description: "Per translation",
   },
 ];
 
@@ -68,14 +108,15 @@ export function Pricing() {
         >
           <p className="text-sm font-medium text-primary mb-3">Pricing</p>
           <h2 className="text-3xl md:text-4xl font-bold text-text text-balance">
-            Simple, transparent pricing
+            Flexible credit system
           </h2>
           <p className="mt-4 text-text-muted max-w-xl mx-auto">
-            Start free, upgrade when you&apos;re ready. No hidden fees.
+            Start with 100 free credits. Buy more anytime, no subscriptions.
+            Prices are dynamically managed from the admin panel.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto mb-16">
           {plans.map((plan, i) => (
             <motion.div
               key={plan.name}
@@ -103,12 +144,9 @@ export function Pricing() {
                   <span className="text-4xl font-bold text-text">
                     {plan.price}
                   </span>
-                  {plan.period && (
-                    <span className="text-sm text-text-muted">
-                      {plan.period}
-                    </span>
-                  )}
                 </div>
+                <p className="text-sm text-text-muted mt-1">{plan.credits}</p>
+                <p className="text-xs text-text-dim mt-0.5">{plan.perCredit}</p>
                 <p className="text-sm text-text-muted mt-2">
                   {plan.description}
                 </p>
@@ -123,14 +161,53 @@ export function Pricing() {
                 ))}
               </ul>
 
-              <button
-                className={`w-full py-2.5 text-sm font-medium rounded-lg transition-all ${plan.ctaStyle}`}
+              <a
+                href={plan.href}
+                className={`w-full py-2.5 text-sm font-medium rounded-lg transition-all text-center block ${plan.ctaStyle}`}
               >
                 {plan.cta}
-              </button>
+              </a>
             </motion.div>
           ))}
         </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-3xl mx-auto"
+        >
+          <h3 className="text-xl font-semibold text-text text-center mb-6">
+            Cost per tool
+          </h3>
+          <div className="rounded-xl border border-border bg-surface overflow-hidden">
+            {toolCosts.map((item, i) => (
+              <div
+                key={item.tool}
+                className={`flex items-center justify-between p-4 ${
+                  i !== toolCosts.length - 1
+                    ? "border-b border-border-subtle"
+                    : ""
+                }`}
+              >
+                <div>
+                  <div className="text-sm font-medium text-text">
+                    {item.tool}
+                  </div>
+                  <div className="text-xs text-text-muted">
+                    {item.description}
+                  </div>
+                </div>
+                <div className="text-sm font-semibold text-primary">
+                  {item.cost}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-text-dim text-center mt-4">
+            Costs may vary depending on the AI provider selected
+          </p>
+        </motion.div>
       </div>
     </section>
   );

@@ -3,8 +3,8 @@
 const footerLinks = {
   Product: [
     { label: "Thumbnail Generator", href: "#tools" },
-    { label: "Script Writer", href: "#tools" },
-    { label: "Stream Games", href: "#tools" },
+    { label: "Video Generator", href: "#tools" },
+    { label: "Content Translator", href: "#tools" },
     { label: "AI Agents", href: "#agents" },
     { label: "Pricing", href: "#pricing" },
   ],
@@ -28,15 +28,12 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-6 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2.5 mb-4">
+            <div className="flex items-center mb-4">
               <img
-                src="/logo.png"
+                src="/isologo_white.png"
                 alt="Creator Hub"
-                className="h-8 w-8 object-contain"
+                className="h-8 w-auto object-contain"
               />
-              <span className="text-lg font-semibold text-text">
-                Creator Hub
-              </span>
             </div>
             <p className="text-sm text-text-muted leading-relaxed max-w-xs">
               The AI-powered operating system for content creators.
@@ -66,7 +63,18 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-border-subtle flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-text-dim">
-            &copy; {new Date().getFullYear()} Creator Hub. All rights reserved.
+            &copy; 2026 Creator Hub. All rights reserved.
+          </p>
+          <p className="text-xs text-text-dim">
+            Platform developed by{" "}
+            <a
+              href="https://cesargarces.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:text-primary-hover transition-colors"
+            >
+              cesargarces.com
+            </a>
           </p>
           <div className="flex items-center gap-4">
             <a

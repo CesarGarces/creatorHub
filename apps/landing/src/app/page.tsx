@@ -1,6 +1,5 @@
 import { Navbar } from "@/components/landing/navbar";
 import { Hero } from "@/components/landing/hero";
-import { SocialProof } from "@/components/landing/social-proof";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { ToolsSection } from "@/components/landing/tools-section";
 import { AgentsSection } from "@/components/landing/agents-section";
@@ -15,7 +14,6 @@ export default function LandingPage() {
       <Navbar />
       <main>
         <Hero />
-        <SocialProof />
         <HowItWorks />
         <ToolsSection />
         <AgentsSection />

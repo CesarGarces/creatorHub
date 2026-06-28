@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useChatStore } from "@/store/chat.store";
-import { cn } from "@creator-hub/ui";
-import type { ChatMessage } from "@creator-hub/shared-types";
+import { useCreditsStore } from "@/store/credits.store";
+import { cn, Badge } from "@creator-hub/ui";
 
 interface ParsedMessage {
   textBefore: string;
@@ -79,6 +79,8 @@ export function ChatWidget() {
     clearActiveSession,
   } = useChatStore();
 
+  const { plan, fetchBalance } = useCreditsStore();
+
   const setIsOpen = (open: boolean) => {
     if (open) openWidget();
     else closeWidget();
@@ -88,7 +90,8 @@ export function ChatWidget() {
     fetchSessions();
     fetchSettings();
     fetchTools();
-  }, [fetchSessions, fetchSettings, fetchTools]);
+    fetchBalance();
+  }, [fetchSessions, fetchSettings, fetchTools, fetchBalance]);
 
   // Show tooltip after 3s if chat hasn't been opened, auto-dismiss after 20s
   useEffect(() => {
@@ -208,6 +211,7 @@ export function ChatWidget() {
         {showSettings && (
           <SettingsPanel
             settings={settings}
+            userPlan={plan}
             onUpdate={(partial) => updateSettings(partial)}
             onClose={() => setShowSettings(false)}
           />
@@ -509,6 +513,7 @@ function ChatInput() {
 
 function SettingsPanel({
   settings,
+  userPlan,
   onUpdate,
   onClose,
 }: {
@@ -518,6 +523,7 @@ function SettingsPanel({
     maxTokens: number;
     reasoning: number;
   };
+  userPlan: string;
   onUpdate: (
     data: Partial<{
       defaultModel: string;
@@ -529,14 +535,32 @@ function SettingsPanel({
   onClose: () => void;
 }) {
   const MODELS = [
-    { id: "zai-org/GLM-5.2", name: "GLM-5.2", tier: "Free" },
     {
       id: "deepseek-ai/DeepSeek-V4-Flash",
       name: "DeepSeek V4 Flash",
       tier: "Free",
     },
+    { id: "zai-org/GLM-5.2", name: "GLM-5.2", tier: "Pro" },
     { id: "deepseek-ai/DeepSeek-V4-Pro", name: "DeepSeek V4 Pro", tier: "Pro" },
   ];
+
+  const isFreePlan = userPlan === "FREE";
+  const [isModelOpen, setIsModelOpen] = useState(false);
+  const selectedModel = MODELS.find((m) => m.id === settings.defaultModel);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        modelDropdownRef.current &&
+        !modelDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsModelOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="border-b border-border bg-surface-elevated/50 px-4 py-3 space-y-3">
@@ -554,21 +578,108 @@ function SettingsPanel({
       </div>
 
       {/* Model */}
-      <div>
-        <label className="mb-1 block text-[11px] font-medium text-text-dim">
+      <div className="relative" ref={modelDropdownRef}>
+        <label className="block text-[11px] font-medium text-text-dim mb-1.5">
           Model
         </label>
-        <select
-          value={settings.defaultModel}
-          onChange={(e) => onUpdate({ defaultModel: e.target.value as any })}
-          className="w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-text outline-none focus:border-primary/40 transition-colors"
+        <button
+          type="button"
+          onClick={() => setIsModelOpen((v) => !v)}
+          aria-haspopup="listbox"
+          aria-expanded={isModelOpen}
+          className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-all cursor-pointer min-h-[40px] ${
+            isModelOpen
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border bg-surface-elevated text-text hover:border-primary/50 hover:bg-primary/5"
+          }`}
         >
-          {MODELS.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name} ({m.tier})
-            </option>
-          ))}
-        </select>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-medium truncate text-xs">
+              {selectedModel?.name || "Select model"}
+            </span>
+            {selectedModel?.tier === "Pro" && (
+              <Badge variant="premium" size="sm">
+                PRO
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className={`transition-transform duration-200 text-text-dim ${isModelOpen ? "rotate-180" : ""}`}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+        </button>
+
+        {isModelOpen && (
+          <div
+            className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-border bg-surface-elevated shadow-xl animate-fade-in"
+            role="listbox"
+            aria-label="Model"
+          >
+            {MODELS.map((m) => {
+              const isSelected = settings.defaultModel === m.id;
+              const isDisabled = isFreePlan && m.tier === "Pro";
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  disabled={isDisabled}
+                  onClick={() => {
+                    if (isDisabled) return;
+                    onUpdate({ defaultModel: m.id as any });
+                    setIsModelOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between px-3 py-3 text-sm text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] ${
+                    isSelected
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-surface text-text"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium truncate text-xs">
+                      {m.name}
+                    </span>
+                    {m.tier === "Pro" && (
+                      <Badge variant="premium" size="sm">
+                        PRO
+                      </Badge>
+                    )}
+                    {isDisabled && (
+                      <span className="text-[10px] text-text-dim whitespace-nowrap">
+                        (upgrade)
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    {isSelected && (
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="text-primary"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Temperature */}
@@ -650,9 +761,9 @@ function SettingsPanel({
 /* ─── Tool Action Card ─── */
 
 const TOOL_ROUTES: Record<string, { path: string; label: string }> = {
-  thumbnail: { path: "/tools/thumbnail-generator", label: "Miniatura" },
+  thumbnail: { path: "/tools/thumbnail-generator", label: "Thumbnail" },
   video: { path: "/tools/video-generator", label: "Video" },
-  translator: { path: "/tools/content-translator", label: "Traductor" },
+  translator: { path: "/tools/content-translator", label: "Translate" },
 };
 
 function ToolActionCard({
@@ -679,7 +790,7 @@ function ToolActionCard({
           </div>
           <div>
             <p className="text-[12px] font-semibold text-text">
-              Ir a {tool.label}
+              Go to {tool.label}
             </p>
             {category && (
               <p className="text-[10px] text-text-dim">Categoria: {category}</p>
