@@ -1,7 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { EmailProvider } from "./email-provider.interface";
 import { renderTemplate } from "./templates/template.helper";
-import type { VerificationEmailData } from "./interfaces/email.types";
+import type {
+  VerificationEmailData,
+  PasswordResetEmailData,
+} from "./interfaces/email.types";
 
 @Injectable()
 export class EmailService {
@@ -26,6 +29,30 @@ export class EmailService {
 
     if (!result.success) {
       this.logger.error(`Verification email failed for ${to}`, {
+        error: result.error,
+      });
+    }
+
+    return { success: result.success, error: result.error };
+  }
+
+  async sendPasswordResetEmail(
+    to: string,
+    data: PasswordResetEmailData,
+  ): Promise<{ success: boolean; error?: string }> {
+    const html = renderTemplate("password-reset", {
+      resetUrl: data.resetUrl,
+      userName: data.userName,
+    });
+
+    const result = await this.provider.send({
+      to,
+      subject: "Reset your password — Creator Hub",
+      html,
+    });
+
+    if (!result.success) {
+      this.logger.error(`Password reset email failed for ${to}`, {
         error: result.error,
       });
     }

@@ -300,6 +300,86 @@ export class AuthService {
     };
   }
 
+  async forgotPassword(
+    email: string,
+  ): Promise<{ message: string; token?: string }> {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return { message: "If an account exists, a reset link was sent." };
+    }
+
+    const token = this.generateResetToken();
+    const expires = new Date();
+    expires.setMinutes(expires.getMinutes() + 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetToken: token,
+        passwordResetExpires: expires,
+      },
+    });
+
+    return { message: "If an account exists, a reset link was sent.", token };
+  }
+
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const user = await prisma.user.findFirst({
+      where: {
+        passwordResetToken: token,
+        passwordResetExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException("Invalid or expired reset token");
+    }
+
+    if (newPassword.length < 8) {
+      throw new BadRequestException("Password must be at least 8 characters");
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+      },
+    });
+
+    return { message: "Password reset successfully" };
+  }
+
+  async validateResetToken(token: string): Promise<{ valid: boolean }> {
+    const user = await prisma.user.findFirst({
+      where: {
+        passwordResetToken: token,
+        passwordResetExpires: { gt: new Date() },
+      },
+    });
+
+    return { valid: !!user };
+  }
+
+  private generateResetToken(): string {
+    const array = new Uint8Array(32);
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+      crypto.getRandomValues(array);
+    } else {
+      for (let i = 0; i < 32; i++) {
+        array[i] = Math.floor(Math.random() * 256);
+      }
+    }
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
+      "",
+    );
+  }
+
   private sanitizeUser(user: {
     id: string;
     email: string;

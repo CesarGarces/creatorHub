@@ -64,6 +64,20 @@ class ResendVerificationDto {
   email!: string;
 }
 
+class ForgotPasswordDto {
+  @IsEmail()
+  email!: string;
+}
+
+class ResetPasswordDto {
+  @IsString()
+  token!: string;
+
+  @IsString()
+  @MinLength(8)
+  newPassword!: string;
+}
+
 @Controller("auth")
 export class AuthController {
   constructor(
@@ -134,6 +148,41 @@ export class AuthController {
   @Get("verification-status/:email")
   async getVerificationStatus(@Param("email") email: string) {
     return this.authService.getVerificationStatus(email);
+  }
+
+  @Public()
+  @Post("forgot-password")
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    const result = await this.authService.forgotPassword(dto.email);
+
+    if (result.token) {
+      const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/auth/reset-password?token=${result.token}`;
+      const user = await prisma.user.findUnique({
+        where: { email: dto.email },
+        select: { name: true },
+      });
+
+      await this.emailService.sendPasswordResetEmail(dto.email, {
+        resetUrl,
+        userName: user?.name || undefined,
+      });
+    }
+
+    return { message: result.message };
+  }
+
+  @Public()
+  @Post("reset-password")
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.newPassword);
+  }
+
+  @Public()
+  @Get("validate-reset-token/:token")
+  async validateResetToken(@Param("token") token: string) {
+    return this.authService.validateResetToken(token);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -5,4 +5,5 @@ export type {
   EmailResult,
   SendEmailOptions,
   VerificationEmailData,
+  PasswordResetEmailData,
 } from "./interfaces/email.types";

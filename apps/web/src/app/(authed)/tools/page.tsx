@@ -3,17 +3,24 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToolsStore } from "@/store/tools.store";
-import { ToolCard, Badge, EmptyState } from "@creator-hub/ui";
+import { ToolCard, EmptyState, Badge } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 
 const categories = [
   { id: "all", label: "All" },
-  { id: "ai-image", label: "AI Image" },
-  { id: "ai-text", label: "AI Text" },
-  { id: "ai-video", label: "AI Video" },
-  { id: "streaming", label: "Streaming" },
-  { id: "analytics", label: "Analytics" },
-  { id: "growth", label: "Growth" },
+  {
+    id: "ai-image",
+    label: "AI Image",
+    toolCategories: ["thumbnail", "design"],
+  },
+  {
+    id: "ai-text",
+    label: "AI Text",
+    toolCategories: ["title", "writing", "translator"],
+  },
+  { id: "ai-video", label: "AI Video", toolCategories: ["video"] },
+  { id: "social", label: "Social", toolCategories: ["social"] },
+  { id: "analytics", label: "Analytics", toolCategories: ["analytics"] },
 ];
 
 export default function ToolsPage() {
@@ -28,7 +35,10 @@ export default function ToolsPage() {
   const filtered =
     activeCategory === "all"
       ? tools
-      : tools.filter((t) => t.category === activeCategory);
+      : tools.filter((t) => {
+          const cat = categories.find((c) => c.id === activeCategory);
+          return cat?.toolCategories?.includes(t.category);
+        });
 
   return (
     <>

@@ -77,6 +77,14 @@ export default function LoginPage() {
               placeholder="••••••••"
               required
             />
+            <div className="flex justify-end">
+              <a
+                href={`/auth/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`}
+                className="text-sm text-primary hover:text-primary-hover transition-colors"
+              >
+                Forgot password?
+              </a>
+            </div>
             <Button
               type="submit"
               isLoading={isLoading}

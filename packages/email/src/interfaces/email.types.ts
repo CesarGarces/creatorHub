@@ -14,3 +14,8 @@ export interface VerificationEmailData {
   code: string;
   userName?: string;
 }
+
+export interface PasswordResetEmailData {
+  resetUrl: string;
+  userName?: string;
+}
