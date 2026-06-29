@@ -68,7 +68,7 @@ export function Footer() {
           <p className="text-xs text-text-dim">
             Platform developed by{" "}
             <a
-              href="https://cesargarces.com"
+              href="https://www.cesargarces.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:text-primary-hover transition-colors"

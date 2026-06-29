@@ -220,6 +220,9 @@ export const useChatStore = create<ChatState>()((set, get) => ({
                 ),
                 isStreaming: false,
               }));
+
+              const { useCreditsStore } = await import("@/store/credits.store");
+              useCreditsStore.getState().fetchBalance();
             } else if (data.type === "error") {
               set({ isStreaming: false });
               throw new Error(data.error);

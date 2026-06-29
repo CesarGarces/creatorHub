@@ -5,6 +5,7 @@ import { ChatHistoryService } from "./chat-history.service";
 import { ChatSettingsService } from "./chat-settings.service";
 import { Logger } from "@creator-hub/shared-utils";
 import { prisma } from "@creator-hub/database";
+import { CreditService } from "@creator-hub/billing";
 import { Readable } from "stream";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -18,6 +19,7 @@ export class ChatService {
     private routingService: ChatRoutingService,
     private historyService: ChatHistoryService,
     private settingsService: ChatSettingsService,
+    private creditService: CreditService,
   ) {}
 
   async createSession(
@@ -81,6 +83,30 @@ export class ChatService {
         throw new Error(`Session not found: ${sessionId}`);
       }
 
+      const model = session.model;
+
+      const providerRecord = await prisma.provider.findFirst({
+        where: { model, isActive: true },
+      });
+      const creditCost = providerRecord?.costPerCredit ?? 1;
+
+      const hasCredits = await this.creditService.hasEnoughCredits(
+        userId,
+        creditCost,
+      );
+      if (!hasCredits) {
+        throw new Error(
+          `Insufficient credits. This model requires ${creditCost} credits.`,
+        );
+      }
+
+      const startData = JSON.stringify({
+        type: "start",
+        model,
+        creditCost,
+      });
+      stream.push(`data: ${startData}\n\n`);
+
       await this.historyService.appendMessage(sessionId, "user", content);
       await this.historyService.updateSessionActivity(sessionId);
 
@@ -88,7 +114,6 @@ export class ChatService {
         await this.historyService.getSessionMessageHistory(sessionId);
       const systemPrompt = this.routingService.buildSystemPrompt(content);
 
-      const model = session.model;
       const provider =
         this.providerRegistry.getStreamingProviderForModel(model);
 
@@ -126,9 +151,25 @@ export class ChatService {
             fullContent,
           );
 
+          const deducted = await this.creditService.deduct(
+            userId,
+            creditCost,
+            "chat",
+            `Chat message (${model})`,
+          );
+
+          if (!deducted) {
+            this.logger.warn("Credit deduction failed after chat completion", {
+              userId,
+              model,
+              creditCost,
+            });
+          }
+
           const data = JSON.stringify({
             type: "done",
             content: fullContent,
+            creditCost,
           });
           stream.push(`data: ${data}\n\n`);
         } else if (chunk.type === "error") {

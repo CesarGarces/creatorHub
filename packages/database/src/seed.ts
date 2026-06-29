@@ -196,7 +196,16 @@ async function main() {
       tier: "FREE" as const,
       costPerCredit: 5,
       isActive: true,
-      supportedTasks: ["translator"],
+      supportedTasks: ["text-generation", "translator"],
+    },
+    {
+      slug: "glm-5.2",
+      name: "GLM-5.2",
+      model: "zai-org/GLM-5.2",
+      tier: "PRO" as const,
+      costPerCredit: 10,
+      isActive: true,
+      supportedTasks: ["text-generation"],
     },
     {
       slug: "deepseek-v4-pro",
@@ -205,7 +214,7 @@ async function main() {
       tier: "PRO" as const,
       costPerCredit: 10,
       isActive: true,
-      supportedTasks: ["translator"],
+      supportedTasks: ["text-generation", "translator"],
     },
     {
       slug: "siliconflow-video",

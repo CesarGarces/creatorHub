@@ -4,6 +4,7 @@ import type {
   AIResponse,
   AITaskType,
   AIProvider,
+  AIStreamChunk,
 } from "@creator-hub/shared-types";
 import type { ImageGenerationOptions } from "./provider.interface";
 
@@ -25,6 +26,96 @@ export class DeepSeekV4FlashProvider extends AIProviderBase {
 
   async generateImage(_options: ImageGenerationOptions): Promise<AIResponse> {
     throw new Error("DeepSeek V4 Flash does not support image generation");
+  }
+
+  async *generateStream(request: AIRequest): AsyncGenerator<AIStreamChunk> {
+    const temperature = (request.parameters?.temperature as number) ?? 0.7;
+    const maxTokens = (request.parameters?.maxTokens as number) ?? 8000;
+    const systemPrompt =
+      (request.parameters?.systemPrompt as string) || SYSTEM_PROMPT;
+
+    const messages: Array<{ role: string; content: string }> = [
+      { role: "system", content: systemPrompt },
+    ];
+
+    const conversationHistory = request.parameters
+      ?.conversationHistory as Array<{ role: string; content: string }>;
+
+    if (conversationHistory) {
+      messages.push(...conversationHistory);
+    }
+
+    messages.push({ role: "user", content: request.prompt });
+
+    const response = await fetch(SILICONFLOW_CHAT_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.getApiKey()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "deepseek-ai/DeepSeek-V4-Flash",
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `DeepSeek V4 Flash API error ${response.status}: ${errorText}`,
+      );
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("DeepSeek V4 Flash response body is not readable");
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+
+          const data = trimmed.slice(6);
+          if (data === "[DONE]") {
+            yield { type: "done" };
+            return;
+          }
+
+          try {
+            const parsed = JSON.parse(data) as {
+              choices: Array<{ delta?: { content?: string } }>;
+              usage?: { total_tokens: number };
+            };
+
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              yield { type: "content", content };
+            }
+          } catch {
+            // skip malformed chunks
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    yield { type: "done" };
   }
 
   private async callChatAPI(
@@ -99,6 +190,96 @@ export class DeepSeekV4ProProvider extends AIProviderBase {
 
   async generateImage(_options: ImageGenerationOptions): Promise<AIResponse> {
     throw new Error("DeepSeek V4 Pro does not support image generation");
+  }
+
+  async *generateStream(request: AIRequest): AsyncGenerator<AIStreamChunk> {
+    const temperature = (request.parameters?.temperature as number) ?? 0.7;
+    const maxTokens = (request.parameters?.maxTokens as number) ?? 8000;
+    const systemPrompt =
+      (request.parameters?.systemPrompt as string) || SYSTEM_PROMPT;
+
+    const messages: Array<{ role: string; content: string }> = [
+      { role: "system", content: systemPrompt },
+    ];
+
+    const conversationHistory = request.parameters
+      ?.conversationHistory as Array<{ role: string; content: string }>;
+
+    if (conversationHistory) {
+      messages.push(...conversationHistory);
+    }
+
+    messages.push({ role: "user", content: request.prompt });
+
+    const response = await fetch(SILICONFLOW_CHAT_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.getApiKey()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "deepseek-ai/DeepSeek-V4-Pro",
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `DeepSeek V4 Pro API error ${response.status}: ${errorText}`,
+      );
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("DeepSeek V4 Pro response body is not readable");
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+
+          const data = trimmed.slice(6);
+          if (data === "[DONE]") {
+            yield { type: "done" };
+            return;
+          }
+
+          try {
+            const parsed = JSON.parse(data) as {
+              choices: Array<{ delta?: { content?: string } }>;
+              usage?: { total_tokens: number };
+            };
+
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              yield { type: "content", content };
+            }
+          } catch {
+            // skip malformed chunks
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    yield { type: "done" };
   }
 
   private async callChatAPI(

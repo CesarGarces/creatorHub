@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useChatStore } from "@/store/chat.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { cn, Badge } from "@creator-hub/ui";
+import api from "@/lib/api";
+import { UpgradeModal } from "@/components/modals/upgrade-modal";
 
 interface ParsedMessage {
   textBefore: string;
@@ -79,7 +81,9 @@ export function ChatWidget() {
     clearActiveSession,
   } = useChatStore();
 
-  const { plan, fetchBalance } = useCreditsStore();
+  const { balance, plan, isLoading, isHydrated, fetchBalance } =
+    useCreditsStore();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const setIsOpen = (open: boolean) => {
     if (open) openWidget();
@@ -92,6 +96,12 @@ export function ChatWidget() {
     fetchTools();
     fetchBalance();
   }, [fetchSessions, fetchSettings, fetchTools, fetchBalance]);
+
+  useEffect(() => {
+    if (isHydrated && !isLoading && balance === 0 && plan === "FREE") {
+      setShowUpgradeModal(true);
+    }
+  }, [isHydrated, isLoading, balance, plan]);
 
   // Show tooltip after 3s if chat hasn't been opened, auto-dismiss after 20s
   useEffect(() => {
@@ -175,6 +185,9 @@ export function ChatWidget() {
             </span>
           </div>
           <div className="flex items-center gap-1">
+            <span className="text-[10px] text-text-muted tabular-nums mr-1">
+              {balance} cr
+            </span>
             <button
               onClick={handleNewChat}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-text-dim hover:text-text hover:bg-surface-elevated transition-colors"
@@ -439,6 +452,11 @@ export function ChatWidget() {
           )}
         </button>
       </div>
+
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+      />
     </>
   );
 }
@@ -511,6 +529,16 @@ function ChatInput() {
 
 /* ─── Settings Panel ─── */
 
+type ChatProvider = {
+  id: string;
+  name: string;
+  displayName: string;
+  tier: "free" | "pro";
+  costPerCredit: number;
+  model: string;
+  supportedTasks: string[];
+};
+
 function SettingsPanel({
   settings,
   userPlan,
@@ -534,20 +562,34 @@ function SettingsPanel({
   ) => void;
   onClose: () => void;
 }) {
-  const MODELS = [
-    {
-      id: "deepseek-ai/DeepSeek-V4-Flash",
-      name: "DeepSeek V4 Flash",
-      tier: "Free",
-    },
-    { id: "zai-org/GLM-5.2", name: "GLM-5.2", tier: "Pro" },
-    { id: "deepseek-ai/DeepSeek-V4-Pro", name: "DeepSeek V4 Pro", tier: "Pro" },
-  ];
-
+  const [providers, setProviders] = useState<ChatProvider[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
   const isFreePlan = userPlan === "FREE";
   const [isModelOpen, setIsModelOpen] = useState(false);
-  const selectedModel = MODELS.find((m) => m.id === settings.defaultModel);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    api
+      .get<ChatProvider[]>("/ai/providers")
+      .then((list) => {
+        if (Array.isArray(list)) {
+          const chatProviders = list.filter((p) =>
+            p.supportedTasks?.includes("text-generation"),
+          );
+          setProviders(chatProviders);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load chat providers", err);
+      })
+      .finally(() => {
+        setProvidersLoading(false);
+      });
+  }, []);
+
+  const selectedProvider = providers.find(
+    (p) => p.model === settings.defaultModel,
+  );
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -582,103 +624,119 @@ function SettingsPanel({
         <label className="block text-[11px] font-medium text-text-dim mb-1.5">
           Model
         </label>
-        <button
-          type="button"
-          onClick={() => setIsModelOpen((v) => !v)}
-          aria-haspopup="listbox"
-          aria-expanded={isModelOpen}
-          className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-all cursor-pointer min-h-[40px] ${
-            isModelOpen
-              ? "border-primary bg-primary/10 text-primary"
-              : "border-border bg-surface-elevated text-text hover:border-primary/50 hover:bg-primary/5"
-          }`}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="font-medium truncate text-xs">
-              {selectedModel?.name || "Select model"}
-            </span>
-            {selectedModel?.tier === "Pro" && (
-              <Badge variant="premium" size="sm">
-                PRO
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className={`transition-transform duration-200 text-text-dim ${isModelOpen ? "rotate-180" : ""}`}
+        {providersLoading ? (
+          <div className="h-10 rounded-lg bg-surface-elevated animate-pulse" />
+        ) : providers.length === 0 ? (
+          <p className="text-xs text-text-dim">No models available.</p>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => setIsModelOpen((v) => !v)}
+              aria-haspopup="listbox"
+              aria-expanded={isModelOpen}
+              className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-all cursor-pointer min-h-[40px] ${
+                isModelOpen
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-surface-elevated text-text hover:border-primary/50 hover:bg-primary/5"
+              }`}
             >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </div>
-        </button>
-
-        {isModelOpen && (
-          <div
-            className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-border bg-surface-elevated shadow-xl animate-fade-in"
-            role="listbox"
-            aria-label="Model"
-          >
-            {MODELS.map((m) => {
-              const isSelected = settings.defaultModel === m.id;
-              const isDisabled = isFreePlan && m.tier === "Pro";
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  role="option"
-                  aria-selected={isSelected}
-                  disabled={isDisabled}
-                  onClick={() => {
-                    if (isDisabled) return;
-                    onUpdate({ defaultModel: m.id as any });
-                    setIsModelOpen(false);
-                  }}
-                  className={`flex w-full items-center justify-between px-3 py-3 text-sm text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] ${
-                    isSelected
-                      ? "bg-primary/10 text-primary"
-                      : "hover:bg-surface text-text"
-                  }`}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-medium truncate text-xs">
+                  {selectedProvider?.name || "Select model"}
+                </span>
+                {selectedProvider?.tier === "pro" && (
+                  <Badge variant="premium" size="sm">
+                    PRO
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                {selectedProvider && (
+                  <span className="text-[10px] text-text-muted tabular-nums">
+                    {selectedProvider.costPerCredit} cr
+                  </span>
+                )}
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className={`transition-transform duration-200 text-text-dim ${isModelOpen ? "rotate-180" : ""}`}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-medium truncate text-xs">
-                      {m.name}
-                    </span>
-                    {m.tier === "Pro" && (
-                      <Badge variant="premium" size="sm">
-                        PRO
-                      </Badge>
-                    )}
-                    {isDisabled && (
-                      <span className="text-[10px] text-text-dim whitespace-nowrap">
-                        (upgrade)
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                    {isSelected && (
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="text-primary"
-                      >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+            </button>
+
+            {isModelOpen && (
+              <div
+                className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-border bg-surface-elevated shadow-xl animate-fade-in"
+                role="listbox"
+                aria-label="Model"
+              >
+                {providers.map((p) => {
+                  const isSelected = settings.defaultModel === p.model;
+                  const isDisabled = isFreePlan && p.tier === "pro";
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      disabled={isDisabled}
+                      onClick={() => {
+                        if (isDisabled) return;
+                        onUpdate({ defaultModel: p.model });
+                        setIsModelOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between px-3 py-3 text-sm text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] ${
+                        isSelected
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-surface text-text"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-medium truncate text-xs">
+                          {p.name}
+                        </span>
+                        {p.tier === "pro" && (
+                          <Badge variant="premium" size="sm">
+                            PRO
+                          </Badge>
+                        )}
+                        {isDisabled && (
+                          <span className="text-[10px] text-text-dim whitespace-nowrap">
+                            (upgrade)
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <span className="text-[10px] text-text-muted tabular-nums">
+                          {p.costPerCredit} cr
+                        </span>
+                        {isSelected && (
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="text-primary"
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
 
