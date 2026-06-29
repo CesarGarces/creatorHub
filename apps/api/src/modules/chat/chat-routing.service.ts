@@ -57,7 +57,7 @@ RULES:
 
     const triggerWords = this.inferTriggerWords(tool);
 
-    return `**${tool.name}** (${tool.category})
+    return `**${tool.name}** (id: "${tool.id}", ${tool.category})
    Description: ${tool.description}
    Cost: ${tool.creditsPerUse} credits
    Activates when: ${triggerWords}

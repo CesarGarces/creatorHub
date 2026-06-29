@@ -410,47 +410,41 @@ export function ChatWidget() {
         )}
 
         {/* Button */}
-        <button
-          onClick={handleToggle}
-          onMouseEnter={() => {
-            if (!isWidgetOpen && !tooltipDismissed) setShowTooltip(true);
-          }}
-          onMouseLeave={() => {
-            setShowTooltip(false);
-          }}
-          className={cn(
-            "group relative flex h-14 w-14 items-center justify-center rounded-full",
-            "bg-primary text-white shadow-lg shadow-primary/25",
-            "transition-all duration-200 ease-out",
-            "hover:scale-105 hover:shadow-xl hover:shadow-primary/30",
-            "active:scale-95",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-            isWidgetOpen &&
-              "bg-surface-elevated text-text shadow-none hover:bg-surface",
-          )}
-          aria-label={isWidgetOpen ? "Close chat" : "Open chat"}
-          aria-expanded={isWidgetOpen}
-        >
-          {/* Chat icon (when closed) */}
-          <ChatBubbleIcon
+        {!isWidgetOpen && (
+          <button
+            onClick={handleToggle}
+            onMouseEnter={() => {
+              if (!isWidgetOpen && !tooltipDismissed) setShowTooltip(true);
+            }}
+            onMouseLeave={() => {
+              setShowTooltip(false);
+            }}
             className={cn(
-              "h-6 w-6 transition-transform duration-200",
-              isWidgetOpen ? "rotate-90 scale-0" : "rotate-0 scale-100",
+              "group relative flex h-14 w-14 items-center justify-center rounded-full",
+              "bg-primary text-white shadow-lg shadow-primary/25",
+              "transition-all duration-200 ease-out",
+              "hover:scale-105 hover:shadow-xl hover:shadow-primary/30",
+              "active:scale-95",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+              isWidgetOpen &&
+                "bg-surface-elevated text-text shadow-none hover:bg-surface",
             )}
-          />
-          {/* Close icon (when open) */}
-          <XIcon
-            className={cn(
-              "absolute h-6 w-6 transition-transform duration-200",
-              isWidgetOpen ? "rotate-0 scale-100" : "-rotate-90 scale-0",
+            aria-label={isWidgetOpen ? "Close chat" : "Open chat"}
+            aria-expanded={isWidgetOpen}
+          >
+            {/* Chat icon (when closed) */}
+            <ChatBubbleIcon
+              className={cn(
+                "h-6 w-6 transition-transform duration-200",
+                isWidgetOpen ? "rotate-90 scale-0" : "rotate-0 scale-100",
+              )}
+            />
+            {/* Pulse ring when closed */}
+            {!isWidgetOpen && (
+              <span className="absolute inset-0 rounded-full animate-ping bg-primary/20" />
             )}
-          />
-
-          {/* Pulse ring when closed */}
-          {!isWidgetOpen && (
-            <span className="absolute inset-0 rounded-full animate-ping bg-primary/20" />
-          )}
-        </button>
+          </button>
+        )}
       </div>
 
       <UpgradeModal
@@ -819,8 +813,17 @@ function SettingsPanel({
 /* ─── Tool Action Card ─── */
 
 const TOOL_ROUTES: Record<string, { path: string; label: string }> = {
+  "thumbnail-generator": {
+    path: "/tools/thumbnail-generator",
+    label: "Thumbnail",
+  },
   thumbnail: { path: "/tools/thumbnail-generator", label: "Thumbnail" },
+  "video-generator": { path: "/tools/video-generator", label: "Video" },
   video: { path: "/tools/video-generator", label: "Video" },
+  "content-translator": {
+    path: "/tools/content-translator",
+    label: "Translate",
+  },
   translator: { path: "/tools/content-translator", label: "Translate" },
 };
 
@@ -837,8 +840,6 @@ function ToolActionCard({
     path: `/tools/${toolId}`,
     label: toolId,
   };
-  const category = params?.category;
-
   return (
     <div className="mt-2 overflow-hidden rounded-xl border border-primary/20 bg-primary/5">
       <div className="px-3.5 py-3">
@@ -850,13 +851,16 @@ function ToolActionCard({
             <p className="text-[12px] font-semibold text-text">
               Go to {tool.label}
             </p>
-            {category && (
-              <p className="text-[10px] text-text-dim">Categoria: {category}</p>
-            )}
           </div>
         </div>
         <button
-          onClick={() => onNavigate(tool.path)}
+          onClick={() => {
+            const qs =
+              params && Object.keys(params).length > 0
+                ? "?" + new URLSearchParams(params).toString()
+                : "";
+            onNavigate(`${tool.path}${qs}`);
+          }}
           className={cn(
             "flex w-full items-center justify-center gap-2 rounded-lg",
             "bg-primary px-3 py-2 text-[12px] font-semibold text-white",

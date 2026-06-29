@@ -186,7 +186,10 @@ export default function ContentTranslatorPage() {
 
   useEffect(() => {
     fetchBalance();
-  }, [fetchBalance]);
+    const searchParams = new URLSearchParams(window.location.search);
+    const promptParam = searchParams.get("prompt");
+    if (promptParam) setInputText(promptParam);
+  }, [fetchBalance, setInputText]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

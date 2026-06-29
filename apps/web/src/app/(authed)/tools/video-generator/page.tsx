@@ -106,7 +106,10 @@ export default function VideoGeneratorPage() {
   useEffect(() => {
     fetchTools();
     fetchBalance();
-  }, [fetchTools, fetchBalance]);
+    const searchParams = new URLSearchParams(window.location.search);
+    const promptParam = searchParams.get("prompt");
+    if (promptParam) setPrompt(promptParam);
+  }, [fetchTools, fetchBalance, setPrompt]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
