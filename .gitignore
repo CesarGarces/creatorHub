@@ -8,5 +8,6 @@ dist/
 coverage/
 .turbo/
 packages/database/generated
+packages/database/backups
 .eslintcache
 docs/

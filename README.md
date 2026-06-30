@@ -718,6 +718,43 @@ The chat widget is a floating global component (bottom-right) that communicates 
 - **Settings Panel**: Model selection, temperature, max tokens, reasoning sliders
 - **Session Management**: Create, switch, delete sessions
 - **Widget Store**: Global Zustand store (`openWidget()` from any component)
+- **User Style RAG**: Learn user's communication style and inject into responses (see below)
+
+### User Style RAG
+
+The chat system learns each user's communication style (tone, vocabulary, sentence structure, emoji usage) from content samples and injects this profile into the system prompt. This makes the assistant generate content in the user's voice.
+
+**How it works:**
+
+1. User adds content samples (manually or via bulk import)
+2. User triggers analysis → LLM extracts style fingerprint (costs 1 credit)
+3. Style profile saved to `UserStyleProfile` table
+4. All subsequent chat responses match the user's style
+
+**Style profile example:**
+
+```
+USER STYLE PROFILE (apply to ALL generated content):
+- Tone: directo, provocativo, profesional
+- Keywords: blockchain, escala, fricción
+- Sentence length: short
+- Emoji usage: moderate
+- Formality: casual
+IMPORTANT: Match this style strictly in your response.
+```
+
+**API Endpoints:**
+
+```
+GET    /api/v1/user-style/profile              # Get style profile
+PUT    /api/v1/user-style/profile              # Update profile manually
+DELETE /api/v1/user-style/profile              # Delete profile (reset)
+POST   /api/v1/user-style/analyze              # Trigger analysis (1 credit)
+POST   /api/v1/user-style/samples              # Add sample (min 10 chars)
+POST   /api/v1/user-style/samples/bulk         # Bulk import (max 50)
+GET    /api/v1/user-style/samples              # List samples (paginated)
+DELETE /api/v1/user-style/samples/:id          # Delete sample
+```
 
 ### Environment Variables (Chat)
 

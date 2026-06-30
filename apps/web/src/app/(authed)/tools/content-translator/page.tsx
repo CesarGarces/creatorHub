@@ -187,7 +187,8 @@ export default function ContentTranslatorPage() {
   useEffect(() => {
     fetchBalance();
     const searchParams = new URLSearchParams(window.location.search);
-    const promptParam = searchParams.get("prompt");
+    const promptParam =
+      searchParams.get("prompt") || searchParams.get("description");
     if (promptParam) setInputText(promptParam);
   }, [fetchBalance, setInputText]);
 

@@ -44,6 +44,8 @@ model User {
   notifications     Notification[]
   chatSessions      ChatSession[]
   chatSettings      ChatSettings?
+  contentSamples    UserContentSample[]
+  styleProfile      UserStyleProfile?
 }
 
 enum UserRole {
@@ -450,6 +452,52 @@ model ChatSettings {
   reasoning    Float    @default(0.7)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────
+// USER STYLE RAG
+// ──────────────────────────────────────────────
+
+enum ContentSampleSource {
+  MANUAL
+  CHAT
+  TWEET
+  POST
+  IMPORT
+}
+
+model UserContentSample {
+  id        String              @id @default(cuid())
+  userId    String
+  content   String              @db.Text
+  source    ContentSampleSource @default(MANUAL)
+  metadata  Json?
+  isActive  Boolean             @default(true)
+  createdAt DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, isActive])
+}
+
+model UserStyleProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  tone           String
+  vocabKeywords  String[] @default([])
+  language       String   @default("es")
+  sentenceLength String   @default("medium")
+  emojiUsage     String   @default("moderate")
+  formalityLevel String   @default("casual")
+  summary        String?
+  sampleCount    Int      @default(0)
+  isActive       Boolean  @default(true)
+  lastAnalyzedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

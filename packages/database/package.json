@@ -12,6 +12,8 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "tsx src/seed.ts",
     "db:studio": "prisma studio",
+    "db:backup": "bash scripts/backup.sh",
+    "db:restore": "bash scripts/restore.sh",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },

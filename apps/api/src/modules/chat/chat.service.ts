@@ -112,7 +112,10 @@ export class ChatService {
 
       const history =
         await this.historyService.getSessionMessageHistory(sessionId);
-      const systemPrompt = this.routingService.buildSystemPrompt(content);
+      const systemPrompt = await this.routingService.buildSystemPrompt(
+        userId,
+        content,
+      );
 
       const provider =
         this.providerRegistry.getStreamingProviderForModel(model);

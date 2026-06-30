@@ -1561,7 +1561,206 @@ async chat(@Body() dto: ChatDto, @Res() res: Response) {
 
 ---
 
-## 13. Testing Strategy
+## 13. User Style RAG System
+
+### Concept
+
+The User Style RAG (Retrieval-Augmented Generation) system learns a user's communication style from their content samples and injects this style profile into the AI Chat system prompt. This allows the assistant to generate content that matches the user's tone, vocabulary, sentence structure, and formality level.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    UserStyleController                           │
+│  GET/PUT/DELETE /user-style/profile                             │
+│  POST /user-style/analyze (ThrottlerGuard: 5/hour)             │
+│  POST/GET/DELETE /user-style/samples                            │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+            ┌──────────────────┼──────────────────┐
+            │                  │                  │
+            ▼                  ▼                  ▼
+┌──────────────────┐ ┌─────────────────┐ ┌─────────────────────┐
+│ StyleProfileService│ │ContentSampleService│ │StyleAnalyzerService│
+│ - CRUD profile   │ │ - CRUD samples  │ │ - LLM analysis      │
+│ - upsert on      │ │ - bulk create   │ │ - parse response    │
+│   analysis       │ │ - paginated list│ │ - deduct credits    │
+└────────┬─────────┘ └────────┬────────┘ └──────────┬──────────┘
+         │                    │                     │
+         ▼                    ▼                     ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Prisma (PostgreSQL)                           │
+│  UserStyleProfile (1:1 with User)                               │
+│  UserContentSample (1:N with User, indexed by userId+createdAt) │
+└─────────────────────────────────────────────────────────────────┘
+
+StyleInjectionService (consumed by ChatRoutingService):
+  getStylePrompt(userId) → string (injected into system prompt)
+```
+
+### Data Model (Prisma)
+
+```prisma
+enum ContentSampleSource {
+  MANUAL
+  CHAT
+  TWEET
+  POST
+  IMPORT
+}
+
+model UserStyleProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  tone           String              // "directo, provocativo, profesional"
+  vocabKeywords  String[]            // ["blockchain", "escala", "fricción"]
+  sentenceLength String   @default("medium")  // short|medium|long
+  emojiUsage     String   @default("moderate") // none|low|moderate|high
+  formalityLevel String   @default("casual")   // casual|semi-formal|formal
+  summary        String?             // 1-2 sentence style description
+  sampleCount    Int      @default(0)
+  isActive       Boolean  @default(true)
+  lastAnalyzedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserContentSample {
+  id        String              @id @default(cuid())
+  userId    String
+  content   String              @db.Text
+  source    ContentSampleSource @default(MANUAL)
+  metadata  Json?
+  isActive  Boolean             @default(true)
+  createdAt DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([userId, createdAt])
+}
+```
+
+### Three-Level Architecture
+
+| Level                  | Component               | Purpose                                            | Size        |
+| ---------------------- | ----------------------- | -------------------------------------------------- | ----------- |
+| **1. Style Profile**   | `UserStyleProfile`      | Lightweight JSON injected into every system prompt | ~200 bytes  |
+| **2. Content Samples** | `UserContentSample`     | Raw text for RAG analysis                          | Variable    |
+| **3. Style Injection** | `StyleInjectionService` | Builds the style prompt section                    | ~150 tokens |
+
+### Integration with Chat
+
+The `ChatRoutingService.buildSystemPrompt()` is now `async` and accepts `userId`:
+
+```typescript
+// chat-routing.service.ts
+async buildSystemPrompt(userId: string, userMessage?: string): Promise<string> {
+  const basePrompt = /* tool descriptions, rules, language */;
+  const stylePrompt = await this.styleInjection.getStylePrompt(userId);
+
+  return stylePrompt ? `${basePrompt}\n\n${stylePrompt}` : basePrompt;
+}
+```
+
+When a user has an active style profile, the system prompt includes:
+
+```
+USER STYLE PROFILE (apply to ALL generated content):
+- Tone: directo, provocativo, profesional
+- Keywords: blockchain, escala, fricción
+- Sentence length: short
+- Emoji usage: moderate
+- Formality: casual
+IMPORTANT: Match this style strictly in your response.
+```
+
+### Style Analysis Flow
+
+```
+User clicks "Analyze my style"
+  │
+  ├──► ContentSampleService.getRecentSamples(userId, 10)
+  │    └── Returns last 10 active samples
+  │
+  ├──► Validate: minimum 3 samples required
+  │
+  ├──► CreditService.hasEnoughCredits(userId, 1)
+  │
+  ├──► AIEngineService.execute({ taskType: "text-analysis", prompt })
+  │    └── LLM analyzes tone, vocabulary, sentence structure
+  │
+  ├──► Parse JSON response → StyleAnalysisResult
+  │
+  ├──► StyleProfileService.upsert(userId, result)
+  │
+  └──► CreditService.deduct(userId, 1, "user-style")
+```
+
+### Module Structure
+
+```
+apps/api/src/modules/user-style/
+├── user-style.module.ts
+├── user-style.controller.ts
+├── interfaces/
+│   └── style-analysis-result.interface.ts
+├── dto/
+│   ├── create-sample.dto.ts
+│   ├── bulk-create-samples.dto.ts
+│   └── update-style-profile.dto.ts
+└── services/
+    ├── style-profile.service.ts
+    ├── content-sample.service.ts
+    ├── style-analyzer.service.ts
+    └── style-injection.service.ts
+```
+
+### API Endpoints
+
+```
+GET    /api/v1/user-style/profile              # Get style profile
+PUT    /api/v1/user-style/profile              # Update profile manually
+DELETE /api/v1/user-style/profile              # Delete profile (reset)
+
+POST   /api/v1/user-style/analyze              # Trigger analysis (costs 1 credit)
+POST   /api/v1/user-style/samples              # Add single sample (min 10 chars)
+POST   /api/v1/user-style/samples/bulk         # Add multiple samples (max 50)
+GET    /api/v1/user-style/samples              # List samples (paginated)
+DELETE /api/v1/user-style/samples/:id          # Delete a sample
+```
+
+### Content Sample Collection
+
+| Source     | Mechanism                       | Description                    |
+| ---------- | ------------------------------- | ------------------------------ |
+| **MANUAL** | `POST /user-style/samples`      | User pastes text directly      |
+| **BULK**   | `POST /user-style/samples/bulk` | Array of texts (tweets, posts) |
+| **CHAT**   | Future: auto-collect            | Chat messages saved as samples |
+
+### Security
+
+- All endpoints protected by `JwtAuthGuard`
+- All queries filter by `userId` from JWT token (no cross-user access)
+- `POST /analyze` rate-limited via `ThrottlerGuard` (5 requests/hour)
+- Content samples validated: min 10 chars, max 5000 chars, max 50 per bulk
+- Analysis costs 1 credit (verified before execution)
+
+### Error Handling
+
+| Scenario             | Behavior                                   |
+| -------------------- | ------------------------------------------ |
+| < 3 samples          | `BadRequestException` with sample count    |
+| Insufficient credits | `BadRequestException` with cost            |
+| LLM parse failure    | `BadRequestException`, retry suggested     |
+| No profile exists    | Style prompt omitted (chat works normally) |
+| Profile stale        | Warning in response, suggest re-analysis   |
+
+---
+
+## 14. Testing Strategy
 
 ### Test Pyramid
 

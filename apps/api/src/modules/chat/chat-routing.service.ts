@@ -2,14 +2,21 @@ import { Injectable } from "@nestjs/common";
 import { ToolRegistry } from "@creator-hub/tool-sdk";
 import { Logger } from "@creator-hub/shared-utils";
 import type { ToolManifest } from "@creator-hub/shared-types";
+import { StyleInjectionService } from "../user-style/services/style-injection.service";
 
 @Injectable()
 export class ChatRoutingService {
   private logger = new Logger("ChatRoutingService");
 
-  constructor(private toolRegistry: ToolRegistry) {}
+  constructor(
+    private toolRegistry: ToolRegistry,
+    private styleInjection: StyleInjectionService,
+  ) {}
 
-  buildSystemPrompt(userMessage?: string): string {
+  async buildSystemPrompt(
+    userId: string,
+    userMessage?: string,
+  ): Promise<string> {
     const tools = this.toolRegistry.getActive();
     const toolDescriptions = tools.map((tool) =>
       this.formatToolDescription(tool),
@@ -23,7 +30,9 @@ export class ChatRoutingService {
           ? "Responda em português."
           : "Respond in English.";
 
-    return `You are the Creator Hub assistant, a platform for content creators.
+    const stylePrompt = await this.styleInjection.getStylePrompt(userId);
+
+    let prompt = `You are the Creator Hub assistant, a platform for content creators.
 
 AVAILABLE TOOLS (use when appropriate):
 ${toolDescriptions.length > 0 ? toolDescriptions.join("\n\n") : "No tools available right now."}
@@ -39,6 +48,12 @@ RULES:
 4. If you're unsure which tool to use, ask the user.
 5. You can combine information from multiple tools if needed.
 6. ${languageInstruction}`;
+
+    if (stylePrompt) {
+      prompt += `\n\n${stylePrompt}`;
+    }
+
+    return prompt;
   }
 
   private formatToolDescription(tool: ToolManifest): string {

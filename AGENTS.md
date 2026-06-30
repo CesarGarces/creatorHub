@@ -18,6 +18,34 @@ This repository follows a modular architecture based on:
 
 ---
 
+# ⛔ CRITICAL RULES — NEVER BREAK THESE
+
+## NEVER use `prisma migrate reset`
+
+```
+prisma migrate reset --force   ← THIS DESTROYS ALL DATA. NO UNDO.
+```
+
+- It drops ALL tables, ALL data, ALL users, ALL history
+- There is NO backup created automatically
+- There is NO way to recover
+- **This caused a production data loss incident**
+
+**If you need to fix schema drift, use instead:**
+
+```bash
+npm run db:migrate     # create a new migration
+npm run db:push        # push schema changes directly
+```
+
+**Before ANY destructive database operation:**
+
+```bash
+npm run db:backup      # saves to packages/database/backups/
+```
+
+---
+
 # How To Use
 
 1. Identify the task.
@@ -47,7 +75,7 @@ All development must respect:
 
 # Repository Structure
 
-```txt
+````txt
 apps/
 ├── web
 └── api
@@ -83,3 +111,22 @@ skills/
 ├── image-analysis
 ├── trend-analysis
 └── future-skills
+
+---
+
+# Database Commands
+
+Run from `packages/database/`:
+
+```bash
+npm run db:backup       # Create backup before ANY changes
+npm run db:restore      # Restore from latest backup (requires confirmation)
+npm run db:migrate      # Create new migration
+npm run db:push         # Push schema changes without migration
+npm run db:seed         # Seed base data (Tools, Plans, Providers)
+npm run db:generate     # Regenerate Prisma client
+npm run db:studio       # Open Prisma Studio
+````
+
+**Backup location:** `packages/database/backups/`
+**Backups are gitignored** — never committed to repo.

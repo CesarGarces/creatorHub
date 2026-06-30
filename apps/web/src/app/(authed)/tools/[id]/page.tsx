@@ -101,7 +101,8 @@ export default function ThumbnailGeneratorPage() {
     fetchTools();
     fetchBalance();
     const searchParams = new URLSearchParams(window.location.search);
-    const promptParam = searchParams.get("prompt");
+    const promptParam =
+      searchParams.get("prompt") || searchParams.get("description");
     if (promptParam) setPrompt(promptParam);
   }, [fetchTools, fetchBalance, setPrompt]);
 
