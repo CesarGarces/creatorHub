@@ -6,12 +6,16 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from "@nestjs/common";
-import { JwtAuthGuard, CurrentUser } from "@creator-hub/auth";
-import { MinPlan } from "@creator-hub/auth";
+import {
+  JwtAuthGuard,
+  CurrentUser,
+  AuthenticatedPlanGuard,
+  MinPlan,
+} from "@creator-hub/auth";
 import { XSearchTrendsService } from "./x-search-trends.service";
 
 @Controller("tools/x-search-trends")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AuthenticatedPlanGuard)
 @MinPlan("STARTER")
 export class XSearchTrendsController {
   constructor(private searchService: XSearchTrendsService) {}

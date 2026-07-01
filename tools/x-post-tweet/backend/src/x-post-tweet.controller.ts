@@ -7,12 +7,16 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from "@nestjs/common";
-import { JwtAuthGuard, CurrentUser } from "@creator-hub/auth";
-import { MinPlan } from "@creator-hub/auth";
+import {
+  JwtAuthGuard,
+  CurrentUser,
+  AuthenticatedPlanGuard,
+  MinPlan,
+} from "@creator-hub/auth";
 import { PostPublisherService } from "./services/post-publisher.service";
 
 @Controller("tools/x-post-tweet")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AuthenticatedPlanGuard)
 @MinPlan("STARTER")
 export class XPostTweetController {
   constructor(private publisherService: PostPublisherService) {}

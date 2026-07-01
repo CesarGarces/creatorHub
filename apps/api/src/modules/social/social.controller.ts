@@ -11,7 +11,13 @@ import {
   UseGuards,
   BadRequestException,
 } from "@nestjs/common";
-import { JwtAuthGuard, CurrentUser, Public } from "@creator-hub/auth";
+import {
+  JwtAuthGuard,
+  CurrentUser,
+  Public,
+  AuthenticatedPlanGuard,
+  MinPlan,
+} from "@creator-hub/auth";
 import { ThrottlerGuard } from "@nestjs/throttler";
 import { Response } from "express";
 import { SocialService } from "./services/social.service";
@@ -19,7 +25,6 @@ import { XOAuthService } from "./services/x-oauth.service";
 import { TweetDraftService } from "./services/tweet-draft.service";
 import { OAuthEncryptionService } from "./services/oauth-encryption.service";
 import { PostPublisherService } from "@creator-hub/x-post-tweet-backend";
-import { MinPlan } from "@creator-hub/auth";
 
 @Controller("social")
 @UseGuards(JwtAuthGuard, ThrottlerGuard)
@@ -122,6 +127,7 @@ export class SocialController {
   }
 
   @Post("tweets/draft")
+  @UseGuards(AuthenticatedPlanGuard)
   @MinPlan("STARTER")
   async createDraft(
     @CurrentUser("id") userId: string,
@@ -152,6 +158,7 @@ export class SocialController {
   }
 
   @Get("tweets/drafts")
+  @UseGuards(AuthenticatedPlanGuard)
   @MinPlan("STARTER")
   async getDrafts(
     @CurrentUser("id") userId: string,
@@ -162,6 +169,7 @@ export class SocialController {
   }
 
   @Get("tweets/drafts/:id")
+  @UseGuards(AuthenticatedPlanGuard)
   @MinPlan("STARTER")
   async getDraft(
     @CurrentUser("id") userId: string,
@@ -172,6 +180,7 @@ export class SocialController {
   }
 
   @Patch("tweets/drafts/:id")
+  @UseGuards(AuthenticatedPlanGuard)
   @MinPlan("STARTER")
   async updateDraft(
     @CurrentUser("id") userId: string,
@@ -192,6 +201,7 @@ export class SocialController {
   }
 
   @Delete("tweets/drafts/:id")
+  @UseGuards(AuthenticatedPlanGuard)
   @MinPlan("STARTER")
   async deleteDraft(
     @CurrentUser("id") userId: string,
@@ -202,6 +212,7 @@ export class SocialController {
   }
 
   @Post("tweets/drafts/:id/publish")
+  @UseGuards(AuthenticatedPlanGuard)
   @MinPlan("STARTER")
   async publishDraft(
     @CurrentUser("id") userId: string,
