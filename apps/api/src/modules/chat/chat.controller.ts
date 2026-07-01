@@ -13,6 +13,7 @@ import { JwtAuthGuard, CurrentUser } from "@creator-hub/auth";
 import { ChatService } from "./chat.service";
 import { ChatHistoryService } from "./chat-history.service";
 import { ChatSettingsService } from "./chat-settings.service";
+import { ChatRoutingService } from "./chat-routing.service";
 import { SendMessageDto } from "./dto/send-message.dto";
 import { UpdateChatSettingsDto } from "./dto/update-chat-settings.dto";
 import type { Response } from "express";
@@ -24,6 +25,7 @@ export class ChatController {
     private chatService: ChatService,
     private chatHistoryService: ChatHistoryService,
     private chatSettingsService: ChatSettingsService,
+    private chatRoutingService: ChatRoutingService,
   ) {}
 
   @Post("sessions")
@@ -111,5 +113,10 @@ export class ChatController {
   @Get("tools")
   async getAvailableTools() {
     return this.chatService.getAvailableTools();
+  }
+
+  @Get("suggestions")
+  async getChatSuggestions() {
+    return this.chatRoutingService.getChatSuggestions();
   }
 }

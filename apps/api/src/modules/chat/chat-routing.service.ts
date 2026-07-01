@@ -43,11 +43,16 @@ RULES:
    { "action": "route_to_tool", "toolId": "<id>", "params": { ... } }
    \`\`\`
    Briefly explain what you'll do and show the action button.
-2. For general questions, respond concisely and helpfully in markdown.
-3. Be friendly, professional, and direct.
-4. If you're unsure which tool to use, ask the user.
-5. You can combine information from multiple tools if needed.
-6. ${languageInstruction}`;
+2. When the user asks you to write a tweet based on research data, use this action:
+   \`\`\`json
+   { "action": "preview_tweet", "draftId": "<draft_id>", "content": "<tweet_text>", "topic": "<topic>" }
+   \`\`\`
+   The tweet must be max 280 characters and follow the user's style profile.
+3. For general questions, respond concisely and helpfully in markdown.
+4. Be friendly, professional, and direct.
+5. If you're unsure which tool to use, ask the user.
+6. You can combine information from multiple tools if needed.
+7. ${languageInstruction}`;
 
     if (stylePrompt) {
       prompt += `\n\n${stylePrompt}`;
@@ -81,6 +86,37 @@ RULES:
 
   getActiveTools() {
     return this.toolRegistry.getActive();
+  }
+
+  getChatSuggestions(): Array<{ text: string; toolId?: string }> {
+    const tools = this.toolRegistry.getActive();
+    const suggestions: Array<{ text: string; toolId?: string }> = [];
+
+    for (const tool of tools) {
+      if (tool.category === "social") {
+        if (tool.id === "x-search-trends") {
+          suggestions.push({
+            text: "Analyze what's trending on X about AI",
+            toolId: tool.id,
+          });
+          suggestions.push({
+            text: "Research trending topics on Twitter about crypto",
+            toolId: tool.id,
+          });
+        } else if (tool.id === "x-post-tweet") {
+          suggestions.push({
+            text: "Write and publish a tweet about today's tech news",
+            toolId: tool.id,
+          });
+          suggestions.push({
+            text: "Create a tweet thread about the latest AI developments",
+            toolId: tool.id,
+          });
+        }
+      }
+    }
+
+    return suggestions;
   }
 
   private detectLanguage(text: string): string {
@@ -216,8 +252,19 @@ RULES:
           "publish",
           "social media",
           "social",
+          "tweet",
+          "post to x",
+          "twitter",
+          "x trends",
+          "trending",
+          "what's trending",
           "publicar",
           "redes sociales",
+          "tuit",
+          "tendencia",
+          "post tweet",
+          "publish tweet",
+          "publicar tweet",
         );
         break;
       case "analytics":

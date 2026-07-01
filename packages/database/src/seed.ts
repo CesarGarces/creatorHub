@@ -43,6 +43,34 @@ async function main() {
     },
   });
 
+  await prisma.tool.upsert({
+    where: { id: "x-search-trends" },
+    update: { icon: "🔍" },
+    create: {
+      id: "x-search-trends",
+      name: "X Trend Research",
+      description:
+        "Search and analyze trending topics on X (Twitter) using Apify. Returns tweets, engagement metrics, and sentiment analysis.",
+      category: "social",
+      creditsPerUse: 15,
+      icon: "🔍",
+    },
+  });
+
+  await prisma.tool.upsert({
+    where: { id: "x-post-tweet" },
+    update: { icon: "📤" },
+    create: {
+      id: "x-post-tweet",
+      name: "Post to X",
+      description:
+        "Publish a tweet to your connected X (Twitter) account. Supports text tweets and threads.",
+      category: "social",
+      creditsPerUse: 5,
+      icon: "📤",
+    },
+  });
+
   // Create default subscription plans (upsert to avoid duplicates)
   const plans = [
     {

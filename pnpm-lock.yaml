@@ -169,6 +169,18 @@ importers:
       '@creator-hub/video-generator-backend':
         specifier: workspace:*
         version: link:../../tools/video-generator/backend
+      '@creator-hub/x-post-tweet':
+        specifier: workspace:*
+        version: link:../../tools/x-post-tweet
+      '@creator-hub/x-post-tweet-backend':
+        specifier: workspace:*
+        version: link:../../tools/x-post-tweet/backend
+      '@creator-hub/x-search-trends':
+        specifier: workspace:*
+        version: link:../../tools/x-search-trends
+      '@creator-hub/x-search-trends-backend':
+        specifier: workspace:*
+        version: link:../../tools/x-search-trends/backend
       '@nestjs/bullmq':
         specifier: ^11.0.0
         version: 11.0.4(@nestjs/common@11.1.26(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.26)(bullmq@5.78.0)
@@ -1120,6 +1132,100 @@ importers:
       bullmq:
         specifier: ^5.0.0
         version: 5.78.0
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../../packages/typescript-config
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.42
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
+  tools/x-post-tweet:
+    dependencies:
+      '@creator-hub/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
+      '@creator-hub/shared-utils':
+        specifier: workspace:*
+        version: link:../../packages/shared-utils
+      '@creator-hub/tool-sdk':
+        specifier: workspace:*
+        version: link:../../packages/tool-sdk
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
+  tools/x-post-tweet/backend:
+    dependencies:
+      '@creator-hub/auth':
+        specifier: workspace:*
+        version: link:../../../packages/auth
+      '@creator-hub/billing':
+        specifier: workspace:*
+        version: link:../../../packages/billing
+      '@creator-hub/database':
+        specifier: workspace:*
+        version: link:../../../packages/database
+      '@creator-hub/shared-utils':
+        specifier: workspace:*
+        version: link:../../../packages/shared-utils
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.26(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../../packages/typescript-config
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.42
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
+  tools/x-search-trends:
+    dependencies:
+      '@creator-hub/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
+      '@creator-hub/shared-utils':
+        specifier: workspace:*
+        version: link:../../packages/shared-utils
+      '@creator-hub/tool-sdk':
+        specifier: workspace:*
+        version: link:../../packages/tool-sdk
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
+  tools/x-search-trends/backend:
+    dependencies:
+      '@creator-hub/auth':
+        specifier: workspace:*
+        version: link:../../../packages/auth
+      '@creator-hub/billing':
+        specifier: workspace:*
+        version: link:../../../packages/billing
+      '@creator-hub/database':
+        specifier: workspace:*
+        version: link:../../../packages/database
+      '@creator-hub/shared-utils':
+        specifier: workspace:*
+        version: link:../../../packages/shared-utils
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.26(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*

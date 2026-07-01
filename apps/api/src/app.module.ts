@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { BullModule } from "@nestjs/bullmq";
 import { ThrottlerModule } from "@nestjs/throttler";
+import { APP_GUARD } from "@nestjs/core";
 import { join } from "path";
 
 import { AuthModule } from "@creator-hub/auth";
@@ -13,6 +14,7 @@ import { DomainEventsModule } from "@creator-hub/domain-events";
 import { STTEngineModule } from "@creator-hub/stt-engine";
 import { EmailModule } from "@creator-hub/email";
 import { ToolSdkModule } from "./tool-sdk.module";
+import { PlanGuard } from "@creator-hub/auth";
 
 import { AuthController } from "./modules/auth/auth.controller";
 import { CreditsController } from "./modules/credits/credits.controller";
@@ -29,6 +31,7 @@ import { PaymentListenerModule } from "./modules/payment-listener/payment-listen
 import { VideoListenerModule } from "./modules/video-listener/video-listener.module";
 import { ChatModule } from "./modules/chat/chat.module";
 import { UserStyleModule } from "./modules/user-style/user-style.module";
+import { SocialModule } from "./modules/social/social.module";
 
 // Import tools (registers them via registerTool)
 import "@creator-hub/thumbnail-generator";
@@ -37,6 +40,10 @@ import "@creator-hub/content-translator";
 import { ContentTranslatorModule } from "@creator-hub/content-translator-backend";
 import "@creator-hub/video-generator";
 import { VideoGeneratorModule } from "@creator-hub/video-generator-backend";
+import "@creator-hub/x-search-trends";
+import { XSearchTrendsModule } from "@creator-hub/x-search-trends-backend";
+import "@creator-hub/x-post-tweet";
+import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
 
 @Module({
   imports: [
@@ -76,11 +83,14 @@ import { VideoGeneratorModule } from "@creator-hub/video-generator-backend";
     // Chat
     ChatModule,
     UserStyleModule,
+    SocialModule,
 
     // Tools (registered automatically via ToolSdkModule)
     ThumbnailGeneratorModule,
     ContentTranslatorModule,
     VideoGeneratorModule,
+    XSearchTrendsModule,
+    XPostTweetModule,
   ],
   controllers: [
     AuthController,
@@ -89,6 +99,12 @@ import { VideoGeneratorModule } from "@creator-hub/video-generator-backend";
     ImagesController,
     AIController,
     WebhooksController,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: PlanGuard,
+    },
   ],
 })
 export class AppModule {}

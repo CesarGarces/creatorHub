@@ -1,0 +1,21 @@
+{
+  "name": "@creator-hub/x-post-tweet",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "echo 'ok'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@creator-hub/tool-sdk": "workspace:*",
+    "@creator-hub/shared-types": "workspace:*",
+    "@creator-hub/shared-utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "^5.5.0"
+  }
+}

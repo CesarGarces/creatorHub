@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
+import { XAccountCard } from "@/components/settings/x-account-card";
 import { useAuthStore } from "@/store/auth.store";
 import { useCreditsStore } from "@/store/credits.store";
 import api from "@/lib/api";
@@ -218,6 +219,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Integrations */}
+        <XAccountCard />
 
         {/* Change Password */}
         <Card>

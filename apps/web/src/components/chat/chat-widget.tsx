@@ -7,30 +7,53 @@ import { useCreditsStore } from "@/store/credits.store";
 import { cn, Badge } from "@creator-hub/ui";
 import api from "@/lib/api";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
+import { TweetActionCard } from "@/components/chat/tweet-action-card";
 
 interface ParsedMessage {
   textBefore: string;
   textAfter: string;
-  action: { toolId: string; params?: Record<string, string> } | null;
+  action:
+    | { type: "route_to_tool"; toolId: string; params?: Record<string, string> }
+    | { type: "preview_tweet"; draftId: string; content: string; topic: string }
+    | null;
 }
 
 function parseToolAction(content: string): ParsedMessage {
   const jsonBlockRegex =
-    /```json\s*(\{[\s\S]*?"action"\s*:\s*"route_to_tool"[\s\S]*?\})\s*```/;
+    /```json\s*(\{[\s\S]*?"action"\s*:\s*"(route_to_tool|preview_tweet)"[\s\S]*?\})\s*```/;
   const match = content.match(jsonBlockRegex);
 
   if (!match) {
-    const rawRegex = /(\{\s*"action"\s*:\s*"route_to_tool"[\s\S]*?\})\s*$/;
+    const rawRegex =
+      /(\{\s*"action"\s*:\s*"(route_to_tool|preview_tweet)"[\s\S]*?\})\s*$/;
     const rawMatch = content.match(rawRegex);
     if (rawMatch) {
       try {
         const jsonStr = rawMatch[1]!;
         const parsed = JSON.parse(jsonStr);
         const idx = content.indexOf(jsonStr);
+
+        if (parsed.action === "preview_tweet") {
+          return {
+            textBefore: content.slice(0, idx).trim(),
+            textAfter: "",
+            action: {
+              type: "preview_tweet",
+              draftId: parsed.draftId,
+              content: parsed.content,
+              topic: parsed.topic,
+            },
+          };
+        }
+
         return {
           textBefore: content.slice(0, idx).trim(),
           textAfter: "",
-          action: { toolId: parsed.toolId, params: parsed.params },
+          action: {
+            type: "route_to_tool",
+            toolId: parsed.toolId,
+            params: parsed.params,
+          },
         };
       } catch {}
     }
@@ -43,10 +66,28 @@ function parseToolAction(content: string): ParsedMessage {
     const idx = match.index!;
     const before = content.slice(0, idx).trim();
     const after = content.slice(idx + match[0].length).trim();
+
+    if (parsed.action === "preview_tweet") {
+      return {
+        textBefore: before,
+        textAfter: after,
+        action: {
+          type: "preview_tweet",
+          draftId: parsed.draftId,
+          content: parsed.content,
+          topic: parsed.topic,
+        },
+      };
+    }
+
     return {
       textBefore: before,
       textAfter: after,
-      action: { toolId: parsed.toolId, params: parsed.params },
+      action: {
+        type: "route_to_tool",
+        toolId: parsed.toolId,
+        params: parsed.params,
+      },
     };
   } catch {
     return { textBefore: content, textAfter: "", action: null };
@@ -347,14 +388,22 @@ export function ChatWidget() {
                           {parsed.textBefore}
                         </div>
                       )}
-                      <ToolActionCard
-                        toolId={parsed.action.toolId}
-                        params={parsed.action.params}
-                        onNavigate={(path) => {
-                          router.push(path);
-                          closeWidget();
-                        }}
-                      />
+                      {parsed.action.type === "route_to_tool" ? (
+                        <ToolActionCard
+                          toolId={parsed.action.toolId}
+                          params={parsed.action.params}
+                          onNavigate={(path) => {
+                            router.push(path);
+                            closeWidget();
+                          }}
+                        />
+                      ) : (
+                        <TweetActionCard
+                          draftId={parsed.action.draftId}
+                          content={parsed.action.content}
+                          topic={parsed.action.topic}
+                        />
+                      )}
                       {parsed.textAfter && (
                         <div className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed">
                           {parsed.textAfter}
@@ -825,6 +874,14 @@ const TOOL_ROUTES: Record<string, { path: string; label: string }> = {
     label: "Translate",
   },
   translator: { path: "/tools/content-translator", label: "Translate" },
+  "x-search-trends": {
+    path: "/tools/x-search-trends",
+    label: "X Trends",
+  },
+  "x-post-tweet": {
+    path: "/tools/x-post-tweet",
+    label: "Post Tweet",
+  },
 };
 
 function ToolActionCard({
