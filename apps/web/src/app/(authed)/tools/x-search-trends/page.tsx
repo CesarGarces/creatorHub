@@ -3,10 +3,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
-import { useChatStore } from "@/store/chat.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { cn } from "@creator-hub/ui";
 import api from "@/lib/api";
+import {
+  ModelSettingsPanel,
+  DEFAULT_MODEL_SETTINGS,
+  type ModelSettings,
+} from "@/components/chat/model-settings-panel";
 
 interface Message {
   id: string;
@@ -27,8 +31,14 @@ export default function XSearchTrendsPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [settings, setSettings] = useState<ModelSettings>(
+    DEFAULT_MODEL_SETTINGS,
+  );
+  const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { balance, fetchBalance } = useCreditsStore();
+  const { fetchBalance, plan } = useCreditsStore();
+
+  const isFreePlan = plan === "FREE";
 
   useEffect(() => {
     fetchBalance();
@@ -37,6 +47,50 @@ export default function XSearchTrendsPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  if (isFreePlan) {
+    return (
+      <>
+        <TopBar
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "X Trend Research" },
+          ]}
+        />
+        <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)] p-6">
+          <div className="max-w-md text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 mx-auto mb-4">
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="text-amber-500"
+              >
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-text mb-2">
+              X Trend Research
+              <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-500">
+                PRO
+              </span>
+            </h2>
+            <p className="text-text-muted mb-6">
+              This tool requires a STARTER plan or higher. Upgrade to access X
+              trend research and analysis.
+            </p>
+            <button
+              onClick={() => router.push("/credits")}
+              className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white hover:bg-primary-hover transition-colors"
+            >
+              Upgrade Plan
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   const handleSend = async (messageText?: string) => {
     const text = messageText || input;
@@ -115,9 +169,6 @@ export default function XSearchTrendsPage() {
         ]}
         actions={
           <div className="flex items-center gap-3">
-            <span className="text-sm text-text-muted">
-              Balance: {balance} credits
-            </span>
             <button
               onClick={() => setMessages([])}
               className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm text-text-muted hover:text-text transition-colors"
@@ -128,18 +179,40 @@ export default function XSearchTrendsPage() {
         }
       />
       <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+        {/* Settings Panel */}
+        {showSettings && (
+          <ModelSettingsPanel
+            settings={settings}
+            onUpdate={(partial) =>
+              setSettings((prev) => ({ ...prev, ...partial }))
+            }
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.length === 0 && (
             <div className="max-w-3xl mx-auto text-center py-12">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mx-auto mb-4">
-                <span className="text-3xl">🔍</span>
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="text-text"
+                >
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
               </div>
               <h2 className="text-xl font-semibold text-text mb-2">
                 X Trend Research
+                <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-500">
+                  PRO
+                </span>
               </h2>
               <p className="text-text-muted mb-8">
-                Search and analyze trending topics on X (Twitter) using AI
+                Search and analyze trending topics on X (Twitter)
               </p>
             </div>
           )}
@@ -235,6 +308,28 @@ export default function XSearchTrendsPage() {
         {/* Input */}
         <div className="border-t border-border bg-surface p-4">
           <div className="max-w-3xl mx-auto flex items-center gap-3">
+            <button
+              onClick={() => setShowSettings((v) => !v)}
+              className={cn(
+                "flex h-11 w-11 items-center justify-center rounded-xl border transition-colors flex-shrink-0",
+                showSettings
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-surface-elevated text-text-muted hover:text-text hover:border-primary/30",
+              )}
+              title="Model settings"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}

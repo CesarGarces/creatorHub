@@ -4,6 +4,8 @@ const prisma = new PrismaClient();
 const icons: Record<string, string> = {
   "thumbnail-generator": "🎨",
   "content-translator": "🌐",
+  "x-post-tweet": "💬",
+  "x-search-trends": "📡",
 };
 
 async function main() {

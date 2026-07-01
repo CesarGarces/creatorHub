@@ -134,8 +134,11 @@ export class SocialController {
     @Body()
     dto: {
       topic: string;
-      researchData: any;
+      researchData?: any;
       instructions?: string;
+      model?: string;
+      temperature?: number;
+      maxTokens?: number;
     },
   ): Promise<{ success: boolean; data: any }> {
     if (!dto.topic?.trim()) {
@@ -147,6 +150,9 @@ export class SocialController {
       topic: dto.topic,
       researchData: dto.researchData,
       instructions: dto.instructions,
+      model: dto.model,
+      temperature: dto.temperature,
+      maxTokens: dto.maxTokens,
     });
 
     await this.socialService.logAuditEvent(userId, "TWEET_DRAFT_CREATED", {

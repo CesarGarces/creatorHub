@@ -1760,6 +1760,215 @@ DELETE /api/v1/user-style/samples/:id          # Delete a sample
 
 ---
 
+## 14b. X (Twitter) Integration
+
+### Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        X Integration Module                          │
+│  apps/api/src/modules/social/                                        │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  │
+│  │   SocialModule    │  │ XSearchTrends    │  │ XPostTweet       │  │
+│  │                  │  │ Module           │  │ Module           │  │
+│  │ • OAuth 2.0 PKCE │  │                  │  │                  │  │
+│  │ • Account CRUD   │  │ • Apify scraper  │  │ • AI drafting    │  │
+│  │ • Token encrypt  │  │ • Trend analysis │  │ • RAG style      │  │
+│  │ • Audit logging  │  │ • Save results   │  │ • Publish to X   │  │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘  │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### OAuth 2.0 PKCE Flow
+
+```
+┌──────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────┐
+│ Frontend │───▶│ SocialModule │───▶│ X OAuth      │───▶│ Callback │
+│          │    │ /auth-url    │    │ Authorization│    │ /callback│
+└──────────┘    └──────────────┘    └──────────────┘    └──────────┘
+                     │                                       │
+                     │ 1. Generate code_verifier + challenge │
+                     │ 2. Store in DB (temporary)            │
+                     │ 3. Return authorize URL               │
+                     │                                       │ 4. Exchange code + code_verifier
+                     │                                       │ 5. Get access_token + refresh_token
+                     │                                       │ 6. Encrypt tokens (AES-256-GCM)
+                     │                                       │ 7. Store in SocialAccount
+                     │                                       │ 8. Redirect to frontend
+```
+
+### Token Encryption
+
+X API tokens are encrypted at rest using AES-256-GCM:
+
+```
+OAuthEncryptionService:
+  encrypt(data: string): string
+    → IV (16 bytes) + Auth Tag (16 bytes) + Encrypted Data
+    → Base64 encoded
+
+  decrypt(encrypted: string): string
+    → Decode Base64 → Extract IV + Auth Tag + Data
+    → Decrypt with AES-256-GCM
+
+  Key: X_SOCIAL_ENCRYPTION_KEY (64-char hex string)
+```
+
+### Tweet Draft with RAG Style
+
+```
+User sends tweet request
+    │
+    ├──► TweetDraftService.generateTweet(userId, prompt, model)
+    │       │
+    │       ├──► StyleInjectionService.getStylePrompt(userId)
+    │       │    └── Returns: "USER STYLE PROFILE: Tone, Keywords, ..."
+    │       │
+    │       ├──► Build tweet prompt:
+    │       │    "Write a tweet about {prompt}
+    │       │     User style: {stylePrompt}
+    │       │     Rules: max 280 chars, concise, engaging"
+    │       │
+    │       ├──► AIEngineService.execute({ taskType, model, prompt })
+    │       │    └── Returns AI-generated tweet
+    │       │
+    │       ├──► CreditService.deduct(userId, 5, "tweet-draft")
+    │       │
+    │       └──► TweetDraft.create(content, userId)
+    │
+    └──► Return { id, content, status: "DRAFT" }
+```
+
+### Trend Research via Apify
+
+```
+User requests trend research
+    │
+    ├──► ApifyService.scrapeTweets(query, options)
+    │       │
+    │       ├──► Start Apify actor: apidojo~tweet-scraper
+    │       │    Input: { searchTerms, maxItems, sort }
+    │       │
+    │       ├──► Poll for completion (2s interval, 60s max)
+    │       │
+    │       └──► Return tweets[]
+    │
+    ├──► Save results to DB (optional)
+    │
+    └──► Return { tweets: [...], count, query }
+```
+
+### Data Model (Prisma)
+
+```prisma
+enum SocialPlatform {
+  X
+  TWITTER  // Alias for X
+}
+
+enum TweetDraftStatus {
+  DRAFT
+  PREVIEW
+  PUBLISHED
+  FAILED
+}
+
+model SocialAccount {
+  id              String   @id @default(cuid())
+  userId          String
+  platform        SocialPlatform
+  providerAccountId String
+  username        String?
+  displayName     String?
+  accessToken     String   @db.Text  // Encrypted
+  refreshToken    String?  @db.Text  // Encrypted
+  expiresAt       DateTime?
+  scope           String?
+  isActive        Boolean  @default(true)
+  lastUsedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform, providerAccountId])
+  @@index([userId, platform])
+}
+
+model TweetDraft {
+  id              String           @id @default(cuid())
+  userId          String
+  content         String           @db.Text
+  model           String?
+  temperature     Float?
+  maxTokens       Int?
+  status          TweetDraftStatus @default(DRAFT)
+  platformPostId  String?
+  publishedAt     DateTime?
+  errorMessage    String?
+  metadata        Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+```
+
+### Plan Guard Integration
+
+X integration tools require `STARTER` plan minimum:
+
+```typescript
+// Tools require STARTER plan minimum
+@UseGuards(AuthenticatedPlanGuard)
+@MinPlan("STARTER")
+@Controller("social")
+export class SocialController { ... }
+
+@UseGuards(AuthenticatedPlanGuard)
+@MinPlan("STARTER")
+@Controller("tweets")
+export class TweetDraftController { ... }
+```
+
+### API Endpoints
+
+```
+# Social Account
+GET    /api/v1/social/x/auth-url        # Get OAuth URL (requires STARTER plan)
+POST   /api/v1/social/x/callback        # OAuth callback (public endpoint)
+GET    /api/v1/social/accounts          # List connected accounts
+DELETE /api/v1/social/accounts/:id      # Disconnect account
+
+# Tweet Drafts
+POST   /api/v1/social/tweets/draft      # Generate tweet (5 cr)
+GET    /api/v1/social/tweets/drafts     # List drafts
+GET    /api/v1/social/tweets/drafts/:id # Get draft
+PATCH  /api/v1/social/tweets/drafts/:id # Edit draft
+DELETE /api/v1/social/tweets/drafts/:id # Delete draft
+POST   /api/v1/social/tweets/drafts/:id/publish  # Publish to X (5 cr)
+
+# Trend Research (via tool controller)
+POST   /api/v1/tools/x-search-trends/research    # Research trends (15 cr)
+```
+
+### Security
+
+- OAuth tokens encrypted with AES-256-GCM at rest
+- `@Public()` on callback endpoint (no JWT required)
+- `JwtAuthGuard` on all other endpoints
+- `AuthenticatedPlanGuard` + `@MinPlan("STARTER")` on X endpoints
+- Audit logging for all account operations
+- Token refresh validation on each use
+
+---
+
 ## 14. Testing Strategy
 
 ### Test Pyramid

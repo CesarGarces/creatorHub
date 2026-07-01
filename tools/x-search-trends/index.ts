@@ -4,9 +4,9 @@ registerTool({
   id: "x-search-trends",
   name: "X Trend Research",
   description:
-    "Search and analyze trending topics on X (Twitter) using Apify. Returns tweets, engagement metrics, and sentiment analysis.",
+    "Search and analyze trending topics on X (Twitter). Returns tweets, engagement metrics, and sentiment analysis.",
   version: "1.0.0",
-  icon: "🔍",
+  icon: "📡",
   category: "social",
   creditsPerUse: 15,
   permissions: [
@@ -27,7 +27,7 @@ registerTool({
         path: "/tools/x-search-trends",
         component: "XSearchTrendsPage",
         title: "X Trend Research",
-        icon: "🔍",
+        icon: "📡",
         showInNav: true,
       },
     ],

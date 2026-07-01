@@ -6,7 +6,7 @@ registerTool({
   description:
     "Publish a tweet to your connected X (Twitter) account. Supports text tweets and threads.",
   version: "1.0.0",
-  icon: "📤",
+  icon: "💬",
   category: "social",
   creditsPerUse: 5,
   permissions: [
@@ -27,7 +27,7 @@ registerTool({
         path: "/tools/x-post-tweet",
         component: "XPostTweetPage",
         title: "Post to X",
-        icon: "📤",
+        icon: "💬",
         showInNav: false,
       },
     ],

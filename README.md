@@ -764,6 +764,103 @@ SILICONFLOW_API_KEY="..."  # Required for GLM-5.2 (siliconflow)
 
 ---
 
+## X (Twitter) Integration
+
+The platform includes full X (Twitter) integration with OAuth 2.0 PKCE authentication, tweet drafting with RAG-powered style injection, trend research via Apify, and one-click publishing.
+
+### Features
+
+- **OAuth 2.0 PKCE** — Secure authentication without exposing client secrets
+- **Tweet Drafting** — AI-generated tweets using your communication style (User Style RAG)
+- **Trend Research** — Real-time X trend analysis via Apify scraper
+- **One-Click Publishing** — Publish drafts directly to X
+- **Credit System** — Research costs 15 credits, publishing costs 5 credits
+
+### X Integration Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        X Integration Flow                            │
+│                                                                      │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐           │
+│  │  Connect X   │───▶│  Research    │───▶│  Draft Tweet │           │
+│  │  Account     │    │  Trends      │    │  (RAG Style) │           │
+│  └──────────────┘    └──────────────┘    └──────────────┘           │
+│         │                   │                    │                   │
+│         ▼                   ▼                    ▼                   │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐           │
+│  │  OAuth 2.0   │    │  Apify API   │    │  AI Engine   │           │
+│  │  PKCE Flow   │    │  Tweet       │    │  + Style     │           │
+│  └──────────────┘    │  Scraper     │    │  Injection   │           │
+│                      └──────────────┘    └──────────────┘           │
+│                             │                    │                   │
+│                             ▼                    ▼                   │
+│                      ┌──────────────┐    ┌──────────────┐           │
+│                      │  Save Draft  │◀───│  Publish     │           │
+│                      │  (DB)        │    │  to X API    │           │
+│                      └──────────────┘    └──────────────┘           │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### API Endpoints
+
+```
+# Social Account Management
+GET    /api/v1/social/x/auth-url        # Get OAuth URL
+POST   /api/v1/social/x/callback        # OAuth callback
+GET    /api/v1/social/accounts          # List connected accounts
+DELETE /api/v1/social/accounts/:id      # Disconnect account
+
+# Tweet Drafts
+POST   /api/v1/social/tweets/draft      # Generate tweet draft (RAG)
+GET    /api/v1/social/tweets/drafts     # List drafts
+GET    /api/v1/social/tweets/drafts/:id # Get draft
+PATCH  /api/v1/social/tweets/drafts/:id # Edit draft
+DELETE /api/v1/social/tweets/drafts/:id # Delete draft
+POST   /api/v1/social/tweets/drafts/:id/publish  # Publish to X
+```
+
+### Tools
+
+| Tool                | Description                   | Credits |
+| ------------------- | ----------------------------- | ------- |
+| **X Search Trends** | Research trending topics on X | 15 cr   |
+| **X Post Tweet**    | Draft and publish tweets      | 5 cr    |
+
+### Environment Variables (X Integration)
+
+```env
+# X OAuth 2.0
+X_CLIENT_ID=""
+X_CLIENT_SECRET=""
+X_REDIRECT_URI="https://creatorhub-qtod.onrender.com/api/v1/social/x/callback"
+
+# Apify (Trend Research)
+APIFY_API_TOKEN=""
+
+# Token Encryption
+X_SOCIAL_ENCRYPTION_KEY=""  # 64-char hex key for AES-256-GCM
+
+# Frontend URL (for OAuth redirect)
+FRONTEND_URL="https://creator-hub-web.vercel.app"
+```
+
+### Database Tables
+
+| Table           | Description                                         |
+| --------------- | --------------------------------------------------- |
+| `SocialAccount` | Encrypted X tokens, user connection status          |
+| `TweetDraft`    | Draft tweets with content, status, publish metadata |
+
+### Tweet Draft Lifecycle
+
+```
+DRAFT → (user edits) → DRAFT → (publish) → PUBLISHED
+                                         → FAILED (with error)
+```
+
+---
+
 ## API
 
 The API exposes REST endpoints under `/api/v1`. Interactive documentation available via Swagger.

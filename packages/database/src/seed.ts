@@ -45,21 +45,21 @@ async function main() {
 
   await prisma.tool.upsert({
     where: { id: "x-search-trends" },
-    update: { icon: "🔍" },
+    update: { icon: "📡" },
     create: {
       id: "x-search-trends",
       name: "X Trend Research",
       description:
-        "Search and analyze trending topics on X (Twitter) using Apify. Returns tweets, engagement metrics, and sentiment analysis.",
+        "Search and analyze trending topics on X (Twitter). Returns tweets, engagement metrics, and sentiment analysis.",
       category: "social",
       creditsPerUse: 15,
-      icon: "🔍",
+      icon: "📡",
     },
   });
 
   await prisma.tool.upsert({
     where: { id: "x-post-tweet" },
-    update: { icon: "📤" },
+    update: { icon: "💬" },
     create: {
       id: "x-post-tweet",
       name: "Post to X",
@@ -67,7 +67,7 @@ async function main() {
         "Publish a tweet to your connected X (Twitter) account. Supports text tweets and threads.",
       category: "social",
       creditsPerUse: 5,
-      icon: "📤",
+      icon: "💬",
     },
   });
 
