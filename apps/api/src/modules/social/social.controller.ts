@@ -96,9 +96,13 @@ export class SocialController {
 
       this.pendingOAuthStates.delete(state);
       return res.redirect(`${frontendUrl}/settings?connected=x`);
-    } catch {
+    } catch (error) {
       this.pendingOAuthStates.delete(state);
-      return res.redirect(`${frontendUrl}/settings?error=callback_failed`);
+      const message = error instanceof Error ? error.message : "unknown";
+      console.error("[X OAuth Callback] Error:", message);
+      return res.redirect(
+        `${frontendUrl}/settings?error=callback_failed&detail=${encodeURIComponent(message)}`,
+      );
     }
   }
 
