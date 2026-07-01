@@ -11,7 +11,7 @@ import {
   UseGuards,
   BadRequestException,
 } from "@nestjs/common";
-import { JwtAuthGuard, CurrentUser } from "@creator-hub/auth";
+import { JwtAuthGuard, CurrentUser, Public } from "@creator-hub/auth";
 import { ThrottlerGuard } from "@nestjs/throttler";
 import { Response } from "express";
 import { SocialService } from "./services/social.service";
@@ -65,6 +65,7 @@ export class SocialController {
   }
 
   @Get("x/callback")
+  @Public()
   async handleXCallback(
     @Query("code") code: string,
     @Query("state") state: string,
