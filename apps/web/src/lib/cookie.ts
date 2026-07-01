@@ -4,8 +4,8 @@ const USER_KEY = "ch_user";
 
 const COOKIE_OPTIONS = {
   path: "/",
-  sameSite: "strict" as const,
-  secure: process.env.NODE_ENV === "production",
+  sameSite: "none" as const,
+  secure: true,
 };
 
 function daysToMs(days: number): number {
