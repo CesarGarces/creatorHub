@@ -151,9 +151,11 @@ export class ApifyService {
 
     let datasetResponse: Response;
     try {
-      datasetResponse = await fetch(
-        `${this.API_BASE}/datasets/${datasetId}/items?token=${apiToken}&format=json`,
-      );
+      const url = `${this.API_BASE}/datasets/${datasetId}/items?token=${apiToken}&format=json&limit=1000`;
+      this.logger.info("Fetching dataset items", {
+        url: url.replace(apiToken, "***"),
+      });
+      datasetResponse = await fetch(url);
     } catch (fetchError) {
       this.logger.error("Network error fetching Apify dataset", {
         error: (fetchError as Error).message,
@@ -177,27 +179,30 @@ export class ApifyService {
 
     const rawItems = (await datasetResponse.json()) as any;
 
-    this.logger.info("Apify dataset fetched", {
+    const items = Array.isArray(rawItems)
+      ? rawItems
+      : rawItems?.items || rawItems?.data || [];
+
+    this.logger.info("Apify dataset processed", {
       topic: options.topic,
-      itemCount: Array.isArray(rawItems) ? rawItems.length : 0,
-      type: typeof rawItems,
-      isArray: Array.isArray(rawItems),
-      sampleKeys:
-        Array.isArray(rawItems) && rawItems.length > 0
-          ? Object.keys(rawItems[0])
-          : [],
+      rawType: typeof rawItems,
+      rawIsArray: Array.isArray(rawItems),
+      rawKeys:
+        !Array.isArray(rawItems) && rawItems ? Object.keys(rawItems) : [],
+      itemCount: items.length,
       sampleItem:
-        Array.isArray(rawItems) && rawItems.length > 0 ? rawItems[0] : null,
+        items.length > 0 ? JSON.stringify(items[0]).slice(0, 500) : null,
     });
 
-    const items = this.normalizeTweets(rawItems);
+    const normalized = this.normalizeTweets(items);
 
     this.logger.info("Apify search completed", {
       topic: options.topic,
-      tweetCount: items.length,
+      rawCount: items.length,
+      normalizedCount: normalized.length,
     });
 
-    return items;
+    return normalized;
   }
 
   private normalizeTweets(rawItems: any[]): ApifyTweet[] {
