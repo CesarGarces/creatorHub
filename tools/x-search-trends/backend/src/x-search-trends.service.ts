@@ -54,8 +54,10 @@ export class XSearchTrendsService {
 
     let tweets: any[];
 
-    if (process.env.NODE_ENV !== "production") {
-      this.logger.warn("[MOCK] Using mock search data (development mode)");
+    const hasApify = !!process.env.APIFY_API_TOKEN;
+
+    if (!hasApify) {
+      this.logger.warn("[MOCK] No APIFY_API_TOKEN, using mock data");
       tweets = this.getMockTweets(options.topic);
     } else {
       tweets = await this.apifyService.searchTweets({

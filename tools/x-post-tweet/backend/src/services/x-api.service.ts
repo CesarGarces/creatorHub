@@ -11,7 +11,8 @@ interface PublishTweetResponse {
 export class XApiService {
   private logger = new Logger("XApiService");
   private readonly API_BASE = "https://api.twitter.com/2";
-  private readonly isMock = process.env.NODE_ENV !== "production";
+  private readonly isMock =
+    !process.env.X_CLIENT_ID || !process.env.X_CLIENT_SECRET;
 
   async publishTweet(
     accessToken: string,
