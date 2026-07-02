@@ -86,7 +86,8 @@ export class XSearchTrendsService {
     };
   }
 
-  private extractTrendingHashtags(tweets: Record<string, unknown>[]): string[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private extractTrendingHashtags(tweets: any[]): string[] {
     const hashtagCounts = new Map<string, number>();
 
     tweets.forEach((tweet) => {
