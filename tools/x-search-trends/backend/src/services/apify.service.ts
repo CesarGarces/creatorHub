@@ -47,7 +47,7 @@ export class ApifyService {
   async searchTweets(options: ApifyRunOptions): Promise<ApifyTweet[]> {
     const apiToken = process.env.APIFY_API_TOKEN;
     const actorId =
-      process.env.APIFY_TWITTER_ACTOR_ID || "apidojo/tweet-scraper";
+      process.env.APIFY_TWITTER_ACTOR_ID || "apidojo/twitter-scraper-lite";
 
     if (!apiToken) {
       this.logger.error("APIFY_API_TOKEN is not configured");
