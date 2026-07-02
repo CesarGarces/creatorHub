@@ -20,6 +20,14 @@ registerTool({
       description: "View translation history",
     },
   ],
+  chatInputParams: [
+    {
+      name: "prompt",
+      type: "string",
+      required: true,
+      description: "text to translate",
+    },
+  ],
   frontend: {
     routes: [
       {

@@ -17,6 +17,15 @@ export interface ToolManifest {
     events: string[];
   };
   status: ToolStatus;
+  chatInputParams?: ChatInputParam[];
+}
+
+export interface ChatInputParam {
+  name: string;
+  type: "string" | "number" | "boolean";
+  required: boolean;
+  description: string;
+  maxLength?: number;
 }
 
 export type ToolCategory =

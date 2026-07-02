@@ -21,6 +21,15 @@ registerTool({
       description: "View published tweets",
     },
   ],
+  chatInputParams: [
+    {
+      name: "text",
+      type: "string",
+      required: true,
+      description: "what the user wants to tweet about",
+      maxLength: 280,
+    },
+  ],
   frontend: {
     routes: [
       {

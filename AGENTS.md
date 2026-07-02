@@ -130,3 +130,96 @@ npm run db:studio       # Open Prisma Studio
 
 **Backup location:** `packages/database/backups/`
 **Backups are gitignored** — never committed to repo.
+
+---
+
+# Tool Chat Input Params Pattern (MANDATORY)
+
+Every tool that can be invoked from the AI chat MUST define `chatInputParams` in its `ToolManifest`. This is a **contract** between the tool definition, the AI system prompt, and the frontend.
+
+## Why
+
+When a user says "write a tweet about AI", the AI responds with a JSON action:
+
+```json
+{
+  "action": "route_to_tool",
+  "toolId": "x-post-tweet",
+  "params": { "text": "..." }
+}
+```
+
+The frontend then navigates to the tool page with query params:
+
+```
+/tools/x-post-tweet?text=write%20a%20tweet%20about%20AI
+```
+
+The tool page reads these params and auto-sends to the chat. **All of this happens automatically** if the tool defines `chatInputParams`.
+
+## How to add chatInputParams to a new tool
+
+### 1. Define in tool registration (`tools/<tool-id>/index.ts`)
+
+```typescript
+registerTool({
+  id: "my-tool",
+  // ...
+  chatInputParams: [
+    {
+      name: "prompt", // URL param name
+      type: "string", // "string" | "number" | "boolean"
+      required: true,
+      description: "what the user wants to generate",
+      maxLength: 500, // optional
+    },
+  ],
+});
+```
+
+### 2. Add the hook to the tool page (`apps/web/src/app/(authed)/tools/<tool-id>/page.tsx`)
+
+```typescript
+import { useToolQueryParams } from "@/hooks/use-tool-query-params";
+
+export default function MyToolPage() {
+  useToolQueryParams(); // reads ?prompt=..., auto-sends to chat
+  // ...
+}
+```
+
+That's it. The hook handles:
+
+- Reading `text`, `prompt`, `topic`, `query`, `content` from URL
+- Auto-sending the message to chat
+- Clearing params from URL after sending
+- Preventing duplicate sends
+
+### 3. The AI system prompt is generated automatically
+
+`ChatRoutingService` reads `chatInputParams` from all active tools and includes them in the system prompt:
+
+```
+**My Tool** (id: "my-tool", design)
+   Chat params: { "prompt": "<what the user wants to generate>" }
+```
+
+The AI uses these param names in its JSON response. No hardcoding needed.
+
+## Param name conventions
+
+Use the same param name across tools when the semantic is the same:
+
+- `text` — free-form text input (tweet content, search query)
+- `prompt` — generation prompt (image, video, translation)
+- `topic` — subject to research
+- `query` — search query
+
+The hook reads all of these. If your tool uses a non-standard param name, add it to the `paramOrder` array in `use-tool-query-params.ts`.
+
+## Checklist for new tools
+
+- [ ] `chatInputParams` defined in `registerTool()`
+- [ ] `useToolQueryParams()` added to tool page
+- [ ] No hardcoded param names in chat system prompt (use manifest)
+- [ ] `backend.modulePath` points to correct NestJS module (not `module`)

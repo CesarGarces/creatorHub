@@ -20,6 +20,14 @@ registerTool({
       description: "View generated thumbnails",
     },
   ],
+  chatInputParams: [
+    {
+      name: "prompt",
+      type: "string",
+      required: true,
+      description: "thumbnail description",
+    },
+  ],
   frontend: {
     routes: [
       {

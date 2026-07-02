@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { useCreditsStore } from "@/store/credits.store";
+import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 import { cn } from "@creator-hub/ui";
 import api from "@/lib/api";
 import {
@@ -37,6 +38,8 @@ export default function XSearchTrendsPage() {
   const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { fetchBalance, plan } = useCreditsStore();
+
+  useToolQueryParams();
 
   const isFreePlan = plan === "FREE";
 

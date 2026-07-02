@@ -54,11 +54,18 @@ export class TweetDraftService {
     this.logger.info("Generating tweet with AI", {
       userId: options.userId,
       topic: options.topic,
+      model: options.model,
     });
 
-    const stylePrompt = await this.styleInjection.getStylePrompt(
-      options.userId,
-    );
+    let stylePrompt = "";
+    try {
+      stylePrompt = await this.styleInjection.getStylePrompt(options.userId);
+    } catch (error) {
+      this.logger.warn("Failed to get style prompt, continuing without it", {
+        userId: options.userId,
+        error: (error as Error).message,
+      });
+    }
 
     const researchContext = this.formatResearchData(options.researchData);
 
@@ -79,16 +86,29 @@ ${options.instructions ? `6. Additional instructions: ${options.instructions}` :
 
 Respond with ONLY the tweet text, no explanations or quotes.`;
 
-    const result = await this.aiEngine.execute({
-      taskType: "text-generation",
-      prompt: systemPrompt,
-      userId: options.userId,
-      model: options.model as any,
-      parameters: {
-        temperature: options.temperature ?? 0.7,
-        maxTokens: options.maxTokens ?? 300,
-      },
-    });
+    let result;
+    try {
+      result = await this.aiEngine.execute({
+        taskType: "text-generation",
+        prompt: systemPrompt,
+        userId: options.userId,
+        model: options.model as any,
+        parameters: {
+          temperature: options.temperature ?? 0.7,
+          maxTokens: options.maxTokens ?? 300,
+        },
+      });
+    } catch (error) {
+      this.logger.error("AI engine execution failed", {
+        userId: options.userId,
+        model: options.model,
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+      });
+      throw new BadRequestException(
+        `Failed to generate tweet: ${(error as Error).message}`,
+      );
+    }
 
     const tweetContent =
       result.output.type === "text" ? result.output.content.trim() : "";

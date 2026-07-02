@@ -20,6 +20,14 @@ registerTool({
       description: "View generated videos",
     },
   ],
+  chatInputParams: [
+    {
+      name: "prompt",
+      type: "string",
+      required: true,
+      description: "video description",
+    },
+  ],
   frontend: {
     routes: [
       {

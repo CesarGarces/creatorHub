@@ -43,6 +43,8 @@ RULES:
    { "action": "route_to_tool", "toolId": "<id>", "params": { ... } }
    \`\`\`
    Briefly explain what you'll do and show the action button.
+   IMPORTANT: Each tool defines its own chatInputParams. Use EXACTLY those param names as shown in the tool description's "Chat params" line.
+   For example, if a tool shows "Chat params": { "text": "<what the user wants>" }, then use { "text": "..." }.
 2. When the user asks you to write a tweet based on research data, use this action:
    \`\`\`json
    { "action": "preview_tweet", "draftId": "<draft_id>", "content": "<tweet_text>", "topic": "<topic>" }
@@ -62,26 +64,24 @@ RULES:
   }
 
   private formatToolDescription(tool: ToolManifest): string {
-    const categoryMap: Record<string, string> = {
-      thumbnail: "Create thumbnails/images",
-      video: "Create videos",
-      translator: "Translate content",
-      title: "Generate titles",
-      stream: "Streaming tools",
-      social: "Social media",
-      analytics: "Analytics",
-      design: "Design",
-      writing: "Writing",
-      other: "Other",
-    };
-
     const triggerWords = this.inferTriggerWords(tool);
+    const paramsStr = this.formatChatInputParams(tool);
 
     return `**${tool.name}** (id: "${tool.id}", ${tool.category})
    Description: ${tool.description}
    Cost: ${tool.creditsPerUse} credits
    Activates when: ${triggerWords}
-   Route: ${tool.frontend.routes[0]?.path || "N/A"}`;
+   Route: ${tool.frontend.routes[0]?.path || "N/A"}${paramsStr}`;
+  }
+
+  private formatChatInputParams(tool: ToolManifest): string {
+    if (!tool.chatInputParams || tool.chatInputParams.length === 0) return "";
+
+    const params = tool.chatInputParams
+      .map((p) => `"${p.name}": <${p.description}>`)
+      .join(", ");
+
+    return `\n   Chat params: { ${params} }`;
   }
 
   getActiveTools() {

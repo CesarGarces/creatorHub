@@ -21,6 +21,14 @@ registerTool({
       description: "View search results",
     },
   ],
+  chatInputParams: [
+    {
+      name: "text",
+      type: "string",
+      required: true,
+      description: "what the user wants to research",
+    },
+  ],
   frontend: {
     routes: [
       {
