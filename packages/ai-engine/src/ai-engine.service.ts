@@ -1,9 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { ProviderRegistry } from "./providers/provider-registry";
+import type { AIProviderInterface } from "./providers/provider.interface";
 import type {
   AIRequest,
   AIResponse,
   AIProvider,
+  AITaskType,
 } from "@creator-hub/shared-types";
 import { Logger } from "@creator-hub/shared-utils";
 
@@ -17,7 +19,9 @@ export class AIEngineService {
     const requestedProvider = request.provider;
     const providers = requestedProvider
       ? [this.providerRegistry.getProvider(requestedProvider)]
-      : this.providerRegistry.getProvidersByTask(request.taskType);
+      : request.model
+        ? this.findProviderByModel(request.model, request.taskType)
+        : this.providerRegistry.getProvidersByTask(request.taskType);
 
     if (providers.length === 0) {
       throw new Error(
@@ -69,7 +73,10 @@ export class AIEngineService {
           message.includes("rate limit") ||
           message.includes("quota") ||
           message.includes("insufficient") ||
-          message.includes("limit");
+          message.includes("limit") ||
+          message.includes("404") ||
+          message.includes("not found") ||
+          message.includes("does not exist");
 
         if (isRetryable && providers.length > 1) {
           this.logger.info("Retrying with next available provider", {
@@ -112,5 +119,14 @@ export class AIEngineService {
       userId: options.userId,
       toolId: options.toolId,
     });
+  }
+
+  private findProviderByModel(
+    model: string,
+    taskType: AITaskType,
+  ): AIProviderInterface[] {
+    const allForTask = this.providerRegistry.getProvidersByTask(taskType);
+    const match = allForTask.find((p) => p.supportedModels.includes(model));
+    return match ? [match] : allForTask;
   }
 }

@@ -145,14 +145,14 @@ When a user says "write a tweet about AI", the AI responds with a JSON action:
 {
   "action": "route_to_tool",
   "toolId": "x-post-tweet",
-  "params": { "text": "..." }
+  "params": { "prompt": "write a tweet about AI" }
 }
 ```
 
 The frontend then navigates to the tool page with query params:
 
 ```
-/tools/x-post-tweet?text=write%20a%20tweet%20about%20AI
+/tools/x-post-tweet?prompt=write%20a%20tweet%20about%20AI
 ```
 
 The tool page reads these params and auto-sends to the chat. **All of this happens automatically** if the tool defines `chatInputParams`.
@@ -208,14 +208,17 @@ The AI uses these param names in its JSON response. No hardcoding needed.
 
 ## Param name conventions
 
-Use the same param name across tools when the semantic is the same:
+**ALL tools MUST use `prompt` as the param name.** This is the standard across the entire project.
 
-- `text` — free-form text input (tweet content, search query)
-- `prompt` — generation prompt (image, video, translation)
-- `topic` — subject to research
-- `query` — search query
+The hook reads `prompt` first, then falls back to: `text`, `topic`, `query`, `content`.
 
-The hook reads all of these. If your tool uses a non-standard param name, add it to the `paramOrder` array in `use-tool-query-params.ts`.
+```json
+{
+  "action": "route_to_tool",
+  "toolId": "any-tool",
+  "params": { "prompt": "<user request>" }
+}
+```
 
 ## Checklist for new tools
 

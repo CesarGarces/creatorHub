@@ -23,7 +23,7 @@ registerTool({
   ],
   chatInputParams: [
     {
-      name: "text",
+      name: "prompt",
       type: "string",
       required: true,
       description: "what the user wants to tweet about",

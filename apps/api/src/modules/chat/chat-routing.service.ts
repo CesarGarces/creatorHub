@@ -40,11 +40,11 @@ ${toolDescriptions.length > 0 ? toolDescriptions.join("\n\n") : "No tools availa
 RULES:
 1. When the user requests something that matches a tool, respond with a JSON action inside a markdown code block:
    \`\`\`json
-   { "action": "route_to_tool", "toolId": "<id>", "params": { ... } }
+   { "action": "route_to_tool", "toolId": "<id>", "params": { "prompt": "<user request>" } }
    \`\`\`
    Briefly explain what you'll do and show the action button.
-   IMPORTANT: Each tool defines its own chatInputParams. Use EXACTLY those param names as shown in the tool description's "Chat params" line.
-   For example, if a tool shows "Chat params": { "text": "<what the user wants>" }, then use { "text": "..." }.
+   IMPORTANT: ALWAYS use "prompt" as the param name for ALL tools. Example:
+   { "action": "route_to_tool", "toolId": "thumbnail-generator", "params": { "prompt": "a cat playing guitar" } }
 2. When the user asks you to write a tweet based on research data, use this action:
    \`\`\`json
    { "action": "preview_tweet", "draftId": "<draft_id>", "content": "<tweet_text>", "topic": "<topic>" }
