@@ -8,6 +8,7 @@ import { cn, Badge } from "@creator-hub/ui";
 import api from "@/lib/api";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
 import { TweetActionCard } from "@/components/chat/tweet-action-card";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 interface ParsedMessage {
   textBefore: string;
@@ -350,89 +351,28 @@ export function ChatWidget() {
             </div>
           )}
 
-          {messages.map((message) => {
-            const parsed =
-              message.role === "assistant" && message.content
-                ? parseToolAction(message.content)
-                : null;
-
-            return (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex",
-                  message.role === "user" ? "justify-end" : "justify-start",
-                )}
-              >
-                <div
-                  className={cn(
-                    "max-w-[85%] rounded-2xl px-3.5 py-2.5",
-                    message.role === "user"
-                      ? "bg-primary text-white rounded-br-md"
-                      : "bg-surface-elevated text-text rounded-bl-md",
-                  )}
-                >
-                  {message.role === "assistant" && (
-                    <div className="mb-1 flex items-center gap-1">
-                      <SparkleIcon className="h-2.5 w-2.5 text-primary" />
-                      <span className="text-[9px] font-medium uppercase tracking-wider text-text-dim">
-                        AI
-                      </span>
-                    </div>
-                  )}
-
-                  {parsed?.action ? (
-                    <>
-                      {parsed.textBefore && (
-                        <div className="whitespace-pre-wrap text-[13px] leading-relaxed">
-                          {parsed.textBefore}
-                        </div>
-                      )}
-                      {parsed.action.type === "route_to_tool" ? (
-                        <ToolActionCard
-                          toolId={parsed.action.toolId}
-                          params={parsed.action.params}
-                          onNavigate={(path) => {
-                            router.push(path);
-                            closeWidget();
-                          }}
-                        />
-                      ) : (
-                        <TweetActionCard
-                          draftId={parsed.action.draftId}
-                          content={parsed.action.content}
-                          topic={parsed.action.topic}
-                        />
-                      )}
-                      {parsed.textAfter && (
-                        <div className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed">
-                          {parsed.textAfter}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="whitespace-pre-wrap text-[13px] leading-relaxed">
-                      {message.content ||
-                        (isStreaming &&
-                        message.role === "assistant" &&
-                        message.id.startsWith("assistant-") ? (
-                          <span className="inline-flex items-center gap-1 text-text-dim">
-                            <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-primary" />
-                            Making...
-                          </span>
-                        ) : null)}
-                      {isStreaming &&
-                        message.role === "assistant" &&
-                        message.id.startsWith("assistant-") &&
-                        message.content && (
-                          <span className="ml-0.5 inline-block h-3.5 w-px animate-pulse bg-text/50" />
-                        )}
-                    </div>
-                  )}
+          {messages.map((message) => (
+            <ErrorBoundary
+              key={message.id}
+              fallback={
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] rounded-2xl px-3.5 py-2.5 bg-surface-elevated text-text rounded-bl-md">
+                    <p className="text-[13px] text-text-muted">
+                      Failed to render message. Please try again.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              }
+            >
+              <MessageBubble
+                message={message}
+                isStreaming={isStreaming}
+                parseToolAction={parseToolAction}
+                router={router}
+                closeWidget={closeWidget}
+              />
+            </ErrorBoundary>
+          ))}
         </div>
 
         {/* Input */}
@@ -854,6 +794,103 @@ function SettingsPanel({
           <span>Fast</span>
           <span>Deep</span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Message Bubble ─── */
+
+function MessageBubble({
+  message,
+  isStreaming,
+  parseToolAction,
+  router,
+  closeWidget,
+}: {
+  message: any;
+  isStreaming: boolean;
+  parseToolAction: (content: string) => any;
+  router: any;
+  closeWidget: () => void;
+}) {
+  const parsed =
+    message.role === "assistant" && message.content
+      ? parseToolAction(message.content)
+      : null;
+
+  return (
+    <div
+      className={cn(
+        "flex",
+        message.role === "user" ? "justify-end" : "justify-start",
+      )}
+    >
+      <div
+        className={cn(
+          "max-w-[85%] rounded-2xl px-3.5 py-2.5",
+          message.role === "user"
+            ? "bg-primary text-white rounded-br-md"
+            : "bg-surface-elevated text-text rounded-bl-md",
+        )}
+      >
+        {message.role === "assistant" && (
+          <div className="mb-1 flex items-center gap-1">
+            <SparkleIcon className="h-2.5 w-2.5 text-primary" />
+            <span className="text-[9px] font-medium uppercase tracking-wider text-text-dim">
+              AI
+            </span>
+          </div>
+        )}
+
+        {parsed?.action ? (
+          <>
+            {parsed.textBefore && (
+              <div className="whitespace-pre-wrap text-[13px] leading-relaxed">
+                {parsed.textBefore}
+              </div>
+            )}
+            {parsed.action.type === "route_to_tool" ? (
+              <ToolActionCard
+                toolId={parsed.action.toolId}
+                params={parsed.action.params}
+                onNavigate={(path) => {
+                  router.push(path);
+                  closeWidget();
+                }}
+              />
+            ) : (
+              <TweetActionCard
+                draftId={parsed.action.draftId}
+                content={parsed.action.content}
+                topic={parsed.action.topic}
+              />
+            )}
+            {parsed.textAfter && (
+              <div className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed">
+                {parsed.textAfter}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="whitespace-pre-wrap text-[13px] leading-relaxed">
+            {message.content ||
+              (isStreaming &&
+              message.role === "assistant" &&
+              message.id.startsWith("assistant-") ? (
+                <span className="inline-flex items-center gap-1 text-text-dim">
+                  <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-primary" />
+                  Making...
+                </span>
+              ) : null)}
+            {isStreaming &&
+              message.role === "assistant" &&
+              message.id.startsWith("assistant-") &&
+              message.content && (
+                <span className="ml-0.5 inline-block h-3.5 w-px animate-pulse bg-text/50" />
+              )}
+          </div>
+        )}
       </div>
     </div>
   );

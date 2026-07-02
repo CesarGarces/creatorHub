@@ -1,58 +1,52 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useChatStore } from "@/store/chat.store";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 const PARAM_ORDER = ["prompt", "text", "topic", "query", "content"];
 
 /**
- * Hook that reads chat input params from URL and auto-sends to chat.
+ * Hook that reads chat input params from URL and returns the message.
  *
  * Usage in any tool page:
  * ```tsx
- * useToolQueryParams(); // reads ?prompt=..., auto-sends to chat
+ * const promptFromUrl = useToolQueryParams();
+ *
+ * useEffect(() => {
+ *   if (promptFromUrl) {
+ *     handleSend(promptFromUrl);
+ *   }
+ * }, [promptFromUrl]);
  * ```
  *
  * All tools should use "prompt" as the primary param name.
  * The hook also supports: text, topic, query, content as fallbacks.
  *
- * If no recognized param is found, does nothing.
- * Clears params from URL after sending.
+ * Returns the message string if a param was found, null otherwise.
  */
-export function useToolQueryParams() {
+export function useToolQueryParams(): string | null {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const sendMessage = useChatStore((s) => s.sendMessage);
-  const hasAutoSent = useRef(false);
-  const lastParams = useRef<string>("");
+  const [message, setMessage] = useState<string | null>(null);
+  const hasParsed = useRef(false);
 
   useEffect(() => {
-    const paramString = searchParams.toString();
+    if (hasParsed.current) return;
 
-    if (!paramString || paramString === lastParams.current) return;
-    if (hasAutoSent.current && lastParams.current) return;
-
-    let message = "";
     for (const key of PARAM_ORDER) {
       const value = searchParams.get(key);
       if (value) {
-        message = value;
+        setMessage(value);
+        hasParsed.current = true;
+
+        const url = new URL(window.location.href);
+        for (const k of PARAM_ORDER) {
+          url.searchParams.delete(k);
+        }
+        window.history.replaceState({}, "", url.pathname);
         break;
       }
     }
+  }, [searchParams]);
 
-    if (!message) return;
-
-    lastParams.current = paramString;
-    hasAutoSent.current = true;
-
-    sendMessage(message);
-
-    const url = new URL(window.location.href);
-    for (const key of PARAM_ORDER) {
-      url.searchParams.delete(key);
-    }
-    router.replace(url.pathname);
-  }, [searchParams, router, sendMessage]);
+  return message;
 }

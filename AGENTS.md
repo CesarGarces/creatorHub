@@ -183,17 +183,23 @@ registerTool({
 import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 
 export default function MyToolPage() {
-  useToolQueryParams(); // reads ?prompt=..., auto-sends to chat
+  const promptFromUrl = useToolQueryParams();
+
+  useEffect(() => {
+    if (promptFromUrl) {
+      handleSend(promptFromUrl);
+    }
+  }, [promptFromUrl]);
+
   // ...
 }
 ```
 
-That's it. The hook handles:
+That's it. The hook:
 
-- Reading `text`, `prompt`, `topic`, `query`, `content` from URL
-- Auto-sending the message to chat
-- Clearing params from URL after sending
-- Preventing duplicate sends
+- Returns the parsed `prompt` (or fallback: text, topic, query, content) from URL
+- Clears params from URL after reading
+- Returns `null` if no param found
 
 ### 3. The AI system prompt is generated automatically
 
@@ -222,7 +228,7 @@ The hook reads `prompt` first, then falls back to: `text`, `topic`, `query`, `co
 
 ## Checklist for new tools
 
-- [ ] `chatInputParams` defined in `registerTool()`
-- [ ] `useToolQueryParams()` added to tool page
+- [ ] `chatInputParams` defined in `registerTool()` with `name: "prompt"`
+- [ ] `useToolQueryParams()` added to tool page, result used in `useEffect` to call `handleSend`
 - [ ] No hardcoded param names in chat system prompt (use manifest)
 - [ ] `backend.modulePath` points to correct NestJS module (not `module`)

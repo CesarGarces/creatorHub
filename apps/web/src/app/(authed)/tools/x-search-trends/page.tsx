@@ -38,14 +38,19 @@ export default function XSearchTrendsPage() {
   const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { fetchBalance, plan } = useCreditsStore();
-
-  useToolQueryParams();
+  const promptFromUrl = useToolQueryParams();
 
   const isFreePlan = plan === "FREE";
 
   useEffect(() => {
     fetchBalance();
   }, [fetchBalance]);
+
+  useEffect(() => {
+    if (promptFromUrl && !isFreePlan) {
+      handleSend(promptFromUrl);
+    }
+  }, [promptFromUrl, isFreePlan]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
