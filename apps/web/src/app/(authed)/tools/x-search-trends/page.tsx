@@ -116,16 +116,16 @@ export default function XSearchTrendsPage() {
 
     try {
       const response = await api.post<{
-        tweets: any[];
-        trendingHashtags: string[];
+        success: boolean;
+        data: { tweets: any[]; trendingHashtags: string[] };
       }>("/tools/x-search-trends/search", {
         topic: text,
         maxTweets: 10,
         timeframe: "24h",
       });
 
-      const results = response.tweets || [];
-      const hashtags = response.trendingHashtags || [];
+      const results = response.data?.tweets || [];
+      const hashtags = response.data?.trendingHashtags || [];
 
       let assistantContent = "";
       if (results.length > 0) {

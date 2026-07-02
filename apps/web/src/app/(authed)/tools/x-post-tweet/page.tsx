@@ -124,9 +124,8 @@ export default function XPostTweetPage() {
 
     try {
       const response = await api.post<{
-        id: string;
-        content: string;
-        status: string;
+        success: boolean;
+        data: { id: string; content: string; status: string };
       }>("/social/tweets/draft", {
         topic: text,
         instructions: text,
@@ -135,14 +134,16 @@ export default function XPostTweetPage() {
         maxTokens: settings.maxTokens,
       });
 
+      const draft = response.data;
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: `Here's a draft tweet for you:`,
         draft: {
-          id: response.id,
-          content: response.content,
-          status: response.status,
+          id: draft.id,
+          content: draft.content,
+          status: draft.status,
         },
       };
 
