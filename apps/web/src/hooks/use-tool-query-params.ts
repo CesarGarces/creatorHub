@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const PARAM_ORDER = ["prompt", "text", "topic", "query", "content"];
 
@@ -25,28 +24,29 @@ const PARAM_ORDER = ["prompt", "text", "topic", "query", "content"];
  * Returns the message string if a param was found, null otherwise.
  */
 export function useToolQueryParams(): string | null {
-  const searchParams = useSearchParams();
   const [message, setMessage] = useState<string | null>(null);
-  const hasParsed = useRef(false);
 
   useEffect(() => {
-    if (hasParsed.current) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
 
-    for (const key of PARAM_ORDER) {
-      const value = searchParams.get(key);
-      if (value) {
-        setMessage(value);
-        hasParsed.current = true;
+      for (const key of PARAM_ORDER) {
+        const value = params.get(key);
+        if (value) {
+          setMessage(value);
 
-        const url = new URL(window.location.href);
-        for (const k of PARAM_ORDER) {
-          url.searchParams.delete(k);
+          const url = new URL(window.location.href);
+          for (const k of PARAM_ORDER) {
+            url.searchParams.delete(k);
+          }
+          window.history.replaceState({}, "", url.pathname);
+          break;
         }
-        window.history.replaceState({}, "", url.pathname);
-        break;
       }
+    } catch {
+      // ignore errors
     }
-  }, [searchParams]);
+  }, []);
 
   return message;
 }
