@@ -151,9 +151,11 @@ export class ApifyService {
 
     let datasetResponse: Response;
     try {
-      const url = `${this.API_BASE}/datasets/${datasetId}/items?token=${apiToken}&format=json&limit=1000`;
+      const url = `${this.API_BASE}/datasets/${datasetId}/items?token=${apiToken}&format=json&limit=1000&clean=true`;
       this.logger.info("Fetching dataset items", {
         url: url.replace(apiToken, "***"),
+        datasetId,
+        runId,
       });
       datasetResponse = await fetch(url);
     } catch (fetchError) {
@@ -177,18 +179,30 @@ export class ApifyService {
       );
     }
 
-    const rawItems = (await datasetResponse.json()) as any;
+    const rawResponse = (await datasetResponse.json()) as any;
 
-    const items = Array.isArray(rawItems)
-      ? rawItems
-      : rawItems?.items || rawItems?.data || [];
+    this.logger.info("Raw dataset response", {
+      type: typeof rawResponse,
+      isArray: Array.isArray(rawResponse),
+      keys:
+        !Array.isArray(rawResponse) && rawResponse
+          ? Object.keys(rawResponse)
+          : [],
+      sample: JSON.stringify(rawResponse).slice(0, 2000),
+    });
+
+    const items = Array.isArray(rawResponse)
+      ? rawResponse
+      : rawResponse?.items || rawResponse?.data || [];
 
     this.logger.info("Apify dataset processed", {
       topic: options.topic,
-      rawType: typeof rawItems,
-      rawIsArray: Array.isArray(rawItems),
+      rawType: typeof rawResponse,
+      rawIsArray: Array.isArray(rawResponse),
       rawKeys:
-        !Array.isArray(rawItems) && rawItems ? Object.keys(rawItems) : [],
+        !Array.isArray(rawResponse) && rawResponse
+          ? Object.keys(rawResponse)
+          : [],
       itemCount: items.length,
       sampleItem:
         items.length > 0 ? JSON.stringify(items[0]).slice(0, 500) : null,
