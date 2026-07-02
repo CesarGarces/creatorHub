@@ -4,4 +4,5 @@ export { TrendCacheService } from "./cache.service";
 export type {
   ResearchMessage,
   ResearchSession,
+  ResearchRole,
 } from "./social-research.service";

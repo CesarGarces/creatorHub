@@ -148,6 +148,9 @@ importers:
       '@creator-hub/shared-utils':
         specifier: workspace:*
         version: link:../../packages/shared-utils
+      '@creator-hub/social-research-backend':
+        specifier: workspace:*
+        version: link:../../tools/social-research/backend
       '@creator-hub/storage':
         specifier: workspace:*
         version: link:../../packages/storage
@@ -995,7 +998,7 @@ importers:
         version: link:../../../packages/shared-utils
       '@nestjs/common':
         specifier: ^10.0.0
-        version: 10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+        version: 10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
       crypto:
         specifier: '*'
         version: 1.0.1
@@ -7942,9 +7945,9 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@nestjs/common@10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)':
+  '@nestjs/common@10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)':
     dependencies:
-      file-type: 20.4.1
+      file-type: 20.4.1(supports-color@8.1.1)
       iterare: 1.2.1
       reflect-metadata: 0.2.2
       rxjs: 7.8.2
@@ -8924,7 +8927,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@tokenizer/inflate@0.2.7':
+  '@tokenizer/inflate@0.2.7(supports-color@8.1.1)':
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
       fflate: 0.8.3
@@ -10554,9 +10557,9 @@ snapshots:
     dependencies:
       flat-cache: 4.0.1
 
-  file-type@20.4.1:
+  file-type@20.4.1(supports-color@8.1.1):
     dependencies:
-      '@tokenizer/inflate': 0.2.7
+      '@tokenizer/inflate': 0.2.7(supports-color@8.1.1)
       strtok3: 10.3.5
       token-types: 6.1.2
       uint8array-extras: 1.5.0

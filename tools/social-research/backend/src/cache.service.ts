@@ -1,9 +1,21 @@
 import { Injectable } from "@nestjs/common";
 import { createHash } from "crypto";
-import { prisma } from "@creator-hub/database";
+import { type PrismaClient } from "@creator-hub/database";
 import { Logger } from "@creator-hub/shared-utils";
 
 const DEFAULT_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+// Prisma proxy export doesn't expose new model properties through TS inference
+// We import the actual client class and use it directly
+let _prisma: any;
+function getPrisma(): any {
+  if (!_prisma) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const db = require("@creator-hub/database");
+    _prisma = db.prisma;
+  }
+  return _prisma;
+}
 
 @Injectable()
 export class TrendCacheService {
@@ -29,8 +41,9 @@ export class TrendCacheService {
     provider: string,
   ): Promise<Record<string, any> | null> {
     const hash = this.generateHash(query);
+    const p = getPrisma();
 
-    const cached = await prisma.trendCache.findUnique({
+    const cached = await p.trendCache.findUnique({
       where: {
         queryHash_provider: {
           queryHash: hash,
@@ -42,7 +55,7 @@ export class TrendCacheService {
     if (!cached) return null;
 
     if (cached.expiresAt < new Date()) {
-      await prisma.trendCache.delete({
+      await p.trendCache.delete({
         where: {
           queryHash_provider: {
             queryHash: hash,
@@ -57,7 +70,7 @@ export class TrendCacheService {
       return null;
     }
 
-    await prisma.trendCache.update({
+    await p.trendCache.update({
       where: {
         queryHash_provider: {
           queryHash: hash,
@@ -84,8 +97,9 @@ export class TrendCacheService {
   ): Promise<void> {
     const hash = this.generateHash(query);
     const expiresAt = new Date(Date.now() + ttlMs);
+    const p = getPrisma();
 
-    await prisma.trendCache.upsert({
+    await p.trendCache.upsert({
       where: {
         queryHash_provider: {
           queryHash: hash,
@@ -113,7 +127,8 @@ export class TrendCacheService {
   }
 
   async cleanup(): Promise<number> {
-    const result = await prisma.trendCache.deleteMany({
+    const p = getPrisma();
+    const result = await p.trendCache.deleteMany({
       where: {
         expiresAt: { lt: new Date() },
       },
