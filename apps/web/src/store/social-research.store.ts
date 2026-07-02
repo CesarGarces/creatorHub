@@ -157,7 +157,15 @@ export const useSocialResearchStore = create<SocialResearchState>()(
       try {
         const response = await api.post<{
           success: boolean;
-          data: ResearchMessage & { sessionId: string };
+          data: {
+            topic: string;
+            tweetCount: number;
+            tweets: any[];
+            trendingHashtags: string[];
+            formattedAnalysis: string;
+            fromCache: boolean;
+            sessionId: string;
+          };
         }>(`/tools/${toolId}/search`, {
           ...params,
           sessionId: activeSession?.id,
@@ -180,11 +188,18 @@ export const useSocialResearchStore = create<SocialResearchState>()(
           const assistantMsg: ResearchMessage = {
             id: `assistant-${Date.now()}`,
             role: "assistant",
-            content: result.formattedAnalysis || result.content || "",
-            resultData: result.resultData || result,
-            provider: result.provider || "x",
-            creditsUsed: result.creditsUsed || 0,
-            cacheHit: result.cacheHit || false,
+            content: result.formattedAnalysis || "",
+            resultData: {
+              topic: result.topic,
+              tweetCount: result.tweetCount,
+              tweets: result.tweets,
+              trendingHashtags: result.trendingHashtags,
+              formattedAnalysis: result.formattedAnalysis,
+              fromCache: result.fromCache,
+            },
+            provider: "x",
+            creditsUsed: params.cacheHit ? 0 : 15,
+            cacheHit: result.fromCache,
             createdAt: new Date().toISOString(),
           };
 
