@@ -56,20 +56,14 @@ export class ApifyService {
       );
     }
 
-    const maxTweets = options.maxTweets || 20;
-    const timeframe = options.timeframe || "24h";
+    const maxTweets = options.maxTweets || 50;
 
     const input = {
       searchTerms: [options.topic],
-      maxTweets: maxTweets,
-      maxTweetsPerQuery: maxTweets,
-      onlyVerifiedUsers: false,
-      onlyTwitterBlue: false,
-      author: "",
-      inReplyTo: "",
-      mentioning: "",
-      includeSearchTerms: true,
+      maxItems: maxTweets,
+      sort: "Top",
       tweetLanguage: options.language || "en",
+      includeSearchTerms: true,
     };
 
     this.logger.info("Starting Apify run", { actorId, topic: options.topic });
@@ -186,10 +180,14 @@ export class ApifyService {
     this.logger.info("Apify dataset fetched", {
       topic: options.topic,
       itemCount: Array.isArray(rawItems) ? rawItems.length : 0,
+      type: typeof rawItems,
+      isArray: Array.isArray(rawItems),
       sampleKeys:
         Array.isArray(rawItems) && rawItems.length > 0
           ? Object.keys(rawItems[0])
           : [],
+      sampleItem:
+        Array.isArray(rawItems) && rawItems.length > 0 ? rawItems[0] : null,
     });
 
     const items = this.normalizeTweets(rawItems);
@@ -218,28 +216,47 @@ export class ApifyService {
             author: {
               id: item.author?.id || item.user?.id || item.authorId || "",
               username:
+                item.author?.userName ||
                 item.author?.username ||
                 item.author?.screen_name ||
                 item.user?.screen_name ||
                 "unknown",
               name: item.author?.name || item.user?.name || "Unknown",
-              verified: item.author?.verified || item.user?.verified || false,
+              verified:
+                item.author?.isVerified ||
+                item.author?.verified ||
+                item.user?.verified ||
+                false,
               followers:
                 item.author?.followers || item.user?.followers_count || 0,
             },
             metrics: {
               likes:
-                item.metrics?.likes || item.favorite_count || item.likes || 0,
+                item.likeCount ||
+                item.metrics?.likes ||
+                item.favorite_count ||
+                item.likes ||
+                0,
               retweets:
+                item.retweetCount ||
                 item.metrics?.retweets ||
                 item.retweet_count ||
                 item.retweets ||
                 0,
               replies:
-                item.metrics?.replies || item.reply_count || item.replies || 0,
+                item.replyCount ||
+                item.metrics?.replies ||
+                item.reply_count ||
+                item.replies ||
+                0,
               quotes:
-                item.metrics?.quotes || item.quote_count || item.quotes || 0,
-              views: item.metrics?.views || item.views_count || 0,
+                item.quoteCount ||
+                item.metrics?.quotes ||
+                item.quote_count ||
+                item.quotes ||
+                0,
+              views:
+                item.viewCount || item.metrics?.views || item.views_count || 0,
             },
             hashtags:
               item.hashtags ||
