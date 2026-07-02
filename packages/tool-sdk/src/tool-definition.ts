@@ -3,6 +3,7 @@ import type {
   ToolCategory,
   ToolPermission,
   ToolRoute,
+  ChatInputParam,
 } from "@creator-hub/shared-types";
 
 export interface ToolManifestInput {
@@ -14,6 +15,7 @@ export interface ToolManifestInput {
   category: ToolCategory;
   permissions?: ToolPermission[];
   creditsPerUse?: number;
+  chatInputParams?: ChatInputParam[];
   frontend: {
     routes: ToolRoute[];
   };
@@ -35,6 +37,7 @@ export class ToolDefinition {
       creditsPerUse: input.creditsPerUse || 10,
       permissions: input.permissions || [],
       configSchema: {},
+      chatInputParams: input.chatInputParams || [],
       frontend: {
         routes: input.frontend.routes,
         components: {},
