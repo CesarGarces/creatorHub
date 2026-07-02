@@ -60,14 +60,21 @@ export class XSearchTrendsService {
       this.logger.warn("[MOCK] No APIFY_API_TOKEN, using mock data");
       tweets = this.getMockTweets(options.topic);
     } else {
-      tweets = await this.apifyService.searchTweets({
-        topic: options.topic,
-        maxTweets: options.maxTweets || 20,
-        timeframe: options.timeframe || "24h",
-        language: options.language || "en",
-        includeReplies: options.includeReplies || false,
-        sortBy: options.sortBy || "relevance",
-      });
+      try {
+        tweets = await this.apifyService.searchTweets({
+          topic: options.topic,
+          maxTweets: options.maxTweets || 20,
+          timeframe: options.timeframe || "24h",
+          language: options.language || "en",
+          includeReplies: options.includeReplies || false,
+          sortBy: options.sortBy || "relevance",
+        });
+      } catch (apifyError) {
+        this.logger.error("[FALLBACK] Apify failed, using mock data", {
+          error: (apifyError as Error).message,
+        });
+        tweets = this.getMockTweets(options.topic);
+      }
     }
 
     const formattedAnalysis = this.apifyService.formatTweetsForAnalysis(tweets);

@@ -111,11 +111,12 @@ export class ApifyService {
     }
 
     const runData = (await runResponse.json()) as {
-      data: { id: string; status: string };
+      data: { id: string; status: string; defaultDatasetId: string };
     };
     const runId = runData.data.id;
+    const datasetId = runData.data.defaultDatasetId;
 
-    this.logger.info("Apify run started", { runId });
+    this.logger.info("Apify run started", { runId, datasetId });
 
     const maxWaitTime = 60000;
     const pollInterval = 2000;
@@ -154,14 +155,30 @@ export class ApifyService {
       }
     }
 
-    const datasetResponse = await fetch(
-      `${this.API_BASE}/acts/${actorIdForUrl}/runs/${runId}/dataset/items?token=${apiToken}&format=json`,
-    );
+    let datasetResponse: Response;
+    try {
+      datasetResponse = await fetch(
+        `${this.API_BASE}/datasets/${datasetId}/items?token=${apiToken}&format=json`,
+      );
+    } catch (fetchError) {
+      this.logger.error("Network error fetching Apify dataset", {
+        error: (fetchError as Error).message,
+      });
+      throw new BadRequestException(
+        `Failed to fetch search results: ${(fetchError as Error).message}`,
+      );
+    }
 
     if (!datasetResponse.ok) {
       const error = await datasetResponse.text();
-      this.logger.error("Failed to fetch Apify dataset", { error });
-      throw new BadRequestException("Failed to fetch search results");
+      this.logger.error("Failed to fetch Apify dataset", {
+        status: datasetResponse.status,
+        statusText: datasetResponse.statusText,
+        error,
+      });
+      throw new BadRequestException(
+        `Failed to fetch search results (HTTP ${datasetResponse.status}): ${error}`,
+      );
     }
 
     const rawItems = (await datasetResponse.json()) as any;
