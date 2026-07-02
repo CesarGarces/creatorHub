@@ -56,7 +56,7 @@ export class ApifyService {
       );
     }
 
-    const maxTweets = options.maxTweets || 50;
+    const maxTweets = Math.max(options.maxTweets || 50, 50);
 
     const input = {
       searchTerms: [options.topic],
@@ -194,6 +194,27 @@ export class ApifyService {
     const items = Array.isArray(rawResponse)
       ? rawResponse
       : rawResponse?.items || rawResponse?.data || [];
+
+    if (
+      items.length > 0 &&
+      items.every(
+        (item: any) =>
+          Object.keys(item).length <= 2 &&
+          (item.demo === true || item.text === undefined),
+      )
+    ) {
+      this.logger.error(
+        "Apify returned demo data - account may be on Free Plan",
+        {
+          itemCount: items.length,
+          sampleItem: JSON.stringify(items[0]),
+        },
+      );
+      throw new BadRequestException(
+        "Apify is returning demo data. Your API token may be on a Free Plan. " +
+          "Upgrade your Apify plan at https://apify.com/pricing to get real search results.",
+      );
+    }
 
     this.logger.info("Apify dataset processed", {
       topic: options.topic,

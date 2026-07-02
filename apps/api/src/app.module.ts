@@ -42,6 +42,7 @@ import "@creator-hub/video-generator";
 import { VideoGeneratorModule } from "@creator-hub/video-generator-backend";
 import "@creator-hub/x-search-trends";
 import { XSearchTrendsModule } from "@creator-hub/x-search-trends-backend";
+import { SocialResearchModule } from "@creator-hub/social-research-backend";
 import "@creator-hub/x-post-tweet";
 import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
 
@@ -91,6 +92,7 @@ import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
     VideoGeneratorModule,
     XSearchTrendsModule,
     XPostTweetModule,
+    SocialResearchModule,
   ],
   controllers: [
     AuthController,

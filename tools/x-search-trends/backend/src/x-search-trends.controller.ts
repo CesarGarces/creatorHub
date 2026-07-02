@@ -31,6 +31,7 @@ export class XSearchTrendsController {
       language?: string;
       includeReplies?: boolean;
       sortBy?: string;
+      sessionId?: string;
     },
   ): Promise<{ success: boolean; data: any }> {
     if (!dto.topic?.trim()) {
@@ -38,21 +39,25 @@ export class XSearchTrendsController {
     }
 
     try {
-      const result = await this.searchService.search(userId, {
-        topic: dto.topic,
-        maxTweets: dto.maxTweets,
-        timeframe: dto.timeframe,
-        language: dto.language,
-        includeReplies: dto.includeReplies,
-        sortBy: dto.sortBy,
-      });
+      const result = await this.searchService.search(
+        userId,
+        {
+          topic: dto.topic,
+          maxTweets: dto.maxTweets,
+          timeframe: dto.timeframe,
+          language: dto.language,
+          includeReplies: dto.includeReplies,
+          sortBy: dto.sortBy,
+        },
+        dto.sessionId,
+      );
 
       return { success: true, data: result };
     } catch (error) {
-      const message = (error as Error).message || "X trend search failed";
-      if (message.includes("Insufficient credits")) {
-        throw new BadRequestException(message);
+      if (error instanceof BadRequestException) {
+        throw error;
       }
+      const message = (error as Error).message || "X trend search failed";
       throw new InternalServerErrorException(message);
     }
   }
