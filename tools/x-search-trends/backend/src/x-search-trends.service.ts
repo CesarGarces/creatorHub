@@ -52,14 +52,21 @@ export class XSearchTrendsService {
       topic: options.topic,
     });
 
-    const tweets = await this.apifyService.searchTweets({
-      topic: options.topic,
-      maxTweets: options.maxTweets || 20,
-      timeframe: options.timeframe || "24h",
-      language: options.language || "en",
-      includeReplies: options.includeReplies || false,
-      sortBy: options.sortBy || "relevance",
-    });
+    let tweets: any[];
+
+    if (process.env.NODE_ENV !== "production") {
+      this.logger.warn("[MOCK] Using mock search data (development mode)");
+      tweets = this.getMockTweets(options.topic);
+    } else {
+      tweets = await this.apifyService.searchTweets({
+        topic: options.topic,
+        maxTweets: options.maxTweets || 20,
+        timeframe: options.timeframe || "24h",
+        language: options.language || "en",
+        includeReplies: options.includeReplies || false,
+        sortBy: options.sortBy || "relevance",
+      });
+    }
 
     const formattedAnalysis = this.apifyService.formatTweetsForAnalysis(tweets);
     const trendingHashtags = this.extractTrendingHashtags(tweets);
@@ -105,5 +112,62 @@ export class XSearchTrendsService {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([tag]) => `#${tag}`);
+  }
+
+  private getMockTweets(topic: string): any[] {
+    return [
+      {
+        id: `mock_${Date.now()}_1`,
+        text: `This is a mock tweet about ${topic} for development testing. #mock #dev`,
+        author: { username: "dev_user", name: "Dev User", followers: 1000 },
+        metrics: { likes: 42, retweets: 10, replies: 5 },
+        hashtags: ["mock", "dev"],
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: `mock_${Date.now()}_2`,
+        text: `Interesting discussion about ${topic} happening here! #trending`,
+        author: {
+          username: "trend_watcher",
+          name: "Trend Watcher",
+          followers: 5000,
+        },
+        metrics: { likes: 128, retweets: 32, replies: 15 },
+        hashtags: ["trending"],
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: `mock_${Date.now()}_3`,
+        text: `Just shared my thoughts on ${topic}. What do you think? #opinion`,
+        author: {
+          username: "tech_opinion",
+          name: "Tech Opinion",
+          followers: 2500,
+        },
+        metrics: { likes: 67, retweets: 8, replies: 12 },
+        hashtags: ["opinion"],
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: `mock_${Date.now()}_4`,
+        text: `Breaking: New developments in ${topic}! #news #update`,
+        author: { username: "news_bot", name: "News Bot", followers: 15000 },
+        metrics: { likes: 256, retweets: 89, replies: 34 },
+        hashtags: ["news", "update"],
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: `mock_${Date.now()}_5`,
+        text: `My experience with ${topic} so far has been amazing! #experience`,
+        author: {
+          username: "experience_sharer",
+          name: "Experience Sharer",
+          followers: 800,
+        },
+        metrics: { likes: 31, retweets: 5, replies: 8 },
+        hashtags: ["experience"],
+        createdAt: new Date().toISOString(),
+      },
+    ];
   }
 }
