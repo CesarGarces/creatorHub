@@ -83,7 +83,7 @@ Respond with ONLY the tweet text, no explanations or quotes.`;
       taskType: "text-generation",
       prompt: systemPrompt,
       userId: options.userId,
-      provider: options.model as any,
+      model: options.model as any,
       parameters: {
         temperature: options.temperature ?? 0.7,
         maxTokens: options.maxTokens ?? 300,
