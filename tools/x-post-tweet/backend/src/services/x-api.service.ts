@@ -11,8 +11,6 @@ interface PublishTweetResponse {
 export class XApiService {
   private logger = new Logger("XApiService");
   private readonly API_BASE = "https://api.twitter.com/2";
-  private readonly isMock =
-    !process.env.X_CLIENT_ID || !process.env.X_CLIENT_SECRET;
 
   async publishTweet(
     accessToken: string,
@@ -24,10 +22,6 @@ export class XApiService {
 
     if (text.length > 280) {
       throw new BadRequestException("Tweet exceeds 280 characters");
-    }
-
-    if (this.isMock) {
-      return this.mockPublishTweet(text);
     }
 
     this.logger.info("Publishing tweet to X API");
@@ -74,14 +68,6 @@ export class XApiService {
   }
 
   async deleteTweet(accessToken: string, tweetId: string): Promise<void> {
-    if (this.isMock) {
-      this.logger.warn("[MOCK] Deleting tweet (development mode)", {
-        tweetId,
-      });
-      await new Promise((r) => setTimeout(r, 200));
-      return;
-    }
-
     this.logger.info("Deleting tweet from X API", { tweetId });
 
     const response = await fetch(`${this.API_BASE}/tweets/${tweetId}`, {
@@ -101,15 +87,6 @@ export class XApiService {
   }
 
   async getTweet(accessToken: string, tweetId: string): Promise<any> {
-    if (this.isMock) {
-      this.logger.warn("[MOCK] Getting tweet (development mode)", { tweetId });
-      return {
-        id: tweetId,
-        text: "This is a mock tweet in development mode.",
-        created_at: new Date().toISOString(),
-      };
-    }
-
     this.logger.info("Fetching tweet from X API", { tweetId });
 
     const response = await fetch(`${this.API_BASE}/tweets/${tweetId}`, {
@@ -126,21 +103,5 @@ export class XApiService {
 
     const data = (await response.json()) as { data: any };
     return data.data;
-  }
-
-  private async mockPublishTweet(text: string): Promise<PublishTweetResponse> {
-    const mockId = `mock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-    this.logger.warn("[MOCK] Publishing tweet (development mode)", {
-      text: text.slice(0, 50),
-    });
-
-    await new Promise((r) => setTimeout(r, 500));
-
-    return {
-      id: mockId,
-      text,
-      edit_history_tweet_ids: [mockId],
-    };
   }
 }
