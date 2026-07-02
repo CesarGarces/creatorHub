@@ -164,7 +164,18 @@ export class ApifyService {
       throw new BadRequestException("Failed to fetch search results");
     }
 
-    const items = (await datasetResponse.json()) as ApifyTweet[];
+    const rawItems = (await datasetResponse.json()) as any;
+
+    this.logger.info("Apify dataset fetched", {
+      topic: options.topic,
+      itemCount: Array.isArray(rawItems) ? rawItems.length : 0,
+      sampleKeys:
+        Array.isArray(rawItems) && rawItems.length > 0
+          ? Object.keys(rawItems[0])
+          : [],
+    });
+
+    const items = this.normalizeTweets(rawItems);
 
     this.logger.info("Apify search completed", {
       topic: options.topic,
@@ -172,6 +183,69 @@ export class ApifyService {
     });
 
     return items;
+  }
+
+  private normalizeTweets(rawItems: any[]): ApifyTweet[] {
+    if (!Array.isArray(rawItems)) {
+      return [];
+    }
+
+    return rawItems
+      .map((item, index) => {
+        try {
+          return {
+            id: item.id || item.tweetId || item.id_str || `unknown_${index}`,
+            text: item.text || item.full_text || item.content || "",
+            createdAt:
+              item.createdAt || item.created_at || item.timestamp || "",
+            author: {
+              id: item.author?.id || item.user?.id || item.authorId || "",
+              username:
+                item.author?.username ||
+                item.author?.screen_name ||
+                item.user?.screen_name ||
+                "unknown",
+              name: item.author?.name || item.user?.name || "Unknown",
+              verified: item.author?.verified || item.user?.verified || false,
+              followers:
+                item.author?.followers || item.user?.followers_count || 0,
+            },
+            metrics: {
+              likes:
+                item.metrics?.likes || item.favorite_count || item.likes || 0,
+              retweets:
+                item.metrics?.retweets ||
+                item.retweet_count ||
+                item.retweets ||
+                0,
+              replies:
+                item.metrics?.replies || item.reply_count || item.replies || 0,
+              quotes:
+                item.metrics?.quotes || item.quote_count || item.quotes || 0,
+              views: item.metrics?.views || item.views_count || 0,
+            },
+            hashtags:
+              item.hashtags ||
+              item.entities?.hashtags?.map((h: any) => h.text) ||
+              [],
+            urls:
+              item.urls ||
+              item.entities?.urls?.map((u: any) => u.expanded_url) ||
+              [],
+            media:
+              item.media ||
+              item.entities?.media?.map((m: any) => m.media_url) ||
+              [],
+          };
+        } catch (error) {
+          this.logger.warn("Failed to normalize tweet", {
+            index,
+            error: (error as Error).message,
+          });
+          return null;
+        }
+      })
+      .filter(Boolean) as ApifyTweet[];
   }
 
   formatTweetsForAnalysis(tweets: ApifyTweet[]): string {
