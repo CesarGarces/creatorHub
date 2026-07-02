@@ -2,8 +2,8 @@
   "name": "@creator-hub/social-research-backend",
   "version": "1.0.0",
   "private": true,
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/",
@@ -13,11 +13,11 @@
     "@creator-hub/auth": "workspace:*",
     "@creator-hub/database": "workspace:*",
     "@creator-hub/shared-utils": "workspace:*",
-    "@nestjs/common": "^10.0.0",
-    "crypto": "*"
+    "@nestjs/common": "^11.0.0"
   },
   "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.5.0"
   }
 }
