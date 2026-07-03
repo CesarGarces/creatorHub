@@ -9,6 +9,10 @@ import {
 } from "@creator-hub/x-post-tweet-backend";
 import { SocialService } from "./services/social.service";
 import { OAuthEncryptionService } from "./services/oauth-encryption.service";
+import {
+  TwitterCrawlerService,
+  type CrawledTweet,
+} from "./services/twitter-crawler.service";
 
 const SEARCH_CREDIT_COST = 15;
 const CACHE_PROVIDER = "x";
@@ -37,6 +41,7 @@ export class XSearchTrendsService {
 
   constructor(
     private xApiService: XApiService,
+    private twitterCrawler: TwitterCrawlerService,
     private socialService: SocialService,
     private encryptionService: OAuthEncryptionService,
     private creditService: CreditService,
@@ -98,68 +103,114 @@ export class XSearchTrendsService {
       );
     }
 
-    // Get user's active X account
-    const account = await this.socialService.getActiveAccountByProvider(
-      userId,
-      "X_TWITTER",
-    );
-
-    if (!account) {
-      throw new BadRequestException(
-        "No active X account connected. Please connect your account in Settings.",
-      );
-    }
-
-    const accessToken = this.encryptionService.decrypt(account.accessToken);
-
-    this.logger.info("Starting X trend search via X API", {
+    this.logger.info("Starting X trend search", {
       userId,
       topic: options.topic,
     });
 
-    // Build search query
-    let query = options.topic;
-    if (options.language) {
-      query += ` lang:${options.language}`;
-    }
-    if (!options.includeReplies) {
-      query += " -is:reply";
-    }
+    // Try X API first, fallback to Crawlee
+    let tweets: SearchResultTweet[] = [];
+    let usedFallback = false;
 
-    // Calculate start time based on timeframe
-    let startTime: string | undefined;
-    if (options.timeframe) {
-      const now = new Date();
-      switch (options.timeframe) {
-        case "24h":
-          startTime = new Date(
-            now.getTime() - 24 * 60 * 60 * 1000,
-          ).toISOString();
-          break;
-        case "7d":
-          startTime = new Date(
-            now.getTime() - 7 * 24 * 60 * 60 * 1000,
-          ).toISOString();
-          break;
-        case "30d":
-          startTime = new Date(
-            now.getTime() - 30 * 24 * 60 * 60 * 1000,
-          ).toISOString();
-          break;
+    try {
+      // Get user's active X account
+      const account = await this.socialService.getActiveAccountByProvider(
+        userId,
+        "X_TWITTER",
+      );
+
+      if (!account) {
+        throw new BadRequestException(
+          "No X account connected. Please connect your X account first.",
+        );
+      }
+
+      const accessToken = this.encryptionService.decrypt(account.accessToken);
+
+      // Build search query
+      let query = options.topic;
+      if (options.language) {
+        query += ` lang:${options.language}`;
+      }
+      if (!options.includeReplies) {
+        query += " -is:reply";
+      }
+
+      // Calculate start time based on timeframe
+      let startTime: string | undefined;
+      if (options.timeframe) {
+        const now = new Date();
+        switch (options.timeframe) {
+          case "24h":
+            startTime = new Date(
+              now.getTime() - 24 * 60 * 60 * 1000,
+            ).toISOString();
+            break;
+          case "7d":
+            startTime = new Date(
+              now.getTime() - 7 * 24 * 60 * 60 * 1000,
+            ).toISOString();
+            break;
+          case "30d":
+            startTime = new Date(
+              now.getTime() - 30 * 24 * 60 * 60 * 1000,
+            ).toISOString();
+            break;
+        }
+      }
+
+      // Search tweets using X API
+      const searchResult = await this.xApiService.searchTweets(
+        accessToken,
+        query,
+        {
+          maxResults: options.maxTweets || 50,
+          startTime,
+        },
+      );
+
+      tweets = searchResult.tweets;
+    } catch (error) {
+      // X API failed - fallback to Crawlee
+      this.logger.warn("X API search failed, falling back to Crawlee", {
+        error: (error as Error).message,
+        userId,
+        topic: options.topic,
+      });
+
+      usedFallback = true;
+
+      try {
+        const crawledTweets = await this.twitterCrawler.searchTweets(
+          options.topic,
+          {
+            maxResults: options.maxTweets || 50,
+            timeframe: options.timeframe,
+            language: options.language,
+          },
+        );
+
+        // Convert CrawledTweet to SearchResultTweet format
+        tweets = crawledTweets.map((t) => ({
+          id: t.id,
+          text: t.text,
+          createdAt: t.createdAt,
+          author: t.author,
+          metrics: t.metrics,
+          hashtags: t.hashtags,
+          urls: t.urls,
+          media: t.media,
+        }));
+      } catch (crawlerError) {
+        this.logger.error("Crawlee fallback also failed", {
+          error: (crawlerError as Error).message,
+        });
+        throw new BadRequestException(
+          "Failed to search tweets. Please try again later.",
+        );
       }
     }
 
-    // Search tweets using X API
-    const searchResult = await this.xApiService.searchTweets(
-      accessToken,
-      query,
-      {
-        maxResults: options.maxTweets || 50,
-        startTime,
-      },
-    );
-
-    const tweets = searchResult.tweets;
     const formattedAnalysis = this.formatTweetsForAnalysis(tweets);
     const trendingHashtags = this.extractTrendingHashtags(tweets);
 
@@ -178,7 +229,7 @@ export class XSearchTrendsService {
       userId,
       SEARCH_CREDIT_COST,
       "x-search-trends",
-      `X trend search: ${options.topic}`,
+      `X trend search: ${options.topic}${usedFallback ? " (via Crawlee)" : ""}`,
     );
 
     await this.socialResearch.addMessage(session.id, {
@@ -194,6 +245,7 @@ export class XSearchTrendsService {
       userId,
       topic: options.topic,
       tweetCount: tweets.length,
+      usedFallback,
     });
 
     return { ...result, sessionId: session.id };

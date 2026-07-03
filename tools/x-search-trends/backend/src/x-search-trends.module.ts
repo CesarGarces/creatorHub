@@ -6,11 +6,17 @@ import { XSearchTrendsService } from "./x-search-trends.service";
 import { XSearchTrendsController } from "./x-search-trends.controller";
 import { SocialService } from "./services/social.service";
 import { OAuthEncryptionService } from "./services/oauth-encryption.service";
+import { TwitterCrawlerService } from "./services/twitter-crawler.service";
 
 @Module({
   imports: [BillingModule, SocialResearchModule, XPostTweetModule],
   controllers: [XSearchTrendsController],
-  providers: [XSearchTrendsService, SocialService, OAuthEncryptionService],
+  providers: [
+    XSearchTrendsService,
+    SocialService,
+    OAuthEncryptionService,
+    TwitterCrawlerService,
+  ],
   exports: [XSearchTrendsService],
 })
 export class XSearchTrendsModule {}
