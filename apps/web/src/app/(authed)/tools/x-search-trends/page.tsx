@@ -30,6 +30,7 @@ export default function XSearchTrendsPage() {
     sessions,
     activeSession,
     isSearching,
+    error,
     fetchSessions,
     selectSession,
     createSession,
@@ -377,6 +378,17 @@ export default function XSearchTrendsPage() {
                 </div>
               </div>
             ))}
+
+            {error && (
+              <div className="flex gap-4 max-w-4xl mx-auto">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-500 text-sm">
+                  ⚠️
+                </div>
+                <div className="rounded-2xl px-5 py-3.5 bg-red-500/5 border border-red-500/20 text-sm text-red-400">
+                  {error}
+                </div>
+              </div>
+            )}
 
             {isSearching && (
               <div className="flex gap-4 max-w-4xl mx-auto">

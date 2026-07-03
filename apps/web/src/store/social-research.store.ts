@@ -237,7 +237,12 @@ export const useSocialResearchStore = create<SocialResearchState>()(
 
         return response.data as any;
       } catch (error: any) {
-        set({ isSearching: false, error: error.message });
+        const message =
+          error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          error?.message ||
+          "Search failed";
+        set({ isSearching: false, error: message });
         throw error;
       }
     },

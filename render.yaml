@@ -3,7 +3,7 @@ services:
     name: creatorhub-api
     runtime: node
     plan: free
-    buildCommand: pnpm install --force && NODE_OPTIONS="--max-old-space-size=1024" pnpm turbo run build --filter=@creator-hub/api... && packages/database/node_modules/.bin/prisma migrate deploy --schema=packages/database/prisma/schema.prisma && packages/database/node_modules/.bin/tsx packages/database/src/seed.ts
+    buildCommand: pnpm install --force && NODE_OPTIONS="--max-old-space-size=1024" pnpm turbo run build --filter=@creator-hub/api... && packages/database/node_modules/.bin/prisma migrate resolve --rolled-back 20260702000000_add_social_research_and_cache --schema=packages/database/prisma/schema.prisma && packages/database/node_modules/.bin/prisma migrate deploy --schema=packages/database/prisma/schema.prisma && packages/database/node_modules/.bin/tsx packages/database/src/seed.ts
     startCommand: node apps/api/dist/main
     envVars:
       - key: DATABASE_URL
