@@ -223,7 +223,10 @@ export class XSearchTrendsService {
       fromCache: false,
     };
 
-    await this.cacheService.set(options.topic, CACHE_PROVIDER, result);
+    // Only cache if we have results (avoid caching empty results)
+    if (tweets.length > 0) {
+      await this.cacheService.set(options.topic, CACHE_PROVIDER, result);
+    }
 
     await this.creditService.deduct(
       userId,
