@@ -24,17 +24,38 @@ export class GLM5Provider extends AIProviderBase {
   readonly tier = "free" as const;
 
   async generate(request: AIRequest): Promise<AIResponse> {
-    let content = "";
+    const startTime = Date.now();
 
-    for await (const chunk of this.generateStream(request)) {
-      if (chunk.type === "content" && chunk.content) {
-        content += chunk.content;
+    // Try streaming first
+    let content = "";
+    try {
+      for await (const chunk of this.generateStream(request)) {
+        if (chunk.type === "content" && chunk.content) {
+          content += chunk.content;
+        }
       }
+    } catch (streamError) {
+      console.error(
+        "[GLM5Provider] Streaming failed, will retry with non-streaming:",
+        (streamError as Error).message,
+      );
+    }
+
+    // Fallback: try non-streaming if streaming returned no content
+    if (!content) {
+      console.log(
+        "[GLM5Provider] Streaming yielded no content, retrying with stream:false",
+      );
+      content = await this.generateNonStreaming(request);
     }
 
     if (!content) {
       throw new Error("GLM-5.2 returned no content");
     }
+
+    console.log(
+      `[GLM5Provider] Generation completed in ${Date.now() - startTime}ms, content length: ${content.length}`,
+    );
 
     return {
       id: crypto.randomUUID(),
@@ -49,6 +70,89 @@ export class GLM5Provider extends AIProviderBase {
       },
       latency: 0,
     };
+  }
+
+  private async generateNonStreaming(request: AIRequest): Promise<string> {
+    const temperature = (request.parameters?.temperature as number) ?? 0.7;
+    const maxTokens = (request.parameters?.maxTokens as number) ?? 8000;
+    const systemPrompt =
+      (request.parameters?.systemPrompt as string) || DEFAULT_SYSTEM_PROMPT;
+
+    const messages: Array<{ role: string; content: string }> = [
+      { role: "system", content: systemPrompt },
+    ];
+
+    const conversationHistory = request.parameters
+      ?.conversationHistory as Array<{ role: string; content: string }>;
+
+    if (conversationHistory) {
+      messages.push(...conversationHistory);
+    }
+
+    messages.push({ role: "user", content: request.prompt });
+
+    console.log("[GLM5Provider] Non-streaming request:", {
+      model: "zai-org/GLM-5.2",
+      messageCount: messages.length,
+      temperature,
+      maxTokens,
+    });
+
+    const response = await fetch(SILICONFLOW_CHAT_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.getApiKey()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "zai-org/GLM-5.2",
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+        stream: false,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `[GLM5Provider] Non-streaming API error ${response.status}:`,
+        errorText,
+      );
+      throw new Error(`GLM-5.2 API error ${response.status}: ${errorText}`);
+    }
+
+    const data = (await response.json()) as {
+      choices: Array<{
+        message?: { content?: string };
+        delta?: { content?: string };
+      }>;
+      usage?: {
+        total_tokens: number;
+        prompt_tokens: number;
+        completion_tokens: number;
+      };
+    };
+
+    console.log(
+      "[GLM5Provider] Non-streaming response:",
+      JSON.stringify(data).slice(0, 500),
+    );
+
+    // Try multiple response formats
+    const content =
+      data.choices?.[0]?.message?.content ||
+      data.choices?.[0]?.delta?.content ||
+      "";
+
+    if (!content) {
+      console.error(
+        "[GLM5Provider] Non-streaming returned no content. Full response:",
+        JSON.stringify(data).slice(0, 500),
+      );
+    }
+
+    return content;
   }
 
   async *generateStream(request: AIRequest): AsyncGenerator<AIStreamChunk> {
@@ -70,6 +174,13 @@ export class GLM5Provider extends AIProviderBase {
 
     messages.push({ role: "user", content: request.prompt });
 
+    console.log("[GLM5Provider] Streaming request:", {
+      model: "zai-org/GLM-5.2",
+      messageCount: messages.length,
+      temperature,
+      maxTokens,
+    });
+
     const response = await fetch(SILICONFLOW_CHAT_URL, {
       method: "POST",
       headers: {
@@ -87,6 +198,10 @@ export class GLM5Provider extends AIProviderBase {
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(
+        `[GLM5Provider] Streaming API error ${response.status}:`,
+        errorText,
+      );
       throw new Error(`GLM-5.2 API error ${response.status}: ${errorText}`);
     }
 
@@ -97,6 +212,8 @@ export class GLM5Provider extends AIProviderBase {
 
     const decoder = new TextDecoder();
     let buffer = "";
+    let chunkCount = 0;
+    let contentChunkCount = 0;
 
     try {
       while (true) {
@@ -109,26 +226,53 @@ export class GLM5Provider extends AIProviderBase {
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+          if (!trimmed) continue;
+
+          chunkCount++;
+
+          if (!trimmed.startsWith("data: ")) {
+            console.log("[GLM5Provider] Non-data line:", trimmed.slice(0, 200));
+            continue;
+          }
 
           const data = trimmed.slice(6);
           if (data === "[DONE]") {
+            console.log(
+              `[GLM5Provider] Stream done. Total chunks: ${chunkCount}, content chunks: ${contentChunkCount}`,
+            );
             yield { type: "done" };
             return;
           }
 
           try {
             const parsed = JSON.parse(data) as {
-              choices: Array<{ delta?: { content?: string } }>;
+              choices: Array<{
+                delta?: { content?: string };
+                message?: { content?: string };
+              }>;
               usage?: { total_tokens: number };
             };
 
-            const content = parsed.choices?.[0]?.delta?.content;
+            // Try delta.content (streaming) and message.content (some APIs)
+            const content =
+              parsed.choices?.[0]?.delta?.content ||
+              parsed.choices?.[0]?.message?.content;
+
             if (content) {
+              contentChunkCount++;
               yield { type: "content", content };
+            } else if (chunkCount <= 3) {
+              console.log(
+                "[GLM5Provider] Chunk with no content:",
+                JSON.stringify(parsed).slice(0, 300),
+              );
             }
-          } catch {
-            // skip malformed chunks
+          } catch (parseError) {
+            console.error(
+              "[GLM5Provider] Failed to parse SSE chunk:",
+              data.slice(0, 200),
+              (parseError as Error).message,
+            );
           }
         }
       }
@@ -136,6 +280,9 @@ export class GLM5Provider extends AIProviderBase {
       reader.releaseLock();
     }
 
+    console.log(
+      `[GLM5Provider] Stream ended without [DONE]. Total chunks: ${chunkCount}, content chunks: ${contentChunkCount}`,
+    );
     yield { type: "done" };
   }
 
