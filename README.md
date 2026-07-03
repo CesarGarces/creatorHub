@@ -842,7 +842,7 @@ APIFY_API_TOKEN=""
 X_SOCIAL_ENCRYPTION_KEY=""  # 64-char hex key for AES-256-GCM
 
 # Frontend URL (for OAuth redirect)
-FRONTEND_URL="https://creator-hub-web.vercel.app"
+FRONTEND_URL="https://app.creatorhubplatform.com/"
 ```
 
 ### Database Tables
