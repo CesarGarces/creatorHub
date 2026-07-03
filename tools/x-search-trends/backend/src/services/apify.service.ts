@@ -33,12 +33,6 @@ interface ApifyTweet {
   media?: string[];
 }
 
-interface ApifyRunResult {
-  id: string;
-  status: string;
-  items: ApifyTweet[];
-}
-
 @Injectable()
 export class ApifyService {
   private logger = new Logger("ApifyService");
@@ -46,9 +40,8 @@ export class ApifyService {
 
   async searchTweets(options: ApifyRunOptions): Promise<ApifyTweet[]> {
     const apiToken = process.env.APIFY_API_TOKEN;
-    const actorId = process.env.APIFY_TWITTER_ACTOR_ID || "LjLGBUqDRGWxlfhqG";
-    const ct0 = process.env.X_CT0;
-    const authToken = process.env.X_AUTH_TOKEN;
+    const actorId =
+      process.env.APIFY_TWITTER_ACTOR_ID || "apidojo/tweet-scraper";
 
     if (!apiToken) {
       this.logger.error("APIFY_API_TOKEN is not configured");
@@ -57,23 +50,45 @@ export class ApifyService {
       );
     }
 
-    if (!ct0 || !authToken) {
-      this.logger.error("X cookies are not configured");
-      throw new BadRequestException(
-        "X/Twitter cookies are not configured. Please add X_CT0 and X_AUTH_TOKEN to your environment variables.",
-      );
+    const maxItems = Math.max(options.maxTweets || 50, 10);
+
+    // Build input according to apidojo/twitter-scraper-lite actor schema
+    // See: https://apify.com/apidojo/twitter-scraper-lite
+    const input: Record<string, any> = {
+      searchTerms: [options.topic],
+      sort: "Latest",
+      maxItems,
+    };
+
+    // Add optional filters
+    if (options.language) {
+      input.tweetLanguage = options.language;
     }
 
-    const maxTweets = Math.max(options.maxTweets || 50, 10);
+    // Add date range if timeframe is specified
+    if (options.timeframe) {
+      const now = new Date();
+      let startDate: Date | null = null;
 
-    const input = {
-      topic: options.topic,
-      maxTweets,
-      language: options.language || "en",
-      timeframe: options.timeframe || "24h",
-      ct0,
-      authToken,
-    };
+      switch (options.timeframe) {
+        case "24h":
+          startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case "7d":
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case "30d":
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case "90d":
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+      }
+
+      if (startDate) {
+        input.start = startDate.toISOString().split("T")[0];
+      }
+    }
 
     this.logger.info("Starting Apify run", { actorId, topic: options.topic });
 
