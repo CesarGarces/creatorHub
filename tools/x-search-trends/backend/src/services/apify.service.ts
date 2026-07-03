@@ -46,8 +46,9 @@ export class ApifyService {
 
   async searchTweets(options: ApifyRunOptions): Promise<ApifyTweet[]> {
     const apiToken = process.env.APIFY_API_TOKEN;
-    const actorId =
-      process.env.APIFY_TWITTER_ACTOR_ID || "apidojo/tweet-scraper";
+    const actorId = process.env.APIFY_TWITTER_ACTOR_ID || "LjLGBUqDRGWxlfhqG";
+    const ct0 = process.env.X_CT0;
+    const authToken = process.env.X_AUTH_TOKEN;
 
     if (!apiToken) {
       this.logger.error("APIFY_API_TOKEN is not configured");
@@ -56,14 +57,22 @@ export class ApifyService {
       );
     }
 
-    const maxTweets = Math.max(options.maxTweets || 50, 50);
+    if (!ct0 || !authToken) {
+      this.logger.error("X cookies are not configured");
+      throw new BadRequestException(
+        "X/Twitter cookies are not configured. Please add X_CT0 and X_AUTH_TOKEN to your environment variables.",
+      );
+    }
+
+    const maxTweets = Math.max(options.maxTweets || 50, 10);
 
     const input = {
-      searchTerms: [options.topic],
-      maxItems: maxTweets,
-      sort: "Top",
-      tweetLanguage: options.language || "en",
-      includeSearchTerms: true,
+      topic: options.topic,
+      maxTweets,
+      language: options.language || "en",
+      timeframe: options.timeframe || "24h",
+      ct0,
+      authToken,
     };
 
     this.logger.info("Starting Apify run", { actorId, topic: options.topic });
@@ -95,7 +104,7 @@ export class ApifyService {
 
       if (runResponse.status === 404) {
         throw new BadRequestException(
-          `Apify actor "${actorId}" not found. Please check APIFY_TWITTER_ACTOR_ID in .env file. Available actors: apidojo/tweet-scraper, clockworks/twitter-scraper`,
+          `Apify actor "${actorId}" not found. Please check APIFY_TWITTER_ACTOR_ID in .env file.`,
         );
       }
 
@@ -194,27 +203,6 @@ export class ApifyService {
     const items = Array.isArray(rawResponse)
       ? rawResponse
       : rawResponse?.items || rawResponse?.data || [];
-
-    if (
-      items.length > 0 &&
-      items.every(
-        (item: any) =>
-          Object.keys(item).length <= 2 &&
-          (item.demo === true || item.text === undefined),
-      )
-    ) {
-      this.logger.error(
-        "Apify returned demo data - account may be on Free Plan",
-        {
-          itemCount: items.length,
-          sampleItem: JSON.stringify(items[0]),
-        },
-      );
-      throw new BadRequestException(
-        "Apify is returning demo data. Your API token may be on a Free Plan. " +
-          "Upgrade your Apify plan at https://apify.com/pricing to get real search results.",
-      );
-    }
 
     this.logger.info("Apify dataset processed", {
       topic: options.topic,
