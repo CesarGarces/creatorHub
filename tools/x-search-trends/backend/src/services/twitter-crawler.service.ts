@@ -29,8 +29,8 @@ export class TwitterCrawlerService {
   private logger = new Logger("TwitterCrawlerService");
 
   /**
-   * Search tweets using Crawlee + Playwright (browser scraping)
-   * This is a fallback when X API is not available (free plan)
+   * Search tweets using Crawlee + Playwright with authenticated session
+   * Requires TWITTER_AUTH_TOKEN and TWITTER_CT0 env vars
    */
   async searchTweets(
     query: string,
@@ -42,23 +42,30 @@ export class TwitterCrawlerService {
   ): Promise<CrawledTweet[]> {
     this.logger.info("Starting Crawlee Twitter search", { query, options });
 
+    const authToken = process.env.X_AUTH_TOKEN;
+    const ct0 = process.env.X_CT0;
+
+    if (!authToken || !ct0) {
+      throw new BadRequestException(
+        "Twitter session cookies not configured. Set TWITTER_AUTH_TOKEN and TWITTER_CT0 environment variables.",
+      );
+    }
+
     try {
-      // Dynamic import to avoid issues in test environments
       const { PlaywrightCrawler } = await import("crawlee");
 
       const maxResults = Math.min(options.maxResults || 50, 100);
       const tweets: CrawledTweet[] = [];
 
-      // Build search URL
-      let searchUrl = `https://x.com/search?q=${encodeURIComponent(query)}&src=typed_query&f=top`;
-
-      // Add language filter if specified
+      // Build search query
+      let searchQuery = query;
       if (options.language) {
-        const langQuery = `${query} lang:${options.language}`;
-        searchUrl = `https://x.com/search?q=${encodeURIComponent(langQuery)}&src=typed_query&f=top`;
+        searchQuery += ` lang:${options.language}`;
       }
 
-      this.logger.info("Crawling Twitter search", { url: searchUrl });
+      const searchUrl = `https://x.com/search?q=${encodeURIComponent(searchQuery)}&src=typed_query&f=top`;
+
+      this.logger.info("Crawling Twitter search with auth", { url: searchUrl });
 
       const crawler = new PlaywrightCrawler({
         headless: true,
@@ -68,47 +75,99 @@ export class TwitterCrawlerService {
         maxRequestRetries: 2,
 
         async requestHandler({ page, request }) {
-          // Navigate and wait for content
+          // Set authentication cookies before navigation
+          await page.context().addCookies([
+            {
+              name: "auth_token",
+              value: authToken,
+              domain: ".x.com",
+              path: "/",
+              httpOnly: true,
+              secure: true,
+              sameSite: "None",
+            },
+            {
+              name: "ct0",
+              value: ct0,
+              domain: ".x.com",
+              path: "/",
+              httpOnly: false,
+              secure: true,
+              sameSite: "Lax",
+            },
+          ]);
+
+          // Navigate to search
+          await page.goto(request.url, { waitUntil: "networkidle" });
           await page.waitForTimeout(3000);
 
-          // Check if we're on login page
+          // Check if we're on the search page (not login)
           const currentUrl = page.url();
           if (
             currentUrl.includes("login") ||
             currentUrl.includes("onboarding")
           ) {
-            // Twitter requires login for search - try to extract what we can from the page
-            console.log("Redirected to login page - extracting public content");
+            console.log("Still redirected to login - cookies may be expired");
+            return;
           }
 
-          // Try to extract tweets from the page
+          // Extract tweets from the page
           const pageTweets = await page.evaluate(() => {
             const results: any[] = [];
 
-            // Look for article elements (Twitter uses these for tweets)
-            const articles = document.querySelectorAll("article");
+            // Look for tweet articles
+            const articles = document.querySelectorAll(
+              'article[data-testid="tweet"]',
+            );
             for (const article of articles) {
-              const text = article.innerText;
-              if (text && text.length > 20) {
-                // Try to extract username
-                const usernameMatch = text.match(/@(\w+)/);
-                const username = usernameMatch ? usernameMatch[1] : "unknown";
+              const textEl = article.querySelector(
+                '[data-testid="tweetText"]',
+              ) as HTMLElement | null;
+              const text = textEl?.innerText || "";
+              if (!text || text.length < 10) continue;
 
-                // Try to extract metrics
-                const likesMatch = text.match(
-                  /(\d+(?:\.\d+)?[KkMm]?)\s*(?:likes?|❤️)/i,
-                );
-                const retweetsMatch = text.match(
-                  /(\d+(?:\.\d+)?[KkMm]?)\s*(?:retweets?|🔁)/i,
-                );
+              // Extract username
+              const usernameEl = article.querySelector(
+                'a[href*="/"] span',
+              ) as HTMLElement | null;
+              const username =
+                usernameEl?.innerText?.replace("@", "") || "unknown";
 
-                results.push({
-                  text: text.substring(0, 500),
-                  username,
-                  likes: likesMatch ? likesMatch[1] : "0",
-                  retweets: retweetsMatch ? retweetsMatch[1] : "0",
-                });
-              }
+              // Extract name
+              const nameEl = article.querySelector(
+                '[data-testid="User-Name"] span',
+              ) as HTMLElement | null;
+              const name = nameEl?.innerText || username;
+
+              // Extract time
+              const timeEl = article.querySelector("time");
+              const createdAt =
+                timeEl?.getAttribute("datetime") || new Date().toISOString();
+
+              // Extract metrics
+              const likesEl = article.querySelector(
+                '[data-testid="like"] span',
+              ) as HTMLElement | null;
+              const retweetsEl = article.querySelector(
+                '[data-testid="retweet"] span',
+              ) as HTMLElement | null;
+              const repliesEl = article.querySelector(
+                '[data-testid="reply"] span',
+              ) as HTMLElement | null;
+              const viewsEl = article.querySelector(
+                'a[href*="/analytics"] span',
+              ) as HTMLElement | null;
+
+              results.push({
+                text,
+                username,
+                name,
+                createdAt,
+                likes: likesEl?.innerText || "0",
+                retweets: retweetsEl?.innerText || "0",
+                replies: repliesEl?.innerText || "0",
+                views: viewsEl?.innerText || "0",
+              });
             }
 
             return results;
@@ -118,26 +177,29 @@ export class TwitterCrawlerService {
           for (const tweet of pageTweets) {
             if (tweets.length >= maxResults) break;
 
+            const hashtags = extractHashtags(tweet.text);
+            const urls = extractUrls(tweet.text);
+
             tweets.push({
               id: `crawled_${Date.now()}_${tweets.length}`,
               text: tweet.text,
-              createdAt: new Date().toISOString(),
+              createdAt: tweet.createdAt,
               author: {
                 id: "",
                 username: tweet.username,
-                name: tweet.username,
+                name: tweet.name,
                 verified: false,
                 followers: 0,
               },
               metrics: {
                 likes: parseMetric(tweet.likes),
                 retweets: parseMetric(tweet.retweets),
-                replies: 0,
+                replies: parseMetric(tweet.replies),
                 quotes: 0,
-                views: 0,
+                views: parseMetric(tweet.views),
               },
-              hashtags: extractHashtags(tweet.text),
-              urls: extractUrls(tweet.text),
+              hashtags,
+              urls,
             });
           }
         },
