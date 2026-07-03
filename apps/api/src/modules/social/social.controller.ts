@@ -24,7 +24,10 @@ import { SocialService } from "./services/social.service";
 import { XOAuthService } from "./services/x-oauth.service";
 import { TweetDraftService } from "./services/tweet-draft.service";
 import { OAuthEncryptionService } from "./services/oauth-encryption.service";
-import { PostPublisherService } from "@creator-hub/x-post-tweet-backend";
+import {
+  PostPublisherService,
+  XApiService,
+} from "@creator-hub/x-post-tweet-backend";
 
 @Controller("social")
 @UseGuards(JwtAuthGuard, ThrottlerGuard)
@@ -40,6 +43,7 @@ export class SocialController {
     private tweetDraftService: TweetDraftService,
     private encryptionService: OAuthEncryptionService,
     private publisherService: PostPublisherService,
+    private xApiService: XApiService,
   ) {}
 
   @Get("accounts")
@@ -247,6 +251,54 @@ export class SocialController {
       draftId,
       tweetId: result.tweetId,
       tweetUrl: result.tweetUrl,
+    });
+
+    await this.socialService.updateLastUsed(account.id);
+
+    return { success: true, data: result };
+  }
+
+  @Post("tweets/search")
+  @UseGuards(AuthenticatedPlanGuard)
+  @MinPlan("STARTER")
+  async searchTweets(
+    @CurrentUser("id") userId: string,
+    @Body()
+    dto: {
+      query: string;
+      maxResults?: number;
+      startTime?: string;
+      endTime?: string;
+      nextToken?: string;
+    },
+  ): Promise<{ success: boolean; data: any }> {
+    if (!dto.query?.trim()) {
+      throw new BadRequestException("Search query is required");
+    }
+
+    const account = await this.socialService.getActiveAccountByProvider(
+      userId,
+      "X_TWITTER",
+    );
+
+    if (!account) {
+      throw new BadRequestException(
+        "No active X account connected. Please connect your account in Settings.",
+      );
+    }
+
+    const accessToken = this.encryptionService.decrypt(account.accessToken);
+
+    const result = await this.xApiService.searchTweets(accessToken, dto.query, {
+      maxResults: dto.maxResults,
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+      nextToken: dto.nextToken,
+    });
+
+    await this.socialService.logAuditEvent(userId, "TWEET_SEARCH", {
+      query: dto.query,
+      resultCount: result.count,
     });
 
     await this.socialService.updateLastUsed(account.id);

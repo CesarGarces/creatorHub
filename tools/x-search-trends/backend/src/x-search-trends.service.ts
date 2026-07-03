@@ -3,7 +3,12 @@ import { CreditService } from "@creator-hub/billing";
 import { Logger } from "@creator-hub/shared-utils";
 import { SocialResearchService } from "@creator-hub/social-research-backend";
 import { TrendCacheService } from "@creator-hub/social-research-backend";
-import { ApifyService } from "./services/apify.service";
+import {
+  XApiService,
+  type SearchResultTweet,
+} from "@creator-hub/x-post-tweet-backend";
+import { SocialService } from "./services/social.service";
+import { OAuthEncryptionService } from "./services/oauth-encryption.service";
 
 const SEARCH_CREDIT_COST = 15;
 const CACHE_PROVIDER = "x";
@@ -31,7 +36,9 @@ export class XSearchTrendsService {
   private logger = new Logger("XSearchTrendsService");
 
   constructor(
-    private apifyService: ApifyService,
+    private xApiService: XApiService,
+    private socialService: SocialService,
+    private encryptionService: OAuthEncryptionService,
     private creditService: CreditService,
     private socialResearch: SocialResearchService,
     private cacheService: TrendCacheService,
@@ -91,21 +98,69 @@ export class XSearchTrendsService {
       );
     }
 
-    this.logger.info("Starting X trend search", {
+    // Get user's active X account
+    const account = await this.socialService.getActiveAccountByProvider(
+      userId,
+      "X_TWITTER",
+    );
+
+    if (!account) {
+      throw new BadRequestException(
+        "No active X account connected. Please connect your account in Settings.",
+      );
+    }
+
+    const accessToken = this.encryptionService.decrypt(account.accessToken);
+
+    this.logger.info("Starting X trend search via X API", {
       userId,
       topic: options.topic,
     });
 
-    const tweets = await this.apifyService.searchTweets({
-      topic: options.topic,
-      maxTweets: options.maxTweets || 50,
-      timeframe: options.timeframe || "24h",
-      language: options.language || "en",
-      includeReplies: options.includeReplies || false,
-      sortBy: options.sortBy || "relevance",
-    });
+    // Build search query
+    let query = options.topic;
+    if (options.language) {
+      query += ` lang:${options.language}`;
+    }
+    if (!options.includeReplies) {
+      query += " -is:reply";
+    }
 
-    const formattedAnalysis = this.apifyService.formatTweetsForAnalysis(tweets);
+    // Calculate start time based on timeframe
+    let startTime: string | undefined;
+    if (options.timeframe) {
+      const now = new Date();
+      switch (options.timeframe) {
+        case "24h":
+          startTime = new Date(
+            now.getTime() - 24 * 60 * 60 * 1000,
+          ).toISOString();
+          break;
+        case "7d":
+          startTime = new Date(
+            now.getTime() - 7 * 24 * 60 * 60 * 1000,
+          ).toISOString();
+          break;
+        case "30d":
+          startTime = new Date(
+            now.getTime() - 30 * 24 * 60 * 60 * 1000,
+          ).toISOString();
+          break;
+      }
+    }
+
+    // Search tweets using X API
+    const searchResult = await this.xApiService.searchTweets(
+      accessToken,
+      query,
+      {
+        maxResults: options.maxTweets || 50,
+        startTime,
+      },
+    );
+
+    const tweets = searchResult.tweets;
+    const formattedAnalysis = this.formatTweetsForAnalysis(tweets);
     const trendingHashtags = this.extractTrendingHashtags(tweets);
 
     const result: SearchResult = {
@@ -142,6 +197,25 @@ export class XSearchTrendsService {
     });
 
     return { ...result, sessionId: session.id };
+  }
+
+  private formatTweetsForAnalysis(tweets: SearchResultTweet[]): string {
+    if (tweets.length === 0) {
+      return "No tweets found for this topic.";
+    }
+
+    const formatted = tweets.slice(0, 10).map((tweet, index) => {
+      const engagement =
+        tweet.metrics.likes + tweet.metrics.retweets + tweet.metrics.replies;
+      return `${index + 1}. @${tweet.author.username} (${tweet.author.followers} followers):
+   "${tweet.text}"
+   Engagement: ${engagement} (${tweet.metrics.likes} likes, ${tweet.metrics.retweets} RTs, ${tweet.metrics.replies} replies)
+   Hashtags: ${tweet.hashtags.length > 0 ? tweet.hashtags.join(", ") : "none"}`;
+    });
+
+    const trendingHashtags = this.extractTrendingHashtags(tweets);
+
+    return `TRENDING TWEETS:\n${formatted.join("\n\n")}\n\nTRENDING HASHTAGS: ${trendingHashtags.join(", ")}`;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

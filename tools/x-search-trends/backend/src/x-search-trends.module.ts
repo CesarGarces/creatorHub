@@ -1,14 +1,16 @@
 import { Module } from "@nestjs/common";
 import { BillingModule } from "@creator-hub/billing";
 import { SocialResearchModule } from "@creator-hub/social-research-backend";
+import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
 import { XSearchTrendsService } from "./x-search-trends.service";
 import { XSearchTrendsController } from "./x-search-trends.controller";
-import { ApifyService } from "./services/apify.service";
+import { SocialService } from "./services/social.service";
+import { OAuthEncryptionService } from "./services/oauth-encryption.service";
 
 @Module({
-  imports: [BillingModule, SocialResearchModule],
+  imports: [BillingModule, SocialResearchModule, XPostTweetModule],
   controllers: [XSearchTrendsController],
-  providers: [XSearchTrendsService, ApifyService],
+  providers: [XSearchTrendsService, SocialService, OAuthEncryptionService],
   exports: [XSearchTrendsService],
 })
 export class XSearchTrendsModule {}
