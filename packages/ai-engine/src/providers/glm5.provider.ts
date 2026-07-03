@@ -24,54 +24,14 @@ export class GLM5Provider extends AIProviderBase {
   readonly tier = "free" as const;
 
   async generate(request: AIRequest): Promise<AIResponse> {
-    const temperature = (request.parameters?.temperature as number) ?? 0.7;
-    const maxTokens = (request.parameters?.maxTokens as number) ?? 8000;
-    const systemPrompt =
-      (request.parameters?.systemPrompt as string) || DEFAULT_SYSTEM_PROMPT;
+    let content = "";
 
-    const messages: Array<{ role: string; content: string }> = [
-      { role: "system", content: systemPrompt },
-    ];
-
-    const conversationHistory = request.parameters
-      ?.conversationHistory as Array<{ role: string; content: string }>;
-
-    if (conversationHistory) {
-      messages.push(...conversationHistory);
+    for await (const chunk of this.generateStream(request)) {
+      if (chunk.type === "content" && chunk.content) {
+        content += chunk.content;
+      }
     }
 
-    messages.push({ role: "user", content: request.prompt });
-
-    const response = await fetch(SILICONFLOW_CHAT_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.getApiKey()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "zai-org/GLM-5.2",
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-        stream: false,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`GLM-5.2 API error ${response.status}: ${errorText}`);
-    }
-
-    const data = (await response.json()) as {
-      choices: Array<{ message: { content: string } }>;
-      usage?: {
-        total_tokens: number;
-        prompt_tokens: number;
-        completion_tokens: number;
-      };
-    };
-
-    const content = data.choices?.[0]?.message?.content;
     if (!content) {
       throw new Error("GLM-5.2 returned no content");
     }
@@ -86,7 +46,6 @@ export class GLM5Provider extends AIProviderBase {
       },
       usage: {
         credits: 3,
-        tokens: data.usage?.total_tokens,
       },
       latency: 0,
     };
