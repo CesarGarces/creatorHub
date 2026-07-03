@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { AIEngineService } from "@creator-hub/ai-engine";
+import { CreditService } from "@creator-hub/billing";
 import { Logger } from "@creator-hub/shared-utils";
 import { prisma, type TweetDraft } from "@creator-hub/database";
 import { StyleInjectionService } from "../../user-style/services/style-injection.service";
@@ -28,6 +29,7 @@ export class TweetDraftService {
   constructor(
     private aiEngine: AIEngineService,
     private styleInjection: StyleInjectionService,
+    private creditService: CreditService,
   ) {}
 
   async createDraft(options: CreateDraftOptions): Promise<TweetDraft> {
@@ -56,6 +58,22 @@ export class TweetDraftService {
       topic: options.topic,
       model: options.model,
     });
+
+    const model = options.model || "zai-org/GLM-5.2";
+    const providerRecord = await prisma.provider.findFirst({
+      where: { model, isActive: true },
+    });
+    const creditCost = providerRecord?.costPerCredit ?? 10;
+
+    const hasCredits = await this.creditService.hasEnoughCredits(
+      options.userId,
+      creditCost,
+    );
+    if (!hasCredits) {
+      throw new BadRequestException(
+        `Insufficient credits. This model requires ${creditCost} credits.`,
+      );
+    }
 
     let stylePrompt = "";
     try {
@@ -133,6 +151,21 @@ Respond with ONLY the tweet text, no explanations or quotes.`;
         status: "PREVIEW",
       },
     });
+
+    const deducted = await this.creditService.deduct(
+      options.userId,
+      creditCost,
+      "x-post-tweet",
+      `Generated tweet with ${model}`,
+    );
+
+    if (!deducted) {
+      this.logger.warn("Credit deduction failed after tweet generation", {
+        userId: options.userId,
+        model,
+        creditCost,
+      });
+    }
 
     this.logger.info("Tweet generated successfully", {
       userId: options.userId,
