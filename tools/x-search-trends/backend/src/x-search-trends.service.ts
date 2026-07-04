@@ -3,6 +3,7 @@ import { CreditService } from "@creator-hub/billing";
 import { Logger } from "@creator-hub/shared-utils";
 import { SocialResearchService } from "@creator-hub/social-research-backend";
 import { TrendCacheService } from "@creator-hub/social-research-backend";
+import { AIEngineService } from "@creator-hub/ai-engine";
 import {
   XApiService,
   type SearchResultTweet,
@@ -13,8 +14,14 @@ import {
   TwitterCrawlerService,
   type CrawledTweet,
 } from "./services/twitter-crawler.service";
+import {
+  TweetAnalysisService,
+  type FilteredTweet,
+  type TweetAnalysis,
+} from "./services/tweet-analysis.service";
 
 const SEARCH_CREDIT_COST = 15;
+const AI_ANALYSIS_CREDIT_COST = 10;
 const CACHE_PROVIDER = "x";
 
 interface SearchOptions {
@@ -29,9 +36,11 @@ interface SearchOptions {
 interface SearchResult {
   topic: string;
   tweetCount: number;
-  tweets: any[];
+  originalTweetCount: number;
+  tweets: FilteredTweet[];
   trendingHashtags: string[];
   formattedAnalysis: string;
+  analysis: TweetAnalysis;
   fromCache: boolean;
 }
 
@@ -47,6 +56,8 @@ export class XSearchTrendsService {
     private creditService: CreditService,
     private socialResearch: SocialResearchService,
     private cacheService: TrendCacheService,
+    private tweetAnalysis: TweetAnalysisService,
+    private aiEngine: AIEngineService,
   ) {}
 
   async search(
@@ -92,14 +103,15 @@ export class XSearchTrendsService {
       return { ...result, sessionId: session.id };
     }
 
+    const totalCreditsNeeded = SEARCH_CREDIT_COST + AI_ANALYSIS_CREDIT_COST;
     const hasCredits = await this.creditService.hasEnoughCredits(
       userId,
-      SEARCH_CREDIT_COST,
+      totalCreditsNeeded,
     );
 
     if (!hasCredits) {
       throw new BadRequestException(
-        `Insufficient credits. X trend search requires ${SEARCH_CREDIT_COST} credits.`,
+        `Insufficient credits. X trend search requires ${totalCreditsNeeded} credits.`,
       );
     }
 
@@ -240,23 +252,50 @@ export class XSearchTrendsService {
       }
     }
 
-    const formattedAnalysis = this.formatTweetsForAnalysis(tweets);
-    const trendingHashtags = this.extractTrendingHashtags(tweets);
+    // Filter and analyze tweets
+    const originalTweetCount = tweets.length;
+    const filteredTweets = this.tweetAnalysis.filterTweets(tweets);
+
+    this.logger.info("Tweets filtered", {
+      original: originalTweetCount,
+      filtered: filteredTweets.length,
+    });
+
+    // Generate AI analysis
+    let analysis: TweetAnalysis;
+    try {
+      analysis = await this.generateAIAnalysis(options.topic, filteredTweets);
+    } catch (error) {
+      this.logger.warn("AI analysis failed, using basic analysis", {
+        error: (error as Error).message,
+      });
+      analysis = this.generateBasicAnalysis(filteredTweets);
+    }
+
+    const trendingHashtags = this.extractTrendingHashtags(filteredTweets);
+    const formattedAnalysis = this.formatAnalysis(
+      options.topic,
+      filteredTweets,
+      analysis,
+    );
 
     const result: SearchResult = {
       topic: options.topic,
-      tweetCount: tweets.length,
-      tweets: tweets.slice(0, 10),
+      tweetCount: filteredTweets.length,
+      originalTweetCount,
+      tweets: filteredTweets.slice(0, 20),
       trendingHashtags,
       formattedAnalysis,
+      analysis,
       fromCache: false,
     };
 
-    // Only cache if we have results (avoid caching empty results)
-    if (tweets.length > 0) {
+    // Only cache if we have results
+    if (filteredTweets.length > 0) {
       await this.cacheService.set(options.topic, CACHE_PROVIDER, result);
     }
 
+    // Deduct credits
     await this.creditService.deduct(
       userId,
       SEARCH_CREDIT_COST,
@@ -264,42 +303,259 @@ export class XSearchTrendsService {
       `X trend search: ${options.topic}${usedFallback ? " (via Crawlee)" : ""}`,
     );
 
+    await this.creditService.deduct(
+      userId,
+      AI_ANALYSIS_CREDIT_COST,
+      "x-search-trends",
+      `AI analysis: ${options.topic}`,
+    );
+
     await this.socialResearch.addMessage(session.id, {
       role: "assistant",
       content: formattedAnalysis,
       resultData: result,
       provider: "x",
-      creditsUsed: SEARCH_CREDIT_COST,
+      creditsUsed: totalCreditsNeeded,
       cacheHit: false,
     });
 
     this.logger.info("X trend search completed", {
       userId,
       topic: options.topic,
-      tweetCount: tweets.length,
+      originalCount: originalTweetCount,
+      filteredCount: filteredTweets.length,
       usedFallback,
     });
 
     return { ...result, sessionId: session.id };
   }
 
-  private formatTweetsForAnalysis(tweets: SearchResultTweet[]): string {
-    if (tweets.length === 0) {
-      return "No tweets found for this topic.";
-    }
+  /**
+   * Generate AI-powered analysis of tweets
+   */
+  private async generateAIAnalysis(
+    topic: string,
+    tweets: FilteredTweet[],
+  ): Promise<TweetAnalysis> {
+    const tweetData = tweets
+      .slice(0, 30)
+      .map(
+        (t) =>
+          `@${t.author.username} (${t.author.followers} followers, verified: ${t.author.verified}):
+"${t.text}"
+Sentiment: ${t.sentiment}, Themes: ${t.themes.join(", ")}`,
+      )
+      .join("\n\n");
 
-    const formatted = tweets.slice(0, 10).map((tweet, index) => {
-      const engagement =
-        tweet.metrics.likes + tweet.metrics.retweets + tweet.metrics.replies;
-      return `${index + 1}. @${tweet.author.username} (${tweet.author.followers} followers):
-   "${tweet.text}"
-   Engagement: ${engagement} (${tweet.metrics.likes} likes, ${tweet.metrics.retweets} RTs, ${tweet.metrics.replies} replies)
-   Hashtags: ${tweet.hashtags.length > 0 ? tweet.hashtags.join(", ") : "none"}`;
+    const prompt = `You are an expert market analyst. Analyze these tweets about "${topic}" and provide:
+
+1. Executive Summary (2-3 sentences)
+2. Key Themes (group tweets by topic)
+3. Overall Sentiment (positive/negative/neutral)
+4. Key Influencers (top 5 most important accounts)
+
+Tweets to analyze:
+${tweetData}
+
+Respond in JSON format:
+{
+  "executiveSummary": "...",
+  "themes": [
+    {
+      "name": "Theme Name",
+      "description": "Brief description",
+      "tweetCount": 0,
+      "sentiment": "positive|negative|neutral"
+    }
+  ],
+  "overallSentiment": "positive|negative|neutral",
+  "keyInfluencers": [
+    {
+      "username": "...",
+      "name": "...",
+      "followers": 0,
+      "verified": false,
+      "tweetCount": 0
+    }
+  ]
+}`;
+
+    const response = await this.aiEngine.execute({
+      taskType: "text-generation",
+      prompt,
+      parameters: {
+        temperature: 0.3,
+        maxTokens: 1000,
+        responseFormat: "json",
+      },
     });
 
-    const trendingHashtags = this.extractTrendingHashtags(tweets);
+    if (response.output.type !== "json") {
+      throw new Error("AI did not return JSON");
+    }
 
-    return `TRENDING TWEETS:\n${formatted.join("\n\n")}\n\nTRENDING HASHTAGS: ${trendingHashtags.join(", ")}`;
+    const data = response.output.data as unknown as TweetAnalysis;
+    return {
+      executiveSummary:
+        data.executiveSummary || "Analysis completed successfully.",
+      themes: data.themes || [],
+      overallSentiment: data.overallSentiment || "neutral",
+      keyInfluencers: data.keyInfluencers || [],
+      filteredTweetCount: tweets.length,
+      originalTweetCount: tweets.length,
+    };
+  }
+
+  /**
+   * Generate basic analysis without AI
+   */
+  private generateBasicAnalysis(tweets: FilteredTweet[]): TweetAnalysis {
+    // Count sentiments
+    const sentiments = { positive: 0, negative: 0, neutral: 0 };
+    tweets.forEach((t) => sentiments[t.sentiment]++);
+
+    // Count themes
+    const themeCounts = new Map<string, number>();
+    tweets.forEach((t) =>
+      t.themes.forEach((theme) =>
+        themeCounts.set(theme, (themeCounts.get(theme) || 0) + 1),
+      ),
+    );
+
+    // Get top influencers
+    const influencerMap = new Map<
+      string,
+      {
+        username: string;
+        name: string;
+        followers: number;
+        verified: boolean;
+        tweetCount: number;
+      }
+    >();
+    tweets.forEach((t) => {
+      const existing = influencerMap.get(t.author.username);
+      if (existing) {
+        existing.tweetCount++;
+      } else {
+        influencerMap.set(t.author.username, {
+          username: t.author.username,
+          name: t.author.name,
+          followers: t.author.followers,
+          verified: t.author.verified,
+          tweetCount: 1,
+        });
+      }
+    });
+
+    const keyInfluencers = Array.from(influencerMap.values())
+      .sort((a, b) => b.followers - a.followers)
+      .slice(0, 5);
+
+    const overallSentiment =
+      sentiments.positive > sentiments.negative
+        ? "positive"
+        : sentiments.negative > sentiments.positive
+          ? "negative"
+          : "neutral";
+
+    return {
+      executiveSummary: `Analysis of ${tweets.length} tweets about this topic.`,
+      themes: Array.from(themeCounts.entries()).map(([name, count]) => ({
+        name,
+        description: `Tweets related to ${name}`,
+        tweetCount: count,
+        sentiment: "neutral" as const,
+      })),
+      overallSentiment,
+      keyInfluencers,
+      filteredTweetCount: tweets.length,
+      originalTweetCount: tweets.length,
+    };
+  }
+
+  /**
+   * Format analysis for display
+   */
+  private formatAnalysis(
+    topic: string,
+    tweets: FilteredTweet[],
+    analysis: TweetAnalysis,
+  ): string {
+    const sentimentEmoji =
+      analysis.overallSentiment === "positive"
+        ? "📈"
+        : analysis.overallSentiment === "negative"
+          ? "📉"
+          : "➡️";
+
+    let output = `# Trend Analysis: ${topic}\n\n`;
+
+    // Executive Summary
+    output += `## Executive Summary\n${analysis.executiveSummary}\n\n`;
+
+    // Sentiment
+    output += `## Overall Sentiment ${sentimentEmoji}\n${analysis.overallSentiment.toUpperCase()}\n\n`;
+
+    // Key Themes
+    if (analysis.themes.length > 0) {
+      output += `## Key Themes\n`;
+      analysis.themes.slice(0, 5).forEach((theme, i) => {
+        const themeEmoji =
+          theme.sentiment === "positive"
+            ? "🟢"
+            : theme.sentiment === "negative"
+              ? "🔴"
+              : "⚪";
+        output += `${i + 1}. ${themeEmoji} **${theme.name}** (${theme.tweetCount} tweets) - ${theme.description}\n`;
+      });
+      output += "\n";
+    }
+
+    // Key Influencers
+    if (analysis.keyInfluencers.length > 0) {
+      output += `## Key Influencers\n`;
+      analysis.keyInfluencers.forEach((inf, i) => {
+        const verified = inf.verified ? " ✓" : "";
+        output += `${i + 1}. @${inf.username}${verified} (${inf.followers.toLocaleString()} followers) - ${inf.tweetCount} tweets\n`;
+      });
+      output += "\n";
+    }
+
+    // Top Tweets (filtered)
+    const topTweets = tweets.slice(0, 10);
+    if (topTweets.length > 0) {
+      output += `## Top Tweets (${tweets.length} filtered from original results)\n\n`;
+      topTweets.forEach((tweet, i) => {
+        const engagement =
+          tweet.metrics.likes + tweet.metrics.retweets + tweet.metrics.replies;
+        const authority =
+          tweet.authority === "high"
+            ? "🔥"
+            : tweet.authority === "medium"
+              ? "⚡"
+              : "";
+        const sentimentIcon =
+          tweet.sentiment === "positive"
+            ? "🟢"
+            : tweet.sentiment === "negative"
+              ? "🔴"
+              : "";
+
+        output += `### ${i + 1}. @${tweet.author.username} ${authority} ${sentimentIcon}\n`;
+        output += `**Followers:** ${tweet.author.followers.toLocaleString()} | **Engagement:** ${engagement.toLocaleString()}\n`;
+        output += `> ${tweet.text.substring(0, 200)}${tweet.text.length > 200 ? "..." : ""}\n`;
+        output += `[View on X →](https://x.com/${tweet.author.username}/status/${tweet.id})\n\n`;
+      });
+    }
+
+    // Trending Hashtags
+    const hashtags = this.extractTrendingHashtags(tweets);
+    if (hashtags.length > 0) {
+      output += `## Trending Hashtags\n${hashtags.join(" | ")}\n`;
+    }
+
+    return output;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -320,20 +576,15 @@ export class XSearchTrendsService {
 
     return Array.from(hashtagCounts.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
+      .slice(0, 10)
       .map(([tag]) => `#${tag}`);
   }
 
   /**
    * Transform natural language user input into a valid X search query.
-   * X API expects search operators, not conversational text.
-   *
-   * "Analyze what's trending on X about AI today" → "AI"
-   * "Research trending topics about crypto on Twitter" → "crypto"
-   * "What are people saying about the new iPhone" → "iPhone"
    */
   private buildSearchQuery(topic: string): string {
-    // Extract hashtags and mentions first (they're valid search terms)
+    // Extract hashtags and mentions first
     const hashtags = topic.match(/#\w+/g);
     const mentions = topic.match(/@\w+/g);
     if (hashtags?.length) return hashtags.join(" OR ");
@@ -343,26 +594,22 @@ export class XSearchTrendsService {
     const fillers =
       /\b(analyze|research|find|search|look|tell|me|about|what'?s?|are|people|saying|trending|trend|topics?|on|twitter|x|today|now|latest|news|recently|popular|the|new|how|who|which|when|where|why|can|could|would|should|do|does|did|have|has|had|is|am|was|were|be|been|being|this|that|these|those|it|its|my|your|his|her|our|their)\b/gi;
 
-    // Also remove contractions properly: "what's" → remove entirely
     let cleaned = topic
       .replace(/\b\w+'(?:s|re|ve|ll|d|m|t)\b/gi, " ")
       .replace(fillers, " ")
       .trim();
 
-    // Remove extra spaces and non-alphanumeric chars (keep spaces, #, @)
     cleaned = cleaned
       .replace(/[^\w\s#@]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
 
-    // If nothing meaningful left, try extracting any word >= 3 chars
     if (cleaned.length < 2) {
       const allWords = topic.match(/\b\w{3,}\b/g);
       if (allWords?.length) return allWords.slice(0, 3).join(" ");
       return topic;
     }
 
-    // Take the most meaningful words (last 2-3 keywords)
     const words = cleaned.split(" ").filter((w) => w.length > 1);
     if (words.length > 3) {
       return words.slice(-3).join(" ");

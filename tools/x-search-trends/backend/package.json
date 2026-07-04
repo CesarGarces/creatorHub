@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@creator-hub/ai-engine": "workspace:*",
     "@creator-hub/auth": "workspace:*",
     "@creator-hub/billing": "workspace:*",
     "@creator-hub/database": "workspace:*",

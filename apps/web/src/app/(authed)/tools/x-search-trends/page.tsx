@@ -131,6 +131,47 @@ export default function XSearchTrendsPage() {
     return num.toString();
   };
 
+  const getSentimentColor = (sentiment: string) => {
+    switch (sentiment) {
+      case "positive":
+        return "text-green-500";
+      case "negative":
+        return "text-red-500";
+      default:
+        return "text-text-muted";
+    }
+  };
+
+  const getSentimentIcon = (sentiment: string) => {
+    switch (sentiment) {
+      case "positive":
+        return "🟢";
+      case "negative":
+        return "🔴";
+      default:
+        return "⚪";
+    }
+  };
+
+  const getAuthorityBadge = (authority: string) => {
+    switch (authority) {
+      case "high":
+        return (
+          <span className="inline-flex items-center gap-0.5 text-[10px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded-full">
+            🔥 Influencer
+          </span>
+        );
+      case "medium":
+        return (
+          <span className="inline-flex items-center gap-0.5 text-[10px] bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded-full">
+            ⚡ Active
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <>
       <TopBar
@@ -283,6 +324,10 @@ export default function XSearchTrendsPage() {
                     className="whitespace-pre-wrap"
                     dangerouslySetInnerHTML={{
                       __html: msg.content
+                        .replace(
+                          /\[View on X →\]\((.*?)\)/g,
+                          '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">View on X →</a>',
+                        )
                         .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
                         .replace(/\n/g, "<br/>"),
                     }}
@@ -291,10 +336,50 @@ export default function XSearchTrendsPage() {
                   {msg.role === "assistant" &&
                     msg.resultData?.tweets &&
                     msg.resultData.tweets.length > 0 && (
-                      <div className="mt-4 overflow-x-auto">
+                      <div className="mt-4">
+                        {/* Analysis Summary */}
+                        {msg.resultData.analysis && (
+                          <div className="mb-4 p-3 bg-surface-elevated rounded-lg border border-border">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs font-medium text-text">
+                                📊 Analysis Summary
+                              </span>
+                              <span
+                                className={cn(
+                                  "text-xs px-2 py-0.5 rounded-full",
+                                  msg.resultData.analysis.overallSentiment ===
+                                    "positive"
+                                    ? "bg-green-500/10 text-green-500"
+                                    : msg.resultData.analysis
+                                          .overallSentiment === "negative"
+                                      ? "bg-red-500/10 text-red-500"
+                                      : "bg-gray-500/10 text-gray-500",
+                                )}
+                              >
+                                {getSentimentIcon(
+                                  msg.resultData.analysis.overallSentiment,
+                                )}{" "}
+                                {msg.resultData.analysis.overallSentiment.toUpperCase()}
+                              </span>
+                            </div>
+                            <p className="text-xs text-text-muted">
+                              {msg.resultData.analysis.executiveSummary}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Stats */}
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-xs font-medium text-text-muted">
                             {msg.resultData.tweetCount} tweets found
+                            {msg.resultData.originalTweetCount >
+                              msg.resultData.tweetCount && (
+                              <span className="text-text-dim">
+                                {" "}
+                                (filtered from{" "}
+                                {msg.resultData.originalTweetCount})
+                              </span>
+                            )}
                           </span>
                           {msg.cacheHit && (
                             <span className="text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full">
@@ -307,89 +392,138 @@ export default function XSearchTrendsPage() {
                             </span>
                           )}
                         </div>
-                        <table className="w-full text-xs border border-border rounded-lg overflow-hidden">
-                          <thead className="bg-surface-elevated">
-                            <tr>
-                              <th className="px-3 py-2 text-left text-text-muted font-medium">
-                                Author
-                              </th>
-                              <th className="px-3 py-2 text-left text-text-muted font-medium">
-                                Tweet
-                              </th>
-                              <th className="px-3 py-2 text-right text-text-muted font-medium">
-                                Likes
-                              </th>
-                              <th className="px-3 py-2 text-right text-text-muted font-medium">
-                                RTs
-                              </th>
-                              <th className="px-3 py-2 text-right text-text-muted font-medium">
-                                Replies
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {msg.resultData.tweets.map(
-                              (tweet: any, i: number) => (
-                                <tr
-                                  key={tweet.id || i}
-                                  className="border-t border-border hover:bg-surface-elevated/50"
-                                >
-                                  <td className="px-3 py-2">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="font-medium text-text">
-                                        @{tweet.author?.username || "unknown"}
-                                      </span>
-                                      {tweet.author?.verified && (
-                                        <svg
-                                          width="12"
-                                          height="12"
-                                          viewBox="0 0 24 24"
-                                          fill="#1d9bf0"
-                                        >
-                                          <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34zm-11.71 4.2L6.8 12.46l1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36-6.2 6.77z" />
-                                        </svg>
+
+                        {/* Key Themes */}
+                        {msg.resultData.analysis &&
+                          msg.resultData.analysis.themes &&
+                          msg.resultData.analysis.themes.length > 0 && (
+                            <div className="mb-3">
+                              <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">
+                                Key Themes
+                              </span>
+                              <div className="flex flex-wrap gap-1.5 mt-1">
+                                {msg.resultData.analysis.themes
+                                  .slice(0, 5)
+                                  .map((theme: any, i: number) => (
+                                    <span
+                                      key={i}
+                                      className={cn(
+                                        "text-[10px] px-2 py-0.5 rounded-full",
+                                        theme.sentiment === "positive"
+                                          ? "bg-green-500/10 text-green-500"
+                                          : theme.sentiment === "negative"
+                                            ? "bg-red-500/10 text-red-500"
+                                            : "bg-surface-elevated text-text-muted",
                                       )}
-                                    </div>
-                                    <div className="text-text-muted">
-                                      {formatNumber(
-                                        tweet.author?.followers || 0,
-                                      )}{" "}
-                                      followers
-                                    </div>
-                                  </td>
-                                  <td className="px-3 py-2 max-w-xs">
-                                    <div className="text-text line-clamp-2">
-                                      {tweet.text}
-                                    </div>
-                                    {tweet.hashtags?.length > 0 && (
-                                      <div className="flex flex-wrap gap-1 mt-1">
-                                        {tweet.hashtags
-                                          .slice(0, 3)
-                                          .map((tag: string, j: number) => (
-                                            <span
-                                              key={j}
-                                              className="text-primary text-[10px]"
-                                            >
-                                              #{tag}
-                                            </span>
-                                          ))}
+                                    >
+                                      {theme.name} ({theme.tweetCount})
+                                    </span>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+
+                        {/* Tweets Table */}
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs border border-border rounded-lg overflow-hidden">
+                            <thead className="bg-surface-elevated">
+                              <tr>
+                                <th className="px-3 py-2 text-left text-text-muted font-medium">
+                                  Author
+                                </th>
+                                <th className="px-3 py-2 text-left text-text-muted font-medium">
+                                  Tweet
+                                </th>
+                                <th className="px-3 py-2 text-right text-text-muted font-medium">
+                                  Likes
+                                </th>
+                                <th className="px-3 py-2 text-right text-text-muted font-medium">
+                                  RTs
+                                </th>
+                                <th className="px-3 py-2 text-right text-text-muted font-medium">
+                                  Replies
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {msg.resultData.tweets.map(
+                                (tweet: any, i: number) => (
+                                  <tr
+                                    key={tweet.id || i}
+                                    className="border-t border-border hover:bg-surface-elevated/50"
+                                  >
+                                    <td className="px-3 py-2">
+                                      <div className="flex items-center gap-1.5">
+                                        <a
+                                          href={`https://x.com/${tweet.author?.username}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="font-medium text-primary hover:underline"
+                                        >
+                                          @{tweet.author?.username || "unknown"}
+                                        </a>
+                                        {tweet.author?.verified && (
+                                          <svg
+                                            width="12"
+                                            height="12"
+                                            viewBox="0 0 24 24"
+                                            fill="#1d9bf0"
+                                          >
+                                            <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34zm-11.71 4.2L6.8 12.46l1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36-6.2 6.77z" />
+                                          </svg>
+                                        )}
                                       </div>
-                                    )}
-                                  </td>
-                                  <td className="px-3 py-2 text-right text-text-muted">
-                                    {formatNumber(tweet.metrics?.likes || 0)}
-                                  </td>
-                                  <td className="px-3 py-2 text-right text-text-muted">
-                                    {formatNumber(tweet.metrics?.retweets || 0)}
-                                  </td>
-                                  <td className="px-3 py-2 text-right text-text-muted">
-                                    {formatNumber(tweet.metrics?.replies || 0)}
-                                  </td>
-                                </tr>
-                              ),
-                            )}
-                          </tbody>
-                        </table>
+                                      <div className="text-text-muted">
+                                        {formatNumber(
+                                          tweet.author?.followers || 0,
+                                        )}{" "}
+                                        followers
+                                      </div>
+                                      {getAuthorityBadge(tweet.authority)}
+                                    </td>
+                                    <td className="px-3 py-2 max-w-xs">
+                                      <a
+                                        href={`https://x.com/${tweet.author?.username}/status/${tweet.id}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-text hover:text-primary hover:underline line-clamp-2"
+                                      >
+                                        {tweet.text}
+                                      </a>
+                                      {tweet.hashtags?.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          {tweet.hashtags
+                                            .slice(0, 3)
+                                            .map((tag: string, j: number) => (
+                                              <span
+                                                key={j}
+                                                className="text-primary text-[10px]"
+                                              >
+                                                #{tag}
+                                              </span>
+                                            ))}
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2 text-right text-text-muted">
+                                      {formatNumber(tweet.metrics?.likes || 0)}
+                                    </td>
+                                    <td className="px-3 py-2 text-right text-text-muted">
+                                      {formatNumber(
+                                        tweet.metrics?.retweets || 0,
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2 text-right text-text-muted">
+                                      {formatNumber(
+                                        tweet.metrics?.replies || 0,
+                                      )}
+                                    </td>
+                                  </tr>
+                                ),
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                 </div>
@@ -429,7 +563,7 @@ export default function XSearchTrendsPage() {
                       />
                     </div>
                     <span className="text-sm text-text-muted">
-                      Searching trends...
+                      Analyzing trends...
                     </span>
                   </div>
                 </div>

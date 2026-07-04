@@ -8,6 +8,7 @@ export interface ResearchMessage {
   resultData?: {
     topic: string;
     tweetCount: number;
+    originalTweetCount: number;
     tweets: Array<{
       id: string;
       text: string;
@@ -29,9 +30,29 @@ export interface ResearchMessage {
       hashtags: string[];
       urls?: string[];
       media?: string[];
+      authority?: "high" | "medium" | "low";
+      sentiment?: "positive" | "negative" | "neutral";
+      themes?: string[];
     }>;
     trendingHashtags: string[];
     formattedAnalysis: string;
+    analysis?: {
+      executiveSummary: string;
+      themes: Array<{
+        name: string;
+        description: string;
+        tweetCount: number;
+        sentiment: "positive" | "negative" | "neutral";
+      }>;
+      overallSentiment: "positive" | "negative" | "neutral";
+      keyInfluencers: Array<{
+        username: string;
+        name: string;
+        followers: number;
+        verified: boolean;
+        tweetCount: number;
+      }>;
+    };
     fromCache: boolean;
   } | null;
   provider: string | null;
@@ -160,9 +181,16 @@ export const useSocialResearchStore = create<SocialResearchState>()(
           data: {
             topic: string;
             tweetCount: number;
+            originalTweetCount: number;
             tweets: any[];
             trendingHashtags: string[];
             formattedAnalysis: string;
+            analysis?: {
+              executiveSummary: string;
+              themes: any[];
+              overallSentiment: string;
+              keyInfluencers: any[];
+            };
             fromCache: boolean;
             sessionId: string;
           };
@@ -192,9 +220,19 @@ export const useSocialResearchStore = create<SocialResearchState>()(
             resultData: {
               topic: result.topic,
               tweetCount: result.tweetCount,
+              originalTweetCount: result.originalTweetCount,
               tweets: result.tweets,
               trendingHashtags: result.trendingHashtags,
               formattedAnalysis: result.formattedAnalysis,
+              analysis: result.analysis
+                ? {
+                    ...result.analysis,
+                    overallSentiment: result.analysis.overallSentiment as
+                      | "positive"
+                      | "negative"
+                      | "neutral",
+                  }
+                : undefined,
               fromCache: result.fromCache,
             },
             provider: "x",

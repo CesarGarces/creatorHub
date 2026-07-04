@@ -1239,6 +1239,9 @@ importers:
 
   tools/x-search-trends/backend:
     dependencies:
+      '@creator-hub/ai-engine':
+        specifier: workspace:*
+        version: link:../../../packages/ai-engine
       '@creator-hub/auth':
         specifier: workspace:*
         version: link:../../../packages/auth
