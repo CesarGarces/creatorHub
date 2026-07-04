@@ -772,9 +772,19 @@ The platform includes full X (Twitter) integration with OAuth 2.0 PKCE authentic
 
 - **OAuth 2.0 PKCE** — Secure authentication without exposing client secrets
 - **Tweet Drafting** — AI-generated tweets using your communication style (User Style RAG)
-- **Trend Research** — Real-time X trend analysis via Apify scraper
+- **Trend Research** — Real-time X trend analysis with AI-powered insights
 - **One-Click Publishing** — Publish drafts directly to X
-- **Credit System** — Research costs 15 credits, publishing costs 5 credits
+- **Credit System** — Research costs 15 credits + 10 AI analysis, publishing costs 5 credits
+
+### X Search Trends - Advanced Features
+
+- **AI-Powered Query Generation** — Enter natural language in any language (Spanish, English, etc.), AI generates optimal X search queries
+- **Quality Filtering** — Spam detection (NSFW, betting, crypto spam), low-authority account filtering
+- **Sentiment Analysis** — Automatic positive/negative/neutral classification
+- **Theme Extraction** — DeFi, NFT, Bitcoin, Ethereum, AI, Regulation, Trading, Gaming
+- **AI Analysis** — Executive summary, key themes, key influencers (when >= 5 tweets available)
+- **Auto-Refresh Tokens** — Automatic token renewal when expired (~2 hour lifetime)
+- **Fallback Search** — Crawlee/Playwright backup when X API unavailable (requires >128MB RAM)
 
 ### X Integration Architecture
 
@@ -789,16 +799,23 @@ The platform includes full X (Twitter) integration with OAuth 2.0 PKCE authentic
 │         │                   │                    │                   │
 │         ▼                   ▼                    ▼                   │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐           │
-│  │  OAuth 2.0   │    │  Apify API   │    │  AI Engine   │           │
-│  │  PKCE Flow   │    │  Tweet       │    │  + Style     │           │
-│  └──────────────┘    │  Scraper     │    │  Injection   │           │
+│  │  OAuth 2.0   │    │  X API +     │    │  AI Engine   │           │
+│  │  PKCE Flow   │    │  AI Query    │    │  + Style     │           │
+│  └──────────────┘    │  Generation  │    │  Injection   │           │
 │                      └──────────────┘    └──────────────┘           │
 │                             │                    │                   │
 │                             ▼                    ▼                   │
 │                      ┌──────────────┐    ┌──────────────┐           │
-│                      │  Save Draft  │◀───│  Publish     │           │
-│                      │  (DB)        │    │  to X API    │           │
-│                      └──────────────┘    └──────────────┘           │
+│                      │  Quality     │    │  Publish     │           │
+│                      │  Filtering + │    │  to X API    │           │
+│                      │  AI Analysis │    └──────────────┘           │
+│                      └──────────────┘                                │
+│                             │                                        │
+│                             ▼                                        │
+│                      ┌──────────────┐                                │
+│                      │  Token Auto  │                                │
+│                      │  Refresh     │                                │
+│                      └──────────────┘                                │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -822,10 +839,10 @@ POST   /api/v1/social/tweets/drafts/:id/publish  # Publish to X
 
 ### Tools
 
-| Tool                | Description                   | Credits |
-| ------------------- | ----------------------------- | ------- |
-| **X Search Trends** | Research trending topics on X | 15 cr   |
-| **X Post Tweet**    | Draft and publish tweets      | 5 cr    |
+| Tool                | Description                                    | Credits |
+| ------------------- | ---------------------------------------------- | ------- |
+| **X Search Trends** | Research trending topics on X with AI analysis | 25 cr   |
+| **X Post Tweet**    | Draft and publish tweets                       | 5 cr    |
 
 ### Environment Variables (X Integration)
 
@@ -835,14 +852,15 @@ X_CLIENT_ID=""
 X_CLIENT_SECRET=""
 X_REDIRECT_URI="https://creatorhub-qtod.onrender.com/api/v1/social/x/callback"
 
-# Apify (Trend Research)
-APIFY_API_TOKEN=""
-
 # Token Encryption
 X_SOCIAL_ENCRYPTION_KEY=""  # 64-char hex key for AES-256-GCM
 
 # Frontend URL (for OAuth redirect)
 FRONTEND_URL="https://app.creatorhubplatform.com/"
+
+# Crawlee/Playwright (Optional - requires >128MB RAM)
+X_AUTH_TOKEN=""  # X session cookie for fallback search
+X_CT0=""         # X CSRF token for fallback search
 ```
 
 ### Database Tables

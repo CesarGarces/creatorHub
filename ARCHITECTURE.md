@@ -1842,23 +1842,125 @@ User sends tweet request
     └──► Return { id, content, status: "DRAFT" }
 ```
 
-### Trend Research via Apify
+### Trend Research Architecture
 
 ```
-User requests trend research
+┌──────────────────────────────────────────────────────────────────────┐
+│                    X Search Trends Module                             │
+│  tools/x-search-trends/backend/src/                                  │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  │
+│  │  XApiService     │  │ TweetAnalysis    │  │ TwitterCrawler   │  │
+│  │  (Primary)       │  │ Service          │  │ Service (Fallback)│  │
+│  │                  │  │                  │  │                  │  │
+│  │ • searchTweets() │  │ • Spam filter    │  │ • Crawlee/       │  │
+│  │ • X API v2       │  │ • Authority score│  │   Playwright     │  │
+│  │ • Pay-as-you-go  │  │ • Sentiment      │  │ • Session cookies│  │
+│  └──────────────────┘  │ • Theme extract  │  └──────────────────┘  │
+│                        └──────────────────┘                         │
+│                                                                      │
+│  ┌──────────────────┐  ┌──────────────────┐                         │
+│  │  AIEngineService │  │ SocialService    │                         │
+│  │  (Analysis)      │  │ (Token Refresh)  │                         │
+│  │                  │  │                  │                         │
+│  │ • Query generation│  │ • Auto-refresh   │                         │
+│  │ • Executive sum. │  │   expired tokens │                         │
+│  │ • Theme analysis │  │ • /refresh API   │                         │
+│  └──────────────────┘  └──────────────────┘                         │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Search Flow
+
+```
+User enters natural language (any language)
     │
-    ├──► ApifyService.scrapeTweets(query, options)
+    ├──► XSearchTrendsService.research(userId, { prompt, model, providerId })
     │       │
-    │       ├──► Start Apify actor: apidojo~tweet-scraper
-    │       │    Input: { searchTerms, maxItems, sort }
+    │       ├──► buildSearchQueries(prompt)  [AI-powered]
+    │       │    │
+    │       │    ├──► AIEngineService.execute(taskType: "chat", prompt: "Extract search keywords...")
+    │       │    │    Input: "tendencias de criptomonedas en español"
+    │       │    │    Output: ["criptomonedas tendencias", "crypto trends"]
+    │       │    │
+    │       │    └──► Returns: string[] (up to 3 queries)
     │       │
-    │       ├──► Poll for completion (2s interval, 60s max)
+    │       ├──► [Query 1] XApiService.searchTweets(query, { maxResults: 50 })
+    │       │    │
+    │       │    ├──► Check token expiration
+    │       │    │    └── If expired → SocialService.refreshToken(accountId)
+    │       │    │
+    │       │    ├──► GET /2/tweets/search/recent
+    │       │    │    Headers: Authorization: Bearer {accessToken}
+    │       │    │
+    │       │    └──► Return TweetData[]
     │       │
-    │       └──► Return tweets[]
+    │       ├──► [Fallback] If X API fails or 0 results
+    │       │    │
+    │       │    └──► TwitterCrawlerService.searchTweets(query)
+    │       │         │
+    │       │         ├──► Crawlee with Playwright browser
+    │       │         │    Cookies: X_AUTH_TOKEN, X_CT0
+    │       │         │
+    │       │         └──► Return TweetData[]
+    │       │
+    │       ├──► TweetAnalysisService.analyze(tweets)
+    │       │    │
+    │       │    ├──► Quality filters:
+    │       │    │    • Spam detection (NSFW, betting, crypto spam keywords)
+    │       │    │    • Low-authority filter (<500 followers unless high engagement)
+    │       │    │    • Sentiment analysis (positive/negative/neutral)
+    │       │    │    • Theme extraction (DeFi, NFT, Bitcoin, AI, etc.)
+    │       │    │
+    │       │    └──► Return AnalyzedTweet[]
+    │       │
+    │       ├──► [If >= 5 tweets] AI Analysis
+    │       │    │
+    │       │    ├──► AIEngineService.execute(taskType: "chat", prompt: analysisPrompt)
+    │       │    │    • Executive summary
+    │       │    │    • Key themes (only if actually mentioned)
+    │       │    │    • Sentiment analysis
+    │       │    │    • Key influencers
+    │       │    │
+    │       │    └──► Return { executiveSummary, themes, sentiment, keyInfluencers }
+    │       │
+    │       ├──► [If < 5 tweets] Return { insufficientData: true, message: "..." }
+    │       │
+    │       ├──► CreditService.deduct(userId, 15, "search-trends")
+    │       │    + CreditService.deduct(userId, 10, "ai-analysis") [if analysis generated]
+    │       │
+    │       └──► Return { tweets, analysis, metadata }
     │
-    ├──► Save results to DB (optional)
+    └──► Return { tweets: [...], analysis, metadata }
+```
+
+### Token Auto-Refresh
+
+```
+X API tokens expire after ~2 hours
     │
-    └──► Return { tweets: [...], count, query }
+    ├──► XApiService.searchTweets() detects 401/expired token
+    │       │
+    │       ├──► SocialService.getAccountWithFreshToken(userId, platform)
+    │       │    │
+    │       │    ├──► Check SocialAccount.expiresAt
+    │       │    │    └── If expired → call refresh endpoint
+    │       │    │
+    │       │    ├──► POST /api/v1/social/accounts/:id/refresh
+    │       │    │    │
+    │       │    │    ├──► XOAuthService.refreshTokens(account)
+    │       │    │    │    └── X API: POST /oauth2/token
+    │       │    │    │
+    │       │    │    ├──► Encrypt new tokens (AES-256-GCM)
+    │       │    │    │
+    │       │    │    └──► Update SocialAccount in DB
+    │       │    │
+    │       │    └──► Return fresh access_token
+    │       │
+    │       └──► Retry original request with new token
+    │
+    └──► Return tweets[]
 ```
 
 ### Data Model (Prisma)
@@ -1955,7 +2057,7 @@ DELETE /api/v1/social/tweets/drafts/:id # Delete draft
 POST   /api/v1/social/tweets/drafts/:id/publish  # Publish to X (5 cr)
 
 # Trend Research (via tool controller)
-POST   /api/v1/tools/x-search-trends/research    # Research trends (15 cr)
+POST   /api/v1/tools/x-search-trends/research    # Research trends (15 cr + 10 cr AI analysis)
 ```
 
 ### Security
