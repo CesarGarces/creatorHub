@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { prisma } from "@creator-hub/database";
+import { prisma, type Tool } from "@creator-hub/database";
 
 @Injectable()
 export class ToolFavoritesService {
-  async getFavorites(userId: string) {
+  async getFavorites(userId: string): Promise<Tool[]> {
     const favorites = await prisma.toolFavorite.findMany({
       where: { userId },
       include: { tool: true },
@@ -20,7 +20,10 @@ export class ToolFavoritesService {
     return favorites.map((f) => f.toolId);
   }
 
-  async addFavorite(userId: string, toolId: string) {
+  async addFavorite(
+    userId: string,
+    toolId: string,
+  ): Promise<{ success: boolean }> {
     await prisma.toolFavorite.upsert({
       where: { userId_toolId: { userId, toolId } },
       create: { userId, toolId },
@@ -29,14 +32,20 @@ export class ToolFavoritesService {
     return { success: true };
   }
 
-  async removeFavorite(userId: string, toolId: string) {
+  async removeFavorite(
+    userId: string,
+    toolId: string,
+  ): Promise<{ success: boolean }> {
     await prisma.toolFavorite.deleteMany({
       where: { userId, toolId },
     });
     return { success: true };
   }
 
-  async toggleFavorite(userId: string, toolId: string) {
+  async toggleFavorite(
+    userId: string,
+    toolId: string,
+  ): Promise<{ favorited: boolean }> {
     const existing = await prisma.toolFavorite.findUnique({
       where: { userId_toolId: { userId, toolId } },
     });
@@ -54,7 +63,7 @@ export class ToolFavoritesService {
     }
   }
 
-  async getFavoriteStats() {
+  async getFavoriteStats(): Promise<{ toolId: string; count: number }[]> {
     const stats = await prisma.toolFavorite.groupBy({
       by: ["toolId"],
       _count: { id: true },
