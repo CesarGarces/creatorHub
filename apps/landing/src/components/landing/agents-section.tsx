@@ -1,10 +1,24 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Bot, Youtube, Tv, Smartphone } from "lucide-react";
+import { Bot, Youtube, Camera, Smartphone, MessageCircle } from "lucide-react";
 import { config } from "@/lib/config";
 
 const agents = [
+  {
+    icon: MessageCircle,
+    title: "X (Twitter) Agent",
+    status: "online" as const,
+    description:
+      "Research trends and post tweets. AI-powered trend analysis, sentiment insights, and one-click publishing.",
+    capabilities: [
+      "Trend Research",
+      "AI Analysis",
+      "Tweet Generation",
+      "Sentiment Analysis",
+    ],
+    prompt: "Research trending topics about crypto and generate a tweet...",
+  },
   {
     icon: Youtube,
     title: "YouTube Agent",
@@ -21,23 +35,23 @@ const agents = [
       "Analyze my latest video and suggest improvements for better reach...",
   },
   {
-    icon: Tv,
-    title: "Twitch Agent",
-    status: "online" as const,
+    icon: Camera,
+    title: "Instagram Agent",
+    status: "coming soon" as const,
     description:
-      "Grow your Twitch channel. Stream scheduling, content strategy, and audience engagement.",
+      "Create engaging Instagram content. Caption writing, hashtag research, and posting strategy.",
     capabilities: [
-      "Stream Planning",
-      "Content Strategy",
-      "Raid Strategy",
-      "Clip Highlights",
+      "Caption Writing",
+      "Hashtag Research",
+      "Reel Ideas",
+      "Engagement Strategy",
     ],
-    prompt: "Help me plan my streaming schedule for maximum viewership...",
+    prompt: "Write engaging captions for my travel photos in Europe...",
   },
   {
     icon: Smartphone,
     title: "TikTok Agent",
-    status: "online" as const,
+    status: "coming soon" as const,
     description:
       "Create viral TikTok content. Trending sounds, hook formulas, and posting strategy.",
     capabilities: [
@@ -70,7 +84,7 @@ export function AgentsSection() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {agents.map((agent, i) => (
             <motion.div
               key={agent.title}
