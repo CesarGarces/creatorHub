@@ -38,3 +38,5 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: false
+      - key: API_URL
+        value: "https://creatorhub-qtod.onrender.com"
