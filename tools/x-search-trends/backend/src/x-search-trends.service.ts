@@ -347,38 +347,13 @@ Sentiment: ${t.sentiment}, Themes: ${t.themes.join(", ")}`,
       )
       .join("\n\n");
 
-    const prompt = `You are an expert market analyst. Analyze these tweets about "${topic}" and provide:
+    const prompt = `Analyze these tweets about "${topic}" and provide insights.
 
-1. Executive Summary (2-3 sentences)
-2. Key Themes (group tweets by topic)
-3. Overall Sentiment (positive/negative/neutral)
-4. Key Influencers (top 5 most important accounts)
-
-Tweets to analyze:
+Tweets:
 ${tweetData}
 
-Respond in JSON format:
-{
-  "executiveSummary": "...",
-  "themes": [
-    {
-      "name": "Theme Name",
-      "description": "Brief description",
-      "tweetCount": 0,
-      "sentiment": "positive|negative|neutral"
-    }
-  ],
-  "overallSentiment": "positive|negative|neutral",
-  "keyInfluencers": [
-    {
-      "username": "...",
-      "name": "...",
-      "followers": 0,
-      "verified": false,
-      "tweetCount": 0
-    }
-  ]
-}`;
+Return ONLY valid JSON (no markdown, no explanation):
+{"executiveSummary":"2-3 sentence summary","themes":[{"name":"Theme","description":"Brief","tweetCount":1,"sentiment":"positive"}],"overallSentiment":"positive","keyInfluencers":[{"username":"user","name":"Name","followers":1000,"verified":false,"tweetCount":1}]}`;
 
     const response = await this.aiEngine.execute({
       taskType: "text-generation",
@@ -386,21 +361,36 @@ Respond in JSON format:
       parameters: {
         temperature: 0.3,
         maxTokens: 1000,
-        responseFormat: "json",
       },
     });
 
-    if (response.output.type !== "json") {
-      throw new Error("AI did not return JSON");
+    // Try to parse JSON from the response
+    let parsed: TweetAnalysis | null = null;
+
+    if (response.output.type === "json") {
+      parsed = response.output.data as unknown as TweetAnalysis;
+    } else if (response.output.type === "text") {
+      // Try to extract JSON from text response
+      const text = response.output.content;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          parsed = JSON.parse(jsonMatch[0]) as TweetAnalysis;
+        } catch {
+          // JSON parse failed
+        }
+      }
     }
 
-    const data = response.output.data as unknown as TweetAnalysis;
+    if (!parsed || !parsed.executiveSummary) {
+      throw new Error("AI did not return valid analysis");
+    }
     return {
       executiveSummary:
-        data.executiveSummary || "Analysis completed successfully.",
-      themes: data.themes || [],
-      overallSentiment: data.overallSentiment || "neutral",
-      keyInfluencers: data.keyInfluencers || [],
+        parsed.executiveSummary || "Analysis completed successfully.",
+      themes: parsed.themes || [],
+      overallSentiment: parsed.overallSentiment || "neutral",
+      keyInfluencers: parsed.keyInfluencers || [],
       filteredTweetCount: tweets.length,
       originalTweetCount: tweets.length,
     };
@@ -590,9 +580,9 @@ Respond in JSON format:
     if (hashtags?.length) return hashtags.join(" OR ");
     if (mentions?.length) return mentions.join(" OR ");
 
-    // Common filler words/phrases to remove
+    // Common filler words/phrases to remove (English + Spanish)
     const fillers =
-      /\b(analyze|research|find|search|look|tell|me|about|what'?s?|are|people|saying|trending|trend|topics?|on|twitter|x|today|now|latest|news|recently|popular|the|new|how|who|which|when|where|why|can|could|would|should|do|does|did|have|has|had|is|am|was|were|be|been|being|this|that|these|those|it|its|my|your|his|her|our|their)\b/gi;
+      /\b(analyze|research|find|search|look|tell|me|about|what'?s?|are|people|saying|trending|trend|topics?|on|twitter|x|today|now|latest|news|recently|popular|the|new|how|who|which|when|where|why|can|could|would|should|do|does|did|have|has|had|is|am|was|were|be|been|being|this|that|these|those|it|its|my|your|his|her|our|their|dame|los|mas|relevante|de|en|el|la|las|los|un|una|unos|unas|que|como|con|por|para|sin|sobre|entre|hasta|desde|segun|durante|mediante|hacia|tras|ante|bajo|contra|entre|segun|todo|todos|toda|todas|este|esta|estos|estas|ese|esa|esos|esas|aquel|aquella|aquellos|aquellas|mismo|misma|mismos|mismas|otro|otra|otros|otras|nuevo|nueva|nuevos|nuevas|gran|grande|grandes|mejor|peor|mayor|menor|primer|primera|ultimo|ultima)\b/gi;
 
     let cleaned = topic
       .replace(/\b\w+'(?:s|re|ve|ll|d|m|t)\b/gi, " ")
