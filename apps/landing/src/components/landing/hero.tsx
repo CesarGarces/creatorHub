@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Play, X } from "lucide-react";
+import { ArrowRight, Play, X, Image, MessageCircle } from "lucide-react";
 import { config } from "@/lib/config";
 
 export function Hero() {
@@ -75,7 +75,7 @@ export function Hero() {
                   capabilities={[
                     "X Post Generation",
                     "AI Analysis",
-                    "Trend Researc",
+                    "Trend Research",
                   ]}
                 />
                 <MockStatsCard />
@@ -142,10 +142,8 @@ function MockToolCard({
 }) {
   return (
     <div className="rounded-lg border border-border bg-bg p-4">
-      <div
-        className={`h-10 w-10 rounded-lg bg-${color}/20 flex items-center justify-center mb-3`}
-      >
-        <div className={`h-5 w-5 rounded bg-${color}`} />
+      <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center mb-3">
+        <Image size={20} className="text-primary" />
       </div>
       <h3 className="text-sm font-semibold text-text mb-1">{title}</h3>
       <p className="text-xs text-text-muted">{description}</p>
@@ -166,7 +164,7 @@ function MockAgentCard({
     <div className="rounded-lg border border-border bg-bg p-4">
       <div className="flex items-center gap-2 mb-3">
         <div className="h-8 w-8 rounded-full bg-accent/20 flex items-center justify-center">
-          <div className="h-4 w-4 rounded bg-accent" />
+          <MessageCircle size={16} className="text-accent" />
         </div>
         <div>
           <h3 className="text-sm font-semibold text-text">{title}</h3>
