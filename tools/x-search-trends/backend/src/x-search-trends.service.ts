@@ -23,6 +23,7 @@ import {
 const SEARCH_CREDIT_COST = 15;
 const AI_ANALYSIS_CREDIT_COST = 10;
 const CACHE_PROVIDER = "x";
+const MIN_TWEETS_FOR_ANALYSIS = 5;
 
 interface SearchOptions {
   topic: string;
@@ -42,6 +43,7 @@ interface SearchResult {
   formattedAnalysis: string;
   analysis: TweetAnalysis;
   fromCache: boolean;
+  insufficientData: boolean;
 }
 
 @Injectable()
@@ -120,119 +122,106 @@ export class XSearchTrendsService {
       topic: options.topic,
     });
 
-    // Try X API first, fallback to Crawlee
-    let tweets: SearchResultTweet[] = [];
+    // Build search queries using AI
+    const queries = await this.buildSearchQueries(options.topic);
+    this.logger.info("Generated search queries", { queries });
+
+    // Search with multiple queries for better coverage
+    let allTweets: SearchResultTweet[] = [];
     let usedFallback = false;
 
-    try {
-      // Get user's active X account
-      const account = await this.socialService.getActiveAccountByProvider(
-        userId,
-        "X_TWITTER",
-      );
+    for (const query of queries) {
+      if (allTweets.length >= 20) break; // Enough data
 
-      if (!account) {
-        throw new BadRequestException(
-          "No X account connected. Please connect your X account first.",
-        );
-      }
-
-      const accessToken = this.encryptionService.decrypt(account.accessToken);
-
-      // Build search query - extract keywords from user input
-      let query = this.buildSearchQuery(options.topic);
-      if (options.language) {
-        query += ` lang:${options.language}`;
-      }
-      if (!options.includeReplies) {
-        query += " -is:reply";
-      }
-
-      // Calculate start time based on timeframe
-      let startTime: string | undefined;
-      if (options.timeframe) {
-        const now = new Date();
-        switch (options.timeframe) {
-          case "24h":
-            startTime = new Date(
-              now.getTime() - 24 * 60 * 60 * 1000,
-            ).toISOString();
-            break;
-          case "7d":
-            startTime = new Date(
-              now.getTime() - 7 * 24 * 60 * 60 * 1000,
-            ).toISOString();
-            break;
-          case "30d":
-            startTime = new Date(
-              now.getTime() - 30 * 24 * 60 * 60 * 1000,
-            ).toISOString();
-            break;
-        }
-      }
-
-      // Search tweets using X API
-      const searchResult = await this.xApiService.searchTweets(
-        accessToken,
-        query,
-        {
-          maxResults: options.maxTweets || 50,
-          startTime,
-        },
-      );
-
-      tweets = searchResult.tweets;
-
-      // If X API returned 0 results, try Crawlee as fallback
-      if (tweets.length === 0) {
-        this.logger.info("X API returned 0 results, trying Crawlee fallback", {
+      try {
+        const account = await this.socialService.getActiveAccountByProvider(
           userId,
-          topic: options.topic,
-        });
+          "X_TWITTER",
+        );
 
-        usedFallback = true;
-        const crawledTweets = await this.twitterCrawler.searchTweets(
-          options.topic,
+        if (!account) {
+          throw new BadRequestException(
+            "No X account connected. Please connect your X account first.",
+          );
+        }
+
+        const accessToken = this.encryptionService.decrypt(account.accessToken);
+
+        let searchQuery = query;
+        if (options.language) {
+          searchQuery += ` lang:${options.language}`;
+        }
+        if (!options.includeReplies) {
+          searchQuery += " -is:reply";
+        }
+
+        let startTime: string | undefined;
+        if (options.timeframe) {
+          const now = new Date();
+          switch (options.timeframe) {
+            case "24h":
+              startTime = new Date(
+                now.getTime() - 24 * 60 * 60 * 1000,
+              ).toISOString();
+              break;
+            case "7d":
+              startTime = new Date(
+                now.getTime() - 7 * 24 * 60 * 60 * 1000,
+              ).toISOString();
+              break;
+            case "30d":
+              startTime = new Date(
+                now.getTime() - 30 * 24 * 60 * 60 * 1000,
+              ).toISOString();
+              break;
+          }
+        }
+
+        const searchResult = await this.xApiService.searchTweets(
+          accessToken,
+          searchQuery,
           {
-            maxResults: options.maxTweets || 50,
-            timeframe: options.timeframe,
-            language: options.language,
+            maxResults: 100,
+            startTime,
           },
         );
 
-        tweets = crawledTweets.map((t) => ({
-          id: t.id,
-          text: t.text,
-          createdAt: t.createdAt,
-          author: t.author,
-          metrics: t.metrics,
-          hashtags: t.hashtags,
-          urls: t.urls,
-          media: t.media,
-        }));
+        allTweets.push(...searchResult.tweets);
+      } catch (error) {
+        this.logger.warn("X API search failed for query", {
+          query,
+          error: (error as Error).message,
+        });
       }
-    } catch (error) {
-      // X API failed - fallback to Crawlee
-      this.logger.warn("X API search failed, falling back to Crawlee", {
-        error: (error as Error).message,
+    }
+
+    // Deduplicate tweets by ID
+    const seenIds = new Set<string>();
+    allTweets = allTweets.filter((t) => {
+      if (seenIds.has(t.id)) return false;
+      seenIds.add(t.id);
+      return true;
+    });
+
+    // If no results from X API, try Crawlee as fallback
+    if (allTweets.length === 0) {
+      this.logger.info("X API returned 0 results, trying Crawlee fallback", {
         userId,
         topic: options.topic,
       });
 
       usedFallback = true;
-
       try {
         const crawledTweets = await this.twitterCrawler.searchTweets(
           options.topic,
           {
-            maxResults: options.maxTweets || 50,
+            maxResults: 100,
             timeframe: options.timeframe,
             language: options.language,
           },
         );
 
-        // Convert CrawledTweet to SearchResultTweet format
-        tweets = crawledTweets.map((t) => ({
+        allTweets = crawledTweets.map((t) => ({
           id: t.id,
           text: t.text,
           createdAt: t.createdAt,
@@ -243,41 +232,58 @@ export class XSearchTrendsService {
           media: t.media,
         }));
       } catch (crawlerError) {
-        this.logger.error("Crawlee fallback also failed", {
+        this.logger.error("Crawlee fallback failed", {
           error: (crawlerError as Error).message,
         });
-        throw new BadRequestException(
-          "Failed to search tweets. Please try again later.",
-        );
       }
     }
 
     // Filter and analyze tweets
-    const originalTweetCount = tweets.length;
-    const filteredTweets = this.tweetAnalysis.filterTweets(tweets);
+    const originalTweetCount = allTweets.length;
+    const filteredTweets = this.tweetAnalysis.filterTweets(allTweets);
 
     this.logger.info("Tweets filtered", {
       original: originalTweetCount,
       filtered: filteredTweets.length,
     });
 
-    // Generate AI analysis
+    // Check if we have enough data for meaningful analysis
+    const insufficientData = filteredTweets.length < MIN_TWEETS_FOR_ANALYSIS;
+
+    // Generate analysis
     let analysis: TweetAnalysis;
-    try {
-      analysis = await this.generateAIAnalysis(options.topic, filteredTweets);
-    } catch (error) {
-      this.logger.warn("AI analysis failed, using basic analysis", {
-        error: (error as Error).message,
-      });
-      analysis = this.generateBasicAnalysis(filteredTweets);
+    let formattedAnalysis: string;
+
+    if (insufficientData) {
+      // Not enough data - provide helpful message
+      analysis = this.generateInsufficientDataAnalysis(
+        options.topic,
+        filteredTweets,
+      );
+      formattedAnalysis = this.formatInsufficientDataAnalysis(
+        options.topic,
+        originalTweetCount,
+        filteredTweets,
+      );
+    } else {
+      // Enough data - generate full analysis
+      try {
+        analysis = await this.generateAIAnalysis(options.topic, filteredTweets);
+      } catch (error) {
+        this.logger.warn("AI analysis failed, using basic analysis", {
+          error: (error as Error).message,
+        });
+        analysis = this.generateBasicAnalysis(filteredTweets);
+      }
+
+      formattedAnalysis = this.formatAnalysis(
+        options.topic,
+        filteredTweets,
+        analysis,
+      );
     }
 
     const trendingHashtags = this.extractTrendingHashtags(filteredTweets);
-    const formattedAnalysis = this.formatAnalysis(
-      options.topic,
-      filteredTweets,
-      analysis,
-    );
 
     const result: SearchResult = {
       topic: options.topic,
@@ -288,10 +294,11 @@ export class XSearchTrendsService {
       formattedAnalysis,
       analysis,
       fromCache: false,
+      insufficientData,
     };
 
-    // Only cache if we have results
-    if (filteredTweets.length > 0) {
+    // Only cache if we have good results
+    if (filteredTweets.length >= MIN_TWEETS_FOR_ANALYSIS) {
       await this.cacheService.set(options.topic, CACHE_PROVIDER, result);
     }
 
@@ -303,19 +310,21 @@ export class XSearchTrendsService {
       `X trend search: ${options.topic}${usedFallback ? " (via Crawlee)" : ""}`,
     );
 
-    await this.creditService.deduct(
-      userId,
-      AI_ANALYSIS_CREDIT_COST,
-      "x-search-trends",
-      `AI analysis: ${options.topic}`,
-    );
+    if (!insufficientData) {
+      await this.creditService.deduct(
+        userId,
+        AI_ANALYSIS_CREDIT_COST,
+        "x-search-trends",
+        `AI analysis: ${options.topic}`,
+      );
+    }
 
     await this.socialResearch.addMessage(session.id, {
       role: "assistant",
       content: formattedAnalysis,
       resultData: result,
       provider: "x",
-      creditsUsed: totalCreditsNeeded,
+      creditsUsed: insufficientData ? SEARCH_CREDIT_COST : totalCreditsNeeded,
       cacheHit: false,
     });
 
@@ -324,10 +333,62 @@ export class XSearchTrendsService {
       topic: options.topic,
       originalCount: originalTweetCount,
       filteredCount: filteredTweets.length,
-      usedFallback,
+      insufficientData,
     });
 
     return { ...result, sessionId: session.id };
+  }
+
+  /**
+   * Use AI to transform user's natural language into X search queries
+   * This works for any language and topic
+   */
+  private async buildSearchQueries(topic: string): Promise<string[]> {
+    try {
+      const prompt = `You are a Twitter/X search expert. Transform this user request into effective X search queries.
+
+User request: "${topic}"
+
+Rules:
+1. Return ONLY the search query (no explanation)
+2. Use X search operators if helpful (-is:reply, min_faves:10, etc)
+3. Keep it concise (max 3-5 words)
+4. If user writes in Spanish, search in Spanish
+5. Extract the CORE topic, remove conversational words
+
+Return ONLY valid JSON: {"queries": ["query1"]}`;
+
+      const response = await this.aiEngine.execute({
+        taskType: "text-generation",
+        prompt,
+        parameters: {
+          temperature: 0.1,
+          maxTokens: 100,
+        },
+      });
+
+      let text = "";
+      if (response.output.type === "json") {
+        const data = response.output.data as { queries?: string[] };
+        if (data.queries?.length) return data.queries.slice(0, 3);
+      } else if (response.output.type === "text") {
+        text = response.output.content;
+      }
+
+      // Try to extract JSON from text
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]) as { queries?: string[] };
+        if (parsed.queries?.length) return parsed.queries.slice(0, 3);
+      }
+    } catch (error) {
+      this.logger.warn("AI query generation failed, using raw input", {
+        error: (error as Error).message,
+      });
+    }
+
+    // Fallback: use raw input cleaned up
+    return [topic.substring(0, 50)];
   }
 
   /**
@@ -341,25 +402,32 @@ export class XSearchTrendsService {
       .slice(0, 30)
       .map(
         (t) =>
-          `@${t.author.username} (${t.author.followers} followers, verified: ${t.author.verified}):
-"${t.text}"
-Sentiment: ${t.sentiment}, Themes: ${t.themes.join(", ")}`,
+          `@${t.author.username} (${t.author.followers.toLocaleString()} followers, verified: ${t.author.verified}):
+"${t.text.substring(0, 200)}"
+Engagement: ${t.metrics.likes} likes, ${t.metrics.retweets} RTs`,
       )
       .join("\n\n");
 
-    const prompt = `Analyze these tweets about "${topic}" and provide insights.
+    const prompt = `You are an expert social media trend analyst. Analyze these tweets about "${topic}".
 
-Tweets:
+IMPORTANT RULES:
+1. Only identify themes that are ACTUALLY mentioned in the tweets
+2. Do NOT guess or infer themes not present
+3. If there are few tweets, say "Limited data available" in your summary
+4. Be specific about what people are actually discussing
+5. Focus on REAL trends, not individual tweets
+
+Tweets to analyze:
 ${tweetData}
 
 Return ONLY valid JSON (no markdown, no explanation):
-{"executiveSummary":"2-3 sentence summary","themes":[{"name":"Theme","description":"Brief","tweetCount":1,"sentiment":"positive"}],"overallSentiment":"positive","keyInfluencers":[{"username":"user","name":"Name","followers":1000,"verified":false,"tweetCount":1}]}`;
+{"executiveSummary":"2-3 sentence summary of actual trends","themes":[{"name":"Specific Theme","description":"What people are actually discussing","tweetCount":1,"sentiment":"positive"}],"overallSentiment":"positive","keyInfluencers":[{"username":"user","name":"Name","followers":1000,"verified":false,"tweetCount":1}]}`;
 
     const response = await this.aiEngine.execute({
       taskType: "text-generation",
       prompt,
       parameters: {
-        temperature: 0.3,
+        temperature: 0.2,
         maxTokens: 1000,
       },
     });
@@ -370,7 +438,6 @@ Return ONLY valid JSON (no markdown, no explanation):
     if (response.output.type === "json") {
       parsed = response.output.data as unknown as TweetAnalysis;
     } else if (response.output.type === "text") {
-      // Try to extract JSON from text response
       const text = response.output.content;
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -385,6 +452,7 @@ Return ONLY valid JSON (no markdown, no explanation):
     if (!parsed || !parsed.executiveSummary) {
       throw new Error("AI did not return valid analysis");
     }
+
     return {
       executiveSummary:
         parsed.executiveSummary || "Analysis completed successfully.",
@@ -397,14 +465,12 @@ Return ONLY valid JSON (no markdown, no explanation):
   }
 
   /**
-   * Generate basic analysis without AI
+   * Generate analysis when there's insufficient data
    */
-  private generateBasicAnalysis(tweets: FilteredTweet[]): TweetAnalysis {
-    // Count sentiments
-    const sentiments = { positive: 0, negative: 0, neutral: 0 };
-    tweets.forEach((t) => sentiments[t.sentiment]++);
-
-    // Count themes
+  private generateInsufficientDataAnalysis(
+    topic: string,
+    tweets: FilteredTweet[],
+  ): TweetAnalysis {
     const themeCounts = new Map<string, number>();
     tweets.forEach((t) =>
       t.themes.forEach((theme) =>
@@ -412,7 +478,51 @@ Return ONLY valid JSON (no markdown, no explanation):
       ),
     );
 
-    // Get top influencers
+    const sentiments = { positive: 0, negative: 0, neutral: 0 };
+    tweets.forEach((t) => sentiments[t.sentiment]++);
+
+    const overallSentiment =
+      sentiments.positive > sentiments.negative
+        ? "positive"
+        : sentiments.negative > sentiments.positive
+          ? "negative"
+          : "neutral";
+
+    return {
+      executiveSummary: `Limited data available for "${topic}". The search found some relevant content but not enough for a comprehensive trend analysis. Try broadening your search terms or checking back later for more data.`,
+      themes: Array.from(themeCounts.entries()).map(([name, count]) => ({
+        name,
+        description: `Found ${count} related post${count > 1 ? "s" : ""}`,
+        tweetCount: count,
+        sentiment: "neutral" as const,
+      })),
+      overallSentiment,
+      keyInfluencers: tweets.slice(0, 3).map((t) => ({
+        username: t.author.username,
+        name: t.author.name,
+        followers: t.author.followers,
+        verified: t.author.verified,
+        tweetCount: 1,
+      })),
+      filteredTweetCount: tweets.length,
+      originalTweetCount: tweets.length,
+    };
+  }
+
+  /**
+   * Generate basic analysis without AI
+   */
+  private generateBasicAnalysis(tweets: FilteredTweet[]): TweetAnalysis {
+    const sentiments = { positive: 0, negative: 0, neutral: 0 };
+    tweets.forEach((t) => sentiments[t.sentiment]++);
+
+    const themeCounts = new Map<string, number>();
+    tweets.forEach((t) =>
+      t.themes.forEach((theme) =>
+        themeCounts.set(theme, (themeCounts.get(theme) || 0) + 1),
+      ),
+    );
+
     const influencerMap = new Map<
       string,
       {
@@ -450,10 +560,10 @@ Return ONLY valid JSON (no markdown, no explanation):
           : "neutral";
 
     return {
-      executiveSummary: `Analysis of ${tweets.length} tweets about this topic.`,
+      executiveSummary: `Analysis of ${tweets.length} relevant posts about this topic.`,
       themes: Array.from(themeCounts.entries()).map(([name, count]) => ({
         name,
-        description: `Tweets related to ${name}`,
+        description: `Discussed in ${count} post${count > 1 ? "s" : ""}`,
         tweetCount: count,
         sentiment: "neutral" as const,
       })),
@@ -497,7 +607,7 @@ Return ONLY valid JSON (no markdown, no explanation):
             : theme.sentiment === "negative"
               ? "🔴"
               : "⚪";
-        output += `${i + 1}. ${themeEmoji} **${theme.name}** (${theme.tweetCount} tweets) - ${theme.description}\n`;
+        output += `${i + 1}. ${themeEmoji} **${theme.name}** (${theme.tweetCount} posts) - ${theme.description}\n`;
       });
       output += "\n";
     }
@@ -507,7 +617,7 @@ Return ONLY valid JSON (no markdown, no explanation):
       output += `## Key Influencers\n`;
       analysis.keyInfluencers.forEach((inf, i) => {
         const verified = inf.verified ? " ✓" : "";
-        output += `${i + 1}. @${inf.username}${verified} (${inf.followers.toLocaleString()} followers) - ${inf.tweetCount} tweets\n`;
+        output += `${i + 1}. @${inf.username}${verified} (${inf.followers.toLocaleString()} followers) - ${inf.tweetCount} post${inf.tweetCount > 1 ? "s" : ""}\n`;
       });
       output += "\n";
     }
@@ -515,7 +625,7 @@ Return ONLY valid JSON (no markdown, no explanation):
     // Top Tweets (filtered)
     const topTweets = tweets.slice(0, 10);
     if (topTweets.length > 0) {
-      output += `## Top Tweets (${tweets.length} filtered from original results)\n\n`;
+      output += `## Top Posts\n\n`;
       topTweets.forEach((tweet, i) => {
         const engagement =
           tweet.metrics.likes + tweet.metrics.retweets + tweet.metrics.replies;
@@ -548,6 +658,39 @@ Return ONLY valid JSON (no markdown, no explanation):
     return output;
   }
 
+  /**
+   * Format analysis when there's insufficient data
+   */
+  private formatInsufficientDataAnalysis(
+    topic: string,
+    originalCount: number,
+    tweets: FilteredTweet[],
+  ): string {
+    let output = `# Trend Analysis: ${topic}\n\n`;
+
+    output += `## ⚠️ Limited Data Available\n\n`;
+    output += `The search found ${originalCount} post${originalCount !== 1 ? "s" : ""} about "${topic}", but this isn't enough for a comprehensive trend analysis.\n\n`;
+
+    output += `### Recommendations\n`;
+    output += `- Try broader search terms (e.g., "crypto" instead of "crypto news today")\n`;
+    output += `- Check back later when more content is available\n`;
+    output += `- Try different timeframes (7d or 30d)\n\n`;
+
+    // Still show what we found if anything
+    if (tweets.length > 0) {
+      output += `### What We Found\n\n`;
+      tweets.slice(0, 5).forEach((tweet, i) => {
+        const engagement =
+          tweet.metrics.likes + tweet.metrics.retweets + tweet.metrics.replies;
+        output += `**@${tweet.author.username}** (${tweet.author.followers.toLocaleString()} followers)\n`;
+        output += `> ${tweet.text.substring(0, 150)}${tweet.text.length > 150 ? "..." : ""}\n`;
+        output += `[View on X →](https://x.com/${tweet.author.username}/status/${tweet.id})\n\n`;
+      });
+    }
+
+    return output;
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private extractTrendingHashtags(tweets: any[]): string[] {
     const hashtagCounts = new Map<string, number>();
@@ -568,43 +711,5 @@ Return ONLY valid JSON (no markdown, no explanation):
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([tag]) => `#${tag}`);
-  }
-
-  /**
-   * Transform natural language user input into a valid X search query.
-   */
-  private buildSearchQuery(topic: string): string {
-    // Extract hashtags and mentions first
-    const hashtags = topic.match(/#\w+/g);
-    const mentions = topic.match(/@\w+/g);
-    if (hashtags?.length) return hashtags.join(" OR ");
-    if (mentions?.length) return mentions.join(" OR ");
-
-    // Common filler words/phrases to remove (English + Spanish)
-    const fillers =
-      /\b(analyze|research|find|search|look|tell|me|about|what'?s?|are|people|saying|trending|trend|topics?|on|twitter|x|today|now|latest|news|recently|popular|the|new|how|who|which|when|where|why|can|could|would|should|do|does|did|have|has|had|is|am|was|were|be|been|being|this|that|these|those|it|its|my|your|his|her|our|their|dame|los|mas|relevante|relevantes|de|en|el|la|las|los|un|una|unos|unas|que|como|con|por|para|sin|sobre|entre|hasta|desde|segun|durante|mediante|hacia|tras|ante|bajo|contra|entre|segun|todo|todos|toda|todas|este|esta|estos|estas|ese|esa|esos|esas|aquel|aquella|aquellos|aquellas|mismo|misma|mismos|mismas|otro|otra|otros|otras|nuevo|nueva|nuevos|nuevas|gran|grande|grandes|mejor|peor|mayor|menor|primer|primera|ultimo|ultima)\b/gi;
-
-    let cleaned = topic
-      .replace(/\b\w+'(?:s|re|ve|ll|d|m|t)\b/gi, " ")
-      .replace(fillers, " ")
-      .trim();
-
-    cleaned = cleaned
-      .replace(/[^\w\s#@]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    if (cleaned.length < 2) {
-      const allWords = topic.match(/\b\w{3,}\b/g);
-      if (allWords?.length) return allWords.slice(0, 3).join(" ");
-      return topic;
-    }
-
-    const words = cleaned.split(" ").filter((w) => w.length > 1);
-    if (words.length > 3) {
-      return words.slice(-3).join(" ");
-    }
-
-    return cleaned;
   }
 }

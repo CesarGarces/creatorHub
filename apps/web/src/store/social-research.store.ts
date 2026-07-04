@@ -54,6 +54,7 @@ export interface ResearchMessage {
       }>;
     };
     fromCache: boolean;
+    insufficientData: boolean;
   } | null;
   provider: string | null;
   creditsUsed: number;
@@ -192,6 +193,7 @@ export const useSocialResearchStore = create<SocialResearchState>()(
               keyInfluencers: any[];
             };
             fromCache: boolean;
+            insufficientData: boolean;
             sessionId: string;
           };
         }>(`/tools/${toolId}/search`, {
@@ -234,6 +236,7 @@ export const useSocialResearchStore = create<SocialResearchState>()(
                   }
                 : undefined,
               fromCache: result.fromCache,
+              insufficientData: result.insufficientData,
             },
             provider: "x",
             creditsUsed: params.cacheHit ? 0 : 15,
