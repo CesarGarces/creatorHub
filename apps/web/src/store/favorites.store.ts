@@ -7,6 +7,7 @@ interface FavoritesState {
 
   fetchFavorites: () => Promise<void>;
   toggleFavorite: (toolId: string) => Promise<void>;
+  reorderFavorites: (orderedIds: string[]) => Promise<void>;
   isFavorite: (toolId: string) => boolean;
 }
 
@@ -44,6 +45,20 @@ export const useFavoritesStore = create<FavoritesState>()((set, get) => ({
           ? [...(favoriteIds || []), toolId]
           : (favoriteIds || []).filter((id) => id !== toolId),
       });
+    }
+  },
+
+  reorderFavorites: async (orderedIds: string[]) => {
+    const prevIds = get().favoriteIds;
+
+    // Optimistic update
+    set({ favoriteIds: orderedIds });
+
+    try {
+      await api.post("/user/favorites/reorder", { orderedIds });
+    } catch {
+      // Revert on error
+      set({ favoriteIds: prevIds });
     }
   },
 

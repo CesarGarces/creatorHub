@@ -1,14 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useAuthStore } from "@/store/auth.store";
 import { useToolsStore } from "@/store/tools.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { useChatStore } from "@/store/chat.store";
 import { useFavoritesStore } from "@/store/favorites.store";
-import { ToolCard, CreditDisplay, EmptyState, Badge } from "@creator-hub/ui";
+import {
+  ToolCard,
+  CreditDisplay,
+  EmptyState,
+  Badge,
+  cn,
+} from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { CommandPalette } from "@/components/layout/command-palette";
 import api from "@/lib/api";
@@ -48,7 +71,8 @@ export default function DashboardPage() {
   const { tools, fetchTools } = useToolsStore();
   const { balance, fetchBalance } = useCreditsStore();
   const { sendMessage, isStreaming, openWidget } = useChatStore();
-  const { favoriteIds, fetchFavorites, toggleFavorite } = useFavoritesStore();
+  const { favoriteIds, fetchFavorites, toggleFavorite, reorderFavorites } =
+    useFavoritesStore();
   const [quickPrompt, setQuickPrompt] = useState("");
   const [cmdOpen, setCmdOpen] = useState(false);
 
@@ -89,9 +113,34 @@ export default function DashboardPage() {
   }, []);
 
   // Show favorite tools, or first 4 if no favorites
-  const favoriteTools = tools.filter((t) => favoriteIds?.includes(t.id));
+  const favoriteTools = useMemo(() => {
+    const favTools = tools.filter((t) => favoriteIds?.includes(t.id));
+    if (favTools.length === 0) return [];
+    // Sort by favoriteIds order
+    return favoriteIds
+      .map((id) => favTools.find((t) => t.id === id))
+      .filter(Boolean);
+  }, [tools, favoriteIds]);
   const recentTools =
-    favoriteTools.length > 0 ? favoriteTools.slice(0, 4) : tools.slice(0, 4);
+    favoriteTools.length > 0 ? favoriteTools : tools.slice(0, 4);
+  const isDraggable = favoriteTools.length > 0;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = favoriteIds.indexOf(active.id as string);
+    const newIndex = favoriteIds.indexOf(over.id as string);
+    const newOrder = arrayMove(favoriteIds, oldIndex, newIndex);
+    reorderFavorites(newOrder);
+  }
 
   return (
     <>
@@ -204,31 +253,58 @@ export default function DashboardPage() {
           {/* Quick Access */}
           <div className="mt-8">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
-              {favoriteTools.length > 0 ? "Favorite Tools" : "Quick Access"}
+              {favoriteTools.length > 0
+                ? "Favorite Tools — drag to reorder"
+                : "Quick Access"}
             </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {recentTools.map((tool) => (
-                <ToolCard
-                  key={tool.id}
-                  name={tool.name}
-                  description={tool.description}
-                  icon={tool.icon}
-                  credits={tool.creditsPerUse}
-                  status={tool.status}
-                  category={tool.category}
-                  isFavorite={favoriteIds?.includes(tool.id) ?? false}
-                  onToggleFavorite={() => toggleFavorite(tool.id)}
-                  onClick={() => router.push(`/tools/${tool.id}`)}
-                />
-              ))}
-              {recentTools.length === 0 && (
-                <EmptyState
-                  icon="🛠️"
-                  title="No tools available"
-                  description="Tools will appear here once they are activated."
-                />
-              )}
-            </div>
+            {isDraggable ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={favoriteIds}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {recentTools.map((tool) => (
+                      <SortableToolCard
+                        key={tool.id}
+                        tool={tool}
+                        isFavorite={favoriteIds?.includes(tool.id) ?? false}
+                        onToggleFavorite={() => toggleFavorite(tool.id)}
+                        onClick={() => router.push(`/tools/${tool.id}`)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {recentTools.map((tool) => (
+                  <ToolCard
+                    key={tool.id}
+                    name={tool.name}
+                    description={tool.description}
+                    icon={tool.icon}
+                    credits={tool.creditsPerUse}
+                    status={tool.status}
+                    category={tool.category}
+                    isFavorite={favoriteIds?.includes(tool.id) ?? false}
+                    onToggleFavorite={() => toggleFavorite(tool.id)}
+                    onClick={() => router.push(`/tools/${tool.id}`)}
+                  />
+                ))}
+                {recentTools.length === 0 && (
+                  <EmptyState
+                    icon="🛠️"
+                    title="No tools available"
+                    description="Tools will appear here once they are activated."
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           {/* Recent History */}
@@ -375,5 +451,92 @@ export default function DashboardPage() {
         </div>
       </div>
     </>
+  );
+}
+
+function SortableToolCard({
+  tool,
+  isFavorite,
+  onToggleFavorite,
+  onClick,
+}: {
+  tool: any;
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
+  onClick: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: tool.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition || "transform 200ms cubic-bezier(0.25, 1, 0.5, 1)",
+    zIndex: isDragging ? 50 : 0,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "relative transition-all duration-200",
+        isDragging &&
+          "rounded-xl shadow-2xl shadow-primary/20 ring-2 ring-primary/30 scale-[1.03] opacity-90",
+      )}
+    >
+      <div
+        {...listeners}
+        {...attributes}
+        role="button"
+        aria-label={`Drag to reorder ${tool.name}`}
+        tabIndex={0}
+        className={cn(
+          "absolute -top-2 -left-2 z-20",
+          "flex h-8 w-8 items-center justify-center rounded-lg",
+          "bg-surface border border-border-subtle shadow-sm",
+          "cursor-grab active:cursor-grabbing",
+          "text-text-dim hover:text-text-muted hover:bg-surface-elevated hover:border-border hover:shadow-md",
+          "transition-all duration-150 ease-out",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+          "active:scale-90",
+          isDragging &&
+            "bg-primary/10 border-primary/30 text-primary shadow-lg",
+        )}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        >
+          <circle cx="9" cy="5" r="1.5" fill="currentColor" stroke="none" />
+          <circle cx="15" cy="5" r="1.5" fill="currentColor" stroke="none" />
+          <circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none" />
+          <circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none" />
+          <circle cx="9" cy="19" r="1.5" fill="currentColor" stroke="none" />
+          <circle cx="15" cy="19" r="1.5" fill="currentColor" stroke="none" />
+        </svg>
+      </div>
+      <ToolCard
+        name={tool.name}
+        description={tool.description}
+        icon={tool.icon}
+        credits={tool.creditsPerUse}
+        status={tool.status}
+        category={tool.category}
+        isFavorite={isFavorite}
+        onToggleFavorite={onToggleFavorite}
+        onClick={onClick}
+      />
+    </div>
   );
 }

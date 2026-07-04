@@ -4,6 +4,7 @@ import {
   Post,
   Delete,
   Param,
+  Body,
   UseGuards,
   Request,
 } from "@nestjs/common";
@@ -20,18 +21,16 @@ export class ToolFavoritesController {
     return this.favoritesService.getFavoriteIds(req.user.id);
   }
 
-  @Post(":toolId")
-  async addFavorite(@Request() req: any, @Param("toolId") toolId: string) {
-    return this.favoritesService.addFavorite(req.user.id, toolId);
-  }
-
-  @Delete(":toolId")
-  async removeFavorite(@Request() req: any, @Param("toolId") toolId: string) {
-    return this.favoritesService.removeFavorite(req.user.id, toolId);
-  }
-
   @Post(":toolId/toggle")
   async toggleFavorite(@Request() req: any, @Param("toolId") toolId: string) {
     return this.favoritesService.toggleFavorite(req.user.id, toolId);
+  }
+
+  @Post("reorder")
+  async reorderFavorites(
+    @Request() req: any,
+    @Body() body: { orderedIds: string[] },
+  ) {
+    return this.favoritesService.reorderFavorites(req.user.id, body.orderedIds);
   }
 }

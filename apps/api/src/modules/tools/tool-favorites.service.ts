@@ -1,45 +1,15 @@
 import { Injectable } from "@nestjs/common";
-import { prisma, type Tool } from "@creator-hub/database";
+import { prisma } from "@creator-hub/database";
 
 @Injectable()
 export class ToolFavoritesService {
-  async getFavorites(userId: string): Promise<Tool[]> {
-    const favorites = await prisma.toolFavorite.findMany({
-      where: { userId },
-      include: { tool: true },
-      orderBy: { createdAt: "desc" },
-    });
-    return favorites.map((f) => f.tool);
-  }
-
   async getFavoriteIds(userId: string): Promise<string[]> {
     const favorites = await prisma.toolFavorite.findMany({
       where: { userId },
       select: { toolId: true },
+      orderBy: { sortOrder: "asc" },
     });
     return favorites.map((f) => f.toolId);
-  }
-
-  async addFavorite(
-    userId: string,
-    toolId: string,
-  ): Promise<{ success: boolean }> {
-    await prisma.toolFavorite.upsert({
-      where: { userId_toolId: { userId, toolId } },
-      create: { userId, toolId },
-      update: {},
-    });
-    return { success: true };
-  }
-
-  async removeFavorite(
-    userId: string,
-    toolId: string,
-  ): Promise<{ success: boolean }> {
-    await prisma.toolFavorite.deleteMany({
-      where: { userId, toolId },
-    });
-    return { success: true };
   }
 
   async toggleFavorite(
@@ -56,11 +26,35 @@ export class ToolFavoritesService {
       });
       return { favorited: false };
     } else {
+      const maxOrder = await prisma.toolFavorite.aggregate({
+        where: { userId },
+        _max: { sortOrder: true },
+      });
+
       await prisma.toolFavorite.create({
-        data: { userId, toolId },
+        data: {
+          userId,
+          toolId,
+          sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
+        },
       });
       return { favorited: true };
     }
+  }
+
+  async reorderFavorites(
+    userId: string,
+    orderedIds: string[],
+  ): Promise<{ success: boolean }> {
+    const updates = orderedIds.map((toolId, index) =>
+      prisma.toolFavorite.updateMany({
+        where: { userId, toolId },
+        data: { sortOrder: index },
+      }),
+    );
+
+    await prisma.$transaction(updates);
+    return { success: true };
   }
 
   async getFavoriteStats(): Promise<{ toolId: string; count: number }[]> {

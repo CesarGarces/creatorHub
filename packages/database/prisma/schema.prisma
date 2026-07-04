@@ -171,7 +171,6 @@ model Tool {
   updatedAt       DateTime @updatedAt
 
   toolAccess      ToolAccess[]
-  toolFavorites   ToolFavorite[]
   usageLogs       UsageLog[]
   images          GeneratedImage[]
   toolConfigs     ToolConfig[]
@@ -211,13 +210,14 @@ model ToolFavorite {
   id        String   @id @default(cuid())
   userId    String
   toolId    String
+  sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
   @@unique([userId, toolId])
   @@index([toolId])
+  @@index([userId, sortOrder])
 }
 
 // ──────────────────────────────────────────────
