@@ -87,7 +87,7 @@ export default function ToolsPage() {
               credits={tool.creditsPerUse}
               status={tool.status}
               category={tool.category}
-              isFavorite={favoriteIds.includes(tool.id)}
+              isFavorite={favoriteIds?.includes(tool.id) ?? false}
               onToggleFavorite={() => toggleFavorite(tool.id)}
               onClick={() => router.push(`/tools/${tool.id}`)}
             />
