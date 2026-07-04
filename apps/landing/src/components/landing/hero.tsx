@@ -162,28 +162,11 @@ function MockAgentCard({
 }) {
   return (
     <div className="rounded-lg border border-border bg-bg p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="h-8 w-8 rounded-full bg-accent/20 flex items-center justify-center">
-          <MessageCircle size={16} className="text-accent" />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-text">{title}</h3>
-          <div className="flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" />
-            <span className="text-[10px] text-success">{status}</span>
-          </div>
-        </div>
+      <div className="h-10 w-10 rounded-lg bg-accent/20 flex items-center justify-center mb-3">
+        <MessageCircle size={20} className="text-accent" />
       </div>
-      <div className="flex flex-wrap gap-1">
-        {capabilities.map((cap) => (
-          <span
-            key={cap}
-            className="px-2 py-0.5 text-[10px] rounded-full bg-surface-elevated text-text-muted"
-          >
-            {cap}
-          </span>
-        ))}
-      </div>
+      <h3 className="text-sm font-semibold text-text mb-1">{title}</h3>
+      <p className="text-xs text-text-muted">{capabilities.join(", ")}</p>
     </div>
   );
 }
