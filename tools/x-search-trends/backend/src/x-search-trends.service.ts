@@ -131,7 +131,7 @@ export class XSearchTrendsService {
     let usedFallback = false;
 
     for (const query of queries) {
-      if (allTweets.length >= 20) break; // Enough data
+      if (allTweets.length >= 20) break;
 
       try {
         const account = await this.socialService.getActiveAccountByProvider(
@@ -141,7 +141,7 @@ export class XSearchTrendsService {
 
         if (!account) {
           throw new BadRequestException(
-            "No X account connected. Please connect your X account first.",
+            "No X account connected. Please connect your X account in Settings.",
           );
         }
 
@@ -188,9 +188,22 @@ export class XSearchTrendsService {
 
         allTweets.push(...searchResult.tweets);
       } catch (error) {
+        const message = (error as Error).message || "";
+
+        // Token expired - tell user to reconnect
+        if (
+          message.includes("401") ||
+          message.includes("Unauthorized") ||
+          message.includes("authorization expired")
+        ) {
+          throw new BadRequestException(
+            "Your X account connection has expired. Please disconnect and reconnect your X account in Settings.",
+          );
+        }
+
         this.logger.warn("X API search failed for query", {
           query,
-          error: (error as Error).message,
+          error: message,
         });
       }
     }
@@ -345,50 +358,47 @@ export class XSearchTrendsService {
    */
   private async buildSearchQueries(topic: string): Promise<string[]> {
     try {
-      const prompt = `You are a Twitter/X search expert. Transform this user request into effective X search queries.
+      const prompt = `Convert this to a Twitter/X search query. Return ONLY the query words, nothing else.
 
-User request: "${topic}"
+User said: "${topic}"
 
-Rules:
-1. Return ONLY the search query (no explanation)
-2. Use X search operators if helpful (-is:reply, min_faves:10, etc)
-3. Keep it concise (max 3-5 words)
-4. If user writes in Spanish, search in Spanish
-5. Extract the CORE topic, remove conversational words
+Example outputs:
+- "gaming"
+- "crypto"
+- "inteligencia artificial"
+- "startup funding"
 
-Return ONLY valid JSON: {"queries": ["query1"]}`;
+Return JSON: {"queries": ["query"]}`;
 
       const response = await this.aiEngine.execute({
         taskType: "text-generation",
         prompt,
         parameters: {
-          temperature: 0.1,
-          maxTokens: 100,
+          temperature: 0,
+          maxTokens: 50,
         },
       });
 
       let text = "";
       if (response.output.type === "json") {
         const data = response.output.data as { queries?: string[] };
-        if (data.queries?.length) return data.queries.slice(0, 3);
+        if (data.queries?.length) return data.queries.slice(0, 2);
       } else if (response.output.type === "text") {
         text = response.output.content;
       }
 
-      // Try to extract JSON from text
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]) as { queries?: string[] };
-        if (parsed.queries?.length) return parsed.queries.slice(0, 3);
+        if (parsed.queries?.length) return parsed.queries.slice(0, 2);
       }
     } catch (error) {
-      this.logger.warn("AI query generation failed, using raw input", {
+      this.logger.warn("AI query generation failed", {
         error: (error as Error).message,
       });
     }
 
-    // Fallback: use raw input cleaned up
-    return [topic.substring(0, 50)];
+    return [topic.substring(0, 30)];
   }
 
   /**
