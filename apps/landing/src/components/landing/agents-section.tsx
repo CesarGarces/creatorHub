@@ -22,7 +22,7 @@ const agents = [
   {
     icon: Youtube,
     title: "YouTube Agent",
-    status: "online" as const,
+    status: "coming soon" as const,
     description:
       "Optimize videos for YouTube. Get title suggestions, SEO tags, and thumbnail ideas.",
     capabilities: [
