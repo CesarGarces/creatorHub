@@ -127,8 +127,8 @@ export class XSearchTrendsService {
 
       const accessToken = this.encryptionService.decrypt(account.accessToken);
 
-      // Build search query
-      let query = options.topic;
+      // Build search query - extract keywords from user input
+      let query = this.buildSearchQuery(options.topic);
       if (options.language) {
         query += ` lang:${options.language}`;
       }
@@ -170,6 +170,35 @@ export class XSearchTrendsService {
       );
 
       tweets = searchResult.tweets;
+
+      // If X API returned 0 results, try Crawlee as fallback
+      if (tweets.length === 0) {
+        this.logger.info("X API returned 0 results, trying Crawlee fallback", {
+          userId,
+          topic: options.topic,
+        });
+
+        usedFallback = true;
+        const crawledTweets = await this.twitterCrawler.searchTweets(
+          options.topic,
+          {
+            maxResults: options.maxTweets || 50,
+            timeframe: options.timeframe,
+            language: options.language,
+          },
+        );
+
+        tweets = crawledTweets.map((t) => ({
+          id: t.id,
+          text: t.text,
+          createdAt: t.createdAt,
+          author: t.author,
+          metrics: t.metrics,
+          hashtags: t.hashtags,
+          urls: t.urls,
+          media: t.media,
+        }));
+      }
     } catch (error) {
       // X API failed - fallback to Crawlee
       this.logger.warn("X API search failed, falling back to Crawlee", {
@@ -293,5 +322,44 @@ export class XSearchTrendsService {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([tag]) => `#${tag}`);
+  }
+
+  /**
+   * Transform natural language user input into a valid X search query.
+   * X API expects search operators, not conversational text.
+   *
+   * "Analyze what's trending on X about AI today" → "AI"
+   * "Research trending topics about crypto on Twitter" → "crypto"
+   * "What are people saying about the new iPhone" → "iPhone"
+   */
+  private buildSearchQuery(topic: string): string {
+    // Common filler words to remove
+    const fillers =
+      /\b(analyze|research|find|search|look|tell|me|about|what|are|people|saying|trending|trend|topics?|on|twitter|x|today|now|latest|news|recently|popular)\b/gi;
+
+    // Remove filler words
+    let cleaned = topic.replace(fillers, " ").trim();
+
+    // Remove extra spaces
+    cleaned = cleaned.replace(/\s+/g, " ").trim();
+
+    // If nothing meaningful left, use original topic
+    if (cleaned.length < 2) {
+      // Extract any hashtags or @mentions as they're valid search terms
+      const hashtags = topic.match(/#\w+/g);
+      const mentions = topic.match(/@\w+/g);
+      if (hashtags?.length) return hashtags.join(" OR ");
+      if (mentions?.length) return mentions.join(" OR ");
+      return topic;
+    }
+
+    // If multiple words, wrap in quotes for exact phrase OR search
+    const words = cleaned.split(" ").filter((w) => w.length > 1);
+    if (words.length > 3) {
+      // Too many words, take the most important ones (last 2-3)
+      return words.slice(-3).join(" ");
+    }
+
+    return cleaned;
   }
 }
