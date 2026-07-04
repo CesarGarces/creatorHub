@@ -26,13 +26,13 @@ export const useFavoritesStore = create<FavoritesState>()((set, get) => ({
 
   toggleFavorite: async (toolId: string) => {
     const { favoriteIds } = get();
-    const isFav = favoriteIds.includes(toolId);
+    const isFav = favoriteIds?.includes(toolId) ?? false;
 
     // Optimistic update
     set({
       favoriteIds: isFav
-        ? favoriteIds.filter((id) => id !== toolId)
-        : [...favoriteIds, toolId],
+        ? (favoriteIds || []).filter((id) => id !== toolId)
+        : [...(favoriteIds || []), toolId],
     });
 
     try {
@@ -41,13 +41,13 @@ export const useFavoritesStore = create<FavoritesState>()((set, get) => ({
       // Revert on error
       set({
         favoriteIds: isFav
-          ? [...favoriteIds, toolId]
-          : favoriteIds.filter((id) => id !== toolId),
+          ? [...(favoriteIds || []), toolId]
+          : (favoriteIds || []).filter((id) => id !== toolId),
       });
     }
   },
 
   isFavorite: (toolId: string) => {
-    return get().favoriteIds.includes(toolId);
+    return get().favoriteIds?.includes(toolId) ?? false;
   },
 }));
