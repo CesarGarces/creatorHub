@@ -34,12 +34,18 @@ export interface DashboardStats {
   activeProviders: number;
   totalCreditsUsed: number;
   totalCreditsRemaining: number;
+  totalFavorites: number;
 }
 
 export interface UsageByProvider {
   toolId: string;
   usageCount: number;
   credits: number;
+}
+
+export interface FavoriteStats {
+  toolId: string;
+  favoriteCount: number;
 }
 
 export interface TopUser {

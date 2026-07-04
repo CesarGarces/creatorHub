@@ -164,6 +164,13 @@ export class AdminController {
     return this.adminService.getUsageByProvider(limit);
   }
 
+  @Get("dashboard/favorites")
+  async getFavoriteStats(
+    @Query("limit", new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ): Promise<any> {
+    return this.adminService.getFavoriteStats(limit);
+  }
+
   @Get("dashboard/top-users")
   async getTopUsers(
     @Query("limit", new DefaultValuePipe(10), ParseIntPipe) limit: number,

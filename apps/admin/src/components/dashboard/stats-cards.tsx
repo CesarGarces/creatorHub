@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, CreditCard, Cpu, UserCheck } from "lucide-react";
+import { Users, CreditCard, UserCheck, Star } from "lucide-react";
 import type { DashboardStats } from "@/types";
 
 interface StatsCardsProps {
@@ -34,12 +34,12 @@ export function StatsCards({ stats }: StatsCardsProps) {
       bg: "bg-warning/10",
     },
     {
-      label: "Active Providers",
-      value: stats.activeProviders,
-      sub: `${stats.totalProviders} total`,
-      icon: Cpu,
-      color: "text-accent",
-      bg: "bg-accent/10",
+      label: "Total Favorites",
+      value: stats.totalFavorites,
+      sub: "tools favorited",
+      icon: Star,
+      color: "text-yellow-500",
+      bg: "bg-yellow-500/10",
     },
   ];
 

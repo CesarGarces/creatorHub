@@ -361,6 +361,7 @@ export class AdminService {
       totalProviders,
       activeProviders,
       totalCreditsUsed,
+      totalFavorites,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { isActive: true } }),
@@ -371,6 +372,7 @@ export class AdminService {
         where: { type: "USAGE" },
         _sum: { amount: true },
       }),
+      prisma.toolFavorite.count(),
     ]);
 
     const totalCreditsRemaining = await prisma.user.aggregate({
@@ -387,6 +389,7 @@ export class AdminService {
       totalCreditsRemaining:
         (totalCreditsRemaining._sum.currentCredits ?? 0) +
         (totalCreditsRemaining._sum.purchasedCredits ?? 0),
+      totalFavorites,
     };
   }
 
@@ -403,7 +406,23 @@ export class AdminService {
       byProvider: usage.map((u) => ({
         toolId: u.toolId,
         usageCount: u._count.userId,
-        credits: u._sum.credits ?? 0,
+        totalCredits: Math.abs(u._sum.credits ?? 0),
+      })),
+    };
+  }
+
+  async getFavoriteStats(limit = 10): Promise<any> {
+    const stats = await prisma.toolFavorite.groupBy({
+      by: ["toolId"],
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+      take: limit,
+    });
+
+    return {
+      byTool: stats.map((s) => ({
+        toolId: s.toolId,
+        favoriteCount: s._count.id,
       })),
     };
   }

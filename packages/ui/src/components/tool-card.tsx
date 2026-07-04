@@ -1,3 +1,6 @@
+"use client";
+
+import { Star } from "lucide-react";
 import { cn } from "../lib/utils";
 
 interface ToolCardProps {
@@ -8,6 +11,8 @@ interface ToolCardProps {
   status?: string;
   category?: string;
   isPremium?: boolean;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
   onClick?: () => void;
 }
 
@@ -19,6 +24,8 @@ export function ToolCard({
   status,
   category,
   isPremium,
+  isFavorite = false,
+  onToggleFavorite,
   onClick,
 }: ToolCardProps) {
   const isInactive = status === "inactive";
@@ -45,11 +52,33 @@ export function ToolCard({
             </p>
           </div>
         </div>
-        {category && (
-          <span className="rounded-full bg-surface-elevated px-2.5 py-0.5 text-xs text-text-muted border border-border-subtle">
-            {category}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {category && (
+            <span className="rounded-full bg-surface-elevated px-2.5 py-0.5 text-xs text-text-muted border border-border-subtle">
+              {category}
+            </span>
+          )}
+          {onToggleFavorite && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite();
+              }}
+              className={cn(
+                "p-1.5 rounded-lg transition-all duration-200",
+                "hover:bg-surface-elevated",
+                isFavorite
+                  ? "text-warning"
+                  : "text-text-dim hover:text-warning/70",
+              )}
+              aria-label={
+                isFavorite ? "Remove from favorites" : "Add to favorites"
+              }
+            >
+              <Star size={16} className={cn(isFavorite && "fill-current")} />
+            </button>
+          )}
+        </div>
       </div>
       <div className="mt-4 flex items-center gap-3">
         {isPremium && (

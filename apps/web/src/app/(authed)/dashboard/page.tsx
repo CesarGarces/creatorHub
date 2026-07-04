@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { useToolsStore } from "@/store/tools.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { useChatStore } from "@/store/chat.store";
+import { useFavoritesStore } from "@/store/favorites.store";
 import { ToolCard, CreditDisplay, EmptyState, Badge } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { CommandPalette } from "@/components/layout/command-palette";
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const { tools, fetchTools } = useToolsStore();
   const { balance, fetchBalance } = useCreditsStore();
   const { sendMessage, isStreaming, openWidget } = useChatStore();
+  const { favoriteIds, fetchFavorites, toggleFavorite } = useFavoritesStore();
   const [quickPrompt, setQuickPrompt] = useState("");
   const [cmdOpen, setCmdOpen] = useState(false);
 
@@ -72,7 +74,8 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchTools();
     fetchBalance();
-  }, [fetchTools, fetchBalance]);
+    fetchFavorites();
+  }, [fetchTools, fetchBalance, fetchFavorites]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -85,7 +88,10 @@ export default function DashboardPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const recentTools = tools.slice(0, 4);
+  // Show favorite tools, or first 4 if no favorites
+  const favoriteTools = tools.filter((t) => favoriteIds.includes(t.id));
+  const recentTools =
+    favoriteTools.length > 0 ? favoriteTools.slice(0, 4) : tools.slice(0, 4);
 
   return (
     <>
@@ -198,7 +204,7 @@ export default function DashboardPage() {
           {/* Quick Access */}
           <div className="mt-8">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
-              Quick Access
+              {favoriteTools.length > 0 ? "Favorite Tools" : "Quick Access"}
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {recentTools.map((tool) => (
@@ -210,6 +216,8 @@ export default function DashboardPage() {
                   credits={tool.creditsPerUse}
                   status={tool.status}
                   category={tool.category}
+                  isFavorite={favoriteIds.includes(tool.id)}
+                  onToggleFavorite={() => toggleFavorite(tool.id)}
                   onClick={() => router.push(`/tools/${tool.id}`)}
                 />
               ))}

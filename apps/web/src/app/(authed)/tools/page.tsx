@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToolsStore } from "@/store/tools.store";
+import { useFavoritesStore } from "@/store/favorites.store";
 import { ToolCard, EmptyState, Badge } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 
@@ -26,11 +27,13 @@ const categories = [
 export default function ToolsPage() {
   const router = useRouter();
   const { tools, fetchTools } = useToolsStore();
+  const { favoriteIds, fetchFavorites, toggleFavorite } = useFavoritesStore();
   const [activeCategory, setActiveCategory] = useState("all");
 
   useEffect(() => {
     fetchTools();
-  }, [fetchTools]);
+    fetchFavorites();
+  }, [fetchTools, fetchFavorites]);
 
   const filtered =
     activeCategory === "all"
@@ -84,6 +87,8 @@ export default function ToolsPage() {
               credits={tool.creditsPerUse}
               status={tool.status}
               category={tool.category}
+              isFavorite={favoriteIds.includes(tool.id)}
+              onToggleFavorite={() => toggleFavorite(tool.id)}
               onClick={() => router.push(`/tools/${tool.id}`)}
             />
           ))}

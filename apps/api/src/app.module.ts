@@ -19,6 +19,8 @@ import { PlanGuard } from "@creator-hub/auth";
 import { AuthController } from "./modules/auth/auth.controller";
 import { CreditsController } from "./modules/credits/credits.controller";
 import { ToolsController } from "./modules/tools/tools.controller";
+import { ToolFavoritesController } from "./modules/tools/tool-favorites.controller";
+import { ToolFavoritesService } from "./modules/tools/tool-favorites.service";
 import { ImagesController } from "./modules/images/images.controller";
 import { AdminModule } from "./modules/admin/admin.module";
 import { AIController } from "./modules/ai/ai.controller";
@@ -98,6 +100,7 @@ import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
     AuthController,
     CreditsController,
     ToolsController,
+    ToolFavoritesController,
     ImagesController,
     AIController,
     WebhooksController,
@@ -107,6 +110,7 @@ import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
       provide: APP_GUARD,
       useClass: PlanGuard,
     },
+    ToolFavoritesService,
   ],
 })
 export class AppModule {}

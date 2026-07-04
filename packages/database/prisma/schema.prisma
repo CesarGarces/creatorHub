@@ -87,6 +87,7 @@ model User {
   creditTxns        CreditTransaction[]
   subscriptions     Subscription[]
   toolAccess        ToolAccess[]
+  toolFavorites     ToolFavorite[]
   usageLogs         UsageLog[]
   images            GeneratedImage[]
   apiKeys           ApiKey[]
@@ -170,6 +171,7 @@ model Tool {
   updatedAt       DateTime @updatedAt
 
   toolAccess      ToolAccess[]
+  toolFavorites   ToolFavorite[]
   usageLogs       UsageLog[]
   images          GeneratedImage[]
   toolConfigs     ToolConfig[]
@@ -203,6 +205,19 @@ model ToolAccess {
   tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
   @@unique([userId, toolId])
+}
+
+model ToolFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  toolId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, toolId])
+  @@index([toolId])
 }
 
 // ──────────────────────────────────────────────

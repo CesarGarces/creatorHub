@@ -4,13 +4,20 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { UsageChart } from "@/components/dashboard/usage-chart";
+import { FavoriteToolsChart } from "@/components/dashboard/favorite-tools-chart";
 import { RegistrationsChart } from "@/components/dashboard/registrations-chart";
 import { TopUsersTable } from "@/components/dashboard/top-users-table";
-import type { DashboardStats, UsageByProvider, TopUser } from "@/types";
+import type {
+  DashboardStats,
+  UsageByProvider,
+  TopUser,
+  FavoriteStats,
+} from "@/types";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [usage, setUsage] = useState<UsageByProvider[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteStats[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -18,14 +25,17 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, usageRes, topUsersRes] = await Promise.all([
-          api.get("/admin/dashboard/stats"),
-          api.get("/admin/dashboard/usage"),
-          api.get("/admin/dashboard/top-users"),
-        ]);
+        const [statsRes, usageRes, favoritesRes, topUsersRes] =
+          await Promise.all([
+            api.get("/admin/dashboard/stats"),
+            api.get("/admin/dashboard/usage"),
+            api.get("/admin/dashboard/favorites"),
+            api.get("/admin/dashboard/top-users"),
+          ]);
 
         setStats(statsRes.data);
         setUsage(usageRes.data?.byProvider || []);
+        setFavorites(favoritesRes.data?.byTool || []);
         setTopUsers(topUsersRes.data?.users || []);
       } catch (err: any) {
         setError(
@@ -77,10 +87,13 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <UsageChart data={usage} />
-        <RegistrationsChart />
+        <FavoriteToolsChart data={favorites} />
       </div>
 
-      <TopUsersTable users={topUsers} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <RegistrationsChart />
+        <TopUsersTable users={topUsers} />
+      </div>
     </div>
   );
 }
