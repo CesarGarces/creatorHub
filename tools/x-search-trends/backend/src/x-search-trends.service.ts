@@ -333,30 +333,38 @@ export class XSearchTrendsService {
    * "What are people saying about the new iPhone" → "iPhone"
    */
   private buildSearchQuery(topic: string): string {
-    // Common filler words to remove
+    // Extract hashtags and mentions first (they're valid search terms)
+    const hashtags = topic.match(/#\w+/g);
+    const mentions = topic.match(/@\w+/g);
+    if (hashtags?.length) return hashtags.join(" OR ");
+    if (mentions?.length) return mentions.join(" OR ");
+
+    // Common filler words/phrases to remove
     const fillers =
-      /\b(analyze|research|find|search|look|tell|me|about|what|are|people|saying|trending|trend|topics?|on|twitter|x|today|now|latest|news|recently|popular)\b/gi;
+      /\b(analyze|research|find|search|look|tell|me|about|what'?s?|are|people|saying|trending|trend|topics?|on|twitter|x|today|now|latest|news|recently|popular|the|new|how|who|which|when|where|why|can|could|would|should|do|does|did|have|has|had|is|am|was|were|be|been|being|this|that|these|those|it|its|my|your|his|her|our|their)\b/gi;
 
-    // Remove filler words
-    let cleaned = topic.replace(fillers, " ").trim();
+    // Also remove contractions properly: "what's" → remove entirely
+    let cleaned = topic
+      .replace(/\b\w+'(?:s|re|ve|ll|d|m|t)\b/gi, " ")
+      .replace(fillers, " ")
+      .trim();
 
-    // Remove extra spaces
-    cleaned = cleaned.replace(/\s+/g, " ").trim();
+    // Remove extra spaces and non-alphanumeric chars (keep spaces, #, @)
+    cleaned = cleaned
+      .replace(/[^\w\s#@]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
 
-    // If nothing meaningful left, use original topic
+    // If nothing meaningful left, try extracting any word >= 3 chars
     if (cleaned.length < 2) {
-      // Extract any hashtags or @mentions as they're valid search terms
-      const hashtags = topic.match(/#\w+/g);
-      const mentions = topic.match(/@\w+/g);
-      if (hashtags?.length) return hashtags.join(" OR ");
-      if (mentions?.length) return mentions.join(" OR ");
+      const allWords = topic.match(/\b\w{3,}\b/g);
+      if (allWords?.length) return allWords.slice(0, 3).join(" ");
       return topic;
     }
 
-    // If multiple words, wrap in quotes for exact phrase OR search
+    // Take the most meaningful words (last 2-3 keywords)
     const words = cleaned.split(" ").filter((w) => w.length > 1);
     if (words.length > 3) {
-      // Too many words, take the most important ones (last 2-3)
       return words.slice(-3).join(" ");
     }
 
