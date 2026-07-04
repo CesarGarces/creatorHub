@@ -582,7 +582,7 @@ Return ONLY valid JSON (no markdown, no explanation):
 
     // Common filler words/phrases to remove (English + Spanish)
     const fillers =
-      /\b(analyze|research|find|search|look|tell|me|about|what'?s?|are|people|saying|trending|trend|topics?|on|twitter|x|today|now|latest|news|recently|popular|the|new|how|who|which|when|where|why|can|could|would|should|do|does|did|have|has|had|is|am|was|were|be|been|being|this|that|these|those|it|its|my|your|his|her|our|their|dame|los|mas|relevante|de|en|el|la|las|los|un|una|unos|unas|que|como|con|por|para|sin|sobre|entre|hasta|desde|segun|durante|mediante|hacia|tras|ante|bajo|contra|entre|segun|todo|todos|toda|todas|este|esta|estos|estas|ese|esa|esos|esas|aquel|aquella|aquellos|aquellas|mismo|misma|mismos|mismas|otro|otra|otros|otras|nuevo|nueva|nuevos|nuevas|gran|grande|grandes|mejor|peor|mayor|menor|primer|primera|ultimo|ultima)\b/gi;
+      /\b(analyze|research|find|search|look|tell|me|about|what'?s?|are|people|saying|trending|trend|topics?|on|twitter|x|today|now|latest|news|recently|popular|the|new|how|who|which|when|where|why|can|could|would|should|do|does|did|have|has|had|is|am|was|were|be|been|being|this|that|these|those|it|its|my|your|his|her|our|their|dame|los|mas|relevante|relevantes|de|en|el|la|las|los|un|una|unos|unas|que|como|con|por|para|sin|sobre|entre|hasta|desde|segun|durante|mediante|hacia|tras|ante|bajo|contra|entre|segun|todo|todos|toda|todas|este|esta|estos|estas|ese|esa|esos|esas|aquel|aquella|aquellos|aquellas|mismo|misma|mismos|mismas|otro|otra|otros|otras|nuevo|nueva|nuevos|nuevas|gran|grande|grandes|mejor|peor|mayor|menor|primer|primera|ultimo|ultima)\b/gi;
 
     let cleaned = topic
       .replace(/\b\w+'(?:s|re|ve|ll|d|m|t)\b/gi, " ")
