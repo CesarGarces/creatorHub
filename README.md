@@ -774,7 +774,7 @@ The platform includes full X (Twitter) integration with OAuth 2.0 PKCE authentic
 - **Tweet Drafting** — AI-generated tweets using your communication style (User Style RAG)
 - **Trend Research** — Real-time X trend analysis with AI-powered insights
 - **One-Click Publishing** — Publish drafts directly to X
-- **Credit System** — Research costs 15 credits + 10 AI analysis, publishing costs 5 credits
+- **Credit System** — Research costs 25 credits, publishing costs 15 credits
 
 ### X Search Trends - Advanced Features
 

@@ -2054,7 +2054,7 @@ GET    /api/v1/social/tweets/drafts     # List drafts
 GET    /api/v1/social/tweets/drafts/:id # Get draft
 PATCH  /api/v1/social/tweets/drafts/:id # Edit draft
 DELETE /api/v1/social/tweets/drafts/:id # Delete draft
-POST   /api/v1/social/tweets/drafts/:id/publish  # Publish to X (5 cr)
+POST   /api/v1/social/tweets/drafts/:id/publish  # Publish to X (15 cr)
 
 # Trend Research (via tool controller)
 POST   /api/v1/tools/x-search-trends/research    # Research trends (15 cr + 10 cr AI analysis)
