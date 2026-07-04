@@ -115,7 +115,6 @@ export class SocialResearchService {
       include: {
         messages: {
           orderBy: { createdAt: "asc" },
-          take: 1,
         },
         _count: {
           select: { messages: true },
