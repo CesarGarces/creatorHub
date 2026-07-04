@@ -315,22 +315,16 @@ export class XSearchTrendsService {
       await this.cacheService.set(options.topic, CACHE_PROVIDER, result);
     }
 
-    // Deduct credits
+    // Deduct credits (single transaction for search + AI analysis)
+    const creditsToDeduct = insufficientData
+      ? SEARCH_CREDIT_COST
+      : totalCreditsNeeded;
     await this.creditService.deduct(
       userId,
-      SEARCH_CREDIT_COST,
+      creditsToDeduct,
       "x-search-trends",
       `X trend search: ${options.topic}${usedFallback ? " (via Crawlee)" : ""}`,
     );
-
-    if (!insufficientData) {
-      await this.creditService.deduct(
-        userId,
-        AI_ANALYSIS_CREDIT_COST,
-        "x-search-trends",
-        `AI analysis: ${options.topic}`,
-      );
-    }
 
     await this.socialResearch.addMessage(session.id, {
       role: "assistant",
