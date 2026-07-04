@@ -22,6 +22,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useAuthStore } from "@/store/auth.store";
 import { useToolsStore } from "@/store/tools.store";
+import type { ToolManifest } from "@creator-hub/shared-types";
 import { useCreditsStore } from "@/store/credits.store";
 import { useChatStore } from "@/store/chat.store";
 import { useFavoritesStore } from "@/store/favorites.store";
@@ -119,7 +120,7 @@ export default function DashboardPage() {
     // Sort by favoriteIds order
     return favoriteIds
       .map((id) => favTools.find((t) => t.id === id))
-      .filter(Boolean);
+      .filter((t): t is ToolManifest => t !== undefined);
   }, [tools, favoriteIds]);
   const recentTools =
     favoriteTools.length > 0 ? favoriteTools : tools.slice(0, 4);
