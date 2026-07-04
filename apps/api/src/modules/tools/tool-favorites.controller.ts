@@ -10,7 +10,7 @@ import {
 import { JwtAuthGuard } from "@creator-hub/auth";
 import { ToolFavoritesService } from "./tool-favorites.service";
 
-@Controller("tools/favorites")
+@Controller("user/favorites")
 @UseGuards(JwtAuthGuard)
 export class ToolFavoritesController {
   constructor(private favoritesService: ToolFavoritesService) {}

@@ -17,7 +17,7 @@ export const useFavoritesStore = create<FavoritesState>()((set, get) => ({
   fetchFavorites: async () => {
     set({ isLoading: true });
     try {
-      const data = await api.get<string[]>("/tools/favorites");
+      const data = await api.get<string[]>("/user/favorites");
       set({ favoriteIds: data });
     } finally {
       set({ isLoading: false });
@@ -36,7 +36,7 @@ export const useFavoritesStore = create<FavoritesState>()((set, get) => ({
     });
 
     try {
-      await api.post(`/tools/favorites/${toolId}/toggle`);
+      await api.post(`/user/favorites/${toolId}/toggle`);
     } catch {
       // Revert on error
       set({
