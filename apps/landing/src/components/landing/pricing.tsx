@@ -86,7 +86,7 @@ const toolCosts = [
   },
   {
     tool: "X Post Tweet",
-    cost: "5 credits",
+    cost: "15 credits",
     description: "Generate and publish tweets with RAG style",
   },
   {

@@ -8,7 +8,7 @@ registerTool({
   version: "1.0.0",
   icon: "💬",
   category: "social",
-  creditsPerUse: 5,
+  creditsPerUse: 15,
   permissions: [
     {
       action: "publish",

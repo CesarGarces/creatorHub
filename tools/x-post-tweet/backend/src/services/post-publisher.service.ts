@@ -4,7 +4,7 @@ import { Logger } from "@creator-hub/shared-utils";
 import { prisma, type TweetDraft } from "@creator-hub/database";
 import { XApiService } from "./x-api.service";
 
-const PUBLISH_CREDIT_COST = 5;
+const PUBLISH_CREDIT_COST = 15;
 
 interface PublishOptions {
   userId: string;
