@@ -70,12 +70,12 @@ export function Hero() {
                   color="primary"
                 />
                 <MockAgentCard
-                  title="YouTube Agent"
+                  title="X (Twitter) Agent"
                   status="online"
                   capabilities={[
-                    "Title Generation",
-                    "SEO Optimization",
-                    "Content Strategy",
+                    "X Post Generation",
+                    "AI Analysis",
+                    "Trend Researc",
                   ]}
                 />
                 <MockStatsCard />
