@@ -81,12 +81,12 @@ const plans = [
 const toolCosts = [
   {
     tool: "X Trend Research",
-    cost: "25 credits",
+    cost: "~25 credits",
     description: "AI-powered trend analysis with sentiment insights",
   },
   {
     tool: "X Post Tweet",
-    cost: "15 credits",
+    cost: "~15 credits",
     description: "Generate and publish tweets with RAG style",
   },
   {
