@@ -4,6 +4,7 @@ import { Logger } from "@creator-hub/shared-utils";
 import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
 import { EventEmitter2 } from "@nestjs/event-emitter";
+import * as Sentry from "@sentry/node";
 
 @Injectable()
 export class CreditService {
@@ -33,10 +34,30 @@ export class CreditService {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "billing.credit",
+        message: `Credit deduction failed: user not found`,
+        level: "warning",
+        data: { userId, amount, toolId },
+      });
       return false;
     }
 
     if (user.currentCredits < amount) {
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "billing.credit",
+        message: `Insufficient credits: ${user.currentCredits} < ${amount}`,
+        level: "warning",
+        data: {
+          userId,
+          currentCredits: user.currentCredits,
+          requested: amount,
+          toolId,
+        },
+      });
+
       await this.creditsQueue.add("credit-depleted", {
         userId,
         balance: user.currentCredits,
@@ -77,6 +98,21 @@ export class CreditService {
           balance: newBalance,
         },
       });
+
+      // Breadcrumb: Credit deduction success
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "billing.credit",
+        message: `Deducted ${amount} credits for user ${userId}`,
+        level: "info",
+        data: {
+          userId,
+          amount,
+          newBalance,
+          toolId: validToolId,
+          description,
+        },
+      });
     });
 
     return true;
@@ -115,6 +151,23 @@ export class CreditService {
           balance: newBalance,
           ...(options?.provider ? { provider: options.provider } : {}),
           ...(options?.referenceId ? { referenceId: options.referenceId } : {}),
+        },
+      });
+
+      // Breadcrumb: Credits added
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "billing.credit",
+        message: `Added ${amount} credits (${type}) for user ${userId}`,
+        level: "info",
+        data: {
+          userId,
+          amount,
+          type,
+          newBalance,
+          provider: options?.provider,
+          referenceId: options?.referenceId,
+          description,
         },
       });
     });

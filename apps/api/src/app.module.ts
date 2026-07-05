@@ -5,6 +5,7 @@ import { ThrottlerModule } from "@nestjs/throttler";
 import { APP_GUARD } from "@nestjs/core";
 import { join } from "path";
 
+import { SentryModule } from "./common/sentry";
 import { AuthModule } from "@creator-hub/auth";
 import { AIEngineModule } from "@creator-hub/ai-engine";
 import { BillingModule } from "@creator-hub/billing";
@@ -51,6 +52,9 @@ import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
 
 @Module({
   imports: [
+    // Sentry MUST be first — captures errors in all subsequent modules
+    SentryModule,
+
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: join(process.cwd(), "../../.env"),

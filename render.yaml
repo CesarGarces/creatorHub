@@ -40,3 +40,10 @@ services:
         value: false
       - key: API_URL
         value: "https://creatorhub-qtod.onrender.com"
+      # Sentry (Error Tracking)
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: production
+      - key: SENTRY_RELEASE
+        sync: false

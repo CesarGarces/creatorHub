@@ -17,6 +17,7 @@ import type {
   ThumbnailReadyPayload,
   ToolJobUpdatePayload,
 } from "@creator-hub/shared-types";
+import * as Sentry from "@sentry/nestjs";
 
 const THUMBNAIL_COMPLETED_CHANNEL = "thumbnail:completed";
 const THUMBNAIL_FAILED_CHANNEL = "thumbnail:failed";
@@ -58,6 +59,20 @@ export class ThumbnailListenerService implements OnModuleInit, OnModuleDestroy {
       key: event.key,
     });
 
+    // Breadcrumb: Thumbnail completed
+    Sentry.addBreadcrumb({
+      type: "default",
+      category: "tool.thumbnail",
+      message: `Thumbnail completed for user ${event.userId}`,
+      level: "info",
+      data: {
+        userId: event.userId,
+        imageId: event.imageId,
+        key: event.key,
+        bucket: event.bucket,
+      },
+    });
+
     try {
       const url = await this.storageService.getPresignedDownloadUrl(
         event.bucket,
@@ -84,6 +99,20 @@ export class ThumbnailListenerService implements OnModuleInit, OnModuleDestroy {
         userId: event.userId,
       });
 
+      // Breadcrumb: Presigned URL failure
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "tool.thumbnail",
+        message: `Failed to generate presigned URL for user ${event.userId}`,
+        level: "error",
+        data: {
+          userId: event.userId,
+          imageId: event.imageId,
+          key: event.key,
+          error: (error as Error).message,
+        },
+      });
+
       this.gateway.emitToUser(event.userId, "tool_job_updated", {
         toolId: "thumbnail-generator",
         jobId: "",
@@ -97,6 +126,20 @@ export class ThumbnailListenerService implements OnModuleInit, OnModuleDestroy {
     this.logger.warn("Thumbnail generation failed", {
       userId: event.userId,
       error: event.rawError || event.error,
+    });
+
+    // Breadcrumb: Thumbnail failed
+    Sentry.addBreadcrumb({
+      type: "default",
+      category: "tool.thumbnail",
+      message: `Thumbnail generation failed for user ${event.userId}`,
+      level: "error",
+      data: {
+        userId: event.userId,
+        jobId: event.jobId,
+        error: event.error,
+        rawError: event.rawError,
+      },
     });
 
     this.gateway.emitToUser(event.userId, "tool_job_updated", {

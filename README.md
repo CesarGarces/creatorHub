@@ -955,6 +955,85 @@ Balance is stored in a single `currentCredits` field which is the single source 
 
 When credits reach 0, an **upgrade modal** is shown with top-up options (minimum $10 USD).
 
+---
+
+## Observability — Sentry
+
+Creator Hub uses **Sentry** for error tracking and performance monitoring across both frontend and backend. Each app has its own Sentry project with a separate DSN.
+
+### What Sentry Captures
+
+| Layer              | What                                                        |
+| ------------------ | ----------------------------------------------------------- |
+| **Backend errors** | Unhandled exceptions, validation errors, database errors    |
+| **AI API calls**   | Provider selection, retries, rate limits (429), failures    |
+| **Payments**       | Webhook received, verification, reconciliation results      |
+| **Credits**        | Deductions, insufficient credits, balance changes           |
+| **Frontend**       | React rendering errors, fetch failures, client-side crashes |
+| **Performance**    | HTTP request duration, AI provider latency, page load times |
+| **Session Replay** | Video replay of user sessions when errors occur             |
+
+### Breadcrumbs
+
+Sentry records "breadcrumbs" — a trail of what happened before an error. When something fails, you see the full context:
+
+```
+[info] User clicked "Generate"
+[info] POST /tools/thumbnail/generate → 200
+[info] Provider selection: [openai, siliconflow]
+[info] Calling openai API — task: image-generation
+[error] openai failed: 429 Too Many Requests
+[warning] Retrying with next provider
+[info] siliconflow responded in 1800ms
+[info] Deducted 10 credits for user xxx
+```
+
+### PII Protection
+
+All events are sanitized before sending to Sentry:
+
+- Passwords, tokens, API keys → `[Filtered]`
+- User prompts >200 chars → truncated
+- IP addresses → never sent
+- Session Replays → all text masked, media blocked
+
+### Setup
+
+**Backend (Render):**
+
+1. Create project "creatorhub-api" in Sentry
+2. Copy DSN → Set `SENTRY_DSN` in Render Environment Variables
+
+**Frontend (Vercel):**
+
+1. Create project "creatorhub-web" in Sentry
+2. Copy DSN → Set `NEXT_PUBLIC_SENTRY_DSN` in Vercel Environment Variables
+3. Create Auth Token → Set `SENTRY_AUTH_TOKEN` for source maps upload
+
+### Environment Variables (Sentry)
+
+```env
+# Backend (Render)
+SENTRY_DSN="https://xxx@xxx.sentry.io/xxx"
+SENTRY_ENVIRONMENT="production"
+SENTRY_RELEASE=""
+SENTRY_TRACES_SAMPLE_RATE="0.2"
+
+# Frontend (Vercel)
+NEXT_PUBLIC_SENTRY_DSN="https://xxx@xxx.sentry.io/xxx"
+NEXT_PUBLIC_SENTRY_ENVIRONMENT="production"
+NEXT_PUBLIC_SENTRY_RELEASE=""
+
+# Source Maps Upload (Vercel build time)
+SENTRY_AUTH_TOKEN="sntrys_..."
+SENTRY_ORG="cesar-garces"
+SENTRY_PROJECT="creatorhub-web"
+```
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md#17-observability--sentry) for full technical details.
+
+---
+
 ## Pre-commit Hooks
 
 The project uses **Husky** + **lint-staged** to ensure code quality before each commit:

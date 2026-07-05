@@ -2407,6 +2407,214 @@ export class YourToolService {
 | **Dynamic tool routing**         | `ChatRoutingService` queries `ToolRegistry.getActive()` at runtime — zero code changes for new tools                                              |
 | **Chat SSE via POST + Readable** | NestJS `@Sse` creates GET endpoints; frontend sends POST with body. Readable stream for SSE.                                                      |
 | **Store-driven widget open**     | `isWidgetOpen` in Zustand store allows any component to open chat via `openWidget()`                                                              |
+| **Sentry for observability**     | Separate projects for API + Web, breadcrumbs for context, PII sanitization, flush on Render shutdown                                              |
+
+---
+
+## 17. Observability — Sentry
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    SENTRY OBSERVABILITY                                      │
+│                                                                             │
+│  ┌─────────────────────────┐       ┌─────────────────────────┐             │
+│  │  FRONTEND (Next.js)     │       │  BACKEND (NestJS)       │             │
+│  │  @sentry/nextjs         │       │  @sentry/nestjs         │             │
+│  │                         │       │                         │             │
+│  │  Sentry Project:        │       │  Sentry Project:        │             │
+│  │  "creatorhub-web"       │       │  "creatorhub-api"       │             │
+│  │                         │       │                         │             │
+│  │  • Client errors        │       │  • Exception filter     │             │
+│  │  • React rendering      │       │  • HTTP interceptor     │             │
+│  │  • Session Replay       │       │  • Breadcrumbs          │             │
+│  │  • Fetch failures       │       │  • Performance spans    │             │
+│  │  • Page performance     │       │  • User context         │             │
+│  └─────────────────────────┘       └─────────────────────────┘             │
+│              │                              │                              │
+│              └──────────────┬───────────────┘                              │
+│                             │                                              │
+│                    ┌────────▼────────┐                                     │
+│                    │  SENTRY.IO       │                                     │
+│                    │                   │                                     │
+│                    │  • Issues         │                                     │
+│                    │  • Performance    │                                     │
+│                    │  • Breadcrumbs    │                                     │
+│                    │  • Session Replay │                                     │
+│                    │  • Alerts         │                                     │
+│                    └───────────────────┘                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Sentry Projects
+
+Each app has its own Sentry project with a separate DSN:
+
+| Sentry Project   | App                  | DSN Variable             | Deployment |
+| ---------------- | -------------------- | ------------------------ | ---------- |
+| `creatorhub-api` | `apps/api` (NestJS)  | `SENTRY_DSN`             | Render     |
+| `creatorhub-web` | `apps/web` (Next.js) | `NEXT_PUBLIC_SENTRY_DSN` | Vercel     |
+
+### Package Structure
+
+```
+apps/api/src/common/sentry/
+├── index.ts                        # Barrel export
+├── sentry.config.ts                # Centralized config + PII sanitization
+├── sentry.init.ts                  # Early init (before NestFactory)
+├── sentry.service.ts               # NestJS service (context, breadcrumbs, flush)
+└── sentry.module.ts                # Global NestJS module
+
+apps/api/src/common/filters/
+└── sentry-exception.filter.ts      # Global exception filter
+
+apps/api/src/common/interceptors/
+└── sentry.interceptor.ts           # HTTP performance tracking
+
+apps/web/
+├── sentry.client.config.ts         # Client-side config + Session Replay
+├── sentry.server.config.ts         # Server-side config
+├── sentry.edge.config.ts           # Edge runtime config
+└── next.config.js                  # withSentryConfig wrapper
+```
+
+### Breadcrumb Trail — What Sentry Captures
+
+```
+User clicks "Generate Thumbnail"
+    │
+    ├──► [breadcrumb] HTTP request received (SentryInterceptor)
+    │
+    ├──► ThumbnailService → BullMQ job enqueued
+    │
+    ├──► [breadcrumb] Thumbnail completed (thumbnail-listener)
+    │       ├──► [breadcrumb] Presigned URL generated
+    │       └──► [breadcrumb] tool_job_updated emitted
+    │
+    ├──► AI Engine → execute()
+    │       ├──► [breadcrumb] Provider selection: [openai, siliconflow]
+    │       ├──► [breadcrumb] Calling openai API — task: image-generation
+    │       ├──► [breadcrumb] openai responded in 2340ms
+    │       └──► [breadcrumb] Deducting 10 credits for user xxx
+    │
+    └──► If error occurs:
+            ├──► [breadcrumb] openai failed: 429 Too Many Requests
+            ├──► [breadcrumb] Retrying with next provider (failed: openai)
+            ├──► [breadcrumb] siliconflow responded in 1800ms
+            └──► [breadcrumb] Credit deduction: insufficient credits
+```
+
+### PII Sanitization (GDPR/Compliance)
+
+The `beforeSend` hook in `sentry.config.ts` sanitizes all events before sending:
+
+| What                    | Action                                   |
+| ----------------------- | ---------------------------------------- |
+| Passwords, tokens       | Replaced with `[Filtered]`               |
+| User prompts >200 chars | Truncated + `...[truncated]`             |
+| Request headers         | `authorization`, `cookie` → `[Filtered]` |
+| IP addresses            | Never sent (`sendDefaultPii: false`)     |
+| Session Replays         | All text masked, all media blocked       |
+
+### Error Filtering Strategy
+
+The `SentryExceptionFilter` intelligently filters what gets reported:
+
+| HTTP Status | Captured? | Rationale                              |
+| ----------- | --------- | -------------------------------------- |
+| 401         | No        | Expected (unauthenticated users)       |
+| 403         | No        | Expected (unauthorized access)         |
+| 404         | No        | Client requesting nonexistent resource |
+| 429         | **Yes**   | Rate limit = operational issue         |
+| 400/422     | **Yes**   | Possible validation bug                |
+| 5xx         | **Yes**   | Server-side bugs (always)              |
+
+### Performance Sampling
+
+| Environment | Traces Sample Rate    | Profiles Sample Rate |
+| ----------- | --------------------- | -------------------- |
+| Development | 100%                  | 100%                 |
+| Production  | 20% (API) / 10% (Web) | 20%                  |
+
+Lower rates in production reduce Sentry costs and minimize performance impact on Render free tier.
+
+### Flush on Shutdown (Critical for Render)
+
+Render free tier can kill processes at any time (spindown, OOM, deploy). The implementation ensures events are flushed:
+
+```
+Process receives SIGTERM/SIGINT
+    │
+    ├──► Sentry.flush(5000)  # Wait up to 5s for events to send
+    │
+    ├──► process.exit(0)
+    │
+    └──► OnModuleDestroy → SentryService.flush()  # NestJS lifecycle hook
+```
+
+Additionally, `unhandledRejection` and `uncaughtException` handlers capture errors before crashing.
+
+### Source Maps Upload
+
+Source maps allow Sentry to show original TypeScript code in stack traces instead of minified JavaScript.
+
+**Setup:**
+
+1. Create Auth Token: https://sentry.io/settings/auth-tokens/
+   - Permissions: `org:read`, `project:releases` (read & write)
+2. Set environment variables in Vercel:
+
+```env
+SENTRY_AUTH_TOKEN="sntrys_..."
+SENTRY_ORG="cesar-garces"
+SENTRY_PROJECT="creatorhub-web"
+```
+
+3. The `withSentryConfig` wrapper in `next.config.js` automatically uploads source maps during `next build`.
+
+### Environment Variables
+
+```env
+# Backend (Render)
+SENTRY_DSN="https://xxx@xxx.sentry.io/xxx"       # Project: creatorhub-api
+SENTRY_ENVIRONMENT="production"
+SENTRY_RELEASE=""                                  # Auto-detects git SHA
+SENTRY_TRACES_SAMPLE_RATE="0.2"                    # 20% in production
+
+# Frontend (Vercel)
+NEXT_PUBLIC_SENTRY_DSN="https://xxx@xxx.sentry.io/xxx"  # Project: creatorhub-web
+NEXT_PUBLIC_SENTRY_ENVIRONMENT="production"
+NEXT_PUBLIC_SENTRY_RELEASE=""
+
+# Source Maps Upload (Vercel build time)
+SENTRY_AUTH_TOKEN="sntrys_..."
+SENTRY_ORG="cesar-garces"
+SENTRY_PROJECT="creatorhub-web"
+```
+
+### Packages with Sentry
+
+| Package                  | Dependency               | Version    | Purpose                   |
+| ------------------------ | ------------------------ | ---------- | ------------------------- |
+| `@creator-hub/api`       | `@sentry/nestjs`         | `^10.63.0` | NestJS integration        |
+| `@creator-hub/api`       | `@sentry/node`           | `^10.63.0` | Node.js SDK               |
+| `@creator-hub/api`       | `@sentry/profiling-node` | `^10.63.0` | CPU profiling             |
+| `@creator-hub/ai-engine` | `@sentry/node`           | `^10.63.0` | Breadcrumbs in AI calls   |
+| `@creator-hub/billing`   | `@sentry/node`           | `^10.63.0` | Breadcrumbs in credit ops |
+| `@creator-hub/web`       | `@sentry/nextjs`         | `^10.63.0` | Next.js integration       |
+
+### Breadcrumb Categories
+
+| Category          | Layer       | Example                                             |
+| ----------------- | ----------- | --------------------------------------------------- |
+| `http`            | Interceptor | `POST /api/v1/tools/thumbnail/generate → 200`       |
+| `ai.engine`       | AI Engine   | `Selected 2 provider(s) for task: image-generation` |
+| `ai.api_call`     | AI Engine   | `Calling openai API — task: image-generation`       |
+| `billing.credit`  | Credit Svc  | `Deducted 10 credits for user xxx`                  |
+| `payment.webhook` | Webhooks    | `Webhook received from mercado-pago`                |
+| `tool.thumbnail`  | Listener    | `Thumbnail completed for user xxx`                  |
+| `stt.session`     | WebSocket   | `STT session started for user xxx`                  |
 
 ---
 

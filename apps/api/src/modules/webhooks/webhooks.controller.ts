@@ -15,6 +15,7 @@ import {
   CreditBillingService,
   PaymentGateway,
 } from "@creator-hub/billing";
+import * as Sentry from "@sentry/nestjs";
 
 @Controller("webhooks")
 export class WebhooksController {
@@ -64,11 +65,33 @@ export class WebhooksController {
       `Webhook received: gateway=${gateway}, hasRawBody=${!!rawBody}, bodyKeys=${JSON.stringify(Object.keys(body || {}))}, body=${JSON.stringify(body)?.slice(0, 500)}`,
     );
 
+    // Breadcrumb: Webhook received
+    Sentry.addBreadcrumb({
+      type: "default",
+      category: "payment.webhook",
+      message: `Webhook received from ${gateway}`,
+      level: "info",
+      data: {
+        gateway,
+        hasRawBody: !!rawBody,
+        bodyKeys: Object.keys(body || {}),
+      },
+    });
+
     // Map gateway path segment to PaymentGateway enum value (e.g. 'mercado-pago' -> MERCADO_PAGO)
     const gwKey = gateway.toUpperCase().replace(/-/g, "_");
     const gatewayEnum = (PaymentGateway as any)[gwKey] as PaymentGateway;
     if (!gatewayEnum) {
       this.logger.warn(`Unsupported gateway path: ${gateway}`);
+
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "payment.webhook",
+        message: `Unsupported gateway: ${gateway}`,
+        level: "warning",
+        data: { gateway },
+      });
+
       return res.status(400).send({ ok: false });
     }
 
@@ -84,6 +107,20 @@ export class WebhooksController {
         `Verification result: isValid=${verification.isValid}, status=${verification.status}, gatewayTxId=${verification.gatewayTxId}`,
       );
 
+      // Breadcrumb: Verification result
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "payment.webhook",
+        message: `Webhook verification: ${verification.isValid ? "valid" : "invalid"} — status: ${verification.status}`,
+        level: verification.isValid ? "info" : "warning",
+        data: {
+          gateway,
+          isValid: verification.isValid,
+          status: verification.status,
+          gatewayTxId: verification.gatewayTxId,
+        },
+      });
+
       if (!verification.isValid) {
         this.logger.warn("Webhook verification failed", verification);
         // Return 200 to prevent MercadoPago from retrying indefinitely
@@ -97,9 +134,31 @@ export class WebhooksController {
         this.logger.log(
           `Skipping duplicate webhook for payment ${gatewayTxId} (already processing)`,
         );
+
+        Sentry.addBreadcrumb({
+          type: "default",
+          category: "payment.webhook",
+          message: `Duplicate webhook skipped for payment ${gatewayTxId}`,
+          level: "info",
+          data: { gatewayTxId, gateway },
+        });
+
         return res.send({ ok: true, status: "duplicate" });
       }
       this.markProcessing(gatewayTxId);
+
+      // Breadcrumb: Processing payment
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "payment.webhook",
+        message: `Processing payment ${gatewayTxId} — status: ${verification.status}`,
+        level: "info",
+        data: {
+          gatewayTxId,
+          gateway,
+          status: verification.status,
+        },
+      });
 
       // Process all statuses: SUCCESSFUL (add credits), FAILED (notify), PENDING (notify)
       let ok = false;
@@ -115,6 +174,20 @@ export class WebhooksController {
 
       this.logger.log(`Reconcile result: ok=${ok}`);
 
+      // Breadcrumb: Reconciliation result
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "payment.webhook",
+        message: `Payment ${gatewayTxId} reconciliation: ${ok ? "success" : "failed"}`,
+        level: ok ? "info" : "error",
+        data: {
+          gatewayTxId,
+          gateway,
+          status: verification.status,
+          reconciliationOk: ok,
+        },
+      });
+
       if (!ok) {
         this.logger.warn("Reconciliation failed for webhook", verification);
         return res.status(500).send({ ok: false });
@@ -123,6 +196,19 @@ export class WebhooksController {
       return res.send({ ok: true, status: verification.status });
     } catch (err) {
       this.logger.error("Error handling webhook", err as any);
+
+      // Breadcrumb: Webhook error
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "payment.webhook",
+        message: `Webhook processing error: ${(err as Error).message}`,
+        level: "error",
+        data: {
+          gateway,
+          error: (err as Error).message,
+        },
+      });
+
       return res.status(500).send({ ok: false });
     }
   }

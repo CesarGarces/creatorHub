@@ -8,6 +8,7 @@ import type {
   AITaskType,
 } from "@creator-hub/shared-types";
 import { Logger } from "@creator-hub/shared-utils";
+import * as Sentry from "@sentry/node";
 
 @Injectable()
 export class AIEngineService {
@@ -24,10 +25,35 @@ export class AIEngineService {
         : this.providerRegistry.getProvidersByTask(request.taskType);
 
     if (providers.length === 0) {
-      throw new Error(
+      const error = new Error(
         `No AI providers available for task: ${request.taskType}. Check that your API keys are configured in .env`,
       );
+
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "ai.engine",
+        message: `No providers available for task: ${request.taskType}`,
+        level: "error",
+        data: { taskType: request.taskType, toolId: request.toolId },
+      });
+
+      throw error;
     }
+
+    // Breadcrumb: Provider selection
+    Sentry.addBreadcrumb({
+      type: "default",
+      category: "ai.engine",
+      message: `Selected ${providers.length} provider(s) for task: ${request.taskType}`,
+      level: "info",
+      data: {
+        taskType: request.taskType,
+        providers: providers.map((p) => p.name),
+        toolId: request.toolId,
+        requestedProvider,
+        requestedModel: request.model,
+      },
+    });
 
     let lastError: Error | null = null;
 
@@ -36,6 +62,21 @@ export class AIEngineService {
         provider: provider.name,
         taskType: request.taskType,
         toolId: request.toolId,
+      });
+
+      // Breadcrumb: Provider attempt
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "ai.api_call",
+        message: `Calling ${provider.name} API — task: ${request.taskType}`,
+        level: "info",
+        data: {
+          provider: provider.name,
+          taskType: request.taskType,
+          model: request.model,
+          toolId: request.toolId,
+          promptLength: request.prompt?.length || 0,
+        },
       });
 
       const startTime = Date.now();
@@ -51,6 +92,20 @@ export class AIEngineService {
               })
             : await provider.generate(request);
         const latency = Date.now() - startTime;
+
+        // Breadcrumb: Success
+        Sentry.addBreadcrumb({
+          type: "default",
+          category: "ai.api_call",
+          message: `${provider.name} responded in ${latency}ms`,
+          level: "info",
+          data: {
+            provider: provider.name,
+            latency,
+            taskType: request.taskType,
+            tokensUsed: response.usage?.tokens || 0,
+          },
+        });
 
         return {
           ...response,
@@ -68,6 +123,20 @@ export class AIEngineService {
           latency,
         });
 
+        // Breadcrumb: Provider failure
+        Sentry.addBreadcrumb({
+          type: "default",
+          category: "ai.api_call",
+          message: `${provider.name} failed after ${latency}ms: ${message}`,
+          level: "error",
+          data: {
+            provider: provider.name,
+            error: message,
+            latency,
+            taskType: request.taskType,
+          },
+        });
+
         const isRetryable =
           message.includes("billing") ||
           message.includes("rate limit") ||
@@ -82,6 +151,19 @@ export class AIEngineService {
           this.logger.info("Retrying with next available provider", {
             failedProvider: provider.name,
           });
+
+          // Breadcrumb: Retry
+          Sentry.addBreadcrumb({
+            type: "default",
+            category: "ai.engine",
+            message: `Retrying with next provider (failed: ${provider.name})`,
+            level: "warning",
+            data: {
+              failedProvider: provider.name,
+              reason: "retryable_error",
+            },
+          });
+
           continue;
         }
 

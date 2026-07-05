@@ -16,6 +16,7 @@ import {
   MIN_CREDITS_FOR_STT,
   type STTProviderName,
 } from "@creator-hub/shared-types";
+import * as Sentry from "@sentry/nestjs";
 
 const allowedOrigins = [
   process.env.FRONTEND_URL || "http://localhost:3000",
@@ -223,10 +224,38 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         sessionId: session.sessionId,
         clientId: client.id,
       });
+
+      // Breadcrumb: STT session started
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "stt.session",
+        message: `STT session started for user ${userId}`,
+        level: "info",
+        data: {
+          userId,
+          sessionId: session.sessionId,
+          clientId: client.id,
+          language: session.language,
+          provider: data?.provider,
+        },
+      });
     } catch (error) {
       client.emit("stt:error", {
         code: "START_FAILED",
         message: (error as Error).message || "Failed to start recording",
+      });
+
+      // Breadcrumb: STT session failed to start
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "stt.session",
+        message: `STT session failed to start for user ${userId}`,
+        level: "error",
+        data: {
+          userId,
+          clientId: client.id,
+          error: (error as Error).message,
+        },
       });
     }
   }
@@ -252,6 +281,21 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (result) {
       const credits = this.sttEngine.calculateCredits(result.durationMs);
 
+      // Breadcrumb: STT session ended
+      Sentry.addBreadcrumb({
+        type: "default",
+        category: "stt.session",
+        message: `STT session ended for user ${userId}`,
+        level: "info",
+        data: {
+          userId,
+          clientId: client.id,
+          durationMs: result.durationMs,
+          wordCount: result.wordCount,
+          credits,
+        },
+      });
+
       if (userId && credits > 0) {
         try {
           const user = await prisma.user.findUnique({
@@ -273,6 +317,20 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 purchasedCredits: 0,
                 totalCredits: updatedUser?.currentCredits ?? 0,
               });
+
+              // Breadcrumb: STT credits deducted
+              Sentry.addBreadcrumb({
+                type: "default",
+                category: "billing.credit",
+                message: `Deducted ${credits} credits for STT session`,
+                level: "info",
+                data: {
+                  userId,
+                  credits,
+                  durationMs: result.durationMs,
+                  newBalance: updatedUser?.currentCredits,
+                },
+              });
             }
           }
         } catch (error) {
@@ -280,6 +338,19 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
             userId,
             credits,
             error: (error as Error).message,
+          });
+
+          // Breadcrumb: STT credit deduction failed
+          Sentry.addBreadcrumb({
+            type: "default",
+            category: "billing.credit",
+            message: `Failed to deduct ${credits} credits for STT session`,
+            level: "error",
+            data: {
+              userId,
+              credits,
+              error: (error as Error).message,
+            },
           });
         }
       }
