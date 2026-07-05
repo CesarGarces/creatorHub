@@ -30,6 +30,7 @@ import { WebsocketModule } from "./modules/websocket/websocket.module";
 import { ThumbnailListenerModule } from "./modules/thumbnail-listener/thumbnail-listener.module";
 import { TranslationListenerModule } from "./modules/translation-listener/translation-listener.module";
 import { PaymentListenerModule } from "./modules/payment-listener/payment-listener.module";
+import { PaymentEmailListenerModule } from "./modules/payment-email-listener/payment-email-listener.module";
 import { VideoListenerModule } from "./modules/video-listener/video-listener.module";
 import { ChatModule } from "./modules/chat/chat.module";
 import { UserStyleModule } from "./modules/user-style/user-style.module";
@@ -81,6 +82,7 @@ import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
     ThumbnailListenerModule,
     TranslationListenerModule,
     PaymentListenerModule,
+    PaymentEmailListenerModule,
     VideoListenerModule,
 
     // Chat

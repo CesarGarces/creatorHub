@@ -6,4 +6,6 @@ export type {
   SendEmailOptions,
   VerificationEmailData,
   PasswordResetEmailData,
+  PurchaseSuccessEmailData,
+  PurchaseFailedEmailData,
 } from "./interfaces/email.types";

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background:#0a0a0f; font-family:system-ui,-apple-system,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="480" cellpadding="0" cellspacing="0" style="background:#14141f; border-radius:16px; border:1px solid rgba(255,255,255,0.06); padding:48px 40px;">
+          <!-- Header -->
+          <tr>
+            <td align="center" style="padding-bottom:24px;">
+              <div style="width:56px; height:56px; background:linear-gradient(135deg, #00bbd9, #00e5a0); border-radius:14px; margin:0 auto; line-height:56px; text-align:center;">
+                <span style="font-size:28px;">&#10003;</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding-bottom:8px;">
+              <h1 style="color:#f0f0f5; font-size:24px; margin:0;">Thank you for your purchase!</h1>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding-bottom:32px;">
+              {{#if userName}}
+              <p style="color:#8888a0; font-size:14px; margin:0;">Hi {{userName}}, your credits have been added to your account.</p>
+              {{else}}
+              <p style="color:#8888a0; font-size:14px; margin:0;">Your credits have been added to your account.</p>
+              {{/if}}
+            </td>
+          </tr>
+
+          <!-- Credits Card -->
+          <tr>
+            <td style="padding-bottom:24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a2e; border-radius:12px; padding:24px; border:1px solid rgba(0,187,217,0.15);">
+                <tr>
+                  <td align="center" style="padding-bottom:12px;">
+                    <span style="color:#8888a0; font-size:12px; text-transform:uppercase; letter-spacing:1px;">Credits added</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-bottom:12px;">
+                    <span style="color:#00bbd9; font-size:40px; font-weight:700;">{{credits}}</span>
+                  </td>
+                </tr>
+                {{#if planName}}
+                <tr>
+                  <td align="center" style="padding-bottom:8px;">
+                    <span style="color:#666680; font-size:13px;">Plan: {{planName}}</span>
+                  </td>
+                </tr>
+                {{/if}}
+                {{#if amount}}
+                <tr>
+                  <td align="center">
+                    <span style="color:#666680; font-size:13px;">Amount: {{currency}} {{amount}}</span>
+                  </td>
+                </tr>
+                {{/if}}
+                {{#if balance}}
+                <tr>
+                  <td align="center" style="padding-top:8px;">
+                    <span style="color:#444460; font-size:12px;">New balance: {{balance}} credits</span>
+                  </td>
+                </tr>
+                {{/if}}
+              </table>
+            </td>
+          </tr>
+
+          <!-- Active Tools -->
+          {{#if activeTools}}
+          <tr>
+            <td style="padding-bottom:24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a2e; border-radius:12px; padding:20px 24px; border:1px solid rgba(255,255,255,0.04);">
+                <tr>
+                  <td style="padding-bottom:12px;">
+                    <span style="color:#f0f0f5; font-size:14px; font-weight:600;">Your tools are ready</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <p style="color:#8888a0; font-size:13px; margin:0 0 8px 0;">These tools are ready for you to use today:</p>
+                  </td>
+                </tr>
+                {{#each activeTools}}
+                <tr>
+                  <td style="padding:4px 0;">
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="width:6px;">
+                          <div style="width:6px; height:6px; background:#00bbd9; border-radius:50%;"></div>
+                        </td>
+                        <td style="padding-left:10px;">
+                          <span style="color:#c0c0d0; font-size:13px;">{{this}}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                {{/each}}
+              </table>
+            </td>
+          </tr>
+          {{/if}}
+
+          <!-- CTA Button -->
+          <tr>
+            <td align="center" style="padding-bottom:24px;">
+              <a href="https://app.creatorhubplatform.com/" style="background:#00bbd9; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:14px 36px; border-radius:8px; display:inline-block;">Start Creating</a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="border-top:1px solid rgba(255,255,255,0.06); padding-top:24px;">
+              <p style="color:#444460; font-size:11px; margin:0;">If you did not make this purchase, please contact support immediately.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -19,3 +19,19 @@ export interface PasswordResetEmailData {
   resetUrl: string;
   userName?: string;
 }
+
+export interface PurchaseSuccessEmailData {
+  userName?: string;
+  credits: number;
+  planName?: string;
+  amount?: number;
+  currency?: string;
+  balance?: number;
+  activeTools?: string[];
+}
+
+export interface PurchaseFailedEmailData {
+  userName?: string;
+  reason?: string;
+  retryUrl?: string;
+}
