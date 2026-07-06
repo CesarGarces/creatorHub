@@ -55,7 +55,7 @@ export function ShareModal({
       try {
         await navigator.share({
           title: `Created with Creator Hub`,
-          text: `Check out this ${assetType.toLowerCase()} I found on Creator Hub: "${assetPrompt}"`,
+          text: `Check out this ${assetType.toLowerCase()} on Creator Hub: "${assetPrompt}"`,
           url: shareUrl,
         });
       } catch {
