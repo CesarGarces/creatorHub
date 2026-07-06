@@ -17,7 +17,7 @@
     "db:seed": "turbo run db:seed",
     "db:backup": "cd packages/database && npm run db:backup",
     "db:restore": "cd packages/database && npm run db:restore",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
