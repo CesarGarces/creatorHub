@@ -145,14 +145,13 @@ export default function SharePage() {
       {/* Header */}
       <header className="border-b border-border bg-surface/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">CH</span>
-            </div>
-            <span className="font-semibold text-text hidden sm:block">
-              Creator Hub
-            </span>
-          </div>
+          <a href="/" className="flex items-center gap-2">
+            <img
+              src="/isologo_white.png"
+              alt="Creator Hub"
+              className="h-8 w-auto"
+            />
+          </a>
           <div className="flex items-center gap-3">
             <button
               onClick={handleLogin}
