@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Trash2, Share2, Globe, Lock } from "lucide-react";
 import api from "@/lib/api";
 import { Button, EmptyState, ActionConfirmDialog } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
+import { AssetLikeButton } from "@/components/asset-like-button";
+import { ShareModal } from "@/components/share-modal";
 
 interface GeneratedAsset {
   id: string;
@@ -19,10 +21,15 @@ interface GeneratedAsset {
   width: number;
   height: number;
   credits: number;
+  isPublic: boolean;
+  likeCount: number;
   createdAt: string;
 }
 
 type AssetFilter = "all" | "IMAGE" | "VIDEO";
+
+const FRONTEND_URL =
+  process.env.NEXT_PUBLIC_FRONTEND_URL || "https://app.creatorhubplatform.com";
 
 export default function AssetsPage() {
   const router = useRouter();
@@ -30,6 +37,9 @@ export default function AssetsPage() {
   const [page, setPage] = useState(1);
   const [assetFilter, setAssetFilter] = useState<AssetFilter>("all");
   const [selectedAsset, setSelectedAsset] = useState<GeneratedAsset | null>(
+    null,
+  );
+  const [shareModalAsset, setShareModalAsset] = useState<GeneratedAsset | null>(
     null,
   );
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -64,6 +74,28 @@ export default function AssetsPage() {
     },
   });
 
+  const togglePublicMutation = useMutation({
+    mutationFn: (id: string) =>
+      api.patch<{ isPublic: boolean }>(`/images/${id}/public`),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["images"] });
+      // Update selected asset if it's the one being toggled
+      if (selectedAsset?.id === variables) {
+        setSelectedAsset((prev) =>
+          prev ? { ...prev, isPublic: data.isPublic } : null,
+        );
+      }
+      toast.success(
+        data.isPublic
+          ? "Asset is now public. Share it!"
+          : "Asset is now private",
+      );
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || "Failed to update visibility");
+    },
+  });
+
   const assets = data?.data || [];
   const meta = data?.meta;
 
@@ -76,6 +108,16 @@ export default function AssetsPage() {
   const handleFilterChange = (filter: AssetFilter) => {
     setAssetFilter(filter);
     setPage(1);
+  };
+
+  const handleCopyShareLink = async (asset: GeneratedAsset) => {
+    const url = `${FRONTEND_URL}/share/${asset.id}`;
+    await navigator.clipboard.writeText(url);
+    toast.success("Share link copied!");
+  };
+
+  const handleTogglePublic = (assetId: string) => {
+    togglePublicMutation.mutate(assetId);
   };
 
   return (
@@ -185,6 +227,13 @@ export default function AssetsPage() {
                         className="w-full h-full object-cover"
                       />
                     )}
+                    {/* Public indicator */}
+                    {asset.isPublic && (
+                      <div className="absolute top-2 right-2 px-2 py-1 bg-green-500/90 text-white text-[10px] font-medium rounded-full flex items-center gap-1">
+                        <Globe size={10} />
+                        Public
+                      </div>
+                    )}
                   </div>
                   <div className="p-3 space-y-2">
                     <div className="flex items-center gap-2">
@@ -268,24 +317,11 @@ export default function AssetsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          aria-label="Copy link"
-                          title="Copy link"
-                          onClick={() => {
-                            navigator.clipboard.writeText(asset.url);
-                            toast.success("URL copied");
-                          }}
+                          aria-label="Share"
+                          title="Share"
+                          onClick={() => setShareModalAsset(asset)}
                         >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                          </svg>
+                          <Share2 size={14} />
                         </Button>
                         <Button
                           variant="ghost"
@@ -408,107 +444,122 @@ export default function AssetsPage() {
                 />
               )}
             </div>
-            <div className="flex items-center justify-center gap-2 p-4 border-t border-border">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  router.push(
-                    `/tools/${selectedAsset.type === "VIDEO" ? "video-generator" : "thumbnail-generator"}?prompt=${encodeURIComponent(selectedAsset.prompt)}`,
-                  );
-                }}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
+            <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-t border-border">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    router.push(
+                      `/tools/${selectedAsset.type === "VIDEO" ? "video-generator" : "thumbnail-generator"}?prompt=${encodeURIComponent(selectedAsset.prompt)}`,
+                    );
+                  }}
                 >
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                </svg>
-                Use Prompt
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={async () => {
-                  try {
-                    const res = await fetch(selectedAsset.url);
-                    const blob = await res.blob();
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `${selectedAsset.type === "VIDEO" ? "video" : "image"}-${selectedAsset.id}.${selectedAsset.type === "VIDEO" ? "mp4" : "png"}`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  } catch {
-                    toast.error("Download failed");
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                  Use Prompt
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(selectedAsset.url);
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `${selectedAsset.type === "VIDEO" ? "video" : "image"}-${selectedAsset.id}.${selectedAsset.type === "VIDEO" ? "mp4" : "png"}`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch {
+                      toast.error("Download failed");
+                    }
+                  }}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" x2="12" y1="15" y2="3" />
+                  </svg>
+                  Download
+                </Button>
+                <AssetLikeButton
+                  assetId={selectedAsset.id}
+                  initialLikeCount={selectedAsset.likeCount || 0}
+                  size="sm"
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShareModalAsset(selectedAsset)}
+                >
+                  <Share2 size={14} />
+                  Share
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Make Public Toggle */}
+                <button
+                  onClick={() => handleTogglePublic(selectedAsset.id)}
+                  disabled={togglePublicMutation.isPending}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    selectedAsset.isPublic
+                      ? "bg-green-500/10 text-green-600 hover:bg-green-500/20"
+                      : "bg-surface-elevated text-text-muted hover:bg-surface-elevated/80"
+                  }`}
+                >
+                  {selectedAsset.isPublic ? (
+                    <Globe size={14} />
+                  ) : (
+                    <Lock size={14} />
+                  )}
+                  {selectedAsset.isPublic ? "Public" : "Private"}
+                </button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-error hover:text-error"
+                  onClick={() =>
+                    setDeleteDialog({
+                      isOpen: true,
+                      assetId: selectedAsset.id,
+                    })
                   }
-                }}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
                 >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" x2="12" y1="15" y2="3" />
-                </svg>
-                Download
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(selectedAsset.url);
-                  toast.success("URL copied");
-                }}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                </svg>
-                Copy URL
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-error hover:text-error"
-                onClick={() =>
-                  setDeleteDialog({
-                    isOpen: true,
-                    assetId: selectedAsset.id,
-                  })
-                }
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M3 6h18" />
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                </svg>
-                Delete
-              </Button>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  </svg>
+                  Delete
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -526,6 +577,16 @@ export default function AssetsPage() {
         icon={<Trash2 className="h-5 w-5" />}
         isLoading={deleteMutation.isPending}
       />
+
+      {/* Share Modal */}
+      {shareModalAsset && (
+        <ShareModal
+          assetId={shareModalAsset.id}
+          assetPrompt={shareModalAsset.prompt}
+          assetType={shareModalAsset.type}
+          onClose={() => setShareModalAsset(null)}
+        />
+      )}
     </>
   );
 }

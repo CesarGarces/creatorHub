@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Delete,
+  Patch,
   Param,
   Query,
   Body,
@@ -16,6 +17,7 @@ import { CreditService } from "@creator-hub/billing";
 import { StorageService } from "@creator-hub/storage";
 import { JwtAuthGuard, CurrentUser } from "@creator-hub/auth";
 import { prisma } from "@creator-hub/database";
+import { SharingService } from "../sharing/sharing.service";
 
 @Controller("images")
 @UseGuards(JwtAuthGuard)
@@ -24,6 +26,7 @@ export class ImagesController {
     private aiEngine: AIEngineService,
     private creditService: CreditService,
     private storageService: StorageService,
+    private sharingService: SharingService,
   ) {}
 
   @Get()
@@ -92,6 +95,56 @@ export class ImagesController {
         total,
         totalPages: Math.ceil(total / limitNum),
       },
+    };
+  }
+
+  /**
+   * PATCH /images/:id/public
+   * Toggle the public status of an asset
+   */
+  @Patch(":id/public")
+  async togglePublic(
+    @CurrentUser("id") userId: string,
+    @Param("id") id: string,
+  ): Promise<{ isPublic: boolean }> {
+    const image = await prisma.generatedImage.findFirst({
+      where: { id, userId },
+    });
+
+    if (!image) {
+      throw new NotFoundException("Image not found");
+    }
+
+    const updated = await prisma.generatedImage.update({
+      where: { id },
+      data: { isPublic: !image.isPublic },
+      select: { isPublic: true },
+    });
+
+    return { isPublic: updated.isPublic };
+  }
+
+  /**
+   * GET /images/:id/share-link
+   * Get the share URL for an asset
+   */
+  @Get(":id/share-link")
+  async getShareLink(
+    @CurrentUser("id") userId: string,
+    @Param("id") id: string,
+  ): Promise<{ url: string; isPublic: boolean }> {
+    const image = await prisma.generatedImage.findFirst({
+      where: { id, userId },
+      select: { id: true, isPublic: true },
+    });
+
+    if (!image) {
+      throw new NotFoundException("Image not found");
+    }
+
+    return {
+      url: this.sharingService.getShareUrl(id),
+      isPublic: image.isPublic,
     };
   }
 

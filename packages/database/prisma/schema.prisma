@@ -8,98 +8,496 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ──────────────────────────────────────────────
-// SOCIAL RESEARCH (Persistent chat + cache)
-// ──────────────────────────────────────────────
-
 model SocialResearchSession {
-  id        String   @id @default(cuid())
+  id        String                  @id @default(cuid())
   userId    String
-  toolId    String   // "x-search-trends", "instagram-research", etc.
+  toolId    String
   title     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages SocialResearchMessage[]
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  messages  SocialResearchMessage[]
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, toolId])
   @@index([userId])
 }
 
 model SocialResearchMessage {
-  id            String   @id @default(cuid())
-  sessionId     String
-  role          String   // "user" | "assistant"
-  content       String   @db.Text
-  resultData    Json?    // { tweets, trendingHashtags, formattedAnalysis, tableData }
-  provider      String?  // "x", "instagram", "tiktok" (for future use)
-  creditsUsed   Int      @default(0)
-  cacheHit      Boolean  @default(false)
-  createdAt     DateTime @default(now())
-
-  session SocialResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  id          String                @id @default(cuid())
+  sessionId   String
+  role        String
+  content     String
+  resultData  Json?
+  provider    String?
+  creditsUsed Int                   @default(0)
+  cacheHit    Boolean               @default(false)
+  createdAt   DateTime              @default(now())
+  session     SocialResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([sessionId, createdAt])
 }
 
 model TrendCache {
-  id          String   @id @default(cuid())
-  queryHash   String   // SHA-256 of normalized query
-  provider    String   // "x", "instagram", "tiktok"
-  resultData  Json     // cached Apify results
-  expiresAt   DateTime // TTL: 1 hour from creation
-  hitCount    Int      @default(0)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  queryHash  String
+  provider   String
+  resultData Json
+  expiresAt  DateTime
+  hitCount   Int      @default(0)
+  createdAt  DateTime @default(now())
 
   @@unique([queryHash, provider])
   @@index([queryHash, provider])
   @@index([expiresAt])
 }
 
-// ──────────────────────────────────────────────
-// USERS & AUTH
-// ──────────────────────────────────────────────
-
 model User {
-  id                   String    @id @default(cuid())
-  email                String    @unique
+  id                   String                  @id @default(cuid())
+  email                String                  @unique
   name                 String?
   passwordHash         String?
   avatarUrl            String?
-  role                 UserRole  @default(USER)
-  plan                 UserPlan  @default(FREE)
-  currentCredits       Int       @default(100)
-  purchasedCredits     Int       @default(0)
-  isActive             Boolean   @default(true)
+  role                 UserRole                @default(USER)
+  isActive             Boolean                 @default(true)
+  lastLoginAt          DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  plan                 UserPlan                @default(FREE)
+  currentCredits       Int                     @default(100)
+  purchasedCredits     Int                     @default(0)
   emailVerified        DateTime?
   verificationCode     String?
   verificationExpires  DateTime?
   passwordResetToken   String?
   passwordResetExpires DateTime?
-  lastLoginAt          DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  accounts             Account[]
+  apiKeys              ApiKey[]
+  assetLikes           AssetLike[]
+  chatSessions         ChatSession[]
+  chatSettings         ChatSettings?
+  creditTxns           CreditTransaction[]
+  images               GeneratedImage[]
+  marketingEvents      MarketingEvent[]
+  notifications        Notification[]
+  sessions             Session[]
+  socialAccounts       SocialAccount[]
+  researchSessions     SocialResearchSession[]
+  subscriptions        Subscription[]
+  toolAccess           ToolAccess[]
+  toolFavorites        ToolFavorite[]
+  tweetDrafts          TweetDraft[]
+  usageLogs            UsageLog[]
+  contentSamples       UserContentSample[]
+  styleProfile         UserStyleProfile?
+}
 
-  accounts          Account[]
-  sessions          Session[]
-  creditTxns        CreditTransaction[]
-  subscriptions     Subscription[]
-  toolAccess        ToolAccess[]
-  toolFavorites     ToolFavorite[]
-  usageLogs         UsageLog[]
-  images            GeneratedImage[]
-  apiKeys           ApiKey[]
-  marketingEvents   MarketingEvent[]
-  notifications     Notification[]
-  chatSessions      ChatSession[]
-  chatSettings      ChatSettings?
-  contentSamples    UserContentSample[]
-  styleProfile      UserStyleProfile?
-  socialAccounts    SocialAccount[]
-  tweetDrafts       TweetDraft[]
-  researchSessions  SocialResearchSession[]
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  refreshToken      String?
+  accessToken       String?
+  expiresAt         Int?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  userId    String
+  name      String
+  key       String    @unique
+  lastUsed  DateTime?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Tool {
+  id              String              @id
+  name            String
+  description     String
+  version         String              @default("1.0.0")
+  icon            String?
+  category        String
+  creditsPerUse   Int                 @default(10)
+  status          String              @default("active")
+  configSchema    Json?
+  manifestVersion String              @default("1.0")
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  creditTxns      CreditTransaction[]
+  images          GeneratedImage[]
+  toolAccess      ToolAccess[]
+  toolConfigs     ToolConfig?
+  usageLogs       UsageLog[]
+}
+
+model ToolConfig {
+  id                String   @id @default(cuid())
+  toolId            String   @unique
+  enabled           Boolean  @default(true)
+  creditsPerUse     Int
+  maxUsesPerDay     Int?
+  allowedRoles      String[] @default([])
+  providerOverrides Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  tool              Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+}
+
+model ToolAccess {
+  id        String   @id @default(cuid())
+  userId    String
+  toolId    String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  tool      Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, toolId])
+}
+
+model ToolFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  toolId    String
+  createdAt DateTime @default(now())
+  sortOrder Int      @default(0)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, toolId])
+  @@index([toolId])
+  @@index([userId, sortOrder])
+}
+
+model CreditTransaction {
+  id          String                @id @default(cuid())
+  userId      String
+  amount      Int
+  type        CreditTransactionType
+  description String
+  toolId      String?
+  provider    String?
+  referenceId String?
+  balance     Int
+  createdAt   DateTime              @default(now())
+  tool        Tool?                 @relation(fields: [toolId], references: [id])
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CreditPlan {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  description  String?
+  usdAmount    Float
+  creditsGiven Int
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String
+  planId               String
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  creditsThisPeriod    Int                @default(0)
+  cancelAtPeriodEnd    Boolean            @default(false)
+  stripeSubscriptionId String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  plan                 SubscriptionPlan   @relation(fields: [planId], references: [id])
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SubscriptionPlan {
+  id              String         @id @default(cuid())
+  name            String
+  description     String?
+  price           Int
+  creditsPerMonth Int
+  features        String[]
+  tools           String[]
+  stripePriceId   String?
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  subscriptions   Subscription[]
+}
+
+model UsageLog {
+  id        String   @id @default(cuid())
+  userId    String
+  toolId    String
+  credits   Int
+  duration  Int?
+  success   Boolean  @default(true)
+  error     String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  tool      Tool     @relation(fields: [toolId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model AIProviderConfig {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isEnabled Boolean  @default(true)
+  priority  Int      @default(0)
+  config    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Provider {
+  id             String           @id @default(cuid())
+  slug           String           @unique
+  name           String
+  model          String
+  tier           ProviderTier     @default(FREE)
+  costPerCredit  Int              @default(1)
+  isActive       Boolean          @default(true)
+  supportedTasks String[]         @default(["thumbnail"])
+  config         Json?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  images         GeneratedImage[]
+}
+
+model AIRequestLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  toolId    String?
+  provider  String
+  model     String
+  taskType  String
+  prompt    String
+  response  Json?
+  credits   Int
+  latency   Int
+  success   Boolean  @default(true)
+  error     String?
+  createdAt DateTime @default(now())
+}
+
+model File {
+  id           String           @id @default(cuid())
+  userId       String?
+  toolId       String?
+  originalName String
+  mimeType     String
+  size         Int
+  key          String           @unique
+  url          String
+  width        Int?
+  height       Int?
+  duration     Int?
+  metadata     Json?
+  createdAt    DateTime         @default(now())
+  images       GeneratedImage[]
+}
+
+model GeneratedImage {
+  id              String             @id @default(cuid())
+  userId          String
+  toolId          String?
+  fileId          String?
+  prompt          String
+  negativePrompt  String?
+  provider        String
+  model           String
+  width           Int
+  height          Int
+  url             String
+  credits         Int
+  metadata        Json?
+  isPublic        Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  storageProvider String             @default("r2")
+  isProModel      Boolean            @default(false)
+  providerId      String?
+  type            GeneratedAssetType @default(IMAGE)
+  likeCount       Int                @default(0)
+  viewCount       Int                @default(0)
+  likes           AssetLike[]
+  file            File?              @relation(fields: [fileId], references: [id])
+  providerRef     Provider?          @relation(fields: [providerId], references: [id])
+  tool            Tool?              @relation(fields: [toolId], references: [id])
+  user            User               @relation(fields: [userId], references: [id])
+}
+
+model AssetLike {
+  id          String         @id @default(cuid())
+  assetId     String
+  fingerprint String
+  userId      String?
+  createdAt   DateTime       @default(now())
+  asset       GeneratedImage @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  user        User?          @relation(fields: [userId], references: [id])
+
+  @@unique([assetId, fingerprint])
+  @@index([assetId])
+  @@index([fingerprint])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MarketingEvent {
+  id        String             @id @default(cuid())
+  userId    String
+  type      MarketingEventType
+  credits   Int
+  metadata  Json?
+  createdAt DateTime           @default(now())
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChatSession {
+  id          String        @id @default(cuid())
+  userId      String
+  title       String?
+  model       String        @default("zai-org/GLM-5.2")
+  temperature Float         @default(0.7)
+  maxTokens   Int           @default(8000)
+  reasoning   Float         @default(0.7)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  messages    ChatMessage[]
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ChatMessage {
+  id         String      @id @default(cuid())
+  sessionId  String
+  role       String
+  content    String
+  toolCalls  Json?
+  tokensUsed Int?
+  createdAt  DateTime    @default(now())
+  session    ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model ChatSettings {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  defaultModel String   @default("zai-org/GLM-5.2")
+  temperature  Float    @default(0.7)
+  maxTokens    Int      @default(8000)
+  reasoning    Float    @default(0.7)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserContentSample {
+  id        String              @id @default(cuid())
+  userId    String
+  content   String
+  source    ContentSampleSource @default(MANUAL)
+  metadata  Json?
+  isActive  Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, isActive])
+}
+
+model UserStyleProfile {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  tone           String
+  vocabKeywords  String[]  @default([])
+  sentenceLength String    @default("medium")
+  emojiUsage     String    @default("moderate")
+  formalityLevel String    @default("casual")
+  summary        String?
+  sampleCount    Int       @default(0)
+  isActive       Boolean   @default(true)
+  lastAnalyzedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  language       String    @default("es")
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SocialAccount {
+  id               String              @id @default(cuid())
+  userId           String
+  provider         SocialProvider
+  providerUserId   String
+  providerUsername String?
+  displayName      String?
+  avatarUrl        String?
+  accessToken      String
+  refreshToken     String?
+  tokenExpiresAt   DateTime?
+  scopes           String[]            @default([])
+  status           SocialAccountStatus @default(ACTIVE)
+  metadata         Json?
+  lastUsedAt       DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tweetDrafts      TweetDraft[]
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider, status])
+}
+
+model TweetDraft {
+  id               String           @id @default(cuid())
+  userId           String
+  socialAccountId  String?
+  content          String
+  topic            String?
+  researchData     Json?
+  styleProfileId   String?
+  status           TweetDraftStatus @default(DRAFT)
+  publishedTweetId String?
+  publishedAt      DateTime?
+  metadata         Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  socialAccount    SocialAccount?   @relation(fields: [socialAccountId], references: [id])
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, status])
 }
 
 enum UserRole {
@@ -116,143 +514,6 @@ enum UserPlan {
   PRO
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  provider          String  // "google", "github", "email"
-  providerAccountId String
-  refreshToken      String?
-  accessToken       String?
-  expiresAt         Int?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id         String   @id @default(cuid())
-  userId     String
-  token      String   @unique
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model ApiKey {
-  id        String   @id @default(cuid())
-  userId    String
-  name      String
-  key       String   @unique
-  lastUsed  DateTime?
-  expiresAt DateTime?
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// ──────────────────────────────────────────────
-// TOOL REGISTRY
-// ──────────────────────────────────────────────
-
-model Tool {
-  id              String   @id
-  name            String
-  description     String
-  version         String   @default("1.0.0")
-  icon            String?
-  category        String
-  creditsPerUse   Int      @default(10)
-  status          String   @default("active") // active, inactive, beta, deprecated
-  configSchema    Json?
-  manifestVersion String   @default("1.0")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  toolAccess      ToolAccess[]
-  usageLogs       UsageLog[]
-  images          GeneratedImage[]
-  toolConfigs     ToolConfig[]
-  creditTxns      CreditTransaction[]
-}
-
-model ToolConfig {
-  id             String   @id @default(cuid())
-  toolId         String
-  enabled        Boolean  @default(true)
-  creditsPerUse  Int
-  maxUsesPerDay  Int?
-  allowedRoles   String[] @default([])
-  providerOverrides Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
-
-  @@unique([toolId])
-}
-
-model ToolAccess {
-  id        String   @id @default(cuid())
-  userId    String
-  toolId    String
-  enabled   Boolean  @default(true)
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, toolId])
-}
-
-model ToolFavorite {
-  id        String   @id @default(cuid())
-  userId    String
-  toolId    String
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, toolId])
-  @@index([toolId])
-  @@index([userId, sortOrder])
-}
-
-// ──────────────────────────────────────────────
-// CREDITS & BILLING
-// ──────────────────────────────────────────────
-
-model CreditTransaction {
-  id          String              @id @default(cuid())
-  userId      String
-  amount      Int
-  type        CreditTransactionType
-  description String
-  toolId      String?
-  provider    String?
-  referenceId String?             // payment intent or external ref
-  balance     Int                 // post-transaction balance
-  createdAt   DateTime            @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tool Tool? @relation(fields: [toolId], references: [id])
-}
-
-model CreditPlan {
-  id           String   @id @default(cuid())
-  slug         String   @unique // PAY_AS_YOU_GO, STARTER, PRO
-  name         String   // Display name: "Pay as you go", "Starter", "Pro"
-  description  String?
-  usdAmount    Float    // Price in USD (e.g., 10.0, 25.0, 50.0)
-  creditsGiven Int      // Credits given on purchase (e.g., 1000, 2700, 6000)
-  isActive     Boolean  @default(true)
-  sortOrder    Int      @default(0) // display order on the pricing page
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
 enum CreditTransactionType {
   PURCHASE
   USAGE
@@ -260,23 +521,6 @@ enum CreditTransactionType {
   BONUS
   SUBSCRIPTION
   PROMOTION
-}
-
-model Subscription {
-  id            String           @id @default(cuid())
-  userId        String
-  planId        String
-  status        SubscriptionStatus @default(ACTIVE)
-  currentPeriodStart DateTime
-  currentPeriodEnd   DateTime
-  creditsThisPeriod Int              @default(0)
-  cancelAtPeriodEnd Boolean          @default(false)
-  stripeSubscriptionId String?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
 }
 
 enum SubscriptionStatus {
@@ -287,161 +531,14 @@ enum SubscriptionStatus {
   TRIALING
 }
 
-model SubscriptionPlan {
-  id              String   @id @default(cuid())
-  name            String
-  description     String?
-  price           Int      // cents
-  creditsPerMonth Int
-  features        String[]
-  tools           String[] // tool IDs included
-  stripePriceId   String?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  subscriptions Subscription[]
-}
-
-// ──────────────────────────────────────────────
-// USAGE & ANALYTICS
-// ──────────────────────────────────────────────
-
-model UsageLog {
-  id        String   @id @default(cuid())
-  userId    String
-  toolId    String
-  credits   Int
-  duration  Int?     // ms
-  success   Boolean  @default(true)
-  error     String?
-  metadata  Json?
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
-  tool Tool @relation(fields: [toolId], references: [id])
-}
-
-// ──────────────────────────────────────────────
-// AI ENGINE
-// ──────────────────────────────────────────────
-
-model AIProviderConfig {
-  id        String   @id @default(cuid())
-  name      String   @unique // "openai", "gemini", "stability-ai", etc.
-  isEnabled Boolean  @default(true)
-  priority  Int      @default(0) // lower = preferred
-  config    Json     // api key, base url, etc. (encrypted)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Provider {
-  id              String   @id @default(cuid())
-  slug            String   @unique           // "z-image-turbo", "siliconflow", etc.
-  name            String                     // "Z-Image Turbo", "FLUX 2 Pro", etc.
-  model           String                     // "Tongyi-MAI/Z-Image-Turbo", etc.
-  tier            ProviderTier @default(FREE)
-  costPerCredit   Int      @default(1)
-  isActive        Boolean  @default(true)
-  supportedTasks  String[] @default(["thumbnail"])
-  config          Json?                     // api key, base url, etc.
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  images GeneratedImage[]
-}
-
 enum ProviderTier {
   FREE
   PRO
 }
 
-model AIRequestLog {
-  id         String   @id @default(cuid())
-  userId     String?
-  toolId     String?
-  provider   String
-  model      String
-  taskType   String
-  prompt     String
-  response   Json?
-  credits    Int
-  latency    Int
-  success    Boolean  @default(true)
-  error      String?
-  createdAt  DateTime @default(now())
-}
-
-// ──────────────────────────────────────────────
-// STORAGE
-// ──────────────────────────────────────────────
-
-model File {
-  id          String   @id @default(cuid())
-  userId      String?
-  toolId      String?
-  originalName String
-  mimeType    String
-  size        Int
-  key         String   @unique // S3 key
-  url         String
-  width       Int?
-  height      Int?
-  duration    Int?
-  metadata    Json?
-  createdAt   DateTime @default(now())
-
-  images GeneratedImage[]
-}
-
-model GeneratedImage {
-  id        String   @id @default(cuid())
-  userId    String
-  toolId    String?
-  fileId    String?
-  providerId String?
-  type      GeneratedAssetType @default(IMAGE)
-  prompt    String
-  negativePrompt String?
-  provider  String
-  storageProvider String @default("r2") // r2, s3, minio
-  model     String
-  width     Int
-  height    Int
-  url       String
-  credits   Int
-  isProModel Boolean @default(false)
-  metadata  Json?
-  isPublic  Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  user     User      @relation(fields: [userId], references: [id])
-  tool     Tool?     @relation(fields: [toolId], references: [id])
-  file     File?     @relation(fields: [fileId], references: [id])
-  providerRef Provider? @relation(fields: [providerId], references: [id])
-}
-
 enum GeneratedAssetType {
   IMAGE
   VIDEO
-}
-
-// ──────────────────────────────────────────────
-// NOTIFICATIONS
-// ──────────────────────────────────────────────
-
-model Notification {
-  id        String            @id @default(cuid())
-  userId    String
-  type      NotificationType
-  title     String
-  body      String?
-  data      Json?
-  readAt    DateTime?
-  createdAt DateTime          @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum NotificationType {
@@ -452,10 +549,6 @@ enum NotificationType {
   SUBSCRIPTION_EXPIRING
   SYSTEM
 }
-
-// ──────────────────────────────────────────────
-// MARKETING EVENTS
-// ──────────────────────────────────────────────
 
 enum MarketingEventType {
   CREDIT_THRESHOLD_75
@@ -469,69 +562,6 @@ enum MarketingEventType {
   REENGAGEMENT
 }
 
-model MarketingEvent {
-  id        String              @id @default(cuid())
-  userId    String
-  type      MarketingEventType
-  credits   Int
-  metadata  Json?
-  createdAt DateTime            @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// ──────────────────────────────────────────────
-// CHAT
-// ──────────────────────────────────────────────
-
-model ChatSession {
-  id          String   @id @default(cuid())
-  userId      String
-  title       String?
-  model       String   @default("zai-org/GLM-5.2")
-  temperature Float    @default(0.7)
-  maxTokens   Int      @default(8000)
-  reasoning   Float    @default(0.7)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages ChatMessage[]
-
-  @@index([userId])
-}
-
-model ChatMessage {
-  id         String   @id @default(cuid())
-  sessionId  String
-  role       String   // "user" | "assistant" | "system"
-  content    String
-  toolCalls  Json?    // [{ toolId, toolName, params, result }]
-  tokensUsed Int?
-  createdAt  DateTime @default(now())
-
-  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@index([sessionId])
-}
-
-model ChatSettings {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  defaultModel String   @default("zai-org/GLM-5.2")
-  temperature  Float    @default(0.7)
-  maxTokens    Int      @default(8000)
-  reasoning    Float    @default(0.7)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// ──────────────────────────────────────────────
-// USER STYLE RAG
-// ──────────────────────────────────────────────
-
 enum ContentSampleSource {
   MANUAL
   CHAT
@@ -539,44 +569,6 @@ enum ContentSampleSource {
   POST
   IMPORT
 }
-
-model UserContentSample {
-  id        String              @id @default(cuid())
-  userId    String
-  content   String              @db.Text
-  source    ContentSampleSource @default(MANUAL)
-  metadata  Json?
-  isActive  Boolean             @default(true)
-  createdAt DateTime            @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@index([userId, isActive])
-}
-
-model UserStyleProfile {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  tone           String
-  vocabKeywords  String[] @default([])
-  language       String   @default("es")
-  sentenceLength String   @default("medium")
-  emojiUsage     String   @default("moderate")
-  formalityLevel String   @default("casual")
-  summary        String?
-  sampleCount    Int      @default(0)
-  isActive       Boolean  @default(true)
-  lastAnalyzedAt DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// ──────────────────────────────────────────────
-// SOCIAL ACCOUNTS
-// ──────────────────────────────────────────────
 
 enum SocialProvider {
   X_TWITTER
@@ -593,63 +585,10 @@ enum SocialAccountStatus {
   ERROR
 }
 
-model SocialAccount {
-  id               String              @id @default(cuid())
-  userId           String
-  provider         SocialProvider
-  providerUserId   String
-  providerUsername  String?
-  displayName      String?
-  avatarUrl        String?
-  accessToken      String              @db.Text
-  refreshToken     String?             @db.Text
-  tokenExpiresAt   DateTime?
-  scopes           String[]            @default([])
-  status           SocialAccountStatus @default(ACTIVE)
-  metadata         Json?
-  lastUsedAt       DateTime?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  tweetDrafts TweetDraft[]
-
-  @@unique([userId, provider])
-  @@index([userId])
-  @@index([provider, status])
-}
-
-// ──────────────────────────────────────────────
-// TWEET DRAFTS
-// ──────────────────────────────────────────────
-
 enum TweetDraftStatus {
   DRAFT
   PREVIEW
   PUBLISHED
   FAILED
   CANCELLED
-}
-
-model TweetDraft {
-  id               String           @id @default(cuid())
-  userId           String
-  socialAccountId  String?
-  content          String           @db.Text
-  topic            String?
-  researchData     Json?
-  styleProfileId   String?
-  status           TweetDraftStatus @default(DRAFT)
-  publishedTweetId String?
-  publishedAt      DateTime?
-  metadata         Json?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  socialAccount SocialAccount? @relation(fields: [socialAccountId], references: [id])
-
-  @@index([userId, createdAt])
-  @@index([userId, status])
 }
