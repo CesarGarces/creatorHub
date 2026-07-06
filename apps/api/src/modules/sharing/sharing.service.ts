@@ -8,6 +8,27 @@ import { prisma } from "@creator-hub/database";
 import { StorageService } from "@creator-hub/storage";
 import { createHash } from "crypto";
 
+/**
+ * Simple in-memory cache for view tracking.
+ * Key: "assetId:fingerprint", Value: timestamp of last view
+ * TTL: 24 hours per IP per asset
+ */
+const VIEW_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const viewCache = new Map<string, number>();
+
+// Cleanup old entries every hour to prevent memory leaks
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, timestamp] of viewCache.entries()) {
+      if (now - timestamp > VIEW_CACHE_TTL_MS) {
+        viewCache.delete(key);
+      }
+    }
+  },
+  60 * 60 * 1000,
+);
+
 @Injectable()
 export class SharingService {
   constructor(private storageService: StorageService) {}
@@ -26,10 +47,33 @@ export class SharingService {
   }
 
   /**
+   * Check if this IP has viewed this asset in the last 24 hours
+   */
+  private hasViewedRecently(assetId: string, fingerprint: string): boolean {
+    const key = `${assetId}:${fingerprint}`;
+    const lastView = viewCache.get(key);
+    if (!lastView) return false;
+    return Date.now() - lastView < VIEW_CACHE_TTL_MS;
+  }
+
+  /**
+   * Mark this IP as having viewed this asset
+   */
+  private markViewed(assetId: string, fingerprint: string): void {
+    const key = `${assetId}:${fingerprint}`;
+    viewCache.set(key, Date.now());
+  }
+
+  /**
    * Get public asset data for sharing
    * Re-signs the R2 URL on demand
    */
-  async getPublicAsset(assetId: string) {
+  async getPublicAsset(
+    assetId: string,
+    ip?: string,
+    userAgent?: string,
+    acceptLanguage?: string,
+  ) {
     const asset = await prisma.generatedImage.findUnique({
       where: { id: assetId },
       include: {
@@ -71,13 +115,26 @@ export class SharingService {
       }
     }
 
-    // Increment view count (fire and forget)
-    prisma.generatedImage
-      .update({
-        where: { id: assetId },
-        data: { viewCount: { increment: 1 } },
-      })
-      .catch(() => {});
+    // Track view: only increment if this IP hasn't viewed in last 24h
+    let viewIncremented = false;
+    if (ip && userAgent && acceptLanguage) {
+      const fingerprint = this.generateFingerprint(
+        ip,
+        userAgent,
+        acceptLanguage,
+      );
+      if (!this.hasViewedRecently(assetId, fingerprint)) {
+        this.markViewed(assetId, fingerprint);
+        // Increment view count (fire and forget)
+        prisma.generatedImage
+          .update({
+            where: { id: assetId },
+            data: { viewCount: { increment: 1 } },
+          })
+          .catch(() => {});
+        viewIncremented = true;
+      }
+    }
 
     return {
       id: asset.id,
@@ -89,7 +146,7 @@ export class SharingService {
       provider: asset.provider,
       url,
       likeCount: asset.likeCount,
-      viewCount: asset.viewCount + 1, // Optimistic increment
+      viewCount: asset.viewCount + (viewIncremented ? 1 : 0),
       createdAt: asset.createdAt,
       creator: asset.user,
     };

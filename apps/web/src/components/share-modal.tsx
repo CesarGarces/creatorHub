@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Copy, Check, Share2 } from "lucide-react";
+import { X, Copy, Check, Share2, Globe, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 interface ShareModalProps {
   assetId: string;
   assetPrompt: string;
   assetType: "IMAGE" | "VIDEO";
+  isPublic: boolean;
+  onTogglePublic?: () => void;
   onClose: () => void;
 }
 
@@ -18,6 +20,8 @@ export function ShareModal({
   assetId,
   assetPrompt,
   assetType,
+  isPublic,
+  onTogglePublic,
   onClose,
 }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
@@ -28,6 +32,10 @@ export function ShareModal({
   }, [assetId]);
 
   const handleCopyLink = async () => {
+    if (!isPublic) {
+      toast.error("Make the asset public first to share it");
+      return;
+    }
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
@@ -39,6 +47,10 @@ export function ShareModal({
   };
 
   const handleNativeShare = async () => {
+    if (!isPublic) {
+      toast.error("Make the asset public first to share it");
+      return;
+    }
     if (navigator.share) {
       try {
         await navigator.share({
@@ -79,6 +91,10 @@ export function ShareModal({
   };
 
   const handleShare = (platform: string) => {
+    if (!isPublic) {
+      toast.error("Make the asset public first to share it");
+      return;
+    }
     const url = getShareUrl(platform);
     if (url !== "#") {
       window.open(url, "_blank", "width=600,height=400");
@@ -172,6 +188,30 @@ export function ShareModal({
 
         {/* Content */}
         <div className="p-4 space-y-4">
+          {/* Not public warning */}
+          {!isPublic && (
+            <div className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+              <Lock size={16} className="text-amber-500 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-amber-500 font-medium">
+                  This asset is private
+                </p>
+                <p className="text-xs text-text-muted mt-0.5">
+                  Make it public to enable sharing and get a link anyone can
+                  view.
+                </p>
+                {onTogglePublic && (
+                  <button
+                    onClick={onTogglePublic}
+                    className="mt-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    Make public now
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Copy Link */}
           <div>
             <label className="block text-sm font-medium text-text mb-2">
@@ -186,7 +226,12 @@ export function ShareModal({
               />
               <button
                 onClick={handleCopyLink}
-                className="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
+                disabled={!isPublic}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                  isPublic
+                    ? "bg-primary text-white hover:bg-primary/90"
+                    : "bg-surface-elevated text-text-muted cursor-not-allowed opacity-50"
+                }`}
               >
                 {copied ? <Check size={16} /> : <Copy size={16} />}
                 {copied ? "Copied!" : "Copy"}
@@ -204,7 +249,12 @@ export function ShareModal({
                 <button
                   key={platform.id}
                   onClick={() => handleShare(platform.id)}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border border-border text-text-muted transition-all ${platform.color}`}
+                  disabled={!isPublic}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${
+                    isPublic
+                      ? `border-border text-text-muted ${platform.color}`
+                      : "border-border/50 text-text-muted/40 cursor-not-allowed opacity-50"
+                  }`}
                 >
                   {platform.icon}
                   <span className="text-xs">{platform.name}</span>
@@ -217,7 +267,12 @@ export function ShareModal({
           {typeof navigator !== "undefined" && "share" in navigator && (
             <button
               onClick={handleNativeShare}
-              className="w-full py-3 bg-surface-elevated text-text rounded-xl font-medium hover:bg-surface-elevated/80 transition-colors flex items-center justify-center gap-2"
+              disabled={!isPublic}
+              className={`w-full py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${
+                isPublic
+                  ? "bg-surface-elevated text-text hover:bg-surface-elevated/80"
+                  : "bg-surface-elevated/50 text-text-muted/40 cursor-not-allowed"
+              }`}
             >
               <Share2 size={18} />
               Share via Device
@@ -228,8 +283,9 @@ export function ShareModal({
         {/* Footer */}
         <div className="p-4 border-t border-border bg-surface-elevated/50">
           <p className="text-xs text-text-muted text-center">
-            Anyone with this link can view this {assetType.toLowerCase()} and
-            give it a like
+            {isPublic
+              ? "Anyone with this link can view this asset and give it a like"
+              : "Only you can see this asset until you make it public"}
           </p>
         </div>
       </div>

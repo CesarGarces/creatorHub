@@ -584,6 +584,13 @@ export default function AssetsPage() {
           assetId={shareModalAsset.id}
           assetPrompt={shareModalAsset.prompt}
           assetType={shareModalAsset.type}
+          isPublic={shareModalAsset.isPublic}
+          onTogglePublic={() => {
+            handleTogglePublic(shareModalAsset.id);
+            setShareModalAsset((prev) =>
+              prev ? { ...prev, isPublic: !prev.isPublic } : null,
+            );
+          }}
           onClose={() => setShareModalAsset(null)}
         />
       )}

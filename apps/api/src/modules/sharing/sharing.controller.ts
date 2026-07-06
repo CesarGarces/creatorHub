@@ -22,12 +22,25 @@ export class SharingController {
   /**
    * GET /sharing/:assetId
    * Public endpoint to view a shared asset
-   * No authentication required
+   * Rate limited: 30 requests per minute per IP (global default)
    */
   @Public()
   @Get(":assetId")
+  @UseGuards(ThrottlerGuard)
   async getPublicAsset(@Param("assetId") assetId: string, @Req() req: Request) {
-    return this.sharingService.getPublicAsset(assetId);
+    const ip =
+      (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+      req.ip ||
+      "unknown";
+    const userAgent = req.headers["user-agent"] || "unknown";
+    const acceptLanguage = req.headers["accept-language"] || "unknown";
+
+    return this.sharingService.getPublicAsset(
+      assetId,
+      ip,
+      userAgent,
+      acceptLanguage,
+    );
   }
 
   /**
@@ -75,6 +88,7 @@ export class SharingController {
    */
   @Public()
   @Get(":assetId/liked")
+  @UseGuards(ThrottlerGuard)
   async hasLiked(@Param("assetId") assetId: string, @Req() req: Request) {
     const ip =
       (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
@@ -112,6 +126,7 @@ export class SharingController {
    */
   @Public()
   @Get(":assetId/share-url")
+  @UseGuards(ThrottlerGuard)
   async getShareUrl(@Param("assetId") assetId: string) {
     return { url: this.sharingService.getShareUrl(assetId) };
   }
