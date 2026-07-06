@@ -206,7 +206,7 @@ export default function SharePage() {
               ) : (
                 <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
                   <span className="text-primary font-medium">
-                    {(asset.creator.name || "C")[0].toUpperCase()}
+                    {asset.creator.name?.charAt(0)?.toUpperCase() ?? "C"}
                   </span>
                 </div>
               )}
