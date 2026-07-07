@@ -16,8 +16,8 @@
     "@creator-hub/shared-types": "workspace:*",
     "@creator-hub/shared-utils": "workspace:*",
     "@nestjs/bullmq": "^11.0.0",
-    "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
+    "@nestjs/common": "^11.1.27",
+    "@nestjs/core": "^11.1.27",
     "@sentry/node": "^10.63.0",
     "bullmq": "^5.0.0",
     "mercadopago": "^3.1.0"

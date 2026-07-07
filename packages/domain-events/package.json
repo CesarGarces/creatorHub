@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.0",
+    "@nestjs/common": "^11.1.27",
     "@creator-hub/shared-types": "workspace:*",
     "ioredis": "^5.4.0"
   },

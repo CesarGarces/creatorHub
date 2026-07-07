@@ -18,7 +18,7 @@
     "@creator-hub/shared-types": "workspace:*",
     "@creator-hub/shared-utils": "workspace:*",
     "@creator-hub/storage": "workspace:*",
-    "@nestjs/common": "^11.0.0",
+    "@nestjs/common": "^11.1.27",
     "@nestjs/bullmq": "^11.0.0",
     "bullmq": "^5.0.0"
   },

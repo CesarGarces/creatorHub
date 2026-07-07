@@ -14,7 +14,7 @@
     "@creator-hub/billing": "workspace:*",
     "@creator-hub/database": "workspace:*",
     "@creator-hub/shared-utils": "workspace:*",
-    "@nestjs/common": "^11.0.0"
+    "@nestjs/common": "^11.1.27"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

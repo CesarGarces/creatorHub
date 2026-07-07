@@ -12,7 +12,7 @@
   "dependencies": {
     "@creator-hub/shared-types": "workspace:*",
     "@creator-hub/shared-utils": "workspace:*",
-    "@nestjs/common": "^11.0.0",
+    "@nestjs/common": "^11.1.27",
     "ws": "^8.18.0"
   },
   "devDependencies": {
