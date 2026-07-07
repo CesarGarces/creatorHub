@@ -37,11 +37,11 @@ export function ActionConfirmDialog({
   isLoading = false,
   icon,
 }: ActionConfirmDialogProps) {
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   React.useEffect(() => {
     if (!isOpen || !mounted) return;
@@ -141,6 +141,7 @@ export function ActionConfirmDialog({
           }}
         >
           <button
+            type="button"
             onClick={onClose}
             disabled={isLoading}
             className={cn(buttonVariants({ variant: "outline" }))}
@@ -148,6 +149,7 @@ export function ActionConfirmDialog({
             {cancelLabel}
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={isLoading}
             className={cn(buttonVariants({ variant: confirmVariant }))}

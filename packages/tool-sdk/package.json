@@ -13,13 +13,11 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@creator-hub/shared-types": "workspace:*",
-    "@creator-hub/shared-utils": "workspace:*",
-    "react": "^18.3.0"
+    "@creator-hub/shared-utils": "workspace:*"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^20.0.0",
-    "@types/react": "^18.3.0",
     "typescript": "^5.5.0"
   }
 }

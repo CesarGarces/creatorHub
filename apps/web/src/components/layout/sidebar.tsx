@@ -85,6 +85,7 @@ export function Sidebar() {
           </Link>
         )}
         <button
+          type="button"
           onClick={() => setCollapsed(!collapsed)}
           className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
         >
@@ -151,6 +152,7 @@ export function Sidebar() {
           )}
           {!collapsed && (
             <button
+              type="button"
               onClick={handleLogout}
               className="text-text-dim hover:text-error transition-colors"
               title="Logout"

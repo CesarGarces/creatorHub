@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Image, Film, Languages, ArrowRight } from "lucide-react";
 
 const tools = [
@@ -37,7 +37,7 @@ export function ToolsSection() {
   return (
     <section id="tools" className="py-24 border-t border-border-subtle">
       <div className="mx-auto max-w-7xl px-6">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -51,11 +51,11 @@ export function ToolsSection() {
             Each tool is designed to solve specific content creation problems,
             powered by state-of-the-art AI models.
           </p>
-        </motion.div>
+        </m.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tools.map((tool, i) => (
-            <motion.div
+            <m.div
               key={tool.title}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -83,7 +83,7 @@ export function ToolsSection() {
                 <span>Explore</span>
                 <ArrowRight size={14} />
               </div>
-            </motion.div>
+            </m.div>
           ))}
         </div>
       </div>

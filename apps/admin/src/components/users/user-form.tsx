@@ -73,10 +73,14 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
 
       <div className="grid gap-6 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-muted">
+          <label
+            htmlFor="user-email"
+            className="mb-1 block text-sm font-medium text-text-muted"
+          >
             Email
           </label>
           <Input
+            id="user-email"
             type="email"
             value={form.email}
             onChange={(e) => updateField("email", e.target.value)}
@@ -85,10 +89,14 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-muted">
+          <label
+            htmlFor="user-name"
+            className="mb-1 block text-sm font-medium text-text-muted"
+          >
             Name
           </label>
           <Input
+            id="user-name"
             value={form.name}
             onChange={(e) => updateField("name", e.target.value)}
             required
@@ -96,10 +104,14 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-muted">
+          <label
+            htmlFor="user-password"
+            className="mb-1 block text-sm font-medium text-text-muted"
+          >
             {user ? "New Password (leave blank to keep)" : "Password"}
           </label>
           <Input
+            id="user-password"
             type="password"
             value={form.password}
             onChange={(e) => updateField("password", e.target.value)}
@@ -110,10 +122,14 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-muted">
+          <label
+            htmlFor="user-role"
+            className="mb-1 block text-sm font-medium text-text-muted"
+          >
             Role
           </label>
           <select
+            id="user-role"
             value={form.role}
             onChange={(e) => updateField("role", e.target.value)}
             className="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text"
@@ -124,10 +140,14 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-muted">
+          <label
+            htmlFor="user-plan"
+            className="mb-1 block text-sm font-medium text-text-muted"
+          >
             Plan
           </label>
           <select
+            id="user-plan"
             value={form.plan}
             onChange={(e) => updateField("plan", e.target.value)}
             className="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text"
@@ -144,10 +164,14 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         <p className="text-sm font-medium text-text-muted">Credit Balance</p>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs text-text-dim">
+            <label
+              htmlFor="currentCredits"
+              className="mb-1 block text-xs text-text-dim"
+            >
               Current Credits
             </label>
             <Input
+              id="currentCredits"
               type="number"
               min={0}
               value={form.currentCredits}
@@ -157,10 +181,14 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-dim">
+            <label
+              htmlFor="purchasedCredits"
+              className="mb-1 block text-xs text-text-dim"
+            >
               Purchased Credits
             </label>
             <Input
+              id="purchasedCredits"
               type="number"
               min={0}
               value={form.purchasedCredits}
@@ -173,8 +201,12 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        <label className="relative inline-flex cursor-pointer items-center">
+        <label
+          htmlFor="user-active"
+          className="relative inline-flex cursor-pointer items-center"
+        >
           <input
+            id="user-active"
             type="checkbox"
             checked={form.isActive}
             onChange={(e) => updateField("isActive", e.target.checked)}
@@ -182,8 +214,8 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
           />
           <div className="h-6 w-11 rounded-full bg-border peer-checked:bg-primary transition-colors" />
           <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+          <span className="ml-2 text-sm text-text-muted">Active</span>
         </label>
-        <span className="text-sm text-text-muted">Active</span>
       </div>
 
       <div className="flex items-center gap-3 pt-4">

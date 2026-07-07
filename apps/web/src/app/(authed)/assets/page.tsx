@@ -144,6 +144,7 @@ export default function AssetsPage() {
             { id: "VIDEO" as AssetFilter, label: "Videos" },
           ].map((tab) => (
             <button
+              type="button"
               key={tab.id}
               onClick={() => handleFilterChange(tab.id)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all cursor-pointer ${
@@ -206,6 +207,7 @@ export default function AssetsPage() {
                           src={asset.url}
                           className="w-full h-full object-cover"
                           muted
+                          aria-label={`Video preview: ${asset.title || "Untitled"}`}
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                           <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
@@ -414,7 +416,9 @@ export default function AssetsPage() {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedAsset(null)}
+                aria-label="Close preview"
                 className="ml-4 rounded-lg p-2 text-text-muted hover:text-text hover:bg-surface-elevated transition-colors cursor-pointer"
               >
                 <svg
@@ -435,6 +439,7 @@ export default function AssetsPage() {
                   src={selectedAsset.url}
                   controls
                   className="max-w-full max-h-[70vh] rounded-lg"
+                  aria-label={`Video player: ${selectedAsset.title || "Untitled"}`}
                 />
               ) : (
                 <img
@@ -518,6 +523,7 @@ export default function AssetsPage() {
               <div className="flex items-center gap-2">
                 {/* Make Public Toggle */}
                 <button
+                  type="button"
                   onClick={() => handleTogglePublic(selectedAsset.id)}
                   disabled={togglePublicMutation.isPending}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${

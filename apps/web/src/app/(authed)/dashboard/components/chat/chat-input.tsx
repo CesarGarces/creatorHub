@@ -37,11 +37,13 @@ export function ChatInput() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask me anything..."
+          aria-label="Chat message input"
           rows={1}
           className="flex-1 resize-none rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary/50 transition-colors"
           disabled={isStreaming}
         />
         <button
+          type="button"
           onClick={handleSubmit}
           disabled={!input.trim() || isStreaming}
           className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

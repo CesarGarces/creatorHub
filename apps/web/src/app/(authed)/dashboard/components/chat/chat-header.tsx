@@ -22,6 +22,7 @@ export function ChatHeader() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={() => setShowSessions(!showSessions)}
             className="flex items-center gap-2 text-sm font-medium text-text hover:text-primary transition-colors"
           >
@@ -40,7 +41,9 @@ export function ChatHeader() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => setShowSettings(!showSettings)}
+            aria-label="Chat Settings"
             className="rounded-lg p-1.5 text-text-dim hover:text-text hover:bg-surface-elevated transition-colors"
             title="Chat Settings"
           >
@@ -66,6 +69,7 @@ export function ChatHeader() {
               Sessions
             </span>
             <button
+              type="button"
               onClick={() => {
                 clearActiveSession();
                 setShowSessions(false);
@@ -96,10 +100,12 @@ export function ChatHeader() {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     deleteSession(session.id);
                   }}
+                  aria-label="Delete session"
                   className="ml-2 rounded p-1 text-text-dim hover:text-error hover:bg-error/10 transition-colors"
                 >
                   <svg

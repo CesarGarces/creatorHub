@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
+import { markdownToSafeHtml } from "@/lib/sanitize";
 
 interface Message {
   id: string;
@@ -68,6 +69,7 @@ export default function AgentChatPage() {
         ]}
         actions={
           <button
+            type="button"
             onClick={() => setMessages(initialMessages)}
             className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm text-text-muted hover:text-text transition-colors"
           >
@@ -104,16 +106,15 @@ export default function AgentChatPage() {
                 <div
                   className="whitespace-pre-wrap"
                   dangerouslySetInnerHTML={{
-                    __html: msg.content
-                      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                      .replace(/\n/g, "<br/>"),
+                    __html: markdownToSafeHtml(msg.content),
                   }}
                 />
                 {msg.actions && (
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {msg.actions.map((action, i) => (
+                    {msg.actions.map((action) => (
                       <button
-                        key={i}
+                        type="button"
+                        key={action.label}
                         onClick={() => action.href && router.push(action.href)}
                         className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:border-primary/30 transition-all"
                       >
@@ -134,6 +135,7 @@ export default function AgentChatPage() {
             <div className="max-w-3xl mx-auto flex flex-wrap gap-2">
               {suggestions.map((s) => (
                 <button
+                  type="button"
                   key={s}
                   onClick={() => setInput(s)}
                   className="rounded-full border border-border bg-surface px-4 py-2 text-xs text-text-muted hover:text-text hover:border-primary/30 transition-all"
@@ -155,11 +157,14 @@ export default function AgentChatPage() {
                 e.key === "Enter" && !e.shiftKey && handleSend()
               }
               placeholder="Type a message..."
+              aria-label="Message input"
               className="flex-1 rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary transition-colors"
             />
             <button
+              type="button"
               onClick={handleSend}
               disabled={!input.trim()}
+              aria-label="Send message"
               className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <svg

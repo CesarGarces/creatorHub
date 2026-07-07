@@ -49,6 +49,7 @@ export function AssetLikeButton({
 
   return (
     <button
+      type="button"
       onClick={handleToggle}
       className={`
         flex items-center justify-center rounded-xl font-medium transition-all duration-200

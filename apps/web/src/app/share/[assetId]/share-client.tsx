@@ -66,12 +66,14 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
           </a>
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={handleLogin}
               className="px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
             >
               Sign In
             </button>
             <button
+              type="button"
               onClick={handleRegister}
               className="px-4 py-2 text-sm bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
             >
@@ -93,6 +95,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
                 controls
                 className="max-w-full max-h-[70vh] rounded-lg"
                 poster={asset.url.replace(/\.[^/.]+$/, ".jpg")}
+                aria-label={asset.prompt}
               />
             ) : (
               <img
@@ -171,6 +174,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
               />
 
               <button
+                type="button"
                 onClick={() => setShowShareModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-surface-elevated text-text rounded-xl hover:bg-surface-elevated/80 transition-colors"
               >
@@ -179,6 +183,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
               </button>
 
               <button
+                type="button"
                 onClick={handleCopyLink}
                 className="flex items-center gap-2 px-4 py-2 bg-surface-elevated text-text rounded-xl hover:bg-surface-elevated/80 transition-colors"
               >
@@ -242,12 +247,14 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
+                type="button"
                 onClick={handleRegister}
                 className="px-8 py-4 bg-primary text-white rounded-xl font-semibold text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
               >
                 Start Creating Free
               </button>
               <button
+                type="button"
                 onClick={handleLogin}
                 className="px-8 py-4 bg-transparent border border-border text-text-muted rounded-xl font-semibold text-lg hover:bg-surface transition-colors"
               >

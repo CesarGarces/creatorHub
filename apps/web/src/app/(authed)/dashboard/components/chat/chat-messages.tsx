@@ -66,9 +66,9 @@ export function ChatMessages() {
             </div>
             {message.toolCalls && message.toolCalls.length > 0 && (
               <div className="mt-2 space-y-1">
-                {message.toolCalls.map((tc, i) => (
+                {message.toolCalls.map((tc) => (
                   <div
-                    key={i}
+                    key={tc.toolName}
                     className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
                   >
                     <span>🔧</span>

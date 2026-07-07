@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Bot, Youtube, Camera, Smartphone, MessageCircle } from "lucide-react";
 import { config } from "@/lib/config";
 
@@ -68,7 +68,7 @@ export function AgentsSection() {
   return (
     <section id="agents" className="py-24 border-t border-border-subtle">
       <div className="mx-auto max-w-7xl px-6">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -82,11 +82,11 @@ export function AgentsSection() {
             Specialized AI agents that understand your platform and help you
             grow. Each agent is trained on platform-specific best practices.
           </p>
-        </motion.div>
+        </m.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {agents.map((agent, i) => (
-            <motion.div
+            <m.div
               key={agent.title}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -151,7 +151,7 @@ export function AgentsSection() {
                   Try {agent.title}
                 </a>
               </div>
-            </motion.div>
+            </m.div>
           ))}
         </div>
       </div>

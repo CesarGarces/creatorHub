@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { MessageSquare, Wand2, Image, Rocket } from "lucide-react";
 
 const steps = [
@@ -38,7 +38,7 @@ export function HowItWorks() {
   return (
     <section className="py-24 border-t border-border-subtle">
       <div className="mx-auto max-w-7xl px-6">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -48,13 +48,13 @@ export function HowItWorks() {
           <h2 className="text-3xl md:text-4xl font-bold text-text text-balance">
             From idea to content in seconds
           </h2>
-        </motion.div>
+        </m.div>
 
         <div className="relative grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="hidden md:block absolute top-12 left-[12%] right-[12%] h-px bg-gradient-to-r from-primary/40 via-accent/40 to-success/40" />
 
           {steps.map((step, i) => (
-            <motion.div
+            <m.div
               key={step.number}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -76,7 +76,7 @@ export function HowItWorks() {
               <p className="text-sm text-text-muted leading-relaxed">
                 {step.description}
               </p>
-            </motion.div>
+            </m.div>
           ))}
         </div>
       </div>

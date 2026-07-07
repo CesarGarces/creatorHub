@@ -234,9 +234,9 @@ export default function CreditsPage() {
                 </CardHeader>
                 <CardContent className="flex-1">
                   <ul className="space-y-3">
-                    {plan.features?.map((f: string, i: number) => (
+                    {plan.features?.map((f: string) => (
                       <li
-                        key={i}
+                        key={f}
                         className="flex items-center gap-2 text-sm text-text-muted"
                       >
                         <span className="text-secondary">✓</span> {f}

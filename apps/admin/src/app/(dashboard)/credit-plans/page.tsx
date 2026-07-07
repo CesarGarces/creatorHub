@@ -87,6 +87,7 @@ export default function CreditPlansPage() {
           </p>
         </div>
         <button
+          type="button"
           onClick={() => {
             setEditingPlan(null);
             setIsCreateMode(true);
@@ -153,6 +154,7 @@ export default function CreditPlansPage() {
 
               <div className="mt-4 flex gap-2">
                 <button
+                  type="button"
                   onClick={() => {
                     setEditingPlan(plan);
                     setIsCreateMode(false);
@@ -163,6 +165,7 @@ export default function CreditPlansPage() {
                   Edit
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     if (confirm(`Delete plan "${plan.name}"?`)) {
                       deleteMutation.mutate(plan.id);
@@ -240,8 +243,14 @@ function CreditPlanForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-text mb-1">Slug</label>
+        <label
+          htmlFor="slug"
+          className="block text-sm font-medium text-text mb-1"
+        >
+          Slug
+        </label>
         <input
+          id="slug"
           type="text"
           value={slug}
           onChange={(e) => setSlug(e.target.value.toUpperCase())}
@@ -253,8 +262,14 @@ function CreditPlanForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-text mb-1">Name</label>
+        <label
+          htmlFor="name"
+          className="block text-sm font-medium text-text mb-1"
+        >
+          Name
+        </label>
         <input
+          id="name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -265,10 +280,14 @@ function CreditPlanForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-text mb-1">
+        <label
+          htmlFor="description"
+          className="block text-sm font-medium text-text mb-1"
+        >
           Description
         </label>
         <input
+          id="description"
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -279,10 +298,14 @@ function CreditPlanForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-text mb-1">
+          <label
+            htmlFor="usdAmount"
+            className="block text-sm font-medium text-text mb-1"
+          >
             Price (USD)
           </label>
           <input
+            id="usdAmount"
             type="number"
             step="0.01"
             min="0.01"
@@ -293,10 +316,14 @@ function CreditPlanForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-text mb-1">
+          <label
+            htmlFor="creditsGiven"
+            className="block text-sm font-medium text-text mb-1"
+          >
             Credits Given
           </label>
           <input
+            id="creditsGiven"
             type="number"
             min="1"
             value={creditsGiven}
@@ -309,10 +336,14 @@ function CreditPlanForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-text mb-1">
+          <label
+            htmlFor="sortOrder"
+            className="block text-sm font-medium text-text mb-1"
+          >
             Sort Order
           </label>
           <input
+            id="sortOrder"
             type="number"
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
@@ -320,8 +351,12 @@ function CreditPlanForm({
           />
         </div>
         <div className="flex items-end pb-1">
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label
+            htmlFor="isActive"
+            className="flex items-center gap-2 cursor-pointer"
+          >
             <input
+              id="isActive"
               type="checkbox"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}

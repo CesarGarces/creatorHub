@@ -83,10 +83,14 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
 
       <div className="grid gap-6 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-muted">
+          <label
+            htmlFor="slug"
+            className="mb-1 block text-sm font-medium text-text-muted"
+          >
             Slug
           </label>
           <Input
+            id="slug"
             value={form.slug}
             onChange={(e) => updateField("slug", e.target.value)}
             required
@@ -98,20 +102,28 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-muted">
+          <label
+            htmlFor="provider-name"
+            className="mb-1 block text-sm font-medium text-text-muted"
+          >
             Name
           </label>
           <Input
+            id="provider-name"
             value={form.name}
             onChange={(e) => updateField("name", e.target.value)}
             required
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-muted">
+          <label
+            htmlFor="model"
+            className="mb-1 block text-sm font-medium text-text-muted"
+          >
             Model
           </label>
           <Input
+            id="model"
             name="model"
             value={form.model}
             onChange={(e) => updateField("model", e.target.value)}
@@ -120,10 +132,14 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-muted">
+          <label
+            htmlFor="tier"
+            className="mb-1 block text-sm font-medium text-text-muted"
+          >
             Tier
           </label>
           <select
+            id="tier"
             name="tier"
             value={form.tier}
             onChange={(e) => updateField("tier", e.target.value)}
@@ -135,10 +151,14 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-muted">
+          <label
+            htmlFor="costPerCredit"
+            className="mb-1 block text-sm font-medium text-text-muted"
+          >
             Cost per Credit
           </label>
           <Input
+            id="costPerCredit"
             name="costPerCredit"
             type="number"
             min={0.01}
@@ -152,10 +172,14 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-muted">
+          <label
+            htmlFor="supportedTasks"
+            className="mb-1 block text-sm font-medium text-text-muted"
+          >
             Supported Tasks
           </label>
           <Input
+            id="supportedTasks"
             name="supportedTasks"
             value={form.supportedTasks}
             onChange={(e) => updateField("supportedTasks", e.target.value)}
@@ -168,10 +192,14 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
       <div className="rounded-lg border border-border bg-surface-elevated/50 p-4 space-y-4">
         <p className="text-sm font-medium text-text-muted">Configuration</p>
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-muted">
+          <label
+            htmlFor="config"
+            className="mb-1 block text-sm font-medium text-text-muted"
+          >
             Config (JSON)
           </label>
           <textarea
+            id="config"
             value={form.config}
             onChange={(e) => updateField("config", e.target.value)}
             rows={5}
@@ -186,8 +214,12 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
 
       {/* ✅ 6. Toggle nativo como en UserForm */}
       <div className="flex items-center gap-3">
-        <label className="relative inline-flex cursor-pointer items-center">
+        <label
+          htmlFor="provider-active"
+          className="relative inline-flex cursor-pointer items-center"
+        >
           <input
+            id="provider-active"
             type="checkbox"
             checked={form.isActive}
             onChange={(e) => updateField("isActive", e.target.checked)}
@@ -195,8 +227,8 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
           />
           <div className="h-6 w-11 rounded-full bg-border peer-checked:bg-primary transition-colors" />
           <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+          <span className="ml-2 text-sm text-text-muted">Active</span>
         </label>
-        <span className="text-sm text-text-muted">Active</span>
       </div>
 
       {/* Botones */}

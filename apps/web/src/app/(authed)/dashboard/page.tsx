@@ -150,6 +150,7 @@ export default function DashboardPage() {
         breadcrumbs={[{ label: "Dashboard" }]}
         actions={
           <button
+            type="button"
             onClick={() => setCmdOpen(true)}
             className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text-dim hover:text-text-muted transition-colors"
           >
@@ -192,6 +193,7 @@ export default function DashboardPage() {
                   value={quickPrompt}
                   onChange={(e) => setQuickPrompt(e.target.value)}
                   placeholder="Describe what you want to create..."
+                  aria-label="Describe what you want to create"
                   className="flex-1 bg-transparent text-sm text-text placeholder:text-text-dim outline-none"
                   onKeyDown={(e) => {
                     if (
@@ -206,6 +208,7 @@ export default function DashboardPage() {
                   }}
                 />
                 <button
+                  type="button"
                   onClick={() => {
                     if (quickPrompt.trim() && !isStreaming) {
                       openWidget();
@@ -223,6 +226,7 @@ export default function DashboardPage() {
             <div className="absolute -bottom-6 left-4 flex gap-2 text-xs text-text-dim">
               <span>Try:</span>
               <button
+                type="button"
                 onClick={() => {
                   setQuickPrompt("Gaming thumbnail");
                 }}
@@ -232,6 +236,7 @@ export default function DashboardPage() {
               </button>
               <span>·</span>
               <button
+                type="button"
                 onClick={() => {
                   setQuickPrompt("YouTube intro script");
                 }}
@@ -241,6 +246,7 @@ export default function DashboardPage() {
               </button>
               <span>·</span>
               <button
+                type="button"
                 onClick={() => {
                   setQuickPrompt("Viral video title");
                 }}
@@ -315,6 +321,7 @@ export default function DashboardPage() {
                 Recent Activity
               </h2>
               <button
+                type="button"
                 onClick={() => router.push("/history")}
                 className="text-xs text-primary hover:text-primary-hover transition-colors"
               >

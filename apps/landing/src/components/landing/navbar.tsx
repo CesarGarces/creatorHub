@@ -54,6 +54,7 @@ export function Navbar() {
         </div>
 
         <button
+          type="button"
           className="md:hidden text-text-muted hover:text-text"
           onClick={() => setMobileOpen(!mobileOpen)}
         >

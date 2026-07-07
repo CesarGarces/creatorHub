@@ -92,6 +92,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
           <div className="space-y-3">
             {creditPacks.map((plan: any) => (
               <button
+                type="button"
                 key={plan.id}
                 onClick={() => handleBuy(plan)}
                 className={`relative flex w-full items-center justify-between rounded-xl border p-4 transition-all cursor-pointer ${
@@ -157,6 +158,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             </Button>
 
             <button
+              type="button"
               onClick={onClose}
               className="w-full text-sm text-text-muted hover:text-text transition-colors"
             >

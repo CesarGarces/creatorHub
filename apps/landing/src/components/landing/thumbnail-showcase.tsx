@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Sparkles } from "lucide-react";
 
 const styles = [
@@ -16,7 +16,7 @@ export function ThumbnailShowcase() {
     <section className="py-24 border-t border-border-subtle">
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <motion.div
+          <m.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -34,7 +34,7 @@ export function ThumbnailShowcase() {
 
             <div className="space-y-3">
               {styles.map((style, i) => (
-                <motion.div
+                <m.div
                   key={style.name}
                   initial={{ opacity: 0, x: -10 }}
                   whileInView={{ opacity: 1, x: 0 }}
@@ -48,12 +48,12 @@ export function ThumbnailShowcase() {
                   <span className="text-sm font-medium text-text">
                     {style.name}
                   </span>
-                </motion.div>
+                </m.div>
               ))}
             </div>
-          </motion.div>
+          </m.div>
 
-          <motion.div
+          <m.div
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -107,13 +107,16 @@ export function ThumbnailShowcase() {
                   ))}
                 </div>
 
-                <button className="w-full py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg transition-colors">
+                <button
+                  type="button"
+                  className="w-full py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg transition-colors"
+                >
                   Generate
                 </button>
               </div>
             </div>
             <div className="absolute -inset-4 bg-accent/5 blur-3xl rounded-full -z-10" />
-          </motion.div>
+          </m.div>
         </div>
       </div>
     </section>

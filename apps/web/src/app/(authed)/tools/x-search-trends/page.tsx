@@ -7,6 +7,7 @@ import { useCreditsStore } from "@/store/credits.store";
 import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 import { cn } from "@creator-hub/ui";
 import { useSocialResearchStore } from "@/store/social-research.store";
+import { sanitizeHtml } from "@/lib/sanitize";
 import {
   ModelSettingsPanel,
   DEFAULT_MODEL_SETTINGS,
@@ -323,13 +324,15 @@ export default function XSearchTrendsPage() {
                   <div
                     className="whitespace-pre-wrap"
                     dangerouslySetInnerHTML={{
-                      __html: msg.content
-                        .replace(
-                          /\[View on X →\]\((.*?)\)/g,
-                          '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">View on X →</a>',
-                        )
-                        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                        .replace(/\n/g, "<br/>"),
+                      __html: sanitizeHtml(
+                        msg.content
+                          .replace(
+                            /\[View on X →\]\((.*?)\)/g,
+                            '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">View on X →</a>',
+                          )
+                          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                          .replace(/\n/g, "<br/>"),
+                      ),
                     }}
                   />
 
@@ -404,9 +407,9 @@ export default function XSearchTrendsPage() {
                               <div className="flex flex-wrap gap-1.5 mt-1">
                                 {msg.resultData.analysis.themes
                                   .slice(0, 5)
-                                  .map((theme: any, i: number) => (
+                                  .map((theme: any) => (
                                     <span
-                                      key={i}
+                                      key={theme.name}
                                       className={cn(
                                         "text-[10px] px-2 py-0.5 rounded-full",
                                         theme.sentiment === "positive"

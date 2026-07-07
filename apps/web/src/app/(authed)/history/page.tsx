@@ -109,6 +109,7 @@ export default function HistoryPage() {
           <div className="flex rounded-lg border border-border overflow-hidden">
             {(["day", "week", "total"] as TimeFilter[]).map((f) => (
               <button
+                type="button"
                 key={f}
                 onClick={() => setTimeFilter(f)}
                 className={`px-4 py-1.5 text-sm font-medium transition-colors ${

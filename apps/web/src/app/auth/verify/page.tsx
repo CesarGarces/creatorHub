@@ -6,6 +6,15 @@ import { useAuthStore } from "@/store/auth.store";
 import api from "@/lib/api";
 import { Button, Card, CardContent, CardHeader } from "@creator-hub/ui";
 
+const OTP_KEYS = [
+  "otp-0",
+  "otp-1",
+  "otp-2",
+  "otp-3",
+  "otp-4",
+  "otp-5",
+] as const;
+
 export default function VerifyEmailPage() {
   const router = useRouter();
   const { user, setUser } = useAuthStore();
@@ -186,7 +195,7 @@ export default function VerifyEmailPage() {
               <div className="flex justify-center gap-3">
                 {digits.map((digit, i) => (
                   <input
-                    key={i}
+                    key={OTP_KEYS[i]}
                     ref={(el) => {
                       inputRefs.current[i] = el;
                     }}
@@ -232,6 +241,7 @@ export default function VerifyEmailPage() {
                   </p>
                 ) : (
                   <button
+                    type="button"
                     onClick={handleResend}
                     disabled={isResending}
                     className="text-sm font-medium text-primary hover:text-primary-hover transition-colors disabled:opacity-50"

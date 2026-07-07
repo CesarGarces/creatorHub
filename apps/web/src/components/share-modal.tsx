@@ -179,6 +179,7 @@ export function ShareModal({
             <h3 className="font-semibold text-text">Share Asset</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
           >
@@ -202,6 +203,7 @@ export function ShareModal({
                 </p>
                 {onTogglePublic && (
                   <button
+                    type="button"
                     onClick={onTogglePublic}
                     className="mt-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                   >
@@ -220,11 +222,13 @@ export function ShareModal({
             <div className="flex gap-2">
               <input
                 type="text"
+                aria-label="Share link"
                 value={shareUrl}
                 readOnly
                 className="flex-1 px-3 py-2 bg-surface-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
               <button
+                type="button"
                 onClick={handleCopyLink}
                 disabled={!isPublic}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
@@ -247,6 +251,7 @@ export function ShareModal({
             <div className="grid grid-cols-3 gap-2">
               {socialPlatforms.map((platform) => (
                 <button
+                  type="button"
                   key={platform.id}
                   onClick={() => handleShare(platform.id)}
                   disabled={!isPublic}
@@ -266,6 +271,7 @@ export function ShareModal({
           {/* Native Share (Mobile) */}
           {typeof navigator !== "undefined" && "share" in navigator && (
             <button
+              type="button"
               onClick={handleNativeShare}
               disabled={!isPublic}
               className={`w-full py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${

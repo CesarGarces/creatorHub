@@ -7,6 +7,7 @@ import { useCreditsStore } from "@/store/credits.store";
 import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 import { cn } from "@creator-hub/ui";
 import api from "@/lib/api";
+import { markdownToSafeHtml } from "@/lib/sanitize";
 import {
   ModelSettingsPanel,
   DEFAULT_MODEL_SETTINGS,
@@ -469,9 +470,7 @@ export default function XPostTweetPage() {
                   <div
                     className="whitespace-pre-wrap"
                     dangerouslySetInnerHTML={{
-                      __html: msg.content
-                        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                        .replace(/\n/g, "<br/>"),
+                      __html: markdownToSafeHtml(msg.content),
                     }}
                   />
 

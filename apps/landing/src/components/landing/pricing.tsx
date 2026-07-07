@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Check } from "lucide-react";
 import { config } from "@/lib/config";
 
@@ -110,7 +110,7 @@ export function Pricing() {
   return (
     <section id="pricing" className="py-24 border-t border-border-subtle">
       <div className="mx-auto max-w-7xl px-6">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -124,11 +124,11 @@ export function Pricing() {
             Start with 100 free credits. Buy more anytime, no subscriptions.
             Prices are dynamically managed from the admin panel.
           </p>
-        </motion.div>
+        </m.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto mb-16">
           {plans.map((plan, i) => (
-            <motion.div
+            <m.div
               key={plan.name}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -177,11 +177,11 @@ export function Pricing() {
               >
                 {plan.cta}
               </a>
-            </motion.div>
+            </m.div>
           ))}
         </div>
 
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -217,7 +217,7 @@ export function Pricing() {
           <p className="text-xs text-text-dim text-center mt-4">
             Costs may vary depending on the AI provider selected
           </p>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
 const faqs = [
@@ -43,7 +43,7 @@ export function FAQ() {
   return (
     <section id="faq" className="py-24 border-t border-border-subtle">
       <div className="mx-auto max-w-3xl px-6">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -53,11 +53,11 @@ export function FAQ() {
           <h2 className="text-3xl md:text-4xl font-bold text-text">
             Frequently asked questions
           </h2>
-        </motion.div>
+        </m.div>
 
         <div className="space-y-3">
           {faqs.map((faq, i) => (
-            <motion.div
+            <m.div
               key={faq.question}
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -66,6 +66,7 @@ export function FAQ() {
               className="rounded-xl border border-border bg-surface overflow-hidden"
             >
               <button
+                type="button"
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
                 className="flex items-center justify-between w-full p-5 text-left"
               >
@@ -81,7 +82,7 @@ export function FAQ() {
               </button>
               <AnimatePresence>
                 {openIndex === i && (
-                  <motion.div
+                  <m.div
                     initial={{ height: 0 }}
                     animate={{ height: "auto" }}
                     exit={{ height: 0 }}
@@ -91,10 +92,10 @@ export function FAQ() {
                     <div className="px-5 pb-5 text-sm text-text-muted leading-relaxed border-t border-border-subtle pt-4">
                       {faq.answer}
                     </div>
-                  </motion.div>
+                  </m.div>
                 )}
               </AnimatePresence>
-            </motion.div>
+            </m.div>
           ))}
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { ArrowRight, Play, X, Image, MessageCircle } from "lucide-react";
 import { config } from "@/lib/config";
 
@@ -13,7 +13,7 @@ export function Hero() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(124,58,237,0.12)_0%,_transparent_60%)]" />
 
       <div className="relative mx-auto max-w-7xl px-6">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -38,6 +38,7 @@ export function Hero() {
               <ArrowRight size={16} />
             </a>
             <button
+              type="button"
               onClick={() => setShowVideo(true)}
               className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-text-muted hover:text-text border border-border hover:border-border-subtle rounded-xl transition-colors"
             >
@@ -45,9 +46,9 @@ export function Hero() {
               Watch Demo
             </button>
           </div>
-        </motion.div>
+        </m.div>
 
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.2 }}
@@ -83,19 +84,19 @@ export function Hero() {
             </div>
           </div>
           <div className="absolute -inset-4 bg-primary/5 blur-3xl rounded-full" />
-        </motion.div>
+        </m.div>
       </div>
 
       <AnimatePresence>
         {showVideo && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
             onClick={() => setShowVideo(false)}
           >
-            <motion.div
+            <m.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -103,6 +104,7 @@ export function Hero() {
               onClick={(e) => e.stopPropagation()}
             >
               <button
+                type="button"
                 onClick={() => setShowVideo(false)}
                 className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
               >
@@ -123,8 +125,8 @@ export function Hero() {
                   Your browser does not support the video tag.
                 </video>
               </div>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
     </section>

@@ -93,6 +93,7 @@ export function ModelSettingsPanel({
             </span>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="flex h-7 w-7 items-center justify-center rounded-md text-text-dim hover:text-text hover:bg-surface transition-all cursor-pointer"
             aria-label="Close settings"

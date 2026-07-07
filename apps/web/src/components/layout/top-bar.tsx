@@ -72,7 +72,7 @@ export function TopBar({
         {breadcrumbs && breadcrumbs.length > 0 ? (
           <nav className="flex items-center gap-1.5 text-sm">
             {breadcrumbs.map((crumb, i) => (
-              <span key={i} className="flex items-center gap-1.5">
+              <span key={crumb.label} className="flex items-center gap-1.5">
                 {i > 0 && <span className="text-text-dim">/</span>}
                 {crumb.href ? (
                   <a
@@ -97,7 +97,10 @@ export function TopBar({
         <CreditDisplay balance={balance} size="sm" />
         <Popover>
           <PopoverTrigger asChild>
-            <button className="relative text-text-muted hover:text-text transition-colors">
+            <button
+              type="button"
+              className="relative text-text-muted hover:text-text transition-colors"
+            >
               <Bell className="h-[18px] w-[18px]" />
               {notifications.length > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[10px] text-white font-bold">
@@ -124,6 +127,7 @@ export function TopBar({
                     <p className="text-sm text-text">{n.message}</p>
                     {n.action && (
                       <button
+                        type="button"
                         onClick={() => {
                           router.push(n.action!);
                         }}
@@ -141,6 +145,7 @@ export function TopBar({
         <div className="flex items-center gap-2">
           <Avatar name={user?.email || "User"} size="sm" />
           <button
+            type="button"
             onClick={handleLogout}
             className="text-xs text-text-dim hover:text-error transition-colors"
           >

@@ -185,6 +185,7 @@ export default function SettingsPage() {
                   {displayName[0]?.toUpperCase()}
                 </div>
                 <button
+                  type="button"
                   onClick={() => {
                     setProfileName(
                       user?.name || user?.email?.split("@")[0] || "",

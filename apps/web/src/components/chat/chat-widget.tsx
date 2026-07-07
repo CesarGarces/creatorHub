@@ -231,6 +231,7 @@ export function ChatWidget() {
               {balance} cr
             </span>
             <button
+              type="button"
               onClick={handleNewChat}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-text-dim hover:text-text hover:bg-surface-elevated transition-colors"
               title="New chat"
@@ -239,6 +240,7 @@ export function ChatWidget() {
               <PlusIcon className="h-4 w-4" />
             </button>
             <button
+              type="button"
               onClick={() => setShowSettings(!showSettings)}
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
@@ -252,6 +254,7 @@ export function ChatWidget() {
               <SettingsIcon className="h-4 w-4" />
             </button>
             <button
+              type="button"
               onClick={() => setIsOpen(false)}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-text-dim hover:text-text hover:bg-surface-elevated transition-colors"
               title="Close"
@@ -287,6 +290,7 @@ export function ChatWidget() {
                   )}
                 >
                   <button
+                    type="button"
                     onClick={() => selectSession(session.id)}
                     className={cn(
                       "px-3 py-1 text-xs font-medium",
@@ -298,6 +302,7 @@ export function ChatWidget() {
                     {session.title || "Chat"}
                   </button>
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteSession(session.id);
@@ -339,6 +344,7 @@ export function ChatWidget() {
                     "Generate video ideas",
                   ].map((suggestion) => (
                     <button
+                      type="button"
                       key={suggestion}
                       onClick={() => sendMessage(suggestion)}
                       className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-xs text-text-dim hover:text-text hover:border-primary/30 transition-colors"
@@ -401,6 +407,7 @@ export function ChatWidget() {
         {/* Button */}
         {!isWidgetOpen && (
           <button
+            type="button"
             onClick={handleToggle}
             onMouseEnter={() => {
               if (!isWidgetOpen && !tooltipDismissed) setShowTooltip(true);
@@ -479,11 +486,13 @@ function ChatInput() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask me anything..."
+          aria-label="Chat message"
           rows={1}
           className="flex-1 resize-none rounded-xl border border-border bg-surface-elevated px-3.5 py-2.5 text-[13px] text-text placeholder:text-text-dim outline-none focus:border-primary/40 transition-colors"
           disabled={isStreaming}
         />
         <button
+          type="button"
           onClick={handleSubmit}
           disabled={!input.trim() || isStreaming}
           className={cn(
@@ -594,6 +603,7 @@ function SettingsPanel({
           Settings
         </span>
         <button
+          type="button"
           onClick={onClose}
           className="flex h-5 w-5 items-center justify-center rounded text-text-dim hover:text-text transition-colors"
           aria-label="Close settings"
@@ -742,6 +752,7 @@ function SettingsPanel({
           onChange={(e) =>
             onUpdate({ temperature: parseFloat(e.target.value) })
           }
+          aria-label="Temperature"
           className="w-full accent-primary h-1"
         />
         <div className="mt-0.5 flex justify-between text-[9px] text-text-dim">
@@ -767,6 +778,7 @@ function SettingsPanel({
           step="256"
           value={settings.maxTokens}
           onChange={(e) => onUpdate({ maxTokens: parseInt(e.target.value) })}
+          aria-label="Max Tokens"
           className="w-full accent-primary h-1"
         />
       </div>
@@ -788,6 +800,7 @@ function SettingsPanel({
           step="0.1"
           value={settings.reasoning}
           onChange={(e) => onUpdate({ reasoning: parseFloat(e.target.value) })}
+          aria-label="Reasoning"
           className="w-full accent-primary h-1"
         />
         <div className="mt-0.5 flex justify-between text-[9px] text-text-dim">
@@ -948,6 +961,7 @@ function ToolActionCard({
           </div>
         </div>
         <button
+          type="button"
           onClick={() => {
             const qs =
               params && Object.keys(params).length > 0

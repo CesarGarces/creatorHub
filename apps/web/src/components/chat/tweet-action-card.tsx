@@ -66,6 +66,7 @@ export function TweetActionCard({
         {isEditing ? (
           <div className="space-y-2">
             <textarea
+              aria-label="Edit tweet content"
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
               className={cn(
@@ -87,6 +88,7 @@ export function TweetActionCard({
               </span>
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={handleCancel}
                   className="rounded-lg px-3 py-1.5 text-[11px] font-medium text-text-muted hover:bg-surface-elevated"
                   disabled={isSaving}
@@ -94,6 +96,7 @@ export function TweetActionCard({
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleSave}
                   className="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-semibold text-white hover:brightness-110 disabled:opacity-50"
                   disabled={isSaving || isOverLimit}
@@ -115,6 +118,7 @@ export function TweetActionCard({
                 {charCount}/280 characters
               </span>
               <button
+                type="button"
                 onClick={() => setIsEditing(true)}
                 className="text-[11px] font-medium text-primary hover:underline"
               >

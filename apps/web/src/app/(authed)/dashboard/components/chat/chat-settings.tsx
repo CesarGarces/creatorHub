@@ -51,7 +51,9 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <span className="text-sm font-semibold text-text">Chat Settings</span>
         <button
+          type="button"
           onClick={onClose}
+          aria-label="Close settings"
           className="rounded p-1 text-text-dim hover:text-text hover:bg-surface transition-colors"
         >
           <svg
@@ -105,6 +107,7 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
             onChange={(e) =>
               handleTemperatureChange(parseFloat(e.target.value))
             }
+            aria-label="Temperature"
             className="w-full accent-primary"
           />
           <div className="mt-0.5 flex justify-between text-[10px] text-text-dim">
@@ -130,6 +133,7 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
             step="256"
             value={settings.maxTokens}
             onChange={(e) => handleMaxTokensChange(parseInt(e.target.value))}
+            aria-label="Max Tokens"
             className="w-full accent-primary"
           />
           <div className="mt-0.5 flex justify-between text-[10px] text-text-dim">
@@ -155,6 +159,7 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
             step="0.1"
             value={settings.reasoning}
             onChange={(e) => handleReasoningChange(parseFloat(e.target.value))}
+            aria-label="Reasoning"
             className="w-full accent-primary"
           />
           <div className="mt-0.5 flex justify-between text-[10px] text-text-dim">
