@@ -207,7 +207,7 @@ export default function AssetsPage() {
                           src={asset.url}
                           className="w-full h-full object-cover"
                           muted
-                          aria-label={`Video preview: ${asset.title || "Untitled"}`}
+                          aria-label={`Video preview: ${asset.prompt || "Untitled"}`}
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                           <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
@@ -439,7 +439,7 @@ export default function AssetsPage() {
                   src={selectedAsset.url}
                   controls
                   className="max-w-full max-h-[70vh] rounded-lg"
-                  aria-label={`Video player: ${selectedAsset.title || "Untitled"}`}
+                  aria-label={`Video player: ${selectedAsset.prompt || "Untitled"}`}
                 />
               ) : (
                 <img

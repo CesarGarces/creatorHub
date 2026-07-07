@@ -111,7 +111,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
-        version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
+        version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.48.0)
 
   apps/api:
     dependencies:
@@ -408,6 +408,9 @@ importers:
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      tailwindcss-animate:
+        specifier: ^1.0.7
+        version: 1.0.7(tailwindcss@4.3.0)
       zustand:
         specifier: ^5.0.0
         version: 5.0.14(@types/react@19.2.17)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
@@ -456,7 +459,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
-        version: 3.2.6(@types/node@20.19.42)(jsdom@22.1.0(supports-color@8.1.1))(lightningcss@1.32.0)(terser@5.48.0)
+        version: 3.2.6(@types/node@20.19.42)(jsdom@22.1.0(supports-color@8.1.1))(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
 
   packages/ai-engine:
     dependencies:
@@ -7468,6 +7471,11 @@ packages:
   tailwind-merge@2.6.1:
     resolution: {integrity: sha512-Oo6tHdpZsGpkKG88HJ8RR1rg/RdnEkQEfMoEk2x1XRI3F1AxeU+ijRXpiVUF4UbLfcxxRGw6TbUINKYdWVsQTQ==}
 
+  tailwindcss-animate@1.0.7:
+    resolution: {integrity: sha512-bl6mpH3T7I3UFxuvDEXLxy/VuFxBk5bbzplh7tXI68mwMokNYd1t9qPBHlnyTwfa4JGC4zP516I1hYYtQ/vspA==}
+    peerDependencies:
+      tailwindcss: '>=3.0.0 || insiders'
+
   tailwindcss@4.3.0:
     resolution: {integrity: sha512-y6nxMGB1nMW9R6k96e5gdIFzcfL/gTJRNaqGes1YvkLnPVXzWgbqFF2yLC0T8G774n24cx3Pe8XrKoniCOAH+Q==}
 
@@ -11294,7 +11302,7 @@ snapshots:
 
   adm-zip@0.5.18: {}
 
-  agent-base@6.0.2(supports-color@8.1.1):
+  agent-base@6.0.2:
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
@@ -13006,7 +13014,7 @@ snapshots:
   http-proxy-agent@5.0.0(supports-color@8.1.1):
     dependencies:
       '@tootallnate/once': 2.0.1
-      agent-base: 6.0.2(supports-color@8.1.1)
+      agent-base: 6.0.2
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
@@ -13031,7 +13039,7 @@ snapshots:
 
   https-proxy-agent@5.0.1(supports-color@8.1.1):
     dependencies:
-      agent-base: 6.0.2(supports-color@8.1.1)
+      agent-base: 6.0.2
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
@@ -14914,6 +14922,10 @@ snapshots:
 
   tailwind-merge@2.6.1: {}
 
+  tailwindcss-animate@1.0.7(tailwindcss@4.3.0):
+    dependencies:
+      tailwindcss: 4.3.0
+
   tailwindcss@4.3.0: {}
 
   tapable@2.3.3: {}
@@ -15246,7 +15258,7 @@ snapshots:
       - supports-color
       - terser
 
-  vite-node@3.2.4(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0):
+  vite-node@3.2.4(@types/node@20.19.42)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0):
     dependencies:
       cac: 6.7.14
       debug: 4.4.3(supports-color@8.1.1)
@@ -15346,7 +15358,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@3.2.6(@types/node@20.19.42)(jsdom@22.1.0(supports-color@8.1.1))(lightningcss@1.32.0)(terser@5.48.0):
+  vitest@3.2.6(@types/node@20.19.42)(jsdom@22.1.0(supports-color@8.1.1))(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.6
@@ -15369,7 +15381,7 @@ snapshots:
       tinypool: 1.1.1
       tinyrainbow: 2.0.0
       vite: 5.4.21(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
-      vite-node: 3.2.4(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
+      vite-node: 3.2.4(@types/node@20.19.42)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.42
@@ -15385,7 +15397,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0):
+  vitest@3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.48.0):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.6
@@ -15408,7 +15420,7 @@ snapshots:
       tinypool: 1.1.1
       tinyrainbow: 2.0.0
       vite: 5.4.21(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
-      vite-node: 3.2.4(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
+      vite-node: 3.2.4(@types/node@20.19.42)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.42
