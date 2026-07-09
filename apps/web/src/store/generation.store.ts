@@ -27,6 +27,8 @@ export interface BaseGenerationState {
   setReady: () => void;
   setFailed: (error: string) => void;
   reset: () => void;
+  resetForm: () => void;
+  resetAll: () => void;
   addVariation: (url: string, imageId: string) => void;
 }
 
@@ -123,6 +125,38 @@ export const useGenerationStore = create<GenerationStore>()((set, get) => ({
       error: null,
       jobId: null,
       toolId: null,
+      variations: [],
+    });
+  },
+
+  resetForm: () => {
+    set({
+      prompt: "",
+      negativePrompt: "",
+      style: "bold",
+      aiProvider: "z-image-turbo",
+      width: 1280,
+      height: 720,
+      sourceImageUrl: null,
+    });
+  },
+
+  resetAll: () => {
+    set({
+      status: "IDLE",
+      resultUrl: null,
+      resultId: null,
+      error: null,
+      jobId: null,
+      toolId: null,
+      variations: [],
+      prompt: "",
+      negativePrompt: "",
+      style: "bold",
+      aiProvider: "z-image-turbo",
+      width: 1280,
+      height: 720,
+      sourceImageUrl: null,
     });
   },
 }));

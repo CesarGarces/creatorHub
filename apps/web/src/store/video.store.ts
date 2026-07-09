@@ -26,6 +26,8 @@ export interface BaseVideoState {
   setReady: () => void;
   setFailed: (error: string) => void;
   reset: () => void;
+  resetForm: () => void;
+  resetAll: () => void;
   addVariation: (url: string, videoId: string) => void;
 }
 
@@ -107,6 +109,34 @@ export const useVideoStore = create<VideoStore>()((set, _get) => ({
       error: null,
       jobId: null,
       toolId: null,
+      variations: [],
+      imageUrl: null,
+    });
+  },
+
+  resetForm: () => {
+    set({
+      prompt: "",
+      aiProvider: "siliconflow-video",
+      aspectRatio: "16:9",
+      model: "Wan-AI/Wan2.2-T2V-A14B",
+      imageUrl: null,
+    });
+  },
+
+  resetAll: () => {
+    set({
+      status: "IDLE",
+      resultUrl: null,
+      resultId: null,
+      error: null,
+      jobId: null,
+      toolId: null,
+      variations: [],
+      prompt: "",
+      aiProvider: "siliconflow-video",
+      aspectRatio: "16:9",
+      model: "Wan-AI/Wan2.2-T2V-A14B",
       imageUrl: null,
     });
   },

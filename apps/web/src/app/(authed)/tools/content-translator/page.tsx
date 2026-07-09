@@ -17,6 +17,7 @@ import api from "@/lib/api";
 import { TopBar } from "@/components/layout/top-bar";
 import { LiquidEtherBackground } from "@/components/animations";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
+import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 
 const planLabels: Record<
   string,
@@ -184,13 +185,28 @@ export default function ContentTranslatorPage() {
     await startListening();
   }, [setListening, startListening]);
 
+  const promptFromUrl = useToolQueryParams();
+
   useEffect(() => {
     fetchBalance();
-    const searchParams = new URLSearchParams(window.location.search);
-    const promptParam =
-      searchParams.get("prompt") || searchParams.get("description");
-    if (promptParam) setInputText(promptParam);
-  }, [fetchBalance, setInputText]);
+  }, [fetchBalance]);
+
+  useEffect(() => {
+    if (promptFromUrl) {
+      setInputText(promptFromUrl);
+    }
+  }, [promptFromUrl, setInputText]);
+
+  // Cleanup URL params on unmount
+  useEffect(() => {
+    return () => {
+      // Clear any remaining URL params when leaving the page
+      const url = new URL(window.location.href);
+      url.searchParams.delete("prompt");
+      url.searchParams.delete("description");
+      window.history.replaceState({}, "", url.pathname);
+    };
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

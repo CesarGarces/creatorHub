@@ -12,6 +12,7 @@ import { Button, Badge, EmptyState, LoadingSpinner } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { LiquidEtherBackground } from "@/components/animations";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
+import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 
 const stylePresets = [
   { id: "bold", label: "Bold & Colorful", emoji: "🎨" },
@@ -92,19 +93,35 @@ export default function ThumbnailGeneratorPage() {
     setFailed,
     addVariation,
     reset,
+    resetAll,
   } = useGenerationStore();
   const lastCompletedRef = useRef<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showVariations, setShowVariations] = useState(false);
 
+  const promptFromUrl = useToolQueryParams();
+
   useEffect(() => {
     fetchTools();
     fetchBalance();
-    const searchParams = new URLSearchParams(window.location.search);
-    const promptParam =
-      searchParams.get("prompt") || searchParams.get("description");
-    if (promptParam) setPrompt(promptParam);
-  }, [fetchTools, fetchBalance, setPrompt]);
+  }, [fetchTools, fetchBalance]);
+
+  useEffect(() => {
+    if (promptFromUrl) {
+      setPrompt(promptFromUrl);
+    }
+  }, [promptFromUrl, setPrompt]);
+
+  // Cleanup URL params on unmount
+  useEffect(() => {
+    return () => {
+      // Clear any remaining URL params when leaving the page
+      const url = new URL(window.location.href);
+      url.searchParams.delete("prompt");
+      url.searchParams.delete("description");
+      window.history.replaceState({}, "", url.pathname);
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -753,7 +770,7 @@ export default function ThumbnailGeneratorPage() {
                       </svg>
                       Copy URL
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={reset}>
+                    <Button variant="ghost" size="sm" onClick={resetAll}>
                       <svg
                         width="14"
                         height="14"

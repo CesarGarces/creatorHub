@@ -32,6 +32,8 @@ export interface TranslatorState {
   appendLiveTranscript: (text: string, isFinal: boolean) => void;
   commitLiveTranscript: () => void;
   reset: () => void;
+  resetForm: () => void;
+  resetAll: () => void;
 }
 
 export const useTranslatorStore = create<TranslatorState>()((set, get) => ({
@@ -120,6 +122,30 @@ export const useTranslatorStore = create<TranslatorState>()((set, get) => ({
       liveTranscript: "",
       liveTranscriptFinal: "",
       isListening: false,
+    });
+  },
+
+  resetForm: () => {
+    set({
+      inputText: "",
+      targetLanguage: "es",
+      provider: "deepseek-v4",
+    });
+  },
+
+  resetAll: () => {
+    set({
+      status: "IDLE",
+      jobId: null,
+      inputText: "",
+      targetLanguage: "es",
+      provider: "deepseek-v4",
+      outputText: null,
+      translationId: null,
+      error: null,
+      isListening: false,
+      liveTranscript: "",
+      liveTranscriptFinal: "",
     });
   },
 }));

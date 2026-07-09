@@ -12,6 +12,7 @@ import { Button, Badge, EmptyState, LoadingSpinner } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { LiquidEtherBackground } from "@/components/animations";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
+import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 
 const videoAspectRatios = [
   { id: "16:9", label: "16:9", width: 1280, height: 720, iconClass: "w-8 h-5" },
@@ -89,6 +90,7 @@ export default function VideoGeneratorPage() {
     setFailed,
     addVariation,
     reset,
+    resetAll,
   } = useVideoStore();
 
   const [providers, setProviders] = useState<ProviderFromApi[]>([]);
@@ -103,14 +105,29 @@ export default function VideoGeneratorPage() {
 
   const isI2V = model === "Wan-AI/Wan2.2-I2V-A14B";
 
+  const promptFromUrl = useToolQueryParams();
+
   useEffect(() => {
     fetchTools();
     fetchBalance();
-    const searchParams = new URLSearchParams(window.location.search);
-    const promptParam =
-      searchParams.get("prompt") || searchParams.get("description");
-    if (promptParam) setPrompt(promptParam);
-  }, [fetchTools, fetchBalance, setPrompt]);
+  }, [fetchTools, fetchBalance]);
+
+  useEffect(() => {
+    if (promptFromUrl) {
+      setPrompt(promptFromUrl);
+    }
+  }, [promptFromUrl, setPrompt]);
+
+  // Cleanup URL params on unmount
+  useEffect(() => {
+    return () => {
+      // Clear any remaining URL params when leaving the page
+      const url = new URL(window.location.href);
+      url.searchParams.delete("prompt");
+      url.searchParams.delete("description");
+      window.history.replaceState({}, "", url.pathname);
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -808,7 +825,7 @@ export default function VideoGeneratorPage() {
                       </svg>
                       Copy URL
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={reset}>
+                    <Button variant="ghost" size="sm" onClick={resetAll}>
                       <svg
                         width="14"
                         height="14"
