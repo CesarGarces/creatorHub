@@ -3,10 +3,13 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
+  Logger,
 } from "@nestjs/common";
-import { prisma } from "@creator-hub/database";
+import { prisma, NotificationType } from "@creator-hub/database";
 import { StorageService } from "@creator-hub/storage";
 import { createHash } from "crypto";
+import { NotificationService } from "../notification/notification.service";
+import { AppGateway } from "../websocket/websocket.gateway";
 
 /**
  * Simple in-memory cache for view tracking.
@@ -31,7 +34,13 @@ setInterval(
 
 @Injectable()
 export class SharingService {
-  constructor(private storageService: StorageService) {}
+  private readonly logger = new Logger(SharingService.name);
+
+  constructor(
+    private storageService: StorageService,
+    private notificationService: NotificationService,
+    private gateway: AppGateway,
+  ) {}
 
   /**
    * Generate a fingerprint from IP + User-Agent + Accept-Language
@@ -166,7 +175,7 @@ export class SharingService {
     // Verify asset exists and is public
     const asset = await prisma.generatedImage.findUnique({
       where: { id: assetId },
-      select: { id: true, isPublic: true, likeCount: true },
+      select: { id: true, isPublic: true, likeCount: true, userId: true },
     });
 
     if (!asset) {
@@ -220,6 +229,17 @@ export class SharingService {
         select: { likeCount: true },
       });
 
+      // Create notification for asset owner (fire and forget)
+      this.createLikeNotification(asset.userId, assetId, userId).catch(
+        (error) => {
+          this.logger.error("Failed to create like notification", {
+            assetId,
+            ownerId: asset.userId,
+            error: error.message,
+          });
+        },
+      );
+
       return {
         liked: true,
         likeCount: updated.likeCount,
@@ -267,5 +287,52 @@ export class SharingService {
     const baseUrl =
       process.env.FRONTEND_URL || "https://app.creatorhubplatform.com";
     return `${baseUrl}/share/${assetId}`;
+  }
+
+  /**
+   * Create a notification for the asset owner when someone likes their asset
+   */
+  private async createLikeNotification(
+    ownerId: string,
+    assetId: string,
+    likerUserId?: string,
+  ): Promise<void> {
+    // Don't notify if the owner liked their own asset
+    if (likerUserId && likerUserId === ownerId) {
+      return;
+    }
+
+    let title: string;
+    let body: string;
+    let data: Record<string, unknown> = { assetId };
+
+    if (likerUserId) {
+      // Liker is a platform user - get their name
+      const liker = await prisma.user.findUnique({
+        where: { id: likerUserId },
+        select: { id: true, name: true, email: true },
+      });
+
+      const likerName = liker?.name || liker?.email || "User";
+      title = "New Like";
+      body = `${likerName} liked your asset`;
+      data = { ...data, likerUserId, likerName };
+    } else {
+      // Anonymous like
+      title = "New Like";
+      body = "Someone liked your asset";
+    }
+
+    // Create notification in database
+    const notification = await this.notificationService.create({
+      userId: ownerId,
+      type: NotificationType.ASSET_LIKE,
+      title,
+      body,
+      data,
+    });
+
+    // Send real-time notification via WebSocket
+    this.gateway.emitToUser(ownerId, "notification:new", notification);
   }
 }

@@ -27,6 +27,7 @@ import { AdminModule } from "./modules/admin/admin.module";
 import { AIController } from "./modules/ai/ai.controller";
 import { WebhooksController } from "./modules/webhooks/webhooks.controller";
 import { SharingModule } from "./modules/sharing/sharing.module";
+import { NotificationModule } from "./modules/notification/notification.module";
 
 import { WebsocketModule } from "./modules/websocket/websocket.module";
 import { ThumbnailListenerModule } from "./modules/thumbnail-listener/thumbnail-listener.module";
@@ -97,6 +98,9 @@ import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
 
     // Sharing (public asset viewing)
     SharingModule,
+
+    // Notifications
+    NotificationModule,
 
     // Tools (registered automatically via ToolSdkModule)
     ThumbnailGeneratorModule,

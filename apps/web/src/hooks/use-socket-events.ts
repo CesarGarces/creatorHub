@@ -9,7 +9,11 @@ import { useCreditsStore } from "@/store/credits.store";
 import { connectSocket } from "@/lib/socket";
 import type { ToolJobUpdatePayload } from "@creator-hub/shared-types";
 
-export function useSocketEvents() {
+interface UseSocketEventsOptions {
+  onNotificationNew?: (notification: any) => void;
+}
+
+export function useSocketEvents(options: UseSocketEventsOptions = {}) {
   const setRevealing = useGenerationStore((s) => s.setRevealing);
   const setReady = useGenerationStore((s) => s.setReady);
   const setFailed = useGenerationStore((s) => s.setFailed);
@@ -105,6 +109,20 @@ export function useSocketEvents() {
           useTranslatorStore.getState().setListening(false);
         }
       });
+
+      socket.on("notification:new", (notification: any) => {
+        // Show toast for new notifications
+        if (notification.title) {
+          toast.info(notification.title, {
+            description: notification.body,
+          });
+        }
+
+        // Call callback if provided
+        if (options.onNotificationNew) {
+          options.onNotificationNew(notification);
+        }
+      });
     }
 
     if (socket.connected) {
@@ -119,6 +137,7 @@ export function useSocketEvents() {
       socket.off("tool_job_updated");
       socket.off("stt:result");
       socket.off("stt:error");
+      socket.off("notification:new");
       attachedRef.current = false;
     };
   }, [
@@ -133,5 +152,6 @@ export function useSocketEvents() {
     videoSetFailed,
     videoAddVariation,
     fetchBalance,
+    options.onNotificationNew,
   ]);
 }

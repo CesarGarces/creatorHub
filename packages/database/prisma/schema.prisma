@@ -369,6 +369,10 @@ model Notification {
   readAt    DateTime?
   createdAt DateTime         @default(now())
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, readAt])
+  @@index([createdAt])
 }
 
 model MarketingEvent {
@@ -548,6 +552,7 @@ enum NotificationType {
   TOOL_NEW
   SUBSCRIPTION_EXPIRING
   SYSTEM
+  ASSET_LIKE
 }
 
 enum MarketingEventType {
