@@ -46,11 +46,19 @@ const defaultItems: CommandItem[] = [
     category: "Tools",
   },
   {
-    id: "youtube-agent",
-    label: "YouTube Agent",
-    description: "Plan and optimize YouTube content",
+    id: "x-post-agent",
+    label: "X Post Agent",
+    description: "Publish tweets to X",
     icon: <Bot className="h-4 w-4 text-text-dim" />,
-    href: "/agents/youtube",
+    href: "/tools/x-post-tweet",
+    category: "Agents",
+  },
+  {
+    id: "x-research-agent",
+    label: "X Research Agent",
+    description: "Search X trends",
+    icon: <Bot className="h-4 w-4 text-text-dim" />,
+    href: "/tools/x-search-trends",
     category: "Agents",
   },
   {

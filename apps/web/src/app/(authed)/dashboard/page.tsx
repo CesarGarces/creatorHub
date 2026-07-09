@@ -394,47 +394,45 @@ export default function DashboardPage() {
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div
-                className="group cursor-pointer rounded-xl border border-border bg-surface p-5 transition-all duration-200 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
-                onClick={() => router.push("/agents/youtube")}
+                className="group cursor-pointer rounded-xl border border-border bg-surface p-5 transition-all duration-200 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5"
+                onClick={() => router.push("/tools/x-post-tweet")}
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-light text-2xl transition-colors group-hover:bg-primary/20">
-                    🤖
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-2xl transition-colors group-hover:bg-blue-500/20">
+                    💬
                   </div>
                   <div>
-                    <h3 className="font-semibold text-text">YouTube Agent</h3>
+                    <h3 className="font-semibold text-text">X Post Agent</h3>
                     <p className="mt-1 text-sm text-text-muted">
-                      Plan, script, and optimize your YouTube content with AI
+                      Publish tweets and threads to your X account
                     </p>
                     <div className="mt-3 flex items-center gap-2">
                       <Badge variant="primary" size="sm">
-                        AI Powered
+                        Social
                       </Badge>
-                      <span className="text-xs text-text-dim">
-                        Last used 2h ago
-                      </span>
                     </div>
                   </div>
                 </div>
               </div>
               <div
-                className="group cursor-pointer rounded-xl border border-border bg-surface p-5 transition-all duration-200 hover:border-accent/30 hover:shadow-lg hover:shadow-accent/5"
-                onClick={() => router.push("/agents/content")}
+                className="group cursor-pointer rounded-xl border border-border bg-surface p-5 transition-all duration-200 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/5"
+                onClick={() => router.push("/tools/x-search-trends")}
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-light text-2xl transition-colors group-hover:bg-accent/20">
-                    🧠
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/10 text-2xl transition-colors group-hover:bg-cyan-500/20">
+                    📡
                   </div>
                   <div>
-                    <h3 className="font-semibold text-text">Content Agent</h3>
+                    <h3 className="font-semibold text-text">
+                      X Research Agent
+                    </h3>
                     <p className="mt-1 text-sm text-text-muted">
-                      Repurpose your content across multiple platforms
+                      Search and analyze trending topics on X
                     </p>
                     <div className="mt-3 flex items-center gap-2">
                       <Badge variant="accent" size="sm">
-                        Multi-Platform
+                        Research
                       </Badge>
-                      <span className="text-xs text-text-dim">New</span>
                     </div>
                   </div>
                 </div>

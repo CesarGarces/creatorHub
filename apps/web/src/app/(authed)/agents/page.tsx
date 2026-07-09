@@ -6,37 +6,27 @@ import { TopBar } from "@/components/layout/top-bar";
 
 const agents = [
   {
-    id: "youtube",
-    name: "Video Creator Agent",
-    description: "Plan, script, and optimize your video content with AI",
-    icon: "🎬",
-    color: "bg-primary-light",
-    hoverColor: "hover:border-primary/30 hover:shadow-primary/5",
+    id: "x-post-tweet",
+    name: "X Post Agent",
+    description:
+      "Publish tweets and threads to your connected X (Twitter) account",
+    icon: "💬",
+    color: "bg-blue-500/10",
+    hoverColor: "hover:border-blue-500/30 hover:shadow-blue-500/5",
     badge: "primary" as const,
-    badgeText: "AI Powered",
-    lastUsed: "2 hours ago",
+    badgeText: "Social",
+    toolId: "x-post-tweet",
   },
   {
-    id: "twitch",
-    name: "Streaming Agent",
-    description: "Manage your live content, overlays, and audience engagement",
+    id: "x-search-trends",
+    name: "X Research Agent",
+    description: "Search and analyze trending topics on X (Twitter)",
     icon: "📡",
-    color: "bg-accent-light",
-    hoverColor: "hover:border-accent/30 hover:shadow-accent/5",
+    color: "bg-cyan-500/10",
+    hoverColor: "hover:border-cyan-500/30 hover:shadow-cyan-500/5",
     badge: "accent" as const,
-    badgeText: "Live",
-    lastUsed: "1 day ago",
-  },
-  {
-    id: "content",
-    name: "Content Agent",
-    description: "Repurpose and distribute your content across all platforms",
-    icon: "🧠",
-    color: "bg-secondary-light",
-    hoverColor: "hover:border-secondary/30 hover:shadow-secondary/5",
-    badge: "secondary" as const,
-    badgeText: "Multi-Platform",
-    lastUsed: "Never",
+    badgeText: "Research",
+    toolId: "x-search-trends",
   },
 ];
 
@@ -69,7 +59,7 @@ export default function AgentsPage() {
               <div
                 key={agent.id}
                 className={`group cursor-pointer rounded-xl border border-border bg-surface p-6 transition-all duration-200 ${agent.hoverColor} hover:shadow-lg`}
-                onClick={() => router.push(`/agents/${agent.id}`)}
+                onClick={() => router.push(`/tools/${agent.toolId}`)}
               >
                 <div className="flex items-start gap-4">
                   <div
@@ -86,9 +76,6 @@ export default function AgentsPage() {
                       <Badge variant={agent.badge} size="sm">
                         {agent.badgeText}
                       </Badge>
-                      <span className="text-xs text-text-dim">
-                        Last used: {agent.lastUsed}
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -97,22 +84,28 @@ export default function AgentsPage() {
           </div>
         </div>
 
-        {/* Available Agents */}
+        {/* Coming Soon */}
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
-            Available Agents
+            Coming Soon
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               {
-                icon: "📊",
-                name: "Analytics Agent",
-                description: "Track and analyze your content performance",
+                icon: "🎬",
+                name: "YouTube Agent",
+                description:
+                  "Plan, script, and optimize your video content with AI",
               },
               {
-                icon: "🎯",
-                name: "Growth Agent",
-                description: "Strategies to grow your audience",
+                icon: "📸",
+                name: "Instagram Agent",
+                description: "Create engaging posts and stories for Instagram",
+              },
+              {
+                icon: "🎮",
+                name: "Twitch Agent",
+                description: "Manage your live content and audience engagement",
               },
             ].map((agent) => (
               <div
