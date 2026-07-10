@@ -508,6 +508,7 @@ export default function AssetsPage() {
                 <AssetLikeButton
                   assetId={selectedAsset.id}
                   initialLikeCount={selectedAsset.likeCount || 0}
+                  isPublic={selectedAsset.isPublic}
                   size="sm"
                 />
                 <Button

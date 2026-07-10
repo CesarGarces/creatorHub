@@ -2,11 +2,13 @@
 
 import { useEffect } from "react";
 import { Heart } from "lucide-react";
+import { toast } from "sonner";
 import { useAssetLikesStore } from "@/store/asset-likes.store";
 
 interface AssetLikeButtonProps {
   assetId: string;
   initialLikeCount: number;
+  isPublic?: boolean;
   size?: "sm" | "md" | "lg";
   showCount?: boolean;
   className?: string;
@@ -15,6 +17,7 @@ interface AssetLikeButtonProps {
 export function AssetLikeButton({
   assetId,
   initialLikeCount,
+  isPublic = true,
   size = "md",
   showCount = true,
   className = "",
@@ -32,6 +35,10 @@ export function AssetLikeButton({
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isPublic) {
+      toast.error("Make the asset public first to like it");
+      return;
+    }
     await toggleLike(assetId);
   };
 

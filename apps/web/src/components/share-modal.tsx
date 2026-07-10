@@ -66,7 +66,7 @@ export function ShareModal({
 
   const getShareUrl = (platform: string) => {
     const text = encodeURIComponent(
-      `Check out this ${assetType.toLowerCase()} I found on Creator Hub: "${assetPrompt}"`,
+      `Check out this ${assetType.toLowerCase()} I made on Creator Hub: "${assetPrompt}"`,
     );
     const url = encodeURIComponent(shareUrl);
 
