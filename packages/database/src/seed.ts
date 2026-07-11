@@ -2,11 +2,9 @@ import { PrismaClient } from "../generated/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Create tools (upsert to avoid duplicates on re-run)
-  await prisma.tool.upsert({
-    where: { id: "thumbnail-generator" },
-    update: { icon: "🎨" },
-    create: {
+  // Create tools (only create if not exists - do NOT update existing)
+  const tools = [
+    {
       id: "thumbnail-generator",
       name: "Thumbnail Generator",
       description: "AI-powered thumbnail generation for YouTube videos",
@@ -14,12 +12,7 @@ async function main() {
       creditsPerUse: 1,
       icon: "🎨",
     },
-  });
-
-  await prisma.tool.upsert({
-    where: { id: "content-translator" },
-    update: { icon: "🌐" },
-    create: {
+    {
       id: "content-translator",
       name: "Content Translator",
       description:
@@ -28,12 +21,7 @@ async function main() {
       creditsPerUse: 1,
       icon: "🌐",
     },
-  });
-
-  await prisma.tool.upsert({
-    where: { id: "video-generator" },
-    update: { icon: "🎬" },
-    create: {
+    {
       id: "video-generator",
       name: "Video Generator",
       description: "Generate stunning AI videos with Wan AI models",
@@ -41,37 +29,32 @@ async function main() {
       creditsPerUse: 50,
       icon: "🎬",
     },
-  });
-
-  await prisma.tool.upsert({
-    where: { id: "x-search-trends" },
-    update: { icon: "📡" },
-    create: {
+    {
       id: "x-search-trends",
       name: "X Trend Research",
-      description:
-        "Search and analyze trending topics on X (Twitter). Returns tweets, engagement metrics, and sentiment analysis.",
+      description: "Search and analyze trending topics on X (Twitter).",
       category: "social",
       creditsPerUse: 15,
       icon: "📡",
     },
-  });
-
-  await prisma.tool.upsert({
-    where: { id: "x-post-tweet" },
-    update: { icon: "💬" },
-    create: {
+    {
       id: "x-post-tweet",
       name: "Post to X",
-      description:
-        "Publish a tweet to your connected X (Twitter) account. Supports text tweets and threads.",
+      description: "Publish a tweet to your connected X (Twitter) account.",
       category: "social",
       creditsPerUse: 5,
       icon: "💬",
     },
-  });
+  ];
 
-  // Create default subscription plans (upsert to avoid duplicates)
+  for (const tool of tools) {
+    const exists = await prisma.tool.findUnique({ where: { id: tool.id } });
+    if (!exists) {
+      await prisma.tool.create({ data: tool });
+    }
+  }
+
+  // Create default subscription plans (only create if not exists)
   const plans = [
     {
       id: "free",
@@ -110,15 +93,16 @@ async function main() {
   ];
 
   for (const plan of plans) {
-    await prisma.subscriptionPlan.upsert({
+    const exists = await prisma.subscriptionPlan.findUnique({
       where: { id: plan.id },
-      update: {},
-      create: plan,
     });
+    if (!exists) {
+      await prisma.subscriptionPlan.create({ data: plan });
+    }
   }
 
   // ──────────────────────────────────────────────
-  // CREDIT PLANS (admin-configurable pay-as-you-go)
+  // CREDIT PLANS (only create if not exists)
   // ──────────────────────────────────────────────
   const creditPlans = [
     {
@@ -148,20 +132,15 @@ async function main() {
   ];
 
   for (const cp of creditPlans) {
-    await prisma.creditPlan.upsert({
+    const exists = await prisma.creditPlan.findUnique({
       where: { slug: cp.slug },
-      update: {
-        name: cp.name,
-        description: cp.description,
-        usdAmount: cp.usdAmount,
-        creditsGiven: cp.creditsGiven,
-        sortOrder: cp.sortOrder,
-      },
-      create: cp,
     });
+    if (!exists) {
+      await prisma.creditPlan.create({ data: cp });
+    }
   }
 
-  // Seed AI providers
+  // Seed AI providers (only create if not exists - do NOT update existing)
   const providers = [
     {
       slug: "z-image-turbo",
@@ -256,18 +235,78 @@ async function main() {
   ];
 
   for (const p of providers) {
-    await prisma.provider.upsert({
+    const exists = await prisma.provider.findUnique({
       where: { slug: p.slug },
-      update: {
-        name: p.name,
-        model: p.model,
-        tier: p.tier,
-        costPerCredit: p.costPerCredit,
-        isActive: p.isActive,
-        supportedTasks: p.supportedTasks,
-      },
-      create: p,
     });
+    if (!exists) {
+      await prisma.provider.create({ data: p });
+    }
+  }
+
+  const modes = [
+    {
+      slug: "image",
+      name: "Image Generation",
+      description: "Generate images from text prompts",
+      icon: "🎨",
+      color: "#8b5cf6",
+    },
+    {
+      slug: "video",
+      name: "Video Generation",
+      description: "Generate videos from text or images",
+      icon: "🎬",
+      color: "#ef4444",
+    },
+    {
+      slug: "chat",
+      name: "Chat",
+      description: "Conversational AI and text generation",
+      icon: "💬",
+      color: "#3b82f6",
+    },
+    {
+      slug: "translation",
+      name: "Translation",
+      description: "Translate content between languages",
+      icon: "🌐",
+      color: "#10b981",
+    },
+    {
+      slug: "analysis",
+      name: "Analysis",
+      description: "Analyze text, trends, and data",
+      icon: "📊",
+      color: "#f59e0b",
+    },
+    {
+      slug: "editing",
+      name: "Image Editing",
+      description: "Edit and modify existing images",
+      icon: "✏️",
+      color: "#ec4899",
+    },
+    {
+      slug: "speech",
+      name: "Speech to Text",
+      description: "Convert audio to text",
+      icon: "🎤",
+      color: "#06b6d4",
+    },
+    {
+      slug: "social",
+      name: "Social Media",
+      description: "Post and manage social media content",
+      icon: "📱",
+      color: "#6366f1",
+    },
+  ];
+
+  for (const mode of modes) {
+    const exists = await prisma.mode.findUnique({ where: { slug: mode.slug } });
+    if (!exists) {
+      await prisma.mode.create({ data: mode });
+    }
   }
 
   console.log("Seed completed");

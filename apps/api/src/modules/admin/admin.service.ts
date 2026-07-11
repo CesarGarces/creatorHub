@@ -13,6 +13,7 @@ import {
   CreateCreditPlanDto,
   UpdateCreditPlanDto,
 } from "./dto/credit-plan.dto";
+import { CreateModeDto, UpdateModeDto } from "./dto/mode.dto";
 
 @Injectable()
 export class AdminService {
@@ -55,6 +56,11 @@ export class AdminService {
         orderBy: [{ tier: "asc" }, { costPerCredit: "asc" }, { name: "asc" }],
         skip,
         take: limit,
+        include: {
+          modes: {
+            include: { mode: true },
+          },
+        },
       }),
       prisma.provider.count({ where }),
     ]);
@@ -66,7 +72,14 @@ export class AdminService {
   }
 
   async findProviderById(id: string): Promise<any> {
-    const provider = await prisma.provider.findUnique({ where: { id } });
+    const provider = await prisma.provider.findUnique({
+      where: { id },
+      include: {
+        modes: {
+          include: { mode: true },
+        },
+      },
+    });
     if (!provider) throw new NotFoundException("Provider not found");
     return provider;
   }
@@ -583,5 +596,165 @@ export class AdminService {
   async deleteCreditPlan(id: string): Promise<any> {
     await this.findCreditPlanById(id);
     return prisma.creditPlan.delete({ where: { id } });
+  }
+
+  // ──────────────────────────────────────────────
+  // Modes
+  // ──────────────────────────────────────────────
+
+  async findAllModes(): Promise<any> {
+    return prisma.mode.findMany({
+      orderBy: [{ name: "asc" }],
+      include: {
+        _count: {
+          select: { tools: true, providers: true },
+        },
+      },
+    });
+  }
+
+  async findModeById(id: string): Promise<any> {
+    const mode = await prisma.mode.findUnique({
+      where: { id },
+      include: {
+        tools: { include: { tool: true } },
+        providers: { include: { provider: true } },
+      },
+    });
+    if (!mode) throw new NotFoundException("Mode not found");
+    return mode;
+  }
+
+  async createMode(dto: CreateModeDto): Promise<any> {
+    const existing = await prisma.mode.findUnique({
+      where: { slug: dto.slug },
+    });
+    if (existing) {
+      throw new BadRequestException(
+        `Mode with slug "${dto.slug}" already exists`,
+      );
+    }
+
+    return prisma.mode.create({
+      data: {
+        slug: dto.slug,
+        name: dto.name,
+        description: dto.description,
+        icon: dto.icon,
+        color: dto.color,
+        isActive: dto.isActive ?? true,
+      },
+    });
+  }
+
+  async updateMode(id: string, dto: UpdateModeDto): Promise<any> {
+    await this.findModeById(id);
+
+    if (dto.slug) {
+      const existing = await prisma.mode.findFirst({
+        where: { slug: dto.slug, id: { not: id } },
+      });
+      if (existing) {
+        throw new BadRequestException(
+          `Mode with slug "${dto.slug}" already exists`,
+        );
+      }
+    }
+
+    return prisma.mode.update({
+      where: { id },
+      data: {
+        ...(dto.slug !== undefined && { slug: dto.slug }),
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.icon !== undefined && { icon: dto.icon }),
+        ...(dto.color !== undefined && { color: dto.color }),
+        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+      },
+    });
+  }
+
+  async deleteMode(id: string): Promise<any> {
+    await this.findModeById(id);
+    return prisma.mode.delete({ where: { id } });
+  }
+
+  // ──────────────────────────────────────────────
+  // Tool-Mode Management
+  // ──────────────────────────────────────────────
+
+  async findAllToolsWithModes(): Promise<any> {
+    const tools = await prisma.tool.findMany({
+      orderBy: [{ name: "asc" }],
+      include: {
+        modes: {
+          include: { mode: true },
+          orderBy: { mode: { name: "asc" } },
+        },
+      },
+    });
+
+    return tools.map((t) => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      icon: t.icon,
+      category: t.category,
+      status: t.status,
+      creditsPerUse: t.creditsPerUse,
+      modes: t.modes.map((tm) => tm.mode),
+    }));
+  }
+
+  async setToolModes(toolId: string, modeIds: string[]): Promise<any> {
+    const tool = await prisma.tool.findUnique({ where: { id: toolId } });
+    if (!tool) throw new NotFoundException("Tool not found");
+
+    await prisma.toolMode.deleteMany({ where: { toolId } });
+
+    if (modeIds.length > 0) {
+      await prisma.toolMode.createMany({
+        data: modeIds.map((modeId) => ({ toolId, modeId })),
+      });
+    }
+
+    return prisma.tool.findUnique({
+      where: { id: toolId },
+      include: {
+        modes: {
+          include: { mode: true },
+          orderBy: { mode: { name: "asc" } },
+        },
+      },
+    });
+  }
+
+  // ──────────────────────────────────────────────
+  // Provider-Mode Management
+  // ──────────────────────────────────────────────
+
+  async setProviderModes(providerId: string, modeIds: string[]): Promise<any> {
+    const provider = await prisma.provider.findUnique({
+      where: { id: providerId },
+    });
+    if (!provider) throw new NotFoundException("Provider not found");
+
+    await prisma.providerMode.deleteMany({ where: { providerId } });
+
+    if (modeIds.length > 0) {
+      await prisma.providerMode.createMany({
+        data: modeIds.map((modeId) => ({ providerId, modeId })),
+      });
+    }
+
+    return prisma.provider.findUnique({
+      where: { id: providerId },
+      include: {
+        modes: {
+          include: { mode: true },
+          orderBy: { mode: { name: "asc" } },
+        },
+      },
+    });
   }
 }

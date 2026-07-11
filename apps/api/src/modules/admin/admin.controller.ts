@@ -33,6 +33,7 @@ import {
   CreateCreditPlanDto,
   UpdateCreditPlanDto,
 } from "./dto/credit-plan.dto";
+import { CreateModeDto, UpdateModeDto } from "./dto/mode.dto";
 
 @Controller("admin")
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -218,5 +219,66 @@ export class AdminController {
   @Delete("credit-plans/:id")
   async deleteCreditPlan(@Param("id") id: string): Promise<any> {
     return this.adminService.deleteCreditPlan(id);
+  }
+
+  // ──────────────────────────────────────────────
+  // Modes
+  // ──────────────────────────────────────────────
+
+  @Get("modes")
+  async getModes(): Promise<any> {
+    return this.adminService.findAllModes();
+  }
+
+  @Get("modes/:id")
+  async getMode(@Param("id") id: string): Promise<any> {
+    return this.adminService.findModeById(id);
+  }
+
+  @Post("modes")
+  async createMode(@Body(ValidationPipe) dto: CreateModeDto): Promise<any> {
+    return this.adminService.createMode(dto);
+  }
+
+  @Put("modes/:id")
+  async updateMode(
+    @Param("id") id: string,
+    @Body(ValidationPipe) dto: UpdateModeDto,
+  ): Promise<any> {
+    return this.adminService.updateMode(id, dto);
+  }
+
+  @Delete("modes/:id")
+  async deleteMode(@Param("id") id: string): Promise<any> {
+    return this.adminService.deleteMode(id);
+  }
+
+  // ──────────────────────────────────────────────
+  // Tool-Mode Management
+  // ──────────────────────────────────────────────
+
+  @Get("tools-with-modes")
+  async getToolsWithModes(): Promise<any> {
+    return this.adminService.findAllToolsWithModes();
+  }
+
+  @Put("tools/:id/modes")
+  async setToolModes(
+    @Param("id") id: string,
+    @Body("modeIds") modeIds: string[],
+  ): Promise<any> {
+    return this.adminService.setToolModes(id, modeIds || []);
+  }
+
+  // ──────────────────────────────────────────────
+  // Provider-Mode Management
+  // ──────────────────────────────────────────────
+
+  @Put("providers/:id/modes")
+  async setProviderModes(
+    @Param("id") id: string,
+    @Body("modeIds") modeIds: string[],
+  ): Promise<any> {
+    return this.adminService.setProviderModes(id, modeIds || []);
   }
 }

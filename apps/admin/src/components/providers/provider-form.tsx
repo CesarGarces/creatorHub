@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input } from "@creator-hub/ui";
-import { Toggle } from "@/components/ui/toggle";
-import type { Provider } from "@/types";
+import type { Provider, Mode } from "@/types";
+import api from "@/lib/api";
 
 interface ProviderFormProps {
   provider?: Provider;
@@ -23,11 +23,34 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
     supportedTasks: provider?.supportedTasks?.join(", ") ?? "thumbnail",
     config: provider?.config ? JSON.stringify(provider.config, null, 2) : "",
   });
+  const [modes, setModes] = useState<Mode[]>([]);
+  const [selectedModeIds, setSelectedModeIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    api
+      .get<Mode[]>("/admin/modes")
+      .then((res) => {
+        setModes(res.data);
+      })
+      .catch(() => {});
+
+    if (provider?.modes && provider.modes.length > 0) {
+      setSelectedModeIds(provider.modes.map((m: any) => m.mode?.id || m.id));
+    }
+  }, [provider]);
+
   const updateField = (field: string, value: string | number | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const toggleMode = (modeId: string) => {
+    setSelectedModeIds((prev) =>
+      prev.includes(modeId)
+        ? prev.filter((id) => id !== modeId)
+        : [...prev, modeId],
+    );
   };
 
   const validateConfig = (configStr: string): boolean => {
@@ -60,6 +83,13 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
       };
 
       await onSubmit(payload);
+
+      if (provider?.id) {
+        await api.put(`/admin/providers/${provider.id}/modes`, {
+          modeIds: selectedModeIds,
+        });
+      }
+
       router.push("/providers");
     } catch (err: any) {
       setError(
@@ -176,7 +206,7 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
             htmlFor="supportedTasks"
             className="mb-1 block text-sm font-medium text-text-muted"
           >
-            Supported Tasks
+            Supported Tasks (legacy)
           </label>
           <Input
             id="supportedTasks"
@@ -188,6 +218,39 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
           />
         </div>
       </div>
+
+      {modes.length > 0 && (
+        <div className="rounded-lg border border-border bg-surface-elevated/50 p-4 space-y-3">
+          <p className="text-sm font-medium text-text-muted">
+            Modes{" "}
+            <span className="text-text-dim">
+              (capability filters for dropdowns)
+            </span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {modes
+              .filter((m) => m.isActive)
+              .map((mode) => {
+                const isSelected = selectedModeIds.includes(mode.id);
+                return (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => toggleMode(mode.id)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-text-muted hover:border-primary/30"
+                    }`}
+                  >
+                    {mode.icon && <span>{mode.icon}</span>}
+                    {mode.name}
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       <div className="rounded-lg border border-border bg-surface-elevated/50 p-4 space-y-4">
         <p className="text-sm font-medium text-text-muted">Configuration</p>
@@ -212,7 +275,6 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
         </div>
       </div>
 
-      {/* ✅ 6. Toggle nativo como en UserForm */}
       <div className="flex items-center gap-3">
         <label
           htmlFor="provider-active"
@@ -231,7 +293,6 @@ export function ProviderForm({ provider, onSubmit }: ProviderFormProps) {
         </label>
       </div>
 
-      {/* Botones */}
       <div className="flex items-center gap-3 pt-4">
         <Button type="submit" isLoading={loading}>
           {provider ? "Update Provider" : "Create Provider"}

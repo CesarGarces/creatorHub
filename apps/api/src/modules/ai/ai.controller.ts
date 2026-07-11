@@ -10,6 +10,11 @@ export class AIController {
     const providers = await prisma.provider.findMany({
       where: { isActive: true },
       orderBy: [{ tier: "asc" }, { costPerCredit: "asc" }, { name: "asc" }],
+      include: {
+        modes: {
+          include: { mode: true },
+        },
+      },
     });
 
     return providers.map((p) => ({
@@ -20,6 +25,7 @@ export class AIController {
       costPerCredit: p.costPerCredit,
       model: p.model,
       supportedTasks: p.supportedTasks,
+      modes: p.modes.filter((pm) => pm.mode.isActive).map((pm) => pm.mode.slug),
     }));
   }
 }

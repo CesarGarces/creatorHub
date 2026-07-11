@@ -59,6 +59,7 @@ type ProviderFromApi = {
   costPerCredit: number;
   model: string;
   supportedTasks: string[];
+  modes?: string[];
 };
 
 export default function ContentTranslatorPage() {
@@ -244,8 +245,10 @@ export default function ContentTranslatorPage() {
       .get<ProviderFromApi[]>("/ai/providers")
       .then((list) => {
         if (Array.isArray(list) && list.length > 0) {
-          const translatorProviders = list.filter((p) =>
-            p.supportedTasks?.includes("translator"),
+          const translatorProviders = list.filter(
+            (p) =>
+              p.modes?.includes("translation") ||
+              p.supportedTasks?.includes("translator"),
           );
           setProviders(translatorProviders);
 

@@ -529,6 +529,7 @@ type ChatProvider = {
   costPerCredit: number;
   model: string;
   supportedTasks: string[];
+  modes?: string[];
 };
 
 function SettingsPanel({
@@ -565,8 +566,10 @@ function SettingsPanel({
       .get<ChatProvider[]>("/ai/providers")
       .then((list) => {
         if (Array.isArray(list)) {
-          const chatProviders = list.filter((p) =>
-            p.supportedTasks?.includes("text-generation"),
+          const chatProviders = list.filter(
+            (p) =>
+              p.modes?.includes("chat") ||
+              p.supportedTasks?.includes("text-generation"),
           );
           setProviders(chatProviders);
         }

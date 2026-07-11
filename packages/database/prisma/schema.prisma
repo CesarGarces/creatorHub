@@ -125,6 +125,46 @@ model ApiKey {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model Mode {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  name        String
+  description String?
+  icon        String?
+  color       String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  tools       ToolMode[]
+  providers   ProviderMode[]
+}
+
+model ToolMode {
+  id        String   @id @default(cuid())
+  toolId    String
+  modeId    String
+  createdAt DateTime @default(now())
+  tool      Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  mode      Mode     @relation(fields: [modeId], references: [id], onDelete: Cascade)
+
+  @@unique([toolId, modeId])
+  @@index([toolId])
+  @@index([modeId])
+}
+
+model ProviderMode {
+  id         String   @id @default(cuid())
+  providerId String
+  modeId     String
+  createdAt  DateTime @default(now())
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  mode       Mode     @relation(fields: [modeId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, modeId])
+  @@index([providerId])
+  @@index([modeId])
+}
+
 model Tool {
   id              String              @id
   name            String
@@ -143,6 +183,7 @@ model Tool {
   toolAccess      ToolAccess[]
   toolConfigs     ToolConfig?
   usageLogs       UsageLog[]
+  modes           ToolMode[]
 }
 
 model ToolConfig {
@@ -279,6 +320,7 @@ model Provider {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   images         GeneratedImage[]
+  modes          ProviderMode[]
 }
 
 model AIRequestLog {

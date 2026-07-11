@@ -56,6 +56,7 @@ type ProviderFromApi = {
   costPerCredit: number;
   model: string;
   supportedTasks: string[];
+  modes?: string[];
 };
 
 export default function VideoGeneratorPage() {
@@ -158,8 +159,9 @@ export default function VideoGeneratorPage() {
       .get<ProviderFromApi[]>("/ai/providers")
       .then((list) => {
         if (Array.isArray(list) && list.length > 0) {
-          const videoProviders = list.filter((p) =>
-            p.supportedTasks?.includes("video"),
+          const videoProviders = list.filter(
+            (p) =>
+              p.modes?.includes("video") || p.supportedTasks?.includes("video"),
           );
           setProviders(videoProviders);
 

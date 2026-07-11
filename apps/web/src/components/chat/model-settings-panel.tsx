@@ -12,6 +12,7 @@ interface ChatProvider {
   costPerCredit: number;
   model: string;
   supportedTasks: string[];
+  modes?: string[];
 }
 
 export interface ModelSettings {
@@ -45,8 +46,10 @@ export function ModelSettingsPanel({
       .get<ChatProvider[]>("/ai/providers")
       .then((list) => {
         if (Array.isArray(list)) {
-          const chatProviders = list.filter((p) =>
-            p.supportedTasks?.includes("text-generation"),
+          const chatProviders = list.filter(
+            (p) =>
+              p.modes?.includes("chat") ||
+              p.supportedTasks?.includes("text-generation"),
           );
           setProviders(chatProviders);
         }

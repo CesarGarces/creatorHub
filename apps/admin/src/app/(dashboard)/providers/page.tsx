@@ -112,6 +112,7 @@ export default function ProvidersPage() {
             <tr className="border-b border-border bg-surface-elevated/50 text-left text-text-muted">
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Model</th>
+              <th className="px-4 py-3 font-medium">Modes</th>
               <th className="px-4 py-3 font-medium">Tier</th>
               <th className="px-4 py-3 font-medium">Cost</th>
               <th className="px-4 py-3 font-medium">Status</th>
@@ -124,14 +125,14 @@ export default function ProvidersPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>
-                  <td colSpan={6} className="px-4 py-4">
+                  <td colSpan={7} className="px-4 py-4">
                     <Skeleton className="h-8 w-full" />
                   </td>
                 </tr>
               ))
             ) : providers.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-text-dim">
+                <td colSpan={7} className="px-4 py-8 text-center text-text-dim">
                   No providers found
                 </td>
               </tr>
@@ -146,6 +147,26 @@ export default function ProvidersPage() {
                   </td>
                   <td className="px-4 py-3 text-text-muted">
                     {provider.model}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {(provider.modes ?? []).length > 0 ? (
+                        (provider.modes ?? []).map((pm: any) => (
+                          <Badge
+                            key={pm.mode?.id || pm.id}
+                            variant="outline"
+                            size="sm"
+                          >
+                            {pm.mode?.icon && (
+                              <span className="mr-0.5">{pm.mode.icon}</span>
+                            )}
+                            {pm.mode?.name || pm.name}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-text-dim">—</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <Badge

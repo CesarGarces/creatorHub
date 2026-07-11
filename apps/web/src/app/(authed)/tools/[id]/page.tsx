@@ -50,6 +50,7 @@ type ProviderFromApi = {
   costPerCredit: number;
   model: string;
   supportedTasks: string[];
+  modes?: string[];
 };
 
 export default function ThumbnailGeneratorPage() {
@@ -152,8 +153,10 @@ export default function ThumbnailGeneratorPage() {
       .get<ProviderFromApi[]>("/ai/providers")
       .then((list) => {
         if (Array.isArray(list) && list.length > 0) {
-          const thumbnailProviders = list.filter((p) =>
-            p.supportedTasks?.includes("thumbnail"),
+          const thumbnailProviders = list.filter(
+            (p) =>
+              p.modes?.includes("image") ||
+              p.supportedTasks?.includes("thumbnail"),
           );
           setProviders(thumbnailProviders);
 

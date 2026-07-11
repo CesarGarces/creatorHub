@@ -1,3 +1,10 @@
+export interface ProviderMode {
+  id: string;
+  mode: Mode;
+  modeId: string;
+  providerId: string;
+}
+
 export interface Provider {
   id: string;
   slug: string;
@@ -7,9 +14,37 @@ export interface Provider {
   costPerCredit: number;
   isActive: boolean;
   supportedTasks: string[];
+  modes?: ProviderMode[];
   config: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Mode {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    tools: number;
+    providers: number;
+  };
+}
+
+export interface ToolWithModes {
+  id: string;
+  name: string;
+  description: string;
+  icon: string | null;
+  category: string;
+  status: string;
+  creditsPerUse: number;
+  modes: Mode[];
 }
 
 export interface User {
