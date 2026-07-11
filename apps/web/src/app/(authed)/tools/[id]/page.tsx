@@ -196,6 +196,7 @@ export default function ThumbnailGeneratorPage() {
       provider?: string;
       width?: number;
       height?: number;
+      aspectRatio?: string;
       imageUrl?: string;
     }) => {
       return api.post<{ success: boolean; data: { jobId: string } }>(
@@ -222,6 +223,9 @@ export default function ThumbnailGeneratorPage() {
 
   const handleGenerate = () => {
     if (!prompt.trim()) return;
+    const matchedRatio = aspectRatios.find(
+      (ar) => ar.width === width && ar.height === height,
+    );
     const payload: typeof generateMutation.variables = {
       prompt,
       negativePrompt,
@@ -229,6 +233,7 @@ export default function ThumbnailGeneratorPage() {
       provider: aiProvider,
       width,
       height,
+      aspectRatio: matchedRatio?.id || "16:9",
     };
     if (sourceImageUrl) {
       payload.imageUrl = sourceImageUrl;

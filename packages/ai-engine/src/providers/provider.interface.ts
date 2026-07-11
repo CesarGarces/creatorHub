@@ -15,6 +15,7 @@ export interface ImageGenerationOptions {
   numberOfImages?: number;
   model?: string;
   imageUrl?: string;
+  aspectRatio?: string;
 }
 
 export interface AIProviderInterface {

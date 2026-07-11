@@ -44,6 +44,7 @@ export class ThumbnailProcessor extends WorkerHost {
       providerTier?: "FREE" | "PRO";
       width: number;
       height: number;
+      aspectRatio?: string;
       creditCost: number;
       imageUrl?: string;
     }>,
@@ -58,6 +59,7 @@ export class ThumbnailProcessor extends WorkerHost {
       providerTier,
       width,
       height,
+      aspectRatio,
       creditCost,
       imageUrl,
     } = job.data;
@@ -77,6 +79,7 @@ export class ThumbnailProcessor extends WorkerHost {
         negativePrompt,
         width,
         height,
+        aspectRatio,
         userId,
         toolId: "thumbnail-generator",
         imageUrl,

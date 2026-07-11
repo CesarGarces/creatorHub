@@ -193,7 +193,16 @@ export class ImagesController {
   @Post("generate")
   async generateImage(
     @CurrentUser("id") userId: string,
-    @Body() dto: { prompt: string; toolId: string; provider?: string },
+    @Body()
+    dto: {
+      prompt: string;
+      toolId: string;
+      provider?: string;
+      negativePrompt?: string;
+      width?: number;
+      height?: number;
+      aspectRatio?: string;
+    },
   ) {
     if (!dto.prompt?.trim()) {
       throw new BadRequestException("Prompt is required");
@@ -207,6 +216,10 @@ export class ImagesController {
     try {
       const result = await this.aiEngine.generateImage(dto.prompt, {
         provider: dto.provider as any,
+        negativePrompt: dto.negativePrompt,
+        width: dto.width,
+        height: dto.height,
+        aspectRatio: dto.aspectRatio,
         userId,
         toolId: dto.toolId,
       });

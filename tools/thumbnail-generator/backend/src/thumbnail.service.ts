@@ -34,6 +34,7 @@ export class ThumbnailService {
     provider?: string;
     width?: number;
     height?: number;
+    aspectRatio?: string;
     imageUrl?: string;
   }): Promise<EnqueuedThumbnail> {
     const user = await prisma.user.findUnique({ where: { id: params.userId } });
@@ -77,6 +78,7 @@ export class ThumbnailService {
       creditCost,
       width: params.width || 1280,
       height: params.height || 720,
+      aspectRatio: params.aspectRatio,
       imageUrl: params.imageUrl,
     });
 

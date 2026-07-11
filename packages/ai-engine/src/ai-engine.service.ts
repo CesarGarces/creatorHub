@@ -88,6 +88,7 @@ export class AIEngineService {
                 negativePrompt: request.negativePrompt,
                 width: (request.parameters?.width as number) || 1024,
                 height: (request.parameters?.height as number) || 1024,
+                aspectRatio: request.parameters?.aspectRatio as string,
                 model: request.model,
               })
             : await provider.generate(request);
@@ -182,6 +183,7 @@ export class AIEngineService {
       negativePrompt?: string;
       width?: number;
       height?: number;
+      aspectRatio?: string;
       userId?: string;
       toolId?: string;
       imageUrl?: string;
@@ -196,6 +198,7 @@ export class AIEngineService {
       parameters: {
         width: options.width || 1024,
         height: options.height || 1024,
+        aspectRatio: options.aspectRatio,
         imageUrl: options.imageUrl,
       },
       userId: options.userId,

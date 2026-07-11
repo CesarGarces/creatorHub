@@ -18,10 +18,19 @@ export class StabilityAIProvider extends AIProviderBase {
       negativePrompt: request.negativePrompt,
       width: (request.parameters?.width as number) || 1024,
       height: (request.parameters?.height as number) || 1024,
+      aspectRatio: request.parameters?.aspectRatio as string,
     });
   }
 
   async generateImage(options: ImageGenerationOptions): Promise<AIResponse> {
+    const formData = new FormData();
+    formData.append("prompt", options.prompt);
+    if (options.negativePrompt) {
+      formData.append("negative_prompt", options.negativePrompt);
+    }
+    formData.append("aspect_ratio", options.aspectRatio || "16:9");
+    formData.append("output_format", "png");
+
     const response = await fetch(
       "https://api.stability.ai/v2beta/stable-image/generate/sd3",
       {
@@ -30,12 +39,7 @@ export class StabilityAIProvider extends AIProviderBase {
           Authorization: `Bearer ${this.getApiKey()}`,
           Accept: "image/*",
         },
-        body: new URLSearchParams({
-          prompt: options.prompt,
-          negative_prompt: options.negativePrompt || "",
-          aspect_ratio: "1:1",
-          output_format: "png",
-        }),
+        body: formData,
       },
     );
 

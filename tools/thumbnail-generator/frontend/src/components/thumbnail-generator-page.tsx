@@ -32,6 +32,14 @@ const STYLE_PRESETS = [
   },
 ];
 
+const ASPECT_RATIOS = [
+  { id: "16:9", label: "16:9", width: 1280, height: 720 },
+  { id: "9:16", label: "9:16", width: 720, height: 1280 },
+  { id: "1:1", label: "1:1", width: 1024, height: 1024 },
+  { id: "4:3", label: "4:3", width: 1024, height: 768 },
+  { id: "3:4", label: "3:4", width: 768, height: 1024 },
+];
+
 function getToken(): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(/(?:^|; )ch_access_token=([^;]*)/);
@@ -50,12 +58,14 @@ export function ThumbnailGeneratorPage() {
   const [negativePrompt, setNegativePrompt] = useState("");
   const [style, setStyle] = useState("");
   const [provider, setProvider] = useState("gemini");
+  const [aspectRatio, setAspectRatio] = useState("16:9");
   const [result, setResult] = useState<string | null>(null);
 
   const generateMutation = useMutation({
     mutationFn: async () => {
       const fullPrompt = style ? `${prompt}, ${style}` : prompt;
       const token = getToken();
+      const selectedRatio = ASPECT_RATIOS.find((ar) => ar.id === aspectRatio);
       const res = await fetch(`${API_URL}/images/generate`, {
         method: "POST",
         headers: {
@@ -67,6 +77,9 @@ export function ThumbnailGeneratorPage() {
           negativePrompt,
           toolId: "thumbnail-generator",
           provider,
+          aspectRatio,
+          width: selectedRatio?.width || 1280,
+          height: selectedRatio?.height || 720,
         }),
       });
 
@@ -154,6 +167,27 @@ export function ThumbnailGeneratorPage() {
               }`}
             >
               {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Aspect Ratio
+        </label>
+        <div className="flex gap-2">
+          {ASPECT_RATIOS.map((ar) => (
+            <button
+              key={ar.id}
+              onClick={() => setAspectRatio(ar.id)}
+              className={`rounded-lg border px-4 py-2 text-sm transition-all ${
+                aspectRatio === ar.id
+                  ? "border-blue-500 bg-blue-50 text-blue-700"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              {ar.label}
             </button>
           ))}
         </div>
