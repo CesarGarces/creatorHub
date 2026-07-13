@@ -5,6 +5,8 @@ import { useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Pencil, Trash2, Plus, ArrowUpDown } from "lucide-react";
+import { ActionConfirmDialog } from "@creator-hub/ui";
+import { Toggle } from "@/components/ui/toggle";
 
 interface CreditPlan {
   id: string;
@@ -23,6 +25,10 @@ export default function CreditPlansPage() {
   const queryClient = useQueryClient();
   const [editingPlan, setEditingPlan] = useState<CreditPlan | null>(null);
   const [isCreateMode, setIsCreateMode] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    plan: CreditPlan | null;
+  }>({ isOpen: false, plan: null });
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ["credit-plans"],
@@ -166,11 +172,7 @@ export default function CreditPlansPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (confirm(`Delete plan "${plan.name}"?`)) {
-                      deleteMutation.mutate(plan.id);
-                    }
-                  }}
+                  onClick={() => setDeleteDialog({ isOpen: true, plan })}
                   className="flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2 size={14} />
@@ -200,6 +202,23 @@ export default function CreditPlansPage() {
           </div>
         </div>
       )}
+
+      <ActionConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, plan: null })}
+        onConfirm={() => {
+          if (deleteDialog.plan) {
+            deleteMutation.mutate(deleteDialog.plan.id);
+          }
+          setDeleteDialog({ isOpen: false, plan: null });
+        }}
+        title="Delete Credit Plan"
+        description={`Are you sure you want to delete "${deleteDialog.plan?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete plan"
+        cancelLabel="Keep plan"
+        confirmVariant="danger"
+        icon={<Trash2 className="h-5 w-5" />}
+      />
     </div>
   );
 }
@@ -351,19 +370,7 @@ function CreditPlanForm({
           />
         </div>
         <div className="flex items-end pb-1">
-          <label
-            htmlFor="isActive"
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            <input
-              id="isActive"
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="rounded border-border"
-            />
-            <span className="text-sm font-medium text-text">Active</span>
-          </label>
+          <Toggle checked={isActive} onChange={setIsActive} label="Active" />
         </div>
       </div>
 
