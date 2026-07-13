@@ -10,12 +10,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nestjs/common": "^11.1.27",
     "@aws-sdk/client-s3": "^3.500.0",
+    "@aws-sdk/lib-storage": "^3.1085.0",
     "@aws-sdk/s3-request-presigner": "^3.500.0",
     "@creator-hub/database": "workspace:*",
     "@creator-hub/shared-types": "workspace:*",
-    "@creator-hub/shared-utils": "workspace:*"
+    "@creator-hub/shared-utils": "workspace:*",
+    "@nestjs/common": "^11.1.27"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

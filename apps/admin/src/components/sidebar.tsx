@@ -10,6 +10,7 @@ import {
   LogOut,
   Layers,
   Wrench,
+  Database,
 } from "lucide-react";
 
 const navItems = [
@@ -19,6 +20,7 @@ const navItems = [
   { href: "/modes", label: "Modes", icon: Layers },
   { href: "/users", label: "Users", icon: Users },
   { href: "/credit-plans", label: "Credit Plans", icon: CreditCard },
+  { href: "/database-backups", label: "Backups", icon: Database },
 ];
 
 export function Sidebar() {

@@ -4,9 +4,12 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  ListObjectsCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { Upload } from "@aws-sdk/lib-storage";
 import { Logger } from "@creator-hub/shared-utils";
+import { Readable } from "stream";
 
 export interface UploadResult {
   bucket: string;
@@ -117,6 +120,32 @@ export class StorageService {
     };
   }
 
+  async uploadStream(
+    bucket: string,
+    key: string,
+    stream: Readable,
+    mimeType: string,
+  ): Promise<UploadResult> {
+    const upload = new Upload({
+      client: this.s3,
+      params: {
+        Bucket: bucket,
+        Key: key,
+        Body: stream,
+        ContentType: mimeType,
+      },
+    });
+
+    await upload.done();
+
+    return {
+      bucket,
+      key,
+      size: 0, // Size is determined by caller via statSync before upload
+      mimeType,
+    };
+  }
+
   async getPresignedDownloadUrl(
     bucket: string,
     key: string,
@@ -137,5 +166,23 @@ export class StorageService {
         Key: key,
       }),
     );
+  }
+
+  async listObjects(
+    prefix: string,
+    bucket?: string,
+  ): Promise<{ key: string; size: number; lastModified: Date }[]> {
+    const result = await this.s3.send(
+      new ListObjectsCommand({
+        Bucket: bucket || this.defaultBucket,
+        Prefix: prefix,
+      }),
+    );
+
+    return (result.Contents || []).map((item) => ({
+      key: item.Key!,
+      size: item.Size || 0,
+      lastModified: item.LastModified || new Date(),
+    }));
   }
 }

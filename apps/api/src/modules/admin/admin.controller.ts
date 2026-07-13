@@ -18,6 +18,7 @@ import { JwtAuthGuard } from "@creator-hub/auth";
 import { CurrentUser } from "@creator-hub/auth";
 import { AdminGuard } from "./admin.guard";
 import { AdminService } from "./admin.service";
+import { DatabaseBackupService } from "./database-backup.service";
 import {
   CreateProviderDto,
   UpdateProviderDto,
@@ -38,7 +39,10 @@ import { CreateModeDto, UpdateModeDto } from "./dto/mode.dto";
 @Controller("admin")
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly backupService: DatabaseBackupService,
+  ) {}
 
   // ──────────────────────────────────────────────
   // Providers
@@ -280,5 +284,30 @@ export class AdminController {
     @Body("modeIds") modeIds: string[],
   ): Promise<any> {
     return this.adminService.setProviderModes(id, modeIds || []);
+  }
+
+  // ──────────────────────────────────────────────
+  // Database Backups
+  // ──────────────────────────────────────────────
+
+  @Get("backups")
+  async getBackups(): Promise<any> {
+    return this.backupService.listBackups();
+  }
+
+  @Post("backups")
+  async createBackup(): Promise<any> {
+    return this.backupService.createBackup();
+  }
+
+  @Delete("backups/:id")
+  async deleteBackup(@Param("id") id: string): Promise<any> {
+    return this.backupService.deleteBackup(id);
+  }
+
+  @Get("backups/:id/download")
+  async downloadBackup(@Param("id") id: string): Promise<any> {
+    const url = await this.backupService.getBackupDownloadUrl(id);
+    return { url };
   }
 }
