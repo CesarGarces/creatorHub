@@ -24,6 +24,7 @@ interface Backup {
   size: number;
   createdAt: string;
   database: string;
+  environment: "development" | "production";
   status: "completed" | "failed" | "in-progress";
   error?: string;
 }
@@ -197,6 +198,9 @@ export default function DatabaseBackupsPage() {
                   Database
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-text-muted">
+                  Environment
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-text-muted">
                   Status
                 </th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-text-muted">
@@ -226,6 +230,17 @@ export default function DatabaseBackupsPage() {
                   </td>
                   <td className="px-4 py-3 text-sm text-text-muted">
                     {backup.database}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
+                        backup.environment === "production"
+                          ? "bg-purple-500/10 text-purple-500"
+                          : "bg-blue-500/10 text-blue-500"
+                      }`}
+                    >
+                      {backup.environment}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <span

@@ -14,6 +14,7 @@ export interface BackupMetadata {
   size: number;
   createdAt: string;
   database: string;
+  environment: "development" | "production";
   status: "completed" | "failed" | "in-progress";
   error?: string;
 }
@@ -57,9 +58,16 @@ export class DatabaseBackupService {
   }
 
   async createBackup(): Promise<BackupMetadata> {
-    const databaseUrl = process.env.DATABASE_URL;
+    const nodeEnv = process.env.NODE_ENV || "development";
+    const databaseUrl =
+      nodeEnv === "production"
+        ? process.env.DATABASE_URL_PROD || process.env.DATABASE_URL
+        : process.env.DATABASE_URL_DEV || process.env.DATABASE_URL;
+
     if (!databaseUrl) {
-      throw new BadRequestException("DATABASE_URL not configured");
+      throw new BadRequestException(
+        `DATABASE_URL not configured for environment: ${nodeEnv}`,
+      );
     }
 
     const now = new Date();
@@ -80,6 +88,7 @@ export class DatabaseBackupService {
       size: 0,
       createdAt: now.toISOString(),
       database,
+      environment: nodeEnv === "production" ? "production" : "development",
       status: "in-progress",
     };
 
@@ -102,6 +111,7 @@ export class DatabaseBackupService {
         password,
         database,
         outputPath: tmpPath,
+        useSsl: nodeEnv === "production",
       });
 
       const fileSize = statSync(tmpPath).size;
@@ -139,6 +149,7 @@ export class DatabaseBackupService {
     password: string;
     database: string;
     outputPath: string;
+    useSsl: boolean;
   }): Promise<void> {
     return new Promise((resolve, reject) => {
       const args = [
@@ -162,7 +173,7 @@ export class DatabaseBackupService {
         env: {
           ...process.env,
           PGPASSWORD: params.password,
-          PGSSLMODE: "require",
+          ...(params.useSsl && { PGSSLMODE: "require" }),
         },
         timeout: 300000,
       });
