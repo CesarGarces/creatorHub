@@ -2,13 +2,21 @@ import { resolveProviderSlug } from "../resolve-provider";
 
 // Mock the prisma module
 const mockProviderFindUnique = jest.fn();
+const mockProviderFindMany = jest.fn();
 const mockModelMetadataFindUnique = jest.fn();
+const mockModelMetadataFindMany = jest.fn();
 
 jest.mock("../index", () => ({
   get prisma() {
     return {
-      provider: { findUnique: mockProviderFindUnique },
-      modelMetadata: { findUnique: mockModelMetadataFindUnique },
+      provider: {
+        findUnique: mockProviderFindUnique,
+        findMany: mockProviderFindMany,
+      },
+      modelMetadata: {
+        findUnique: mockModelMetadataFindUnique,
+        findMany: mockModelMetadataFindMany,
+      },
     };
   },
 }));
@@ -56,24 +64,42 @@ describe("resolveProviderSlug", () => {
   });
 
   describe("when input is a ModelMetadata modelId string", () => {
-    it("returns the providerSlug for openrouter model", async () => {
+    it("returns the providerSlug preferring active providers", async () => {
       mockProviderFindUnique.mockResolvedValue(null);
-      mockModelMetadataFindUnique
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ providerSlug: "openrouter" });
+      mockModelMetadataFindUnique.mockResolvedValue(null);
+      mockModelMetadataFindMany.mockResolvedValue([
+        { providerSlug: "siliconflow" },
+        { providerSlug: "openrouter" },
+      ]);
+      mockProviderFindMany.mockResolvedValue([{ slug: "openrouter" }]);
 
       const result = await resolveProviderSlug("deepseek-ai/DeepSeek-V4-Flash");
 
       expect(result).toBe("openrouter");
-      expect(mockModelMetadataFindUnique).toHaveBeenCalledWith({
-        where: {
-          providerSlug_modelId: {
-            providerSlug: "openrouter",
-            modelId: "deepseek-ai/DeepSeek-V4-Flash",
-          },
-        },
+      expect(mockModelMetadataFindMany).toHaveBeenCalledWith({
+        where: { modelId: "deepseek-ai/DeepSeek-V4-Flash" },
         select: { providerSlug: true },
       });
+      expect(mockProviderFindMany).toHaveBeenCalledWith({
+        where: {
+          slug: { in: ["siliconflow", "openrouter"] },
+          isActive: true,
+        },
+        select: { slug: true },
+      });
+    });
+
+    it("falls back to first model if no providers are active", async () => {
+      mockProviderFindUnique.mockResolvedValue(null);
+      mockModelMetadataFindUnique.mockResolvedValue(null);
+      mockModelMetadataFindMany.mockResolvedValue([
+        { providerSlug: "siliconflow" },
+      ]);
+      mockProviderFindMany.mockResolvedValue([]);
+
+      const result = await resolveProviderSlug("some-model");
+
+      expect(result).toBe("siliconflow");
     });
   });
 
@@ -81,6 +107,7 @@ describe("resolveProviderSlug", () => {
     it("returns the input as-is (fallback)", async () => {
       mockProviderFindUnique.mockResolvedValue(null);
       mockModelMetadataFindUnique.mockResolvedValue(null);
+      mockModelMetadataFindMany.mockResolvedValue([]);
 
       const result = await resolveProviderSlug("unknown-slug");
 

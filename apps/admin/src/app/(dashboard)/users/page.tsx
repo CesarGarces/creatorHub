@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Loader2 } from "lucide-react";
+import { Plus, Search, Pencil, Loader2, UserX, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import {
