@@ -41,7 +41,7 @@ export const useTranslatorStore = create<TranslatorState>()((set, get) => ({
   jobId: null,
   inputText: "",
   targetLanguage: "es",
-  provider: "deepseek-v4",
+  provider: "",
   outputText: null,
   translationId: null,
   error: null,
@@ -129,7 +129,7 @@ export const useTranslatorStore = create<TranslatorState>()((set, get) => ({
     set({
       inputText: "",
       targetLanguage: "es",
-      provider: "deepseek-v4",
+      provider: "",
     });
   },
 
@@ -139,7 +139,7 @@ export const useTranslatorStore = create<TranslatorState>()((set, get) => ({
       jobId: null,
       inputText: "",
       targetLanguage: "es",
-      provider: "deepseek-v4",
+      provider: "",
       outputText: null,
       translationId: null,
       error: null,

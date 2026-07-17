@@ -1,8 +1,12 @@
-import { Injectable } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
 import { CreditService } from "@creator-hub/billing";
 import { StorageService } from "@creator-hub/storage";
 import { AIEngineService, ProviderRegistry } from "@creator-hub/ai-engine";
-import { prisma } from "@creator-hub/database";
+import { prisma, resolveProviderSlug } from "@creator-hub/database";
 import { Logger, getFriendlyError } from "@creator-hub/shared-utils";
 import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
@@ -36,22 +40,48 @@ export class VideoService {
     const user = await prisma.user.findUnique({
       where: { id: params.userId },
     });
-    if (!user) throw new Error("User not found");
+    if (!user) throw new NotFoundException("User not found");
 
     const model = params.model || "Wan-AI/Wan2.2-T2V-A14B";
     if (model.includes("I2V") && !params.imageUrl) {
-      throw new Error("Image-to-Video model requires a source image");
+      throw new BadRequestException(
+        "Image-to-Video model requires a source image",
+      );
     }
 
-    const providerSlug = params.provider || "siliconflow-video";
+    const providerSlug = await resolveProviderSlug(
+      params.provider || "siliconflow-video",
+    );
     const provider = await prisma.provider.findUnique({
       where: { slug: providerSlug },
     });
+    if (!provider) {
+      throw new NotFoundException("Selected provider is not available");
+    }
+    if (!provider.isActive) {
+      throw new NotFoundException("Selected provider is not available");
+    }
 
-    const creditCost = provider?.costPerCredit || 50;
+    // Verify the specific model is active (if a modelId was provided)
+    const modelId = params.model || params.provider;
+    if (modelId) {
+      const modelMetadata = await prisma.modelMetadata.findUnique({
+        where: {
+          providerSlug_modelId: { providerSlug, modelId },
+        },
+        select: { isActive: true, displayName: true },
+      });
+      if (modelMetadata && !modelMetadata.isActive) {
+        throw new BadRequestException(
+          `Model "${modelMetadata.displayName}" is currently inactive. Please select a different model.`,
+        );
+      }
+    }
+
+    const creditCost = provider.costPerCredit;
     if (user.currentCredits < creditCost) {
-      throw new Error(
-        "Insufficient credits. Video generation requires 50 credits.",
+      throw new BadRequestException(
+        "Insufficient credits. Please upgrade your plan or purchase credits.",
       );
     }
 

@@ -757,4 +757,243 @@ export class AdminService {
       },
     });
   }
+
+  // ──────────────────────────────────────────────
+  // Model Metadata (AI Models)
+  // ──────────────────────────────────────────────
+
+  async findAllModels(params: {
+    page?: number;
+    limit?: number;
+    providerSlug?: string;
+    taskType?: string;
+    tier?: string;
+    isActive?: boolean;
+    search?: string;
+    tags?: string[];
+  }): Promise<any> {
+    const page = Math.max(1, params.page ?? 1);
+    const limit = Math.max(1, Math.min(100, params.limit ?? 20));
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.ModelMetadataWhereInput = {};
+
+    if (params.providerSlug) {
+      where.providerSlug = params.providerSlug;
+    }
+
+    if (params.taskType) {
+      where.taskType = params.taskType;
+    }
+
+    if (params.tier) {
+      where.tier = params.tier as any;
+    }
+
+    if (typeof params.isActive === "boolean") {
+      where.isActive = params.isActive;
+    }
+
+    if (params.search) {
+      where.OR = [
+        { displayName: { contains: params.search, mode: "insensitive" } },
+        { modelId: { contains: params.search, mode: "insensitive" } },
+        { description: { contains: params.search, mode: "insensitive" } },
+      ];
+    }
+
+    if (params.tags && params.tags.length > 0) {
+      where.tags = { hasSome: params.tags };
+    }
+
+    const [data, total] = await Promise.all([
+      prisma.modelMetadata.findMany({
+        where,
+        orderBy: [{ tier: "asc" }, { taskType: "asc" }, { displayName: "asc" }],
+        skip,
+        take: limit,
+      }),
+      prisma.modelMetadata.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async findModelById(id: string): Promise<any> {
+    const model = await prisma.modelMetadata.findUnique({ where: { id } });
+    if (!model) {
+      throw new NotFoundException(`Model not found: ${id}`);
+    }
+    return model;
+  }
+
+  async updateModelConfig(
+    id: string,
+    config: {
+      isActive?: boolean;
+      creditCost?: number;
+      profitMargin?: number;
+      tier?: string;
+      taskType?: string;
+    },
+  ): Promise<any> {
+    const model = await prisma.modelMetadata.findUnique({ where: { id } });
+    if (!model) {
+      throw new NotFoundException(`Model not found: ${id}`);
+    }
+
+    const updated = await prisma.modelMetadata.update({
+      where: { id },
+      data: {
+        ...(config.isActive !== undefined && { isActive: config.isActive }),
+        ...(config.creditCost !== undefined && {
+          creditCost: config.creditCost,
+        }),
+        ...(config.profitMargin !== undefined && {
+          profitMargin: config.profitMargin,
+        }),
+        ...(config.tier !== undefined && { tier: config.tier as any }),
+        ...(config.taskType !== undefined && { taskType: config.taskType }),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Auto-sync Provider record when model is activated/deactivated
+    // Non-blocking: if sync fails, the model update still succeeds
+    try {
+      await this.syncProviderFromModel(updated);
+    } catch (err) {
+      console.error("[AdminService] Provider sync failed:", err);
+    }
+
+    return updated;
+  }
+
+  /**
+   * Creates or updates a Provider record from a ModelMetadata entry.
+   * This ensures the generation flow always has a matching Provider.
+   */
+  private async syncProviderFromModel(model: {
+    id: string;
+    modelId: string;
+    displayName: string;
+    tier: string;
+    creditCost: number;
+    isActive: boolean;
+    taskType: string;
+    providerSlug: string;
+  }): Promise<void> {
+    const slug = this.toSlug(model.displayName);
+
+    // Determine supported tasks from taskType
+    const supportedTasks = [model.taskType];
+    if (model.taskType === "text-generation") {
+      supportedTasks.push("translator");
+    }
+
+    // Find existing provider by model ID
+    const existing = await prisma.provider.findFirst({
+      where: { model: model.modelId },
+    });
+
+    if (existing) {
+      // Update existing provider
+      await prisma.provider.update({
+        where: { id: existing.id },
+        data: {
+          name: model.displayName,
+          tier: model.tier as any,
+          costPerCredit: model.creditCost,
+          isActive: model.isActive,
+          supportedTasks,
+        },
+      });
+    } else if (model.isActive) {
+      // Create new provider only if model is active
+      const slugExists = await prisma.provider.findUnique({ where: { slug } });
+      if (!slugExists) {
+        await prisma.provider.create({
+          data: {
+            slug,
+            name: model.displayName,
+            model: model.modelId,
+            tier: model.tier as any,
+            costPerCredit: model.creditCost,
+            isActive: true,
+            supportedTasks,
+          },
+        });
+      }
+    }
+  }
+
+  private toSlug(text: string): string {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+
+  async bulkUpdateModels(
+    ids: string[],
+    config: {
+      isActive?: boolean;
+      creditCost?: number;
+      profitMargin?: number;
+      tier?: string;
+      taskType?: string;
+    },
+  ): Promise<{ updated: number }> {
+    const result = await prisma.modelMetadata.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        ...(config.isActive !== undefined && { isActive: config.isActive }),
+        ...(config.creditCost !== undefined && {
+          creditCost: config.creditCost,
+        }),
+        ...(config.profitMargin !== undefined && {
+          profitMargin: config.profitMargin,
+        }),
+        ...(config.tier !== undefined && { tier: config.tier as any }),
+        ...(config.taskType !== undefined && { taskType: config.taskType }),
+        updatedAt: new Date(),
+      },
+    });
+
+    return { updated: result.count };
+  }
+
+  async getModelStats(): Promise<any> {
+    const [total, active, byProvider, byTaskType, byTier] = await Promise.all([
+      prisma.modelMetadata.count(),
+      prisma.modelMetadata.count({ where: { isActive: true } }),
+      prisma.modelMetadata.groupBy({
+        by: ["providerSlug"],
+        _count: true,
+      }),
+      prisma.modelMetadata.groupBy({
+        by: ["taskType"],
+        _count: true,
+      }),
+      prisma.modelMetadata.groupBy({
+        by: ["tier"],
+        _count: true,
+      }),
+    ]);
+
+    return {
+      total,
+      active,
+      byProvider: Object.fromEntries(
+        byProvider.map((p) => [p.providerSlug, p._count]),
+      ),
+      byTaskType: Object.fromEntries(
+        byTaskType.map((t) => [t.taskType, t._count]),
+      ),
+      byTier: Object.fromEntries(byTier.map((t) => [t.tier, t._count])),
+    };
+  }
 }

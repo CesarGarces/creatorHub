@@ -4,18 +4,18 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
-  Cpu,
   Users,
   CreditCard,
   LogOut,
   Layers,
   Wrench,
   Database,
+  BrainCircuit,
 } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/providers", label: "Providers", icon: Cpu },
+  { href: "/models", label: "AI Models", icon: BrainCircuit },
   { href: "/tools", label: "Tools", icon: Wrench },
   { href: "/modes", label: "Modes", icon: Layers },
   { href: "/users", label: "Users", icon: Users },

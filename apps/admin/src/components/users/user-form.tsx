@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Input } from "@creator-hub/ui";
+import { Button, Input, Switch } from "@creator-hub/ui";
 import type { User } from "@/types";
 
 interface UserFormProps {
@@ -201,21 +201,11 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        <label
-          htmlFor="user-active"
-          className="relative inline-flex cursor-pointer items-center"
-        >
-          <input
-            id="user-active"
-            type="checkbox"
-            checked={form.isActive}
-            onChange={(e) => updateField("isActive", e.target.checked)}
-            className="peer sr-only"
-          />
-          <div className="h-6 w-11 rounded-full bg-border peer-checked:bg-primary transition-colors" />
-          <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
-          <span className="ml-2 text-sm text-text-muted">Active</span>
-        </label>
+        <Switch
+          checked={form.isActive}
+          onCheckedChange={(checked) => updateField("isActive", checked)}
+        />
+        <span className="text-sm text-text-muted">Active</span>
       </div>
 
       <div className="flex items-center gap-3 pt-4">

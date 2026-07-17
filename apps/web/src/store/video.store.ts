@@ -57,7 +57,7 @@ export const useVideoStore = create<VideoStore>()((set, _get) => ({
   variations: [],
 
   prompt: "",
-  aiProvider: "siliconflow-video",
+  aiProvider: "",
   aspectRatio: "16:9",
   model: "Wan-AI/Wan2.2-T2V-A14B",
   imageUrl: null,
@@ -117,7 +117,7 @@ export const useVideoStore = create<VideoStore>()((set, _get) => ({
   resetForm: () => {
     set({
       prompt: "",
-      aiProvider: "siliconflow-video",
+      aiProvider: "",
       aspectRatio: "16:9",
       model: "Wan-AI/Wan2.2-T2V-A14B",
       imageUrl: null,
@@ -134,7 +134,7 @@ export const useVideoStore = create<VideoStore>()((set, _get) => ({
       toolId: null,
       variations: [],
       prompt: "",
-      aiProvider: "siliconflow-video",
+      aiProvider: "",
       aspectRatio: "16:9",
       model: "Wan-AI/Wan2.2-T2V-A14B",
       imageUrl: null,

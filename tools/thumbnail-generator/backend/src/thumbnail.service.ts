@@ -1,8 +1,13 @@
-import { Injectable } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from "@nestjs/common";
 import { CreditService } from "@creator-hub/billing";
 import { StorageService } from "@creator-hub/storage";
 import { AIEngineService, ProviderRegistry } from "@creator-hub/ai-engine";
-import { prisma } from "@creator-hub/database";
+import { prisma, resolveProviderSlug } from "@creator-hub/database";
 import { Logger } from "@creator-hub/shared-utils";
 import { getFriendlyError } from "@creator-hub/shared-utils";
 import { Queue } from "bullmq";
@@ -39,20 +44,51 @@ export class ThumbnailService {
   }): Promise<EnqueuedThumbnail> {
     const user = await prisma.user.findUnique({ where: { id: params.userId } });
     if (!user) {
-      throw new Error("User not found");
+      throw new NotFoundException("User not found");
     }
 
-    const providerSlug = this.selectProviderSlug(params.provider);
+    const providerSlug = await this.selectProviderSlug(params.provider);
+
+    console.log("[ThumbnailService] selectProviderSlug result:", {
+      paramsProvider: params.provider,
+      resolvedSlug: providerSlug,
+    });
+
     const provider = await prisma.provider.findUnique({
       where: { slug: providerSlug },
     });
+
+    console.log("[ThumbnailService] Provider lookup result:", {
+      providerSlug,
+      providerExists: !!provider,
+      providerIsActive: provider?.isActive,
+    });
+
     if (!provider) {
-      throw new Error("Selected provider is not available");
+      throw new NotFoundException("Selected provider is not available");
+    }
+    if (!provider.isActive) {
+      throw new NotFoundException("Selected provider is not available");
+    }
+
+    // Verify the specific model is active (if a modelId was provided)
+    if (params.provider) {
+      const modelMetadata = await prisma.modelMetadata.findUnique({
+        where: {
+          providerSlug_modelId: { providerSlug, modelId: params.provider },
+        },
+        select: { isActive: true, displayName: true },
+      });
+      if (modelMetadata && !modelMetadata.isActive) {
+        throw new BadRequestException(
+          `Model "${modelMetadata.displayName}" is currently inactive. Please select a different model.`,
+        );
+      }
     }
 
     // Free tier users cannot use paid providers
     if (user.plan === "FREE" && provider.tier === "PRO") {
-      throw new Error(
+      throw new ForbiddenException(
         "This provider is only available on paid plans. Please upgrade.",
       );
     }
@@ -60,12 +96,18 @@ export class ThumbnailService {
     const creditCost = provider.costPerCredit;
     const totalCredits = user.currentCredits;
     if (totalCredits < creditCost) {
-      throw new Error(
+      throw new BadRequestException(
         "No credits available. Please upgrade your plan or purchase credits.",
       );
     }
 
     const selectedProvider = this.selectProviderName(user, provider.slug);
+
+    console.log("[ThumbnailService] Enqueuing job with:", {
+      paramsProvider: params.provider,
+      selectedProvider,
+      providerSlug,
+    });
 
     const job = await this.thumbnailQueue.add("generate", {
       userId: params.userId,
@@ -75,6 +117,7 @@ export class ThumbnailService {
       provider: selectedProvider,
       providerId: provider.id,
       providerTier: provider.tier,
+      model: params.provider, // Pass the original modelId (e.g. "black-forest-labs/FLUX.2-pro")
       creditCost,
       width: params.width || 1280,
       height: params.height || 720,
@@ -155,9 +198,11 @@ export class ThumbnailService {
     };
   }
 
-  private selectProviderSlug(requestedProvider?: string): string {
+  private async selectProviderSlug(
+    requestedProvider?: string,
+  ): Promise<string> {
     if (requestedProvider) {
-      return requestedProvider;
+      return resolveProviderSlug(requestedProvider);
     }
 
     // Default to first active free provider if none requested

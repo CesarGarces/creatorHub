@@ -24,7 +24,7 @@ import { ToolFavoritesController } from "./modules/tools/tool-favorites.controll
 import { ToolFavoritesService } from "./modules/tools/tool-favorites.service";
 import { ImagesController } from "./modules/images/images.controller";
 import { AdminModule } from "./modules/admin/admin.module";
-import { AIController } from "./modules/ai/ai.controller";
+import { AIModule } from "./modules/ai/ai.module";
 import { WebhooksController } from "./modules/webhooks/webhooks.controller";
 import { SharingModule } from "./modules/sharing/sharing.module";
 import { NotificationModule } from "./modules/notification/notification.module";
@@ -82,6 +82,7 @@ import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
     EmailModule,
     ToolSdkModule,
     AdminModule,
+    AIModule,
 
     // WebSocket + event listeners
     WebsocketModule,
@@ -116,7 +117,6 @@ import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
     ToolsController,
     ToolFavoritesController,
     ImagesController,
-    AIController,
     WebhooksController,
   ],
   providers: [

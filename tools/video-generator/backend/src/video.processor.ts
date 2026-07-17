@@ -69,6 +69,32 @@ export class VideoProcessor extends WorkerHost {
       prompt: prompt.slice(0, 50),
     });
 
+    // Defense-in-depth: verify model is still active before making expensive AI call
+    if (model && provider) {
+      const modelMetadata = await prisma.modelMetadata.findUnique({
+        where: {
+          providerSlug_modelId: { providerSlug: provider, modelId: model },
+        },
+        select: { isActive: true },
+      });
+      if (modelMetadata && !modelMetadata.isActive) {
+        throw new Error(
+          `Model "${model}" has been deactivated. Please regenerate with a different model.`,
+        );
+      }
+    }
+    if (provider) {
+      const providerRecord = await prisma.provider.findUnique({
+        where: { slug: provider },
+        select: { isActive: true },
+      });
+      if (providerRecord && !providerRecord.isActive) {
+        throw new Error(
+          `Provider "${provider}" has been deactivated. Please regenerate with a different model.`,
+        );
+      }
+    }
+
     const resolvedImageUrl = imageUrl;
     this.logger.info(`Video processor imageUrl check`, {
       hasImage: !!imageUrl,

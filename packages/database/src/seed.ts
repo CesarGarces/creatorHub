@@ -309,6 +309,187 @@ async function main() {
     }
   }
 
+  // ──────────────────────────────────────────────
+  // Seed AI Model Metadata (OpenRouter models)
+  // ──────────────────────────────────────────────
+
+  const openrouterModels = [
+    // Image Generation Models
+    {
+      providerSlug: "openrouter",
+      modelId: "openai/gpt-image-1-mini",
+      displayName: "GPT Image 1 Mini",
+      taskType: "image-generation",
+      tier: "PRO" as const,
+      supportsStreaming: false,
+      supportsVision: false,
+      imagePricePerGen: 0.02,
+      isActive: true,
+      creditCost: 10,
+      profitMargin: 2.0,
+      description: "Fast and affordable image generation by OpenAI",
+      tags: ["fast", "cheap", "openai"],
+    },
+    {
+      providerSlug: "openrouter",
+      modelId: "google/gemini-3.1-flash-image",
+      displayName: "Gemini 3.1 Flash Image",
+      taskType: "image-generation",
+      tier: "PRO" as const,
+      supportsStreaming: false,
+      supportsVision: true,
+      imagePricePerGen: 0.03,
+      isActive: true,
+      creditCost: 12,
+      profitMargin: 2.0,
+      description: "Google's latest image generation model",
+      tags: ["fast", "google", "multimodal"],
+    },
+    {
+      providerSlug: "openrouter",
+      modelId: "black-forest-labs/flux-1.1-pro",
+      displayName: "Flux 1.1 Pro",
+      taskType: "image-generation",
+      tier: "PRO" as const,
+      supportsStreaming: false,
+      supportsVision: false,
+      imagePricePerGen: 0.04,
+      isActive: true,
+      creditCost: 15,
+      profitMargin: 2.0,
+      description: "High-quality image generation by Black Forest Labs",
+      tags: ["high-quality", "flux"],
+    },
+
+    // Text Generation Models (Chat)
+    {
+      providerSlug: "openrouter",
+      modelId: "google/gemini-2.5-flash",
+      displayName: "Gemini 2.5 Flash",
+      taskType: "text-generation",
+      tier: "PRO" as const,
+      contextLength: 1048576,
+      maxOutputTokens: 65536,
+      supportsStreaming: true,
+      supportsVision: true,
+      promptPricePer1k: 0.00015,
+      completionPricePer1k: 0.0006,
+      isActive: true,
+      creditCost: 3,
+      profitMargin: 2.0,
+      description: "Fast and efficient multimodal model by Google",
+      tags: ["fast", "cheap", "google", "multimodal", "long-context"],
+    },
+    {
+      providerSlug: "openrouter",
+      modelId: "anthropic/claude-3.5-sonnet",
+      displayName: "Claude 3.5 Sonnet",
+      taskType: "text-generation",
+      tier: "PRO" as const,
+      contextLength: 200000,
+      maxOutputTokens: 8192,
+      supportsStreaming: true,
+      supportsVision: true,
+      promptPricePer1k: 0.003,
+      completionPricePer1k: 0.015,
+      isActive: true,
+      creditCost: 8,
+      profitMargin: 2.0,
+      description: "Anthropic's most capable model",
+      tags: ["high-quality", "anthropic", "coding"],
+    },
+    {
+      providerSlug: "openrouter",
+      modelId: "meta-llama/llama-3.1-405b-instruct",
+      displayName: "Llama 3.1 405B",
+      taskType: "text-generation",
+      tier: "PRO" as const,
+      contextLength: 131072,
+      maxOutputTokens: 4096,
+      supportsStreaming: true,
+      supportsVision: false,
+      promptPricePer1k: 0.002,
+      completionPricePer1k: 0.006,
+      isActive: true,
+      creditCost: 6,
+      profitMargin: 2.0,
+      description: "Meta's largest open-source model",
+      tags: ["open-source", "meta", "long-context"],
+    },
+    {
+      providerSlug: "openrouter",
+      modelId: "deepseek/deepseek-chat",
+      displayName: "DeepSeek Chat",
+      taskType: "text-generation",
+      tier: "PRO" as const,
+      contextLength: 64000,
+      maxOutputTokens: 8192,
+      supportsStreaming: true,
+      supportsVision: false,
+      promptPricePer1k: 0.00014,
+      completionPricePer1k: 0.00028,
+      isActive: true,
+      creditCost: 2,
+      profitMargin: 2.0,
+      description: "DeepSeek's conversational model",
+      tags: ["fast", "cheap", "deepseek"],
+    },
+
+    // Video Generation Models
+    {
+      providerSlug: "openrouter",
+      modelId: "runway/video-generation",
+      displayName: "Runway Video Generation",
+      taskType: "video-generation",
+      tier: "PRO" as const,
+      supportsStreaming: false,
+      supportsVision: false,
+      imagePricePerGen: 0.5,
+      isActive: false, // Disabled until pricing confirmed
+      creditCost: 40,
+      profitMargin: 2.0,
+      description: "Professional video generation by Runway",
+      tags: ["video", "professional"],
+    },
+  ];
+
+  for (const model of openrouterModels) {
+    const exists = await prisma.modelMetadata.findUnique({
+      where: {
+        providerSlug_modelId: {
+          providerSlug: model.providerSlug,
+          modelId: model.modelId,
+        },
+      },
+    });
+    if (!exists) {
+      await prisma.modelMetadata.create({ data: model });
+    }
+  }
+
+  // Add OpenRouter as a gateway provider
+  const openrouterProviderExists = await prisma.provider.findUnique({
+    where: { slug: "openrouter" },
+  });
+  if (!openrouterProviderExists) {
+    await prisma.provider.create({
+      data: {
+        slug: "openrouter",
+        name: "OpenRouter",
+        model: "google/gemini-2.5-flash", // Default model
+        tier: "PRO",
+        costPerCredit: 5,
+        isActive: true,
+        supportedTasks: ["thumbnail", "text-generation", "video"],
+        isGateway: true,
+        config: {
+          baseUrl: "https://openrouter.ai/api/v1",
+          description: "Access 50+ AI models through a single API",
+        },
+      },
+    });
+  }
+
   console.log("Seed completed");
 }
 

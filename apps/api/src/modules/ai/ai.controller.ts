@@ -1,31 +1,30 @@
-import { Controller, Get, UseGuards } from "@nestjs/common";
+import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "@creator-hub/auth";
-import { prisma } from "@creator-hub/database";
+import { AIService } from "./ai.service";
 
 @Controller("ai")
 @UseGuards(JwtAuthGuard)
 export class AIController {
+  constructor(private readonly aiService: AIService) {}
+
+  /**
+   * Legacy endpoint — returns providers with modes.
+   * Kept for backward compatibility.
+   */
   @Get("providers")
   async getProviders() {
-    const providers = await prisma.provider.findMany({
-      where: { isActive: true },
-      orderBy: [{ tier: "asc" }, { costPerCredit: "asc" }, { name: "asc" }],
-      include: {
-        modes: {
-          include: { mode: true },
-        },
-      },
-    });
+    return this.aiService.getActiveProviders();
+  }
 
-    return providers.map((p) => ({
-      id: p.slug,
-      name: p.name,
-      displayName: p.name,
-      tier: p.tier === "PRO" ? "pro" : "free",
-      costPerCredit: p.costPerCredit,
-      model: p.model,
-      supportedTasks: p.supportedTasks,
-      modes: p.modes.filter((pm) => pm.mode.isActive).map((pm) => pm.mode.slug),
-    }));
+  /**
+   * Returns active models filtered by taskType(s).
+   * Used by ProviderSelect to show only models matching the tool's modes.
+   *
+   * Query params:
+   *   taskTypes — comma-separated list (e.g. "image-generation,text-generation")
+   */
+  @Get("models")
+  async getModels(@Query("taskTypes") taskTypes?: string) {
+    return this.aiService.getActiveModels(taskTypes);
   }
 }

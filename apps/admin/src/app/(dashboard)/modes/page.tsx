@@ -5,7 +5,7 @@ import { useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Pencil, Trash2, Plus, Layers, Cpu, Wrench } from "lucide-react";
-import { ActionConfirmDialog } from "@creator-hub/ui";
+import { ActionConfirmDialog, Switch } from "@creator-hub/ui";
 import type { Mode } from "@/types";
 
 export default function ModesPage() {
@@ -365,22 +365,9 @@ function ModeForm({
         </div>
       </div>
 
-      <div>
-        <label
-          htmlFor="mode-active"
-          className="relative inline-flex cursor-pointer items-center"
-        >
-          <input
-            id="mode-active"
-            type="checkbox"
-            checked={isActive}
-            onChange={(e) => setIsActive(e.target.checked)}
-            className="peer sr-only"
-          />
-          <div className="h-6 w-11 rounded-full bg-border peer-checked:bg-primary transition-colors" />
-          <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
-          <span className="ml-2 text-sm font-medium text-text">Active</span>
-        </label>
+      <div className="flex items-center gap-3">
+        <Switch checked={isActive} onCheckedChange={setIsActive} />
+        <span className="text-sm font-medium text-text">Active</span>
       </div>
 
       <div className="flex justify-end gap-3 pt-4">

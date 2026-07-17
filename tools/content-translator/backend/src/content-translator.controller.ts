@@ -7,8 +7,8 @@ import {
   Query,
   UseGuards,
   BadRequestException,
-  InternalServerErrorException,
 } from "@nestjs/common";
+import { HttpException } from "@nestjs/common";
 import { JwtAuthGuard, CurrentUser } from "@creator-hub/auth";
 import { ContentTranslatorService } from "./content-translator.service";
 
@@ -43,15 +43,14 @@ export class ContentTranslatorController {
       });
       return { success: true, data: result };
     } catch (error) {
+      // Re-throw NestJS exceptions as-is (NotFoundException, ForbiddenException, etc.)
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      // Only wrap unexpected errors as 500
       const message =
         (error as Error).message || "Translation generation failed";
-      if (
-        message.includes("Insufficient credits") ||
-        message.includes("only available on paid plans")
-      ) {
-        throw new BadRequestException(message);
-      }
-      throw new InternalServerErrorException(message);
+      throw new BadRequestException(message);
     }
   }
 

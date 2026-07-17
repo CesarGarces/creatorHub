@@ -1,9 +1,14 @@
-import { Injectable } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { CreditService } from "@creator-hub/billing";
 import { AIEngineService, ProviderRegistry } from "@creator-hub/ai-engine";
-import { prisma } from "@creator-hub/database";
+import { prisma, resolveProviderSlug } from "@creator-hub/database";
 import { Logger, getFriendlyError } from "@creator-hub/shared-utils";
 
 export interface EnqueuedTranslation {
@@ -29,19 +34,37 @@ export class ContentTranslatorService {
   }): Promise<EnqueuedTranslation> {
     const user = await prisma.user.findUnique({ where: { id: params.userId } });
     if (!user) {
-      throw new Error("User not found");
+      throw new NotFoundException("User not found");
     }
 
-    const providerSlug = this.selectProviderSlug(params.provider);
+    const providerSlug = await this.selectProviderSlug(params.provider);
     const provider = await prisma.provider.findUnique({
       where: { slug: providerSlug },
     });
     if (!provider) {
-      throw new Error("Selected provider is not available");
+      throw new NotFoundException("Selected provider is not available");
+    }
+    if (!provider.isActive) {
+      throw new NotFoundException("Selected provider is not available");
+    }
+
+    // Verify the specific model is active (if a modelId was provided)
+    if (params.provider) {
+      const modelMetadata = await prisma.modelMetadata.findUnique({
+        where: {
+          providerSlug_modelId: { providerSlug, modelId: params.provider },
+        },
+        select: { isActive: true, displayName: true },
+      });
+      if (modelMetadata && !modelMetadata.isActive) {
+        throw new BadRequestException(
+          `Model "${modelMetadata.displayName}" is currently inactive. Please select a different model.`,
+        );
+      }
     }
 
     if (user.plan === "FREE" && provider.tier === "PRO") {
-      throw new Error(
+      throw new ForbiddenException(
         "This provider is only available on paid plans. Please upgrade.",
       );
     }
@@ -49,7 +72,7 @@ export class ContentTranslatorService {
     const creditCost = provider.costPerCredit;
     const totalCredits = user.currentCredits;
     if (totalCredits < creditCost) {
-      throw new Error(
+      throw new BadRequestException(
         "No credits available. Please upgrade your plan or purchase credits.",
       );
     }
@@ -63,6 +86,7 @@ export class ContentTranslatorService {
       provider: selectedProvider,
       providerId: provider.id,
       providerTier: provider.tier,
+      model: params.provider, // Pass the original modelId (e.g. "deepseek-ai/DeepSeek-V4-Flash")
       creditCost,
     });
 
@@ -123,9 +147,11 @@ export class ContentTranslatorService {
     };
   }
 
-  private selectProviderSlug(requestedProvider?: string): string {
+  private async selectProviderSlug(
+    requestedProvider?: string,
+  ): Promise<string> {
     if (requestedProvider) {
-      return requestedProvider;
+      return resolveProviderSlug(requestedProvider);
     }
     return "deepseek-v4";
   }

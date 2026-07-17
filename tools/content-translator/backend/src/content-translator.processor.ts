@@ -43,11 +43,19 @@ export class ContentTranslatorProcessor extends WorkerHost {
       provider?: string;
       providerId?: string;
       providerTier?: "FREE" | "PRO";
+      model?: string;
       creditCost: number;
     }>,
   ): Promise<{ userId: string; translationId: string; content: string }> {
-    const { userId, text, targetLanguage, provider, providerId, creditCost } =
-      job.data;
+    const {
+      userId,
+      text,
+      targetLanguage,
+      provider,
+      providerId,
+      model,
+      creditCost,
+    } = job.data;
 
     this.logger.info("Processing translation job", {
       jobId: job.id,
@@ -55,6 +63,32 @@ export class ContentTranslatorProcessor extends WorkerHost {
       textLength: text.length,
       targetLanguage,
     });
+
+    // Defense-in-depth: verify model is still active before making expensive AI call
+    if (model && provider) {
+      const modelMetadata = await prisma.modelMetadata.findUnique({
+        where: {
+          providerSlug_modelId: { providerSlug: provider, modelId: model },
+        },
+        select: { isActive: true },
+      });
+      if (modelMetadata && !modelMetadata.isActive) {
+        throw new Error(
+          `Model "${model}" has been deactivated. Please regenerate with a different model.`,
+        );
+      }
+    }
+    if (provider) {
+      const providerRecord = await prisma.provider.findUnique({
+        where: { slug: provider },
+        select: { isActive: true },
+      });
+      if (providerRecord && !providerRecord.isActive) {
+        throw new Error(
+          `Provider "${provider}" has been deactivated. Please regenerate with a different model.`,
+        );
+      }
+    }
 
     const prompt = `Translate the following text to ${targetLanguage}:\n\n${text}`;
     const startTime = Date.now();
@@ -64,6 +98,7 @@ export class ContentTranslatorProcessor extends WorkerHost {
       result = await this.aiEngine.execute({
         taskType: "text-generation",
         provider: provider as any,
+        model: model as any,
         prompt,
         userId,
         toolId: "content-translator",

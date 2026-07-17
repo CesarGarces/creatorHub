@@ -106,3 +106,38 @@ export interface PaginatedResponse<T> {
     totalPages: number;
   };
 }
+
+// ──────────────────────────────────────────────
+// AI Models (ModelMetadata)
+// ──────────────────────────────────────────────
+
+export interface ModelMetadata {
+  id: string;
+  providerSlug: string;
+  modelId: string;
+  displayName: string;
+  taskType: string;
+  tier: "FREE" | "PRO";
+  contextLength: number | null;
+  maxOutputTokens: number | null;
+  supportsStreaming: boolean;
+  supportsVision: boolean;
+  promptPricePer1k: number | null;
+  completionPricePer1k: number | null;
+  imagePricePerGen: number | null;
+  creditCost: number;
+  profitMargin: number;
+  isActive: boolean;
+  description: string | null;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModelStats {
+  total: number;
+  active: number;
+  byProvider: Record<string, number>;
+  byTaskType: Record<string, number>;
+  byTier: Record<string, number>;
+}

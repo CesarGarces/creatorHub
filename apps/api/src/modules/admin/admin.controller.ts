@@ -19,6 +19,7 @@ import { CurrentUser } from "@creator-hub/auth";
 import { AdminGuard } from "./admin.guard";
 import { AdminService } from "./admin.service";
 import { DatabaseBackupService } from "./database-backup.service";
+import { ModelSyncService } from "@creator-hub/ai-engine";
 import {
   CreateProviderDto,
   UpdateProviderDto,
@@ -42,6 +43,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly backupService: DatabaseBackupService,
+    private readonly modelSyncService: ModelSyncService,
   ) {}
 
   // ──────────────────────────────────────────────
@@ -284,6 +286,86 @@ export class AdminController {
     @Body("modeIds") modeIds: string[],
   ): Promise<any> {
     return this.adminService.setProviderModes(id, modeIds || []);
+  }
+
+  // ──────────────────────────────────────────────
+  // Model Metadata (AI Models)
+  // ──────────────────────────────────────────────
+
+  @Get("models")
+  async getModels(
+    @Query("page", new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query("limit", new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query("providerSlug") providerSlug?: string,
+    @Query("taskType") taskType?: string,
+    @Query("tier") tier?: string,
+    @Query("isActive", new ParseBoolPipe({ optional: true }))
+    isActive?: boolean,
+    @Query("search") search?: string,
+    @Query("tags") tags?: string,
+  ): Promise<any> {
+    const tagArray = tags ? tags.split(",") : undefined;
+    return this.adminService.findAllModels({
+      page,
+      limit,
+      providerSlug,
+      taskType,
+      tier,
+      isActive,
+      search,
+      tags: tagArray,
+    });
+  }
+
+  @Get("models/stats")
+  async getModelStats(): Promise<any> {
+    return this.adminService.getModelStats();
+  }
+
+  @Get("models/:id")
+  async getModel(@Param("id") id: string): Promise<any> {
+    return this.adminService.findModelById(id);
+  }
+
+  @Put("models/:id/config")
+  async updateModelConfig(
+    @Param("id") id: string,
+    @Body(ValidationPipe)
+    config: {
+      isActive?: boolean;
+      creditCost?: number;
+      profitMargin?: number;
+      tier?: string;
+      taskType?: string;
+    },
+  ): Promise<any> {
+    return this.adminService.updateModelConfig(id, config);
+  }
+
+  @Put("models/bulk")
+  async bulkUpdateModels(
+    @Body(ValidationPipe)
+    body: {
+      ids: string[];
+      isActive?: boolean;
+      creditCost?: number;
+      profitMargin?: number;
+      tier?: string;
+      taskType?: string;
+    },
+  ): Promise<any> {
+    return this.adminService.bulkUpdateModels(body.ids, {
+      isActive: body.isActive,
+      creditCost: body.creditCost,
+      profitMargin: body.profitMargin,
+      tier: body.tier,
+      taskType: body.taskType,
+    });
+  }
+
+  @Post("models/sync")
+  async syncModels(): Promise<any> {
+    return this.modelSyncService.sync();
   }
 
   // ──────────────────────────────────────────────

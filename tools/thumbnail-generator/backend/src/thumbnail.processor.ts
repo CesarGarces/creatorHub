@@ -42,6 +42,7 @@ export class ThumbnailProcessor extends WorkerHost {
       provider?: string;
       providerId?: string;
       providerTier?: "FREE" | "PRO";
+      model?: string;
       width: number;
       height: number;
       aspectRatio?: string;
@@ -57,6 +58,7 @@ export class ThumbnailProcessor extends WorkerHost {
       provider,
       providerId,
       providerTier,
+      model,
       width,
       height,
       aspectRatio,
@@ -67,6 +69,40 @@ export class ThumbnailProcessor extends WorkerHost {
     this.logger.info(`Processing thumbnail job ${job.id}`, {
       userId,
       prompt: prompt.slice(0, 50),
+      provider,
+      model,
+    });
+
+    // Defense-in-depth: verify model is still active before making expensive AI call
+    if (model && provider) {
+      const modelMetadata = await prisma.modelMetadata.findUnique({
+        where: {
+          providerSlug_modelId: { providerSlug: provider, modelId: model },
+        },
+        select: { isActive: true },
+      });
+      if (modelMetadata && !modelMetadata.isActive) {
+        throw new Error(
+          `Model "${model}" has been deactivated. Please regenerate with a different model.`,
+        );
+      }
+    }
+    // Also verify provider is active
+    if (provider) {
+      const providerRecord = await prisma.provider.findUnique({
+        where: { slug: provider },
+        select: { isActive: true },
+      });
+      if (providerRecord && !providerRecord.isActive) {
+        throw new Error(
+          `Provider "${provider}" has been deactivated. Please regenerate with a different model.`,
+        );
+      }
+    }
+
+    console.log("[ThumbnailProcessor] Calling aiEngine.generateImage with:", {
+      provider,
+      model,
     });
 
     const fullPrompt = style ? `${prompt}, ${style}` : prompt;
@@ -76,6 +112,7 @@ export class ThumbnailProcessor extends WorkerHost {
     try {
       result = await this.aiEngine.generateImage(fullPrompt, {
         provider: provider as any,
+        model,
         negativePrompt,
         width,
         height,

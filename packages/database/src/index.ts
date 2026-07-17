@@ -38,3 +38,4 @@ export const prisma = new Proxy({} as PrismaClient, {
 });
 
 export * from "../generated/client";
+export { resolveProviderSlug } from "./resolve-provider";

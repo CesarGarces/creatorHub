@@ -13,6 +13,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { LiquidEtherBackground } from "@/components/animations";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
 import { useToolQueryParams } from "@/hooks/use-tool-query-params";
+import { ProviderSelect } from "@/components/provider-select";
 
 const stylePresets = [
   { id: "bold", label: "Bold & Colorful", emoji: "🎨" },
@@ -42,17 +43,6 @@ const aspectRatios = [
   { id: "16:9", label: "16:9", width: 1280, height: 720, iconClass: "w-8 h-5" },
 ];
 
-type ProviderFromApi = {
-  id: string;
-  name: string;
-  displayName: string;
-  tier: "free" | "pro";
-  costPerCredit: number;
-  model: string;
-  supportedTasks: string[];
-  modes?: string[];
-};
-
 export default function ThumbnailGeneratorPage() {
   const params = useParams();
   const router = useRouter();
@@ -64,10 +54,6 @@ export default function ThumbnailGeneratorPage() {
     isHydrated: creditsHydrated,
     fetchBalance,
   } = useCreditsStore();
-  const [providers, setProviders] = useState<ProviderFromApi[]>([]);
-  const [providersLoading, setProvidersLoading] = useState(true);
-  const [isProviderOpen, setIsProviderOpen] = useState(false);
-  const providerDropdownRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const {
     status,
@@ -78,6 +64,7 @@ export default function ThumbnailGeneratorPage() {
     negativePrompt,
     style,
     aiProvider,
+    providerSlug,
     width,
     height,
     sourceImageUrl,
@@ -86,6 +73,7 @@ export default function ThumbnailGeneratorPage() {
     setNegativePrompt,
     setStyle,
     setAiProvider,
+    setProviderSlug,
     setDimensions,
     setSourceImageUrl,
     startGeneration,
@@ -125,19 +113,6 @@ export default function ThumbnailGeneratorPage() {
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        providerDropdownRef.current &&
-        !providerDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsProviderOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
     if (
       creditsHydrated &&
       !creditsLoading &&
@@ -147,34 +122,6 @@ export default function ThumbnailGeneratorPage() {
       setShowUpgradeModal(true);
     }
   }, [creditsHydrated, creditsLoading, balance, plan]);
-
-  useEffect(() => {
-    api
-      .get<ProviderFromApi[]>("/ai/providers")
-      .then((list) => {
-        if (Array.isArray(list) && list.length > 0) {
-          const thumbnailProviders = list.filter(
-            (p) =>
-              p.modes?.includes("image") ||
-              p.supportedTasks?.includes("thumbnail"),
-          );
-          setProviders(thumbnailProviders);
-
-          // Ensure selected provider is valid; default to first available
-          const firstProvider = thumbnailProviders[0];
-          const validIds = new Set(thumbnailProviders.map((p) => p.id));
-          if (firstProvider && !validIds.has(aiProvider)) {
-            setAiProvider(firstProvider.id);
-          }
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to load providers", err);
-      })
-      .finally(() => {
-        setProvidersLoading(false);
-      });
-  }, [aiProvider, setAiProvider]);
 
   useEffect(() => {
     if (
@@ -188,7 +135,7 @@ export default function ThumbnailGeneratorPage() {
   }, [status, imageUrl, imageId, addVariation]);
 
   const _tool = tools.find((t) => t.id === params.id);
-  const selectedProvider = providers.find((p) => p.id === aiProvider);
+  const [selectedModelCost, setSelectedModelCost] = useState<number>(0);
   const isProcessing = status === "GENERATING" || status === "REVEALING";
 
   const generateMutation = useMutation({
@@ -284,9 +231,9 @@ export default function ThumbnailGeneratorPage() {
                 </span>
               </button>
             )}
-            {selectedProvider && (
+            {selectedModelCost > 0 && (
               <Badge variant="primary" size="sm">
-                ⚡ {selectedProvider.costPerCredit} credits
+                ⚡ {selectedModelCost} credits
               </Badge>
             )}
             {plan && planLabels[plan] && (
@@ -404,133 +351,19 @@ export default function ThumbnailGeneratorPage() {
             </div>
           </div>
 
-          <div className="relative" ref={providerDropdownRef}>
-            <label className="block text-sm font-medium text-text-muted mb-3">
-              AI Provider
-            </label>
-            {providersLoading ? (
-              <div className="h-12 rounded-lg bg-surface-elevated animate-pulse" />
-            ) : providers.length === 0 ? (
-              <p className="text-xs text-text-dim">No providers available.</p>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => !isProcessing && setIsProviderOpen((v) => !v)}
-                  disabled={isProcessing}
-                  aria-haspopup="listbox"
-                  aria-expanded={isProviderOpen}
-                  className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] ${
-                    isProviderOpen
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-surface-elevated text-text hover:border-primary/50 hover:bg-primary/5"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-medium truncate">
-                      {selectedProvider?.displayName ||
-                        selectedProvider?.name ||
-                        "Select provider"}
-                    </span>
-                    {selectedProvider?.tier === "pro" && (
-                      <Badge variant="premium" size="sm">
-                        PRO
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                    {selectedProvider && (
-                      <span className="text-xs text-text-muted tabular-nums">
-                        {selectedProvider.costPerCredit} cr
-                      </span>
-                    )}
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className={`transition-transform duration-200 ${
-                        isProviderOpen ? "rotate-180" : ""
-                      }`}
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </div>
-                </button>
+          <ProviderSelect
+            toolModes={["image"]}
+            value={aiProvider}
+            onChange={(_modelId, model) => {
+              setAiProvider(model.modelId);
+              setProviderSlug(model.providerSlug);
+              setSelectedModelCost(model.creditCost);
+            }}
+            disabled={isProcessing}
+            label="AI Provider"
+          />
 
-                {isProviderOpen && (
-                  <div
-                    className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-border bg-surface-elevated shadow-xl animate-fade-in"
-                    role="listbox"
-                    aria-label="AI Provider"
-                  >
-                    {providers.map((p) => {
-                      const isSelected = aiProvider === p.id;
-                      const isDisabled =
-                        isProcessing || (p.tier === "pro" && plan === "FREE");
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          disabled={isDisabled}
-                          onClick={() => {
-                            if (isDisabled) return;
-                            setAiProvider(p.id);
-                            setIsProviderOpen(false);
-                          }}
-                          className={`flex w-full items-center justify-between px-3 py-3 text-sm text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] ${
-                            isSelected
-                              ? "bg-primary/10 text-primary"
-                              : "hover:bg-surface text-text"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="font-medium truncate">
-                              {p.displayName || p.name}
-                            </span>
-                            {p.tier === "pro" && (
-                              <Badge variant="premium" size="sm">
-                                PRO
-                              </Badge>
-                            )}
-                            {isDisabled && p.tier === "pro" && (
-                              <span className="text-[10px] text-text-dim whitespace-nowrap">
-                                (upgrade)
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                            <span className="text-xs text-text-muted tabular-nums">
-                              {p.costPerCredit} cr
-                            </span>
-                            {isSelected && (
-                              <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                className="text-primary"
-                              >
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {aiProvider === "siliconflow" && (
+          {providerSlug === "siliconflow" && (
             <div>
               <label className="block text-sm font-medium text-text-muted mb-3">
                 Reference Image (optional)
@@ -628,25 +461,24 @@ export default function ThumbnailGeneratorPage() {
               disabled={
                 !prompt.trim() ||
                 !creditsHydrated ||
-                balance < (selectedProvider?.costPerCredit ?? 1) ||
+                balance < (selectedModelCost || 1) ||
                 isProcessing
               }
               onClick={handleGenerate}
             >
               {isProcessing ? "Generating..." : "Generate Thumbnail"}
             </Button>
-            {creditsHydrated &&
-              balance < (selectedProvider?.costPerCredit ?? 1) && (
-                <p className="mt-2 text-xs text-error text-center">
-                  Insufficient credits.{" "}
-                  <button
-                    onClick={() => router.push("/credits")}
-                    className="underline cursor-pointer"
-                  >
-                    Buy more
-                  </button>
-                </p>
-              )}
+            {creditsHydrated && balance < (selectedModelCost || 1) && (
+              <p className="mt-2 text-xs text-error text-center">
+                Insufficient credits.{" "}
+                <button
+                  onClick={() => router.push("/credits")}
+                  className="underline cursor-pointer"
+                >
+                  Buy more
+                </button>
+              </p>
+            )}
           </div>
 
           {creditsHydrated &&

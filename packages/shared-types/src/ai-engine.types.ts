@@ -12,6 +12,7 @@ export type AIProvider =
   | "deepseek-v4"
   | "deepseek-v4-pro"
   | "glm5"
+  | "openrouter"
   | "mock";
 
 export type AIModel =

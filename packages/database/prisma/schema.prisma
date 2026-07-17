@@ -317,10 +317,89 @@ model Provider {
   isActive       Boolean          @default(true)
   supportedTasks String[]         @default(["thumbnail"])
   config         Json?
+
+  // Gateway support (for OpenRouter, SiliconFlow, etc.)
+  isGateway      Boolean          @default(false)
+  gatewayConfig  Json?            // { baseUrl, headers, etc. }
+
+  // Sync metadata
+  lastSyncAt     DateTime?
+  syncStatus     String?          // "syncing" | "success" | "error"
+
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   images         GeneratedImage[]
   modes          ProviderMode[]
+}
+
+// ============================================================
+// MODEL METADATA - Centralized model registry for AI providers
+// ============================================================
+model ModelMetadata {
+  id                String   @id @default(cuid())
+  providerSlug      String   // "openrouter", "siliconflow"
+  modelId           String   // "google/gemini-3.1-flash-image"
+  displayName       String   // "Gemini 3.1 Flash Image"
+  taskType          String   // "image-generation", "chat", "video-generation"
+  tier              ProviderTier @default(PRO)
+
+  // Model capabilities
+  contextLength     Int?
+  maxOutputTokens   Int?
+  supportsStreaming Boolean  @default(false)
+  supportsVision    Boolean  @default(false)
+
+  // Pricing (from provider API, USD)
+  promptPricePer1k      Float?
+  completionPricePer1k  Float?
+  imagePricePerGen      Float?
+
+  // Rate limits
+  requestsPerMinute Int?
+  tokensPerMinute   Int?
+
+  // Admin configuration
+  isActive          Boolean  @default(false)
+  creditCost        Int      @default(10)
+  profitMargin      Float    @default(2.0)
+
+  // Metadata
+  description       String?
+  tags              String[]
+  lastSyncedAt      DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([providerSlug, modelId])
+  @@index([taskType, isActive])
+  @@index([tier, isActive])
+  @@index([providerSlug, isActive])
+}
+
+// ============================================================
+// PROVIDER USAGE - Cost tracking per model per day
+// ============================================================
+model ProviderUsage {
+  id                String   @id @default(cuid())
+  providerSlug      String
+  modelId           String
+  date              DateTime @db.Date
+
+  // Usage metrics
+  totalRequests     Int      @default(0)
+  totalTokens       Int      @default(0)
+  totalImages       Int      @default(0)
+
+  // Cost tracking
+  actualCostUsd     Float    @default(0)   // What we pay to provider
+  creditsCharged    Int      @default(0)   // What we charge users
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([providerSlug, modelId, date])
+  @@index([date])
+  @@index([providerSlug, date])
 }
 
 model AIRequestLog {

@@ -8,6 +8,7 @@ import { cn, Badge } from "@creator-hub/ui";
 import api from "@/lib/api";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
 import { TweetActionCard } from "@/components/chat/tweet-action-card";
+import { ProviderSelect } from "@/components/provider-select";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 interface ParsedMessage {
@@ -521,17 +522,6 @@ function ChatInput() {
 
 /* ─── Settings Panel ─── */
 
-type ChatProvider = {
-  id: string;
-  name: string;
-  displayName: string;
-  tier: "free" | "pro";
-  costPerCredit: number;
-  model: string;
-  supportedTasks: string[];
-  modes?: string[];
-};
-
 function SettingsPanel({
   settings,
   userPlan,
@@ -555,50 +545,6 @@ function SettingsPanel({
   ) => void;
   onClose: () => void;
 }) {
-  const [providers, setProviders] = useState<ChatProvider[]>([]);
-  const [providersLoading, setProvidersLoading] = useState(true);
-  const isFreePlan = userPlan === "FREE";
-  const [isModelOpen, setIsModelOpen] = useState(false);
-  const modelDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    api
-      .get<ChatProvider[]>("/ai/providers")
-      .then((list) => {
-        if (Array.isArray(list)) {
-          const chatProviders = list.filter(
-            (p) =>
-              p.modes?.includes("chat") ||
-              p.supportedTasks?.includes("text-generation"),
-          );
-          setProviders(chatProviders);
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to load chat providers", err);
-      })
-      .finally(() => {
-        setProvidersLoading(false);
-      });
-  }, []);
-
-  const selectedProvider = providers.find(
-    (p) => p.model === settings.defaultModel,
-  );
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        modelDropdownRef.current &&
-        !modelDropdownRef.current.contains(e.target as Node)
-      ) {
-        setIsModelOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   return (
     <div className="border-b border-border bg-surface-elevated/50 px-4 py-3 space-y-3">
       <div className="flex items-center justify-between">
@@ -616,124 +562,18 @@ function SettingsPanel({
       </div>
 
       {/* Model */}
-      <div className="relative" ref={modelDropdownRef}>
+      <div className="relative">
         <label className="block text-[11px] font-medium text-text-dim mb-1.5">
           Model
         </label>
-        {providersLoading ? (
-          <div className="h-10 rounded-lg bg-surface-elevated animate-pulse" />
-        ) : providers.length === 0 ? (
-          <p className="text-xs text-text-dim">No models available.</p>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => setIsModelOpen((v) => !v)}
-              aria-haspopup="listbox"
-              aria-expanded={isModelOpen}
-              className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-all cursor-pointer min-h-[40px] ${
-                isModelOpen
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-surface-elevated text-text hover:border-primary/50 hover:bg-primary/5"
-              }`}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="font-medium truncate text-xs">
-                  {selectedProvider?.name || "Select model"}
-                </span>
-                {selectedProvider?.tier === "pro" && (
-                  <Badge variant="premium" size="sm">
-                    PRO
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                {selectedProvider && (
-                  <span className="text-[10px] text-text-muted tabular-nums">
-                    {selectedProvider.costPerCredit} cr
-                  </span>
-                )}
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className={`transition-transform duration-200 text-text-dim ${isModelOpen ? "rotate-180" : ""}`}
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </div>
-            </button>
-
-            {isModelOpen && (
-              <div
-                className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-border bg-surface-elevated shadow-xl animate-fade-in"
-                role="listbox"
-                aria-label="Model"
-              >
-                {providers.map((p) => {
-                  const isSelected = settings.defaultModel === p.model;
-                  const isDisabled = isFreePlan && p.tier === "pro";
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      disabled={isDisabled}
-                      onClick={() => {
-                        if (isDisabled) return;
-                        onUpdate({ defaultModel: p.model });
-                        setIsModelOpen(false);
-                      }}
-                      className={`flex w-full items-center justify-between px-3 py-3 text-sm text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] ${
-                        isSelected
-                          ? "bg-primary/10 text-primary"
-                          : "hover:bg-surface text-text"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-medium truncate text-xs">
-                          {p.name}
-                        </span>
-                        {p.tier === "pro" && (
-                          <Badge variant="premium" size="sm">
-                            PRO
-                          </Badge>
-                        )}
-                        {isDisabled && (
-                          <span className="text-[10px] text-text-dim whitespace-nowrap">
-                            (upgrade)
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                        <span className="text-[10px] text-text-muted tabular-nums">
-                          {p.costPerCredit} cr
-                        </span>
-                        {isSelected && (
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="text-primary"
-                          >
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
+        <ProviderSelect
+          toolModes={["chat", "text"]}
+          value={settings.defaultModel}
+          onChange={(_id, model) => {
+            onUpdate({ defaultModel: model.modelId });
+          }}
+          label=""
+        />
       </div>
 
       {/* Temperature */}

@@ -38,6 +38,7 @@ export interface ThumbnailFormState {
   negativePrompt: string;
   style: string;
   aiProvider: string;
+  providerSlug: string;
   width: number;
   height: number;
   sourceImageUrl: string | null;
@@ -46,6 +47,7 @@ export interface ThumbnailFormState {
   setNegativePrompt: (prompt: string) => void;
   setStyle: (style: string) => void;
   setAiProvider: (provider: string) => void;
+  setProviderSlug: (slug: string) => void;
   setDimensions: (width: number, height: number) => void;
   setSourceImageUrl: (url: string | null) => void;
 }
@@ -67,7 +69,8 @@ export const useGenerationStore = create<GenerationStore>()((set, get) => ({
   prompt: "",
   negativePrompt: "",
   style: "bold",
-  aiProvider: "z-image-turbo",
+  aiProvider: "",
+  providerSlug: "",
   width: 1280,
   height: 720,
   sourceImageUrl: null,
@@ -77,6 +80,7 @@ export const useGenerationStore = create<GenerationStore>()((set, get) => ({
   setNegativePrompt: (negativePrompt) => set({ negativePrompt }),
   setStyle: (style) => set({ style }),
   setAiProvider: (aiProvider) => set({ aiProvider }),
+  setProviderSlug: (providerSlug) => set({ providerSlug }),
   setDimensions: (width, height) => set({ width, height }),
   setSourceImageUrl: (sourceImageUrl) => set({ sourceImageUrl }),
 
@@ -134,7 +138,8 @@ export const useGenerationStore = create<GenerationStore>()((set, get) => ({
       prompt: "",
       negativePrompt: "",
       style: "bold",
-      aiProvider: "z-image-turbo",
+      aiProvider: "",
+      providerSlug: "",
       width: 1280,
       height: 720,
       sourceImageUrl: null,
@@ -153,7 +158,8 @@ export const useGenerationStore = create<GenerationStore>()((set, get) => ({
       prompt: "",
       negativePrompt: "",
       style: "bold",
-      aiProvider: "z-image-turbo",
+      aiProvider: "",
+      providerSlug: "",
       width: 1280,
       height: 720,
       sourceImageUrl: null,

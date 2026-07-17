@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Trash2, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  Loader2,
+  Power,
+  PowerOff,
+} from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import {
@@ -10,6 +18,7 @@ import {
   Input,
   Badge,
   Skeleton,
+  Switch,
   ActionConfirmDialog,
 } from "@creator-hub/ui";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -35,6 +44,13 @@ export default function ProvidersPage() {
     isOpen: false,
     id: null,
     name: "",
+  });
+  const [toggleDialog, setToggleDialog] = useState<{
+    isOpen: boolean;
+    provider: Provider | null;
+  }>({
+    isOpen: false,
+    provider: null,
   });
 
   const fetchProviders = async (page = 1, query?: string, isSearch = false) => {
@@ -75,6 +91,29 @@ export default function ProvidersPage() {
       toast.error(err.response?.data?.message || "Failed to delete provider");
     } finally {
       setDeleteDialog({ isOpen: false, id: null, name: "" });
+    }
+  };
+
+  const handleToggleActive = async () => {
+    if (!toggleDialog.provider) return;
+    const provider = toggleDialog.provider;
+    const newActive = !provider.isActive;
+    try {
+      await api.put(`/admin/providers/${provider.id}`, {
+        isActive: newActive,
+      });
+      setProviders((prev) =>
+        prev.map((p) =>
+          p.id === provider.id ? { ...p, isActive: newActive } : p,
+        ),
+      );
+      toast.success(
+        `${provider.name} ${newActive ? "activated" : "deactivated"}`,
+      );
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update provider");
+    } finally {
+      setToggleDialog({ isOpen: false, provider: null });
     }
   };
 
@@ -180,12 +219,12 @@ export default function ProvidersPage() {
                     {provider.costPerCredit} cr
                   </td>
                   <td className="px-4 py-3">
-                    <Badge
-                      variant={provider.isActive ? "secondary" : "outline"}
-                      size="sm"
-                    >
-                      {provider.isActive ? "Active" : "Inactive"}
-                    </Badge>
+                    <Switch
+                      checked={provider.isActive}
+                      onCheckedChange={() =>
+                        setToggleDialog({ isOpen: true, provider })
+                      }
+                    />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-3">
@@ -261,6 +300,34 @@ export default function ProvidersPage() {
         cancelLabel="Keep provider"
         confirmVariant="danger"
         icon={<Trash2 className="h-5 w-5" />}
+      />
+
+      <ActionConfirmDialog
+        isOpen={toggleDialog.isOpen}
+        onClose={() => setToggleDialog({ isOpen: false, provider: null })}
+        onConfirm={handleToggleActive}
+        title={
+          toggleDialog.provider?.isActive
+            ? "Deactivate Provider"
+            : "Activate Provider"
+        }
+        description={
+          toggleDialog.provider?.isActive
+            ? `Are you sure you want to deactivate "${toggleDialog.provider?.name}"? It will no longer be available.`
+            : `Are you sure you want to activate "${toggleDialog.provider?.name}"? It will become available.`
+        }
+        confirmLabel={
+          toggleDialog.provider?.isActive ? "Deactivate" : "Activate"
+        }
+        cancelLabel="Cancel"
+        confirmVariant="danger"
+        icon={
+          toggleDialog.provider?.isActive ? (
+            <PowerOff className="h-5 w-5" />
+          ) : (
+            <Power className="h-5 w-5" />
+          )
+        }
       />
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, UserX, UserCheck, Loader2 } from "lucide-react";
+import { Plus, Search, Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import {
@@ -10,6 +10,7 @@ import {
   Input,
   Badge,
   Skeleton,
+  Switch,
   ActionConfirmDialog,
 } from "@creator-hub/ui";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -173,51 +174,23 @@ export default function UsersPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge
-                      variant={user.isActive ? "secondary" : "outline"}
-                      size="sm"
-                    >
-                      {user.isActive ? "Active" : "Inactive"}
-                    </Badge>
+                    <Switch
+                      checked={user.isActive}
+                      onCheckedChange={() => openToggleDialog(user)}
+                    />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-3">
-                      <Link href={`/users/${user.id}/edit`}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          aria-label={`Edit ${user.name || user.email}`}
-                          className="min-w-[80px]"
-                        >
-                          <Pencil className="h-4 w-4" />
-                          <span className="hidden sm:inline">Edit</span>
-                        </Button>
-                      </Link>
+                    <Link href={`/users/${user.id}/edit`}>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => openToggleDialog(user)}
-                        aria-label={
-                          user.isActive
-                            ? `Deactivate ${user.name || user.email}`
-                            : `Activate ${user.name || user.email}`
-                        }
-                        className={`min-w-[100px] ${
-                          user.isActive
-                            ? "border-error text-error hover:bg-error/10"
-                            : ""
-                        }`}
+                        aria-label={`Edit ${user.name || user.email}`}
+                        className="min-w-[80px]"
                       >
-                        {user.isActive ? (
-                          <UserX className="h-4 w-4" />
-                        ) : (
-                          <UserCheck className="h-4 w-4" />
-                        )}
-                        <span className="hidden sm:inline">
-                          {user.isActive ? "Deactivate" : "Activate"}
-                        </span>
+                        <Pencil className="h-4 w-4" />
+                        <span className="hidden sm:inline">Edit</span>
                       </Button>
-                    </div>
+                    </Link>
                   </td>
                 </tr>
               ))

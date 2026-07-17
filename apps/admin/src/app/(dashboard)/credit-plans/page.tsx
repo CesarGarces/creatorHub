@@ -5,8 +5,7 @@ import { useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Pencil, Trash2, Plus, ArrowUpDown } from "lucide-react";
-import { ActionConfirmDialog } from "@creator-hub/ui";
-import { Toggle } from "@/components/ui/toggle";
+import { ActionConfirmDialog, Switch } from "@creator-hub/ui";
 
 interface CreditPlan {
   id: string;
@@ -370,7 +369,10 @@ function CreditPlanForm({
           />
         </div>
         <div className="flex items-end pb-1">
-          <Toggle checked={isActive} onChange={setIsActive} label="Active" />
+          <div className="flex items-center gap-3">
+            <Switch checked={isActive} onCheckedChange={setIsActive} />
+            <span className="text-sm text-text-muted">Active</span>
+          </div>
         </div>
       </div>
 

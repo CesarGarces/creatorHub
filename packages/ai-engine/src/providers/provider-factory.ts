@@ -6,24 +6,24 @@ import { StabilityAIProvider } from "./stability-ai.provider";
 import { FluxProvider } from "./flux.provider";
 import { SiliconFlowProvider } from "./siliconflow.provider";
 import { SiliconFlowVideoProvider } from "./siliconflow-video.provider";
-import { ZImageTurboProvider } from "./z-image-turbo.provider";
-import {
-  DeepSeekV4FlashProvider,
-  DeepSeekV4ProProvider,
-} from "./deepseek-v4.provider";
-import { GLM5Provider } from "./glm5.provider";
 import { MockImageProvider } from "./mock-image.provider";
+import { OpenRouterProvider } from "./openrouter.provider";
 import { Logger } from "@creator-hub/shared-utils";
 import type { AIProviderInterface } from "./provider.interface";
+import { GatewayFactory } from "../gateways/gateway-factory";
 
 @Injectable()
 export class ProviderFactory implements OnModuleInit {
   private logger = new Logger("ProviderFactory");
 
-  constructor(private registry: ProviderRegistry) {}
+  constructor(
+    private registry: ProviderRegistry,
+    private gatewayFactory: GatewayFactory,
+  ) {}
 
   onModuleInit() {
     this.registerBuiltInProviders();
+    this.registerOpenRouterProvider();
   }
 
   private registerBuiltInProviders() {
@@ -34,10 +34,6 @@ export class ProviderFactory implements OnModuleInit {
       new FluxProvider(),
       new SiliconFlowProvider(),
       new SiliconFlowVideoProvider(),
-      new ZImageTurboProvider(),
-      new DeepSeekV4FlashProvider(),
-      new DeepSeekV4ProProvider(),
-      new GLM5Provider(),
     ];
 
     // In development without SiliconFlow key, register mock as fallback
@@ -57,6 +53,23 @@ export class ProviderFactory implements OnModuleInit {
           `Provider registered: ${provider.name} (tier: ${provider.tier || "pro"})`,
         );
       }
+    }
+  }
+
+  private registerOpenRouterProvider() {
+    // Register OpenRouter provider if gateway is available
+    const openRouterGateway =
+      this.gatewayFactory.getGatewayByType("openrouter");
+    if (openRouterGateway) {
+      const openRouterProvider = new OpenRouterProvider(openRouterGateway);
+      this.registry.register(openRouterProvider);
+      this.logger.info(
+        "Provider registered: openrouter (tier: pro) - Gateway-based provider for 50+ models",
+      );
+    } else {
+      this.logger.warn(
+        "OpenRouter provider skipped: OPENROUTER_API_KEY not configured",
+      );
     }
   }
 }

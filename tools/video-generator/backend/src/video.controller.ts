@@ -7,7 +7,7 @@ import {
   Query,
   UseGuards,
   BadRequestException,
-  InternalServerErrorException,
+  HttpException,
 } from "@nestjs/common";
 import { JwtAuthGuard, CurrentUser } from "@creator-hub/auth";
 import { VideoService } from "./video.service";
@@ -43,11 +43,12 @@ export class VideoController {
       });
       return { success: true, data: result };
     } catch (error) {
-      const message = (error as Error).message || "Video generation failed";
-      if (message.includes("Insufficient credits")) {
-        throw new BadRequestException(message);
+      // Re-throw NestJS exceptions as-is
+      if (error instanceof HttpException) {
+        throw error;
       }
-      throw new InternalServerErrorException(message);
+      const message = (error as Error).message || "Video generation failed";
+      throw new BadRequestException(message);
     }
   }
 

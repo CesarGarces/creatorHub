@@ -18,6 +18,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { LiquidEtherBackground } from "@/components/animations";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
 import { useToolQueryParams } from "@/hooks/use-tool-query-params";
+import { ProviderSelect } from "@/components/provider-select";
 
 const planLabels: Record<
   string,
@@ -51,17 +52,6 @@ const LANGUAGES = [
   { code: "sv", label: "Swedish" },
 ];
 
-type ProviderFromApi = {
-  id: string;
-  name: string;
-  displayName: string;
-  tier: "free" | "pro";
-  costPerCredit: number;
-  model: string;
-  supportedTasks: string[];
-  modes?: string[];
-};
-
 export default function ContentTranslatorPage() {
   const router = useRouter();
   const {
@@ -92,18 +82,14 @@ export default function ContentTranslatorPage() {
     reset,
   } = useTranslatorStore();
 
-  const [providers, setProviders] = useState<ProviderFromApi[]>([]);
-  const [providersLoading, setProvidersLoading] = useState(true);
   const [isLangOpen, setIsLangOpen] = useState(false);
-  const [isProviderOpen, setIsProviderOpen] = useState(false);
+  const [selectedModelCost, setSelectedModelCost] = useState<number>(0);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showNewDictationConfirm, setShowNewDictationConfirm] = useState(false);
 
   const langDropdownRef = useRef<HTMLDivElement>(null);
-  const providerDropdownRef = useRef<HTMLDivElement>(null);
 
   const isProcessing = status === "GENERATING" || status === "REVEALING";
-  const selectedProvider = providers.find((p) => p.id === provider);
   const selectedLanguage = LANGUAGES.find((l) => l.code === targetLanguage);
 
   const displayText = inputText + (liveTranscript ? " " + liveTranscript : "");
@@ -217,12 +203,6 @@ export default function ContentTranslatorPage() {
       ) {
         setIsLangOpen(false);
       }
-      if (
-        providerDropdownRef.current &&
-        !providerDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsProviderOpen(false);
-      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -239,33 +219,6 @@ export default function ContentTranslatorPage() {
       setShowUpgradeModal(true);
     }
   }, [creditsHydrated, creditsLoading, balance, plan, status]);
-
-  useEffect(() => {
-    api
-      .get<ProviderFromApi[]>("/ai/providers")
-      .then((list) => {
-        if (Array.isArray(list) && list.length > 0) {
-          const translatorProviders = list.filter(
-            (p) =>
-              p.modes?.includes("translation") ||
-              p.supportedTasks?.includes("translator"),
-          );
-          setProviders(translatorProviders);
-
-          const firstProvider = translatorProviders[0];
-          const validIds = new Set(translatorProviders.map((p) => p.id));
-          if (firstProvider && !validIds.has(provider)) {
-            setProvider(firstProvider.id);
-          }
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to load providers", err);
-      })
-      .finally(() => {
-        setProvidersLoading(false);
-      });
-  }, []);
 
   const translateMutation = useMutation({
     mutationFn: async () => {
@@ -317,9 +270,9 @@ export default function ContentTranslatorPage() {
         ]}
         actions={
           <div className="flex items-center gap-2">
-            {selectedProvider && (
+            {selectedModelCost > 0 && (
               <Badge variant="primary" size="sm">
-                {selectedProvider.costPerCredit} credits
+                {selectedModelCost} credits
               </Badge>
             )}
             {plan && planLabels[plan] && (
@@ -464,130 +417,15 @@ export default function ContentTranslatorPage() {
             )}
           </div>
 
-          <div className="relative" ref={providerDropdownRef}>
-            {providersLoading ? (
-              <div className="h-11 w-52 rounded-lg bg-surface-elevated animate-pulse" />
-            ) : providers.length === 0 ? (
-              <p className="text-xs text-text-dim">
-                No text providers available.
-              </p>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => !isProcessing && setIsProviderOpen((v) => !v)}
-                  disabled={isProcessing}
-                  aria-haspopup="listbox"
-                  aria-expanded={isProviderOpen}
-                  className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[220px] ${
-                    isProviderOpen
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-surface-elevated text-text hover:border-primary/50 hover:bg-primary/5"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="truncate">
-                      {selectedProvider?.displayName ||
-                        selectedProvider?.name ||
-                        "AI Provider"}
-                    </span>
-                    {selectedProvider?.tier === "pro" && (
-                      <Badge variant="premium" size="sm">
-                        PRO
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-                    {selectedProvider && (
-                      <span className="text-xs text-text-muted tabular-nums">
-                        {selectedProvider.costPerCredit} cr
-                      </span>
-                    )}
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className={`ml-auto transition-transform duration-200 ${
-                        isProviderOpen ? "rotate-180" : ""
-                      }`}
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </div>
-                </button>
-
-                {isProviderOpen && (
-                  <div
-                    className="absolute z-30 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-border bg-surface-elevated shadow-xl animate-fade-in"
-                    role="listbox"
-                    aria-label="AI Model"
-                  >
-                    {providers.map((p) => {
-                      const isSelected = provider === p.id;
-                      const isDisabled =
-                        isProcessing || (p.tier === "pro" && plan === "FREE");
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          disabled={isDisabled}
-                          onClick={() => {
-                            if (isDisabled) return;
-                            setProvider(p.id);
-                            setIsProviderOpen(false);
-                          }}
-                          className={`flex w-full items-center justify-between px-3 py-3 text-sm text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                            isSelected
-                              ? "bg-primary/10 text-primary"
-                              : "hover:bg-surface text-text"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="font-medium truncate">
-                              {p.displayName || p.name}
-                            </span>
-                            {p.tier === "pro" && (
-                              <Badge variant="premium" size="sm">
-                                PRO
-                              </Badge>
-                            )}
-                            {isDisabled && p.tier === "pro" && (
-                              <span className="text-[10px] text-text-dim whitespace-nowrap">
-                                (upgrade)
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                            <span className="text-xs text-text-muted tabular-nums">
-                              {p.costPerCredit} cr
-                            </span>
-                            {isSelected && (
-                              <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                className="text-primary"
-                              >
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          <ProviderSelect
+            toolModes={["translation"]}
+            value={provider}
+            onChange={(_modelId, model) => {
+              setProvider(model.modelId);
+              setSelectedModelCost(model.creditCost);
+            }}
+            disabled={isProcessing}
+          />
 
           <div className="ml-auto flex items-center gap-2">
             <Button
@@ -596,7 +434,7 @@ export default function ContentTranslatorPage() {
               disabled={
                 !inputText.trim() ||
                 !creditsHydrated ||
-                balance < (selectedProvider?.costPerCredit ?? 1) ||
+                balance < (selectedModelCost || 1) ||
                 isProcessing
               }
               onClick={handleTranslate}
@@ -718,7 +556,7 @@ export default function ContentTranslatorPage() {
         </div>
 
         {creditsHydrated &&
-          balance < (selectedProvider?.costPerCredit ?? 1) &&
+          balance < (selectedModelCost || 1) &&
           status === "IDLE" && (
             <div className="relative z-10 px-6 py-2">
               <p className="text-xs text-error text-center">
