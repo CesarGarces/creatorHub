@@ -1,35 +1,34 @@
 "use client";
 
 import * as React from "react";
+import * as SwitchPrimitives from "@radix-ui/react-switch";
+import { cn } from "../lib/utils";
 
 const Switch = React.forwardRef<
-  HTMLInputElement,
-  {
-    checked?: boolean;
-    onCheckedChange?: (checked: boolean) => void;
-    disabled?: boolean;
-    name?: string;
-    className?: string;
-  }
->(({ checked = false, onCheckedChange, disabled, name, className }, ref) => {
+  React.ComponentRef<typeof SwitchPrimitives.Root>,
+  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
+>(({ className, checked, onCheckedChange, ...props }, ref) => {
   return (
-    <label
-      className={`relative inline-flex cursor-pointer items-center ${disabled ? "cursor-not-allowed opacity-50" : ""} ${className ?? ""}`}
+    <SwitchPrimitives.Root
+      className={cn(
+        "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00bbd9] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0f19] disabled:cursor-not-allowed disabled:opacity-50",
+        checked ? "bg-[#00bbd9]" : "bg-[#1e293b]",
+        className,
+      )}
+      checked={checked}
+      onCheckedChange={onCheckedChange}
+      {...props}
+      ref={ref}
     >
-      <input
-        ref={ref}
-        type="checkbox"
-        name={name}
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onCheckedChange?.(e.target.checked)}
-        className="peer sr-only"
+      <SwitchPrimitives.Thumb
+        className={cn(
+          "pointer-events-none block h-5 w-5 rounded-full bg-[#f1f5f9] shadow-lg ring-0 transition-transform",
+          checked ? "translate-x-5" : "translate-x-0",
+        )}
       />
-      <div className="h-6 w-11 rounded-full bg-border transition-colors peer-checked:bg-primary" />
-      <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
-    </label>
+    </SwitchPrimitives.Root>
   );
 });
-Switch.displayName = "Switch";
+Switch.displayName = SwitchPrimitives.Root.displayName;
 
 export { Switch };

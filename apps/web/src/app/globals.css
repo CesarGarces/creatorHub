@@ -1,15 +1,19 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
+@source "../../../../packages/ui/src/**/*.tsx";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --color-bg: #0b0f19;
+  --color-background: #0b0f19;
   --color-surface: #121826;
   --color-surface-elevated: #1a2236;
   --color-border: #1e293b;
   --color-border-subtle: #162032;
+  --color-input: #1e293b;
+  --color-ring: #00bbd9;
 
   --color-primary: #00bbd9;
   --color-primary-hover: #009fb8;
