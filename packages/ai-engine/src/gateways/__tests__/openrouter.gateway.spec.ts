@@ -139,18 +139,6 @@ describe("OpenRouterGateway", () => {
 
   describe("imageGeneration", () => {
     it("should generate image via images endpoint", async () => {
-      const modelsResponse = {
-        data: [
-          {
-            id: "openai/gpt-image-1-mini",
-            name: "GPT Image 1 Mini",
-            pricing: { prompt: "0", completion: "0", image: "0.02" },
-            context_length: 4096,
-            architecture: { modality: "image" },
-          },
-        ],
-      };
-
       const imageResponse = {
         id: "img-123",
         data: [
@@ -164,21 +152,9 @@ describe("OpenRouterGateway", () => {
         },
       };
 
-      let callCount = 0;
-      global.fetch = jest.fn().mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) {
-          // First call is listModels
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(modelsResponse),
-          });
-        }
-        // Second call is image generation
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(imageResponse),
-        });
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(imageResponse),
       });
 
       const result = await gateway.imageGeneration({
@@ -189,6 +165,11 @@ describe("OpenRouterGateway", () => {
       });
 
       expect(result.imageUrl).toBe("https://example.com/image.png");
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/images/generations"),
+        expect.any(Object),
+      );
     });
   });
 

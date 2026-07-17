@@ -506,7 +506,7 @@ export class SiliconFlowGateway implements AIGatewayInterface {
       this.logger.info(
         `Fetched ${allModels.length} models from SiliconFlow API`,
       );
-      return allModels;
+      return allModels.length > 0 ? allModels : [...this.knownModels];
     } catch (error) {
       this.logger.warn(
         "Failed to fetch models from SiliconFlow API, returning known models",
