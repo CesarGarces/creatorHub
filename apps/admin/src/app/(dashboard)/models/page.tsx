@@ -9,8 +9,6 @@ import {
   PowerOff,
   Settings2,
   BrainCircuit,
-  Check,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -45,12 +43,6 @@ const PROVIDERS = [
   { value: "siliconflow", label: "SiliconFlow" },
 ];
 
-const taskTypeColor: Record<string, string> = {
-  "image-generation": "bg-purple-100 text-purple-700",
-  "text-generation": "bg-blue-100 text-blue-700",
-  "video-generation": "bg-orange-100 text-orange-700",
-};
-
 export default function ModelsPage() {
   // Data
   const [models, setModels] = useState<ModelMetadata[]>([]);
@@ -84,14 +76,6 @@ export default function ModelsPage() {
     isOpen: boolean;
     model: ModelMetadata | null;
   }>({ isOpen: false, model: null });
-
-  // Inline editing
-  const [editingCell, setEditingCell] = useState<{
-    modelId: string;
-    field: "tier" | "taskType";
-  } | null>(null);
-  const [editValue, setEditValue] = useState("");
-  const [saving, setSaving] = useState(false);
 
   // ──────────────────────────────────────────────
   // Fetching
@@ -238,52 +222,6 @@ export default function ModelsPage() {
       setToggleDialog({ isOpen: false, model: null });
     }
   };
-
-  // ──────────────────────────────────────────────
-  // Inline editing (tier, taskType)
-  // ──────────────────────────────────────────────
-
-  const startEditing = (
-    modelId: string,
-    field: "tier" | "taskType",
-    currentValue: string,
-  ) => {
-    setEditingCell({ modelId, field });
-    setEditValue(currentValue);
-  };
-
-  const cancelEditing = () => {
-    setEditingCell(null);
-    setEditValue("");
-  };
-
-  const saveEditing = async () => {
-    if (!editingCell) return;
-    setSaving(true);
-    try {
-      await api.put(`/admin/models/${editingCell.modelId}/config`, {
-        [editingCell.field]: editValue,
-      });
-      setModels((prev) =>
-        prev.map((m) =>
-          m.id === editingCell.modelId
-            ? { ...m, [editingCell.field]: editValue }
-            : m,
-        ),
-      );
-      toast.success(
-        `${editingCell.field === "tier" ? "Tier" : "Task type"} updated`,
-      );
-      cancelEditing();
-    } catch {
-      toast.error("Failed to update");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const isEditing = (modelId: string, field: string) =>
-    editingCell?.modelId === modelId && editingCell?.field === field;
 
   return (
     <div className="space-y-6">
@@ -487,91 +425,30 @@ export default function ModelsPage() {
                     </Badge>
                   </td>
 
-                  {/* Task Type — clickable to edit inline */}
+                  {/* Task Type */}
                   <td className="px-4 py-3">
-                    {isEditing(model.id, "taskType") ? (
-                      <div className="flex items-center gap-1">
-                        <select
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="rounded border border-border bg-surface px-2 py-1 text-xs text-text outline-none focus:ring-1 focus:ring-primary"
-                        >
-                          <option value="image-generation">Image</option>
-                          <option value="text-generation">Text</option>
-                          <option value="video-generation">Video</option>
-                        </select>
-                        <button
-                          type="button"
-                          onClick={saveEditing}
-                          disabled={saving}
-                          className="rounded p-0.5 text-emerald-600 hover:bg-emerald-50"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={cancelEditing}
-                          className="rounded p-0.5 text-text-dim hover:bg-surface-elevated"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          startEditing(model.id, "taskType", model.taskType)
-                        }
-                        className={`cursor-pointer rounded px-2 py-0.5 text-xs font-medium hover:opacity-80 ${taskTypeColor[model.taskType] ?? ""}`}
-                      >
-                        {model.taskType.replace("-generation", "")}
-                      </button>
-                    )}
+                    <Badge
+                      variant={
+                        model.taskType === "image-generation"
+                          ? "primary"
+                          : model.taskType === "text-generation"
+                            ? "secondary"
+                            : "accent"
+                      }
+                      size="sm"
+                    >
+                      {model.taskType.replace("-generation", "")}
+                    </Badge>
                   </td>
 
-                  {/* Tier — clickable to edit inline */}
+                  {/* Tier */}
                   <td className="px-4 py-3">
-                    {isEditing(model.id, "tier") ? (
-                      <div className="flex items-center gap-1">
-                        <select
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="rounded border border-border bg-surface px-2 py-1 text-xs text-text outline-none focus:ring-1 focus:ring-primary"
-                        >
-                          <option value="FREE">Free</option>
-                          <option value="PRO">Pro</option>
-                        </select>
-                        <button
-                          type="button"
-                          onClick={saveEditing}
-                          disabled={saving}
-                          className="rounded p-0.5 text-emerald-600 hover:bg-emerald-50"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={cancelEditing}
-                          className="rounded p-0.5 text-text-dim hover:bg-surface-elevated"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          startEditing(model.id, "tier", model.tier)
-                        }
-                        className={`cursor-pointer rounded px-2 py-0.5 text-xs font-medium hover:opacity-80 ${
-                          model.tier === "PRO"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-sky-100 text-sky-700"
-                        }`}
-                      >
-                        {model.tier}
-                      </button>
-                    )}
+                    <Badge
+                      variant={model.tier === "PRO" ? "premium" : "free"}
+                      size="sm"
+                    >
+                      {model.tier}
+                    </Badge>
                   </td>
 
                   <td className="px-4 py-3 text-right font-mono text-text">
