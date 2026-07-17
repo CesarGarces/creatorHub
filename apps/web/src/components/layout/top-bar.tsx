@@ -6,7 +6,6 @@ import { Bell, Check, Trash2 } from "lucide-react";
 import {
   cn,
   CreditDisplay,
-  Avatar,
   Popover,
   PopoverTrigger,
   PopoverContent,
@@ -31,7 +30,7 @@ export function TopBar({
   className,
 }: TopBarProps) {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const {
     balance,
     isLoading: creditsLoading,
@@ -103,11 +102,6 @@ export function TopBar({
       createdAt: n.createdAt,
     });
   });
-
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
 
   const handleMarkAllRead = async () => {
     await markAllAsRead();
@@ -239,16 +233,6 @@ export function TopBar({
             )}
           </PopoverContent>
         </Popover>
-        <div className="flex items-center gap-2">
-          <Avatar name={user?.email || "User"} size="sm" />
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="text-xs text-text-dim hover:text-error transition-colors"
-          >
-            Logout
-          </button>
-        </div>
       </div>
     </header>
   );
