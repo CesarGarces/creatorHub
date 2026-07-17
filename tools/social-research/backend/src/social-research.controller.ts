@@ -28,12 +28,13 @@ export class SocialResearchController {
   async createSession(
     @CurrentUser("id") userId: string,
     @Param("toolId") toolId: string,
-    @Body() dto: { sessionId?: string },
+    @Body() dto: { sessionId?: string; title?: string },
   ) {
     return this.researchService.getOrCreateSession(
       userId,
       toolId,
       dto.sessionId,
+      dto.title,
     );
   }
 

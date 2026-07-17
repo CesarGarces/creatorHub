@@ -73,6 +73,7 @@ export class SocialResearchService {
     userId: string,
     toolId: string,
     sessionId?: string,
+    title?: string,
   ): Promise<ResearchSession> {
     const p = getPrisma();
 
@@ -86,14 +87,23 @@ export class SocialResearchService {
         },
       });
 
-      if (existing) return mapSession(existing);
+      if (existing) {
+        if (!existing.title && title?.trim()) {
+          await p.socialResearchSession.update({
+            where: { id: sessionId },
+            data: { title: title.trim() },
+          });
+          existing.title = title.trim();
+        }
+        return mapSession(existing);
+      }
     }
 
     const session = await p.socialResearchSession.create({
       data: {
         userId,
         toolId,
-        title: null,
+        title: title?.trim() || null,
       },
       include: {
         messages: {

@@ -66,6 +66,7 @@ export class XSearchTrendsService {
     userId: string,
     options: SearchOptions,
     sessionId?: string,
+    title?: string,
   ): Promise<SearchResult & { sessionId: string }> {
     if (!options.topic?.trim()) {
       throw new BadRequestException("Topic is required");
@@ -75,6 +76,7 @@ export class XSearchTrendsService {
       userId,
       "x-search-trends",
       sessionId,
+      title,
     );
 
     await this.socialResearch.addMessage(session.id, {

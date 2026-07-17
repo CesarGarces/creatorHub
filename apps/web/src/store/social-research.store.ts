@@ -81,12 +81,13 @@ interface SocialResearchState {
 
   fetchSessions: (toolId: string) => Promise<void>;
   selectSession: (sessionId: string) => Promise<void>;
-  createSession: (toolId: string) => Promise<ResearchSession>;
+  createSession: (toolId: string, title?: string) => Promise<ResearchSession>;
   deleteSession: (sessionId: string) => Promise<void>;
   updateSessionTitle: (sessionId: string, title: string) => Promise<void>;
   search: (
     toolId: string,
     params: Record<string, any>,
+    title?: string,
   ) => Promise<ResearchMessage>;
   clearActiveSession: () => void;
 }
@@ -123,11 +124,11 @@ export const useSocialResearchStore = create<SocialResearchState>()(
       }
     },
 
-    createSession: async (toolId: string) => {
+    createSession: async (toolId: string, title?: string) => {
       try {
         const session = await api.post<ResearchSession>(
           `/tools/social-research/sessions/${toolId}`,
-          {},
+          { title },
         );
         set((state) => ({
           sessions: [session, ...state.sessions],
@@ -172,7 +173,11 @@ export const useSocialResearchStore = create<SocialResearchState>()(
       }
     },
 
-    search: async (toolId: string, params: Record<string, any>) => {
+    search: async (
+      toolId: string,
+      params: Record<string, any>,
+      title?: string,
+    ) => {
       const { activeSession } = get();
       set({ isSearching: true, error: null });
 
@@ -199,6 +204,7 @@ export const useSocialResearchStore = create<SocialResearchState>()(
         }>(`/tools/${toolId}/search`, {
           ...params,
           sessionId: activeSession?.id,
+          title,
         });
 
         const result = response.data;

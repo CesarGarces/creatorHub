@@ -131,14 +131,19 @@ export default function XSearchTrendsPage() {
     committedTextRef.current = "";
     setInput("");
     try {
+      const title = text.slice(0, 50);
       if (!activeSession) {
-        await createSession("x-search-trends");
+        await createSession("x-search-trends", title);
       }
-      await search("x-search-trends", {
-        topic: text,
-        maxTweets: 50,
-        timeframe: "24h",
-      });
+      await search(
+        "x-search-trends",
+        {
+          topic: text,
+          maxTweets: 50,
+          timeframe: "24h",
+        },
+        title,
+      );
     } catch (error) {
       console.error("Search failed:", error);
     }

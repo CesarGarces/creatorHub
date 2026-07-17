@@ -32,6 +32,7 @@ export class XSearchTrendsController {
       includeReplies?: boolean;
       sortBy?: string;
       sessionId?: string;
+      title?: string;
     },
   ): Promise<{ success: boolean; data: any }> {
     if (!dto.topic?.trim()) {
@@ -50,6 +51,7 @@ export class XSearchTrendsController {
           sortBy: dto.sortBy,
         },
         dto.sessionId,
+        dto.title,
       );
 
       return { success: true, data: result };
