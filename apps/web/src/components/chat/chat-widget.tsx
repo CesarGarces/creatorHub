@@ -10,6 +10,7 @@ import { UpgradeModal } from "@/components/modals/upgrade-modal";
 import { TweetActionCard } from "@/components/chat/tweet-action-card";
 import { ProviderSelect } from "@/components/provider-select";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { VoiceButton, useVoiceButton } from "@/components/voice-button";
 
 interface ParsedMessage {
   textBefore: string;
@@ -457,6 +458,23 @@ function ChatInput() {
   const [input, setInput] = useState("");
   const { sendMessage, isStreaming } = useChatStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const committedTextRef = useRef("");
+
+  const voice = useVoiceButton({
+    language: "en",
+    onPartialTranscript: (text, isFinal) => {
+      if (isFinal) {
+        // Utterance finalized — commit it
+        committedTextRef.current =
+          (committedTextRef.current ? committedTextRef.current + " " : "") +
+          text;
+        setInput(committedTextRef.current);
+      } else {
+        // Interim — show committed + current partial
+        setInput(committedTextRef.current + text);
+      }
+    },
+  });
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -469,6 +487,7 @@ function ChatInput() {
     if (!input.trim() || isStreaming) return;
     sendMessage(input.trim());
     setInput("");
+    committedTextRef.current = "";
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -484,7 +503,10 @@ function ChatInput() {
         <textarea
           ref={textareaRef}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value);
+            committedTextRef.current = e.target.value;
+          }}
           onKeyDown={handleKeyDown}
           placeholder="Ask me anything..."
           aria-label="Chat message"
@@ -492,6 +514,17 @@ function ChatInput() {
           className="flex-1 resize-none rounded-xl border border-border bg-surface-elevated px-3.5 py-2.5 text-[13px] text-text placeholder:text-text-dim outline-none focus:border-primary/40 transition-colors"
           disabled={isStreaming}
         />
+        {voice.isSupported && (
+          <VoiceButton
+            variant="icon"
+            isListening={voice.isListening}
+            isSupported={voice.isSupported}
+            onToggle={voice.toggleMic}
+            disabled={isStreaming}
+            showCredits={false}
+            className="h-10 w-10"
+          />
+        )}
         <button
           type="button"
           onClick={handleSubmit}

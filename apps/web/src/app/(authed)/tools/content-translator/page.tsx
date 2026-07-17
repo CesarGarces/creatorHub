@@ -12,7 +12,7 @@ import {
 } from "@creator-hub/ui";
 import { useCreditsStore } from "@/store/credits.store";
 import { useTranslatorStore } from "@/store/translator.store";
-import { useLiveSpeechToText } from "@/hooks/use-live-speech-to-text";
+import { VoiceButton, useVoiceButton } from "@/components/voice-button";
 import api from "@/lib/api";
 import { TopBar } from "@/components/layout/top-bar";
 import { LiquidEtherBackground } from "@/components/animations";
@@ -123,39 +123,31 @@ export default function ContentTranslatorPage() {
     [setListening],
   );
 
-  const { startListening, stopListening, isSupported } = useLiveSpeechToText({
+  const {
+    toggleMic: voiceToggleMic,
+    isSupported,
+    startListening,
+  } = useVoiceButton({
     language: targetLanguage,
     onPartialTranscript: handlePartialTranscript,
     onUtteranceEnd: handleUtteranceEnd,
     onResult: handleSTTResult,
     onError: handleSTTError,
+    externalIsListening: isListening,
+    setExternalListening: setListening,
   });
-
-  const playStartSound = () => {
-    const audio = new Audio("/Voice_record_start.mp3");
-    audio.play().catch(() => {});
-  };
-
-  const playEndSound = () => {
-    const audio = new Audio("/Voice_record_end.mp3");
-    audio.play().catch(() => {});
-  };
 
   const toggleMic = useCallback(async () => {
     if (isListening) {
-      playEndSound();
-      setListening(false);
-      stopListening();
+      voiceToggleMic();
     } else {
       if (inputText.trim()) {
         setShowNewDictationConfirm(true);
         return;
       }
-      playStartSound();
-      setListening(true);
-      await startListening();
+      await voiceToggleMic();
     }
-  }, [isListening, inputText, stopListening, setListening, startListening]);
+  }, [isListening, inputText, voiceToggleMic]);
 
   const handleNewDictationConfirm = useCallback(async () => {
     setShowNewDictationConfirm(false);
@@ -167,7 +159,6 @@ export default function ContentTranslatorPage() {
       status: "IDLE",
       error: null,
     });
-    playStartSound();
     setListening(true);
     await startListening();
   }, [setListening, startListening]);
@@ -291,52 +282,13 @@ export default function ContentTranslatorPage() {
         <div className="relative z-30 flex items-center gap-3 px-6 py-3 border-b border-border bg-bg/80 backdrop-blur-sm flex-shrink-0">
           {/* Mic button — first in the bar */}
           {isSupported && (
-            <button
-              type="button"
-              onClick={toggleMic}
+            <VoiceButton
+              variant="icon-text"
+              isListening={isListening}
+              isSupported={isSupported}
+              onToggle={toggleMic}
               disabled={isProcessing}
-              className={`relative flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                isListening
-                  ? "border-red-500/50 bg-red-500/15 text-red-400"
-                  : "border-border bg-surface-elevated text-text-muted hover:text-text hover:border-primary/50 hover:bg-primary/5"
-              }`}
-              title={isListening ? "Stop recording" : "Start voice input"}
-            >
-              {isListening ? (
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <rect x="6" y="6" width="12" height="12" rx="2" />
-                </svg>
-              ) : (
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                  <line x1="12" x2="12" y1="19" y2="22" />
-                </svg>
-              )}
-              <span className="text-xs">
-                {isListening ? "Listening..." : "Voice"}
-              </span>
-              {isListening && (
-                <>
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
-                  <span className="text-[10px] text-red-400/80 ml-0.5">
-                    +1 cr/min
-                  </span>
-                </>
-              )}
-            </button>
+            />
           )}
 
           <div className="relative" ref={langDropdownRef}>
