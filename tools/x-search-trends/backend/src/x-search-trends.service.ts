@@ -11,14 +11,11 @@ import {
 import { SocialService } from "./services/social.service";
 import { OAuthEncryptionService } from "./services/oauth-encryption.service";
 import {
-  TwitterCrawlerService,
-  type CrawledTweet,
-} from "./services/twitter-crawler.service";
-import {
   TweetAnalysisService,
   type FilteredTweet,
   type TweetAnalysis,
 } from "./services/tweet-analysis.service";
+import { ApifyService } from "./services/apify.service";
 
 const SEARCH_CREDIT_COST = 15;
 const AI_ANALYSIS_CREDIT_COST = 10;
@@ -52,7 +49,7 @@ export class XSearchTrendsService {
 
   constructor(
     private xApiService: XApiService,
-    private twitterCrawler: TwitterCrawlerService,
+    private apifyService: ApifyService,
     private socialService: SocialService,
     private encryptionService: OAuthEncryptionService,
     private creditService: CreditService,
@@ -132,6 +129,8 @@ export class XSearchTrendsService {
     let allTweets: SearchResultTweet[] = [];
     let usedFallback = false;
 
+    let tokenExpired = false;
+
     for (const query of queries) {
       if (allTweets.length >= 20) break;
 
@@ -179,6 +178,8 @@ export class XSearchTrendsService {
           }
         }
 
+        this.logger.info("Searching X API", { query: searchQuery, startTime });
+
         const searchResult = await this.xApiService.searchTweets(
           accessToken,
           searchQuery,
@@ -187,6 +188,11 @@ export class XSearchTrendsService {
             startTime,
           },
         );
+
+        this.logger.info("X API returned results", {
+          query: searchQuery,
+          count: searchResult.tweets.length,
+        });
 
         allTweets.push(...searchResult.tweets);
       } catch (error) {
@@ -198,9 +204,9 @@ export class XSearchTrendsService {
           message.includes("Unauthorized") ||
           message.includes("authorization expired")
         ) {
-          throw new BadRequestException(
-            "Your X account connection has expired. Please disconnect and reconnect your X account in Settings.",
-          );
+          tokenExpired = true;
+          this.logger.error("X API token expired", { query, error: message });
+          break;
         }
 
         this.logger.warn("X API search failed for query", {
@@ -208,6 +214,12 @@ export class XSearchTrendsService {
           error: message,
         });
       }
+    }
+
+    if (tokenExpired && allTweets.length === 0) {
+      throw new BadRequestException(
+        "Your X account connection has expired. Please disconnect and reconnect your X account in Settings.",
+      );
     }
 
     // Deduplicate tweets by ID
@@ -218,25 +230,23 @@ export class XSearchTrendsService {
       return true;
     });
 
-    // If no results from X API, try Crawlee as fallback
+    // If no results from X API, try Apify as fallback
     if (allTweets.length === 0) {
-      this.logger.info("X API returned 0 results, trying Crawlee fallback", {
+      this.logger.info("X API returned 0 results, trying Apify fallback", {
         userId,
         topic: options.topic,
       });
 
       usedFallback = true;
       try {
-        const crawledTweets = await this.twitterCrawler.searchTweets(
-          options.topic,
-          {
-            maxResults: 100,
-            timeframe: options.timeframe,
-            language: options.language,
-          },
-        );
+        const apifyTweets = await this.apifyService.searchTweets({
+          topic: queries[0] || options.topic,
+          maxTweets: 100,
+          timeframe: options.timeframe,
+          language: options.language,
+        });
 
-        allTweets = crawledTweets.map((t) => ({
+        allTweets = apifyTweets.map((t) => ({
           id: t.id,
           text: t.text,
           createdAt: t.createdAt,
@@ -246,9 +256,13 @@ export class XSearchTrendsService {
           urls: t.urls,
           media: t.media,
         }));
-      } catch (crawlerError) {
-        this.logger.error("Crawlee fallback failed", {
-          error: (crawlerError as Error).message,
+
+        this.logger.info("Apify fallback returned results", {
+          count: allTweets.length,
+        });
+      } catch (apifyError) {
+        this.logger.error("Apify fallback failed", {
+          error: (apifyError as Error).message,
         });
       }
     }
@@ -354,17 +368,23 @@ export class XSearchTrendsService {
    */
   private async buildSearchQueries(topic: string): Promise<string[]> {
     try {
-      const prompt = `Convert this to a Twitter/X search query. Return ONLY the query words, nothing else.
+      const prompt = `Convert this user request into a short Twitter/X search query (max 5 words).
 
 User said: "${topic}"
 
-Example outputs:
-- "gaming"
-- "crypto"
-- "inteligencia artificial"
-- "startup funding"
+Rules:
+- Return ONLY the search keywords, nothing else
+- Remove conversational words like "research", "trending topics about", "on Twitter"
+- Extract the CORE topic only
+- If user writes in Spanish, keep Spanish keywords
 
-Return JSON: {"queries": ["query"]}`;
+Examples:
+- "Research trending topics about crypto on Twitter" → crypto
+- "What are people saying about AI today" → artificial intelligence
+- "Dame las tendencias de gaming" → gaming
+- "trends in startup funding" → startup funding
+
+Return ONLY valid JSON: {"queries": ["query"]}`;
 
       const response = await this.aiEngine.execute({
         taskType: "text-generation",
@@ -394,7 +414,48 @@ Return JSON: {"queries": ["query"]}`;
       });
     }
 
-    return [topic.substring(0, 30)];
+    // Fallback: extract core keywords from the topic
+    return [this.extractCoreTopic(topic)];
+  }
+
+  /**
+   * Extract core topic from user input by removing filler words
+   */
+  private extractCoreTopic(topic: string): string {
+    const fillerWords = [
+      "research",
+      "trending",
+      "topics",
+      "about",
+      "on",
+      "twitter",
+      "x",
+      "what",
+      "are",
+      "people",
+      "saying",
+      "tell",
+      "me",
+      "find",
+      "search",
+      "dame",
+      "las",
+      "tendencias",
+      "de",
+      "en",
+      "sobre",
+      "investigar",
+      "busca",
+      "noticias",
+      "novedades",
+      "informacion",
+    ];
+
+    const words = topic
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !fillerWords.includes(w));
+    return words.slice(0, 3).join(" ") || topic.substring(0, 30);
   }
 
   /**
@@ -678,9 +739,10 @@ Return ONLY valid JSON (no markdown, no explanation):
     output += `The search found ${originalCount} post${originalCount !== 1 ? "s" : ""} about "${topic}", but this isn't enough for a comprehensive trend analysis.\n\n`;
 
     output += `### Recommendations\n`;
-    output += `- Try broader search terms (e.g., "crypto" instead of "crypto news today")\n`;
+    output += `- Try simpler search terms (e.g., "crypto" instead of "research trending topics about crypto on Twitter")\n`;
     output += `- Check back later when more content is available\n`;
-    output += `- Try different timeframes (7d or 30d)\n\n`;
+    output += `- Try different timeframes (7d or 30d)\n`;
+    output += `- Verify your X account is connected in Settings\n\n`;
 
     // Still show what we found if anything
     if (tweets.length > 0) {

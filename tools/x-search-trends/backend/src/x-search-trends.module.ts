@@ -7,8 +7,8 @@ import { XSearchTrendsService } from "./x-search-trends.service";
 import { XSearchTrendsController } from "./x-search-trends.controller";
 import { SocialService } from "./services/social.service";
 import { OAuthEncryptionService } from "./services/oauth-encryption.service";
-import { TwitterCrawlerService } from "./services/twitter-crawler.service";
 import { TweetAnalysisService } from "./services/tweet-analysis.service";
+import { ApifyService } from "./services/apify.service";
 
 @Module({
   imports: [
@@ -22,8 +22,8 @@ import { TweetAnalysisService } from "./services/tweet-analysis.service";
     XSearchTrendsService,
     SocialService,
     OAuthEncryptionService,
-    TwitterCrawlerService,
     TweetAnalysisService,
+    ApifyService,
   ],
   exports: [XSearchTrendsService],
 })
