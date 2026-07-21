@@ -784,7 +784,7 @@ The platform includes full X (Twitter) integration with OAuth 2.0 PKCE authentic
 - **Theme Extraction** — DeFi, NFT, Bitcoin, Ethereum, AI, Regulation, Trading, Gaming
 - **AI Analysis** — Executive summary, key themes, key influencers (when >= 5 tweets available)
 - **Auto-Refresh Tokens** — Automatic token renewal when expired (~2 hour lifetime)
-- **Fallback Search** — Crawlee/Playwright backup when X API unavailable (requires >128MB RAM)
+- **Apify Fallback** — Backup search via Apify when X API returns no results
 
 ### X Integration Architecture
 
@@ -813,8 +813,8 @@ The platform includes full X (Twitter) integration with OAuth 2.0 PKCE authentic
 │                             │                                        │
 │                             ▼                                        │
 │                      ┌──────────────┐                                │
-│                      │  Token Auto  │                                │
-│                      │  Refresh     │                                │
+│                      │  Apify       │                                │
+│                      │  Fallback    │                                │
 │                      └──────────────┘                                │
 └──────────────────────────────────────────────────────────────────────┘
 ```
@@ -858,9 +858,9 @@ X_SOCIAL_ENCRYPTION_KEY=""  # 64-char hex key for AES-256-GCM
 # Frontend URL (for OAuth redirect)
 FRONTEND_URL="https://app.creatorhubplatform.com/"
 
-# Crawlee/Playwright (Optional - requires >128MB RAM)
-X_AUTH_TOKEN=""  # X session cookie for fallback search
-X_CT0=""         # X CSRF token for fallback search
+# Apify (Fallback search when X API returns 0 results)
+APIFY_API_TOKEN=""
+APIFY_TWITTER_ACTOR_ID="apidojo/twitter-scraper-lite"
 ```
 
 ### Database Tables

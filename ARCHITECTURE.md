@@ -1851,14 +1851,14 @@ User sends tweet request
 ├──────────────────────────────────────────────────────────────────────┤
 │                                                                      │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  │
-│  │  XApiService     │  │ TweetAnalysis    │  │ TwitterCrawler   │  │
-│  │  (Primary)       │  │ Service          │  │ Service (Fallback)│  │
+│  │  XApiService     │  │ TweetAnalysis    │  │ ApifyService     │  │
+│  │  (Primary)       │  │ Service          │  │ (Fallback)       │  │
 │  │                  │  │                  │  │                  │  │
-│  │ • searchTweets() │  │ • Spam filter    │  │ • Crawlee/       │  │
-│  │ • X API v2       │  │ • Authority score│  │   Playwright     │  │
-│  │ • Pay-as-you-go  │  │ • Sentiment      │  │ • Session cookies│  │
-│  └──────────────────┘  │ • Theme extract  │  └──────────────────┘  │
-│                        └──────────────────┘                         │
+│  │ • searchTweets() │  │ • Spam filter    │  │ • Apify API      │  │
+│  │ • X API v2       │  │ • Authority score│  │ • Auto-scaling   │  │
+│  │ • Auto-refresh   │  │ • Sentiment      │  │ • No cookies     │  │
+│  │   expired tokens │  │ • Theme extract  │  │   needed         │  │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘  │
 │                                                                      │
 │  ┌──────────────────┐  ┌──────────────────┐                         │
 │  │  AIEngineService │  │ SocialService    │                         │
@@ -1884,7 +1884,7 @@ User enters natural language (any language)
     │       │    │    Input: "tendencias de criptomonedas en español"
     │       │    │    Output: ["criptomonedas tendencias", "crypto trends"]
     │       │    │
-    │       │    └──► Returns: string[] (up to 3 queries)
+    │       │    └──► Returns: string[] (up to 2 queries)
     │       │
     │       ├──► [Query 1] XApiService.searchTweets(query, { maxResults: 50 })
     │       │    │
@@ -1898,10 +1898,10 @@ User enters natural language (any language)
     │       │
     │       ├──► [Fallback] If X API fails or 0 results
     │       │    │
-    │       │    └──► TwitterCrawlerService.searchTweets(query)
+    │       │    └──► ApifyService.searchTweets(query, { maxResults: 50 })
     │       │         │
-    │       │         ├──► Crawlee with Playwright browser
-    │       │         │    Cookies: X_AUTH_TOKEN, X_CT0
+    │       │         ├──► Apify API with APIFY_API_TOKEN
+    │       │         │    Actor: apidojo/twitter-scraper-lite
     │       │         │
     │       │         └──► Return TweetData[]
     │       │
@@ -2408,6 +2408,7 @@ export class YourToolService {
 | **Chat SSE via POST + Readable** | NestJS `@Sse` creates GET endpoints; frontend sends POST with body. Readable stream for SSE.                                                      |
 | **Store-driven widget open**     | `isWidgetOpen` in Zustand store allows any component to open chat via `openWidget()`                                                              |
 | **Sentry for observability**     | Separate projects for API + Web, breadcrumbs for context, PII sanitization, flush on Render shutdown                                              |
+| **Apify over Crawlee**           | Apify handles authentication and scraping at scale; no cookie management needed. Crawlee was fragile and required manual cookie refresh.          |
 
 ---
 
