@@ -205,19 +205,17 @@ export class ApifyService {
 
     const rawResponse = (await datasetResponse.json()) as any;
 
-    this.logger.info("Raw dataset response", {
-      type: typeof rawResponse,
-      isArray: Array.isArray(rawResponse),
-      keys:
-        !Array.isArray(rawResponse) && rawResponse
-          ? Object.keys(rawResponse)
-          : [],
-      sample: JSON.stringify(rawResponse).slice(0, 2000),
-    });
-
+    // Log first item structure to understand field mapping
     const items = Array.isArray(rawResponse)
       ? rawResponse
       : rawResponse?.items || rawResponse?.data || [];
+
+    if (items.length > 0) {
+      this.logger.info("Apify raw item sample", {
+        firstItem: JSON.stringify(items[0]).slice(0, 2000),
+        itemKeys: Object.keys(items[0]),
+      });
+    }
 
     this.logger.info("Apify dataset processed", {
       topic: options.topic,
@@ -276,30 +274,43 @@ export class ApifyService {
             metrics: {
               likes:
                 item.likeCount ||
-                item.metrics?.likes ||
+                item.like_count ||
+                item.favoriteCount ||
                 item.favorite_count ||
+                item.metrics?.likes ||
                 item.likes ||
+                item.heartCount ||
+                item.heart_count ||
                 0,
               retweets:
                 item.retweetCount ||
-                item.metrics?.retweets ||
                 item.retweet_count ||
+                item.metrics?.retweets ||
                 item.retweets ||
+                item.retweeted_count ||
                 0,
               replies:
                 item.replyCount ||
-                item.metrics?.replies ||
                 item.reply_count ||
+                item.metrics?.replies ||
                 item.replies ||
+                item.commentCount ||
+                item.comment_count ||
                 0,
               quotes:
                 item.quoteCount ||
-                item.metrics?.quotes ||
                 item.quote_count ||
+                item.metrics?.quotes ||
                 item.quotes ||
                 0,
               views:
-                item.viewCount || item.metrics?.views || item.views_count || 0,
+                item.viewCount ||
+                item.view_count ||
+                item.metrics?.views ||
+                item.views_count ||
+                item.impressionCount ||
+                item.impression_count ||
+                0,
             },
             hashtags:
               item.hashtags ||
