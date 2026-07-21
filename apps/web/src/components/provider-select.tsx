@@ -93,14 +93,22 @@ export function ProviderSelect({
       })
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
-        setModels(list);
+
+        // Deduplicate by modelId — prefer entries with active providers
+        const seen = new Map<string, ModelOption>();
+        for (const m of list) {
+          const existing = seen.get(m.modelId);
+          if (!existing || (m.isActive && !existing.isActive)) {
+            seen.set(m.modelId, m);
+          }
+        }
+        const deduped = Array.from(seen.values());
+        setModels(deduped);
 
         // Auto-select first if current value not in list or empty
-        const validValues = new Set(
-          list.flatMap((m) => [m.modelId, m.providerSlug]),
-        );
-        const first = list[0];
-        if (first && (!value || !validValues.has(value))) {
+        const validIds = new Set(deduped.map((m) => m.modelId));
+        const first = deduped[0];
+        if (first && (!value || !validIds.has(value))) {
           onChange(first.modelId, first);
         }
       })
@@ -124,9 +132,7 @@ export function ProviderSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const selectedModel = models.find(
-    (m) => m.modelId === value || m.providerSlug === value,
-  );
+  const selectedModel = models.find((m) => m.modelId === value);
 
   const taskTypeLabel: Record<string, string> = {
     "image-generation": "Image",
@@ -197,8 +203,7 @@ export function ProviderSelect({
               aria-label={label}
             >
               {models.map((model) => {
-                const isSelected =
-                  value === model.modelId || value === model.providerSlug;
+                const isSelected = value === model.modelId;
                 const isProDisabled = model.tier === "pro" && plan === "FREE";
 
                 return (

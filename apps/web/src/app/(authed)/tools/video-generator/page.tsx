@@ -21,23 +21,6 @@ const videoAspectRatios = [
   { id: "1:1", label: "1:1", width: 720, height: 720, iconClass: "w-8 h-8" },
 ];
 
-const videoModels = [
-  {
-    id: "Wan-AI/Wan2.2-T2V-A14B",
-    label: "Text to Video",
-    modelId: "Wan-AI/Wan2.2-T2V-A14B",
-    description: "Generate videos from text prompts",
-    emoji: "📝",
-  },
-  {
-    id: "Wan-AI/Wan2.2-I2V-A14B",
-    label: "Image to Video",
-    modelId: "Wan-AI/Wan2.2-I2V-A14B",
-    description: "Animate images into videos",
-    emoji: "🖼️",
-  },
-];
-
 const planLabels: Record<
   string,
   { label: string; variant: "free" | "primary" | "premium" }
@@ -314,34 +297,6 @@ export default function VideoGeneratorPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-text-muted mb-3">
-              Video Model
-            </label>
-            <div className="space-y-2">
-              {videoModels.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => !isProcessing && setModel(m.id)}
-                  disabled={isProcessing}
-                  className={`flex items-center gap-3 w-full rounded-lg border p-3 text-left transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                    model === m.id
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-surface-elevated text-text-muted hover:border-primary/50 hover:bg-primary/5"
-                  }`}
-                >
-                  <span className="text-lg">{m.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{m.label}</p>
-                    <p className="text-[11px] text-text-dim font-mono truncate">
-                      {m.modelId}
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Image Upload - Only for I2V model */}
           {isI2V && (
             <div>
@@ -483,10 +438,13 @@ export default function VideoGeneratorPage() {
 
           <ProviderSelect
             toolModes={["video"]}
-            value={aiProvider}
-            onChange={(_modelId, model) => setAiProvider(model.providerSlug)}
+            value={model}
+            onChange={(_modelId, m) => {
+              setModel(m.modelId);
+              setAiProvider(m.providerSlug);
+            }}
             disabled={isProcessing}
-            label="AI Provider"
+            label="Video Model"
           />
 
           <div className="pt-2">
