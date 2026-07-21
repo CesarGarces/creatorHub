@@ -96,9 +96,11 @@ export function ProviderSelect({
         setModels(list);
 
         // Auto-select first if current value not in list or empty
-        const validIds = new Set(list.map((m) => m.modelId));
+        const validValues = new Set(
+          list.flatMap((m) => [m.modelId, m.providerSlug]),
+        );
         const first = list[0];
-        if (first && (!value || !validIds.has(value))) {
+        if (first && (!value || !validValues.has(value))) {
           onChange(first.modelId, first);
         }
       })
@@ -122,7 +124,9 @@ export function ProviderSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const selectedModel = models.find((m) => m.modelId === value);
+  const selectedModel = models.find(
+    (m) => m.modelId === value || m.providerSlug === value,
+  );
 
   const taskTypeLabel: Record<string, string> = {
     "image-generation": "Image",
@@ -193,7 +197,8 @@ export function ProviderSelect({
               aria-label={label}
             >
               {models.map((model) => {
-                const isSelected = value === model.modelId;
+                const isSelected =
+                  value === model.modelId || value === model.providerSlug;
                 const isProDisabled = model.tier === "pro" && plan === "FREE";
 
                 return (
