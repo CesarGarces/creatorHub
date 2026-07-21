@@ -467,6 +467,57 @@ async function main() {
     }
   }
 
+  // ──────────────────────────────────────────────
+  // Seed AI Model Metadata (SiliconFlow Video models)
+  // ──────────────────────────────────────────────
+
+  const siliconflowVideoModels = [
+    {
+      providerSlug: "siliconflow-video",
+      modelId: "Wan-AI/Wan2.2-T2V-A14B",
+      displayName: "Wan 2.2 Text-to-Video",
+      taskType: "video-generation",
+      tier: "FREE" as const,
+      supportsStreaming: false,
+      supportsVision: false,
+      imagePricePerGen: 0,
+      isActive: true,
+      creditCost: 50,
+      profitMargin: 1.0,
+      description: "Generate videos from text prompts using Wan AI",
+      tags: ["video", "free", "wan"],
+    },
+    {
+      providerSlug: "siliconflow-video",
+      modelId: "Wan-AI/Wan2.2-I2V-A14B",
+      displayName: "Wan 2.2 Image-to-Video",
+      taskType: "video-generation",
+      tier: "FREE" as const,
+      supportsStreaming: false,
+      supportsVision: false,
+      imagePricePerGen: 0,
+      isActive: true,
+      creditCost: 50,
+      profitMargin: 1.0,
+      description: "Generate videos from images using Wan AI",
+      tags: ["video", "free", "wan", "i2v"],
+    },
+  ];
+
+  for (const model of siliconflowVideoModels) {
+    const exists = await prisma.modelMetadata.findUnique({
+      where: {
+        providerSlug_modelId: {
+          providerSlug: model.providerSlug,
+          modelId: model.modelId,
+        },
+      },
+    });
+    if (!exists) {
+      await prisma.modelMetadata.create({ data: model });
+    }
+  }
+
   // Add OpenRouter as a gateway provider
   const openrouterProviderExists = await prisma.provider.findUnique({
     where: { slug: "openrouter" },
