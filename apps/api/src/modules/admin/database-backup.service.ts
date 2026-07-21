@@ -40,7 +40,7 @@ export class DatabaseBackupService {
     );
     const res = await fetch(url);
     if (!res.ok) return [];
-    return res.json();
+    return (await res.json()) as BackupMetadata[];
   }
 
   private async saveBackupMetadataList(list: BackupMetadata[]): Promise<void> {
