@@ -117,17 +117,21 @@ export class ChatService {
         content,
       );
 
-      const provider =
+      const streamingProvider =
         this.providerRegistry.getStreamingProviderForModel(model);
+      const fallbackProvider = this.providerRegistry.getProviderForModel(model);
 
-      if (!provider || !provider.generateStream) {
-        throw new Error(`No streaming provider available for model: ${model}`);
+      if (!streamingProvider && !fallbackProvider) {
+        throw new Error(`No provider available for model: ${model}`);
       }
+
+      const provider = streamingProvider || fallbackProvider;
+      const supportsStreaming = !!streamingProvider;
 
       const conversationHistory = history.slice(0, -1);
 
-      const aiStream = provider.generateStream({
-        taskType: "text-generation",
+      const aiRequest = {
+        taskType: "text-generation" as const,
         prompt: content,
         parameters: {
           temperature: session.temperature,
@@ -135,54 +139,63 @@ export class ChatService {
           systemPrompt,
           conversationHistory,
         },
-      });
+      };
 
       let fullContent = "";
 
-      for await (const chunk of aiStream) {
-        if (chunk.type === "content" && chunk.content) {
-          fullContent += chunk.content;
-          const data = JSON.stringify({
-            type: "content",
-            content: chunk.content,
-          });
-          stream.push(`data: ${data}\n\n`);
-        } else if (chunk.type === "done") {
-          await this.historyService.appendMessage(
-            sessionId,
-            "assistant",
-            fullContent,
-          );
+      if (supportsStreaming && provider!.generateStream) {
+        const aiStream = provider!.generateStream(aiRequest);
 
-          const deducted = await this.creditService.deduct(
-            userId,
-            creditCost,
-            "chat",
-            `Chat message (${model})`,
-          );
-
-          if (!deducted) {
-            this.logger.warn("Credit deduction failed after chat completion", {
-              userId,
-              model,
-              creditCost,
+        for await (const chunk of aiStream) {
+          if (chunk.type === "content" && chunk.content) {
+            fullContent += chunk.content;
+            const data = JSON.stringify({
+              type: "content",
+              content: chunk.content,
             });
+            stream.push(`data: ${data}\n\n`);
+          } else if (chunk.type === "done") {
+            break;
           }
-
-          const data = JSON.stringify({
-            type: "done",
-            content: fullContent,
-            creditCost,
-          });
-          stream.push(`data: ${data}\n\n`);
-        } else if (chunk.type === "error") {
-          const data = JSON.stringify({
-            type: "error",
-            error: chunk.error,
-          });
-          stream.push(`data: ${data}\n\n`);
         }
+      } else {
+        const response = await provider!.generate(aiRequest);
+        const output = response.output as { content?: string; type?: string };
+        fullContent = output?.content || "";
+        const data = JSON.stringify({
+          type: "content",
+          content: fullContent,
+        });
+        stream.push(`data: ${data}\n\n`);
       }
+
+      await this.historyService.appendMessage(
+        sessionId,
+        "assistant",
+        fullContent,
+      );
+
+      const deducted = await this.creditService.deduct(
+        userId,
+        creditCost,
+        "chat",
+        `Chat message (${model})`,
+      );
+
+      if (!deducted) {
+        this.logger.warn("Credit deduction failed after chat completion", {
+          userId,
+          model,
+          creditCost,
+        });
+      }
+
+      const doneData = JSON.stringify({
+        type: "done",
+        content: fullContent,
+        creditCost,
+      });
+      stream.push(`data: ${doneData}\n\n`);
 
       stream.push(null);
     } catch (error) {

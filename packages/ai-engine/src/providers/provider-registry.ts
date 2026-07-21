@@ -96,4 +96,10 @@ export class ProviderRegistry {
       p.supportedModels.includes(model),
     );
   }
+
+  getProviderForModel(model: string): AIProviderInterface | undefined {
+    return Array.from(this.providers.values()).find((p) =>
+      p.supportedModels.includes(model),
+    );
+  }
 }
