@@ -484,7 +484,7 @@ export default function VideoGeneratorPage() {
           <ProviderSelect
             toolModes={["video"]}
             value={aiProvider}
-            onChange={(_modelId, model) => setAiProvider(model.modelId)}
+            onChange={(_modelId, model) => setAiProvider(model.providerSlug)}
             disabled={isProcessing}
             label="AI Provider"
           />
