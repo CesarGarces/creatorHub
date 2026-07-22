@@ -28,6 +28,7 @@ export class OpenRouterModelsService {
 
   /**
    * Fetch all models from OpenRouter API
+   * Fetches both text/image models AND video generation models (separate endpoints)
    */
   async fetchModels(): Promise<ModelInfo[]> {
     // Check cache
@@ -43,60 +44,13 @@ export class OpenRouterModelsService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/models`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        signal: AbortSignal.timeout(30_000),
-      });
+      // Fetch text/image models AND video models in parallel
+      const [textModels, videoModels] = await Promise.all([
+        this.fetchTextImageModels(),
+        this.fetchVideoModels(),
+      ]);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `OpenRouter API error ${response.status}: ${errorText}`,
-        );
-      }
-
-      const data = (await response.json()) as {
-        data: Array<{
-          id: string;
-          name: string;
-          description?: string;
-          pricing: {
-            prompt: string;
-            completion: string;
-            image?: string;
-          };
-          context_length?: number;
-          top_provider?: {
-            max_completion_tokens?: number;
-          };
-          architecture?: {
-            modality?: string;
-          };
-        }>;
-      };
-
-      const models: ModelInfo[] = data.data.map((model) => ({
-        id: model.id,
-        name: model.name,
-        taskType: this.inferTaskType(model),
-        contextLength: model.context_length,
-        maxOutputTokens: model.top_provider?.max_completion_tokens,
-        supportsStreaming: true,
-        supportsVision:
-          model.architecture?.modality?.includes("image") || false,
-        pricing: {
-          promptPer1k: parseFloat(model.pricing.prompt) * 1000,
-          completionPer1k: parseFloat(model.pricing.completion) * 1000,
-          imagePerGen: model.pricing.image
-            ? parseFloat(model.pricing.image)
-            : undefined,
-        },
-        description: model.description,
-        tags: this.inferTags(model),
-      }));
+      const models: ModelInfo[] = [...textModels, ...videoModels];
 
       // Update cache
       this.cache.clear();
@@ -107,6 +61,8 @@ export class OpenRouterModelsService {
 
       this.logger.info("Models fetched from OpenRouter", {
         count: models.length,
+        textImage: textModels.length,
+        video: videoModels.length,
       });
 
       return models;
@@ -117,6 +73,191 @@ export class OpenRouterModelsService {
       // Return cached data if available
       return Array.from(this.cache.values());
     }
+  }
+
+  /**
+   * Fetch text/image models from GET /api/v1/models
+   */
+  private async fetchTextImageModels(): Promise<ModelInfo[]> {
+    const response = await fetch(`${this.baseUrl}/models`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenRouter API error ${response.status}: ${errorText}`);
+    }
+
+    const data = (await response.json()) as {
+      data: Array<{
+        id: string;
+        name: string;
+        description?: string;
+        pricing: {
+          prompt: string;
+          completion: string;
+          image?: string;
+        };
+        context_length?: number;
+        top_provider?: {
+          max_completion_tokens?: number;
+        };
+        architecture?: {
+          modality?: string;
+        };
+      }>;
+    };
+
+    return data.data.map((model) => ({
+      id: model.id,
+      name: model.name,
+      taskType: this.inferTaskType(model),
+      contextLength: model.context_length,
+      maxOutputTokens: model.top_provider?.max_completion_tokens,
+      supportsStreaming: true,
+      supportsVision: model.architecture?.modality?.includes("image") || false,
+      pricing: {
+        promptPer1k: parseFloat(model.pricing.prompt) * 1000,
+        completionPer1k: parseFloat(model.pricing.completion) * 1000,
+        imagePerGen: model.pricing.image
+          ? parseFloat(model.pricing.image)
+          : undefined,
+      },
+      description: model.description,
+      tags: this.inferTags(model),
+    }));
+  }
+
+  /**
+   * Fetch video generation models from GET /api/v1/videos/models
+   *
+   * Video models use a different API and have a different schema:
+   * - pricing_skus instead of pricing (per-second, per-resolution)
+   * - supported_resolutions, supported_durations, supported_frame_images
+   * - No context_length or architecture.modality
+   */
+  private async fetchVideoModels(): Promise<ModelInfo[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/videos/models`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        signal: AbortSignal.timeout(30_000),
+      });
+
+      if (!response.ok) {
+        this.logger.warn(`Failed to fetch video models: ${response.status}`);
+        return [];
+      }
+
+      const data = (await response.json()) as {
+        data: Array<{
+          id: string;
+          name: string;
+          description?: string;
+          supported_resolutions?: string[];
+          supported_durations?: number[];
+          supported_frame_images?: string[];
+          pricing_skus?: Record<string, string>;
+        }>;
+      };
+
+      return data.data.map((model) => ({
+        id: model.id,
+        name: model.name,
+        taskType: "video-generation" as const,
+        supportsStreaming: false, // Video is async (job-based), not streaming
+        supportsVision: (model.supported_frame_images?.length ?? 0) > 0, // Accepts image input = i2v support
+        pricing: {
+          // Use cheapest per-second pricing as base imagePerGen
+          // Actual cost depends on duration × resolution
+          imagePerGen: this.parseVideoPricing(model.pricing_skus),
+        },
+        description: model.description,
+        tags: [
+          "video",
+          ...(model.supported_resolutions?.includes("1080p")
+            ? ["high-quality"]
+            : []),
+          ...(model.supported_durations &&
+          Math.max(...model.supported_durations) >= 10
+            ? ["long-form"]
+            : []),
+        ],
+      }));
+    } catch (error) {
+      this.logger.warn("Failed to fetch video models from OpenRouter", {
+        error: (error as Error).message,
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Parse video pricing from pricing_skus to a base USD cost.
+   * Handles three formats:
+   *   - "duration_seconds_720p": "0.0988" (Alibaba, Kling, etc.) — USD per second
+   *   - "cents_per_video_output_second_480p": "8" (older ByteDance) — cents per second
+   *   - "video_tokens": "0.0000056" (ByteDance Seedance) — USD per token
+   *     Token formula: (height * width * duration * 24) / 1024
+   *     Base estimate: 480x480 4s = ~21.5K tokens
+   */
+  private parseVideoPricing(
+    pricingSkus?: Record<string, string>,
+  ): number | undefined {
+    if (!pricingSkus) return undefined;
+
+    const perSecondPrices: number[] = [];
+    let pricePerToken: number | undefined;
+
+    for (const [key, value] of Object.entries(pricingSkus)) {
+      const lowerKey = key.toLowerCase();
+      const numValue = parseFloat(value);
+      if (isNaN(numValue)) continue;
+
+      // Per-second pricing (USD or cents)
+      if (
+        lowerKey.includes("per_video_output_second") ||
+        lowerKey.includes("duration_seconds")
+      ) {
+        let price = numValue;
+        if (lowerKey.includes("cents_")) {
+          price = numValue / 100;
+        }
+        perSecondPrices.push(price);
+      }
+
+      // Token-based pricing (ByteDance Seedance)
+      if (
+        lowerKey === "video_tokens" ||
+        lowerKey === "video_tokens_without_audio"
+      ) {
+        // Pick the cheaper token rate (with vs without audio)
+        if (pricePerToken === undefined || numValue < pricePerToken) {
+          pricePerToken = numValue;
+        }
+      }
+    }
+
+    // Per-second pricing
+    if (perSecondPrices.length > 0) {
+      const cheapestPerSec = Math.min(...perSecondPrices);
+      return cheapestPerSec * 4; // ~4 second video as base
+    }
+
+    // Token-based pricing: estimate for 480x480 4-second video
+    // Tokens = (480 * 480 * 4 * 24) / 1024 ≈ 21,504
+    if (pricePerToken !== undefined) {
+      const estimatedTokens = (480 * 480 * 4 * 24) / 1024;
+      return pricePerToken * estimatedTokens;
+    }
+
+    return undefined;
   }
 
   /**
