@@ -111,7 +111,7 @@ export class AdminService {
   }
 
   async updateProvider(id: string, dto: UpdateProviderDto): Promise<any> {
-    await this.findProviderById(id);
+    const provider = await this.findProviderById(id);
 
     if (dto.slug) {
       const existing = await prisma.provider.findFirst({
@@ -122,6 +122,15 @@ export class AdminService {
           `Provider with slug "${dto.slug}" already exists`,
         );
       }
+    }
+
+    // Protect gateway providers from being deactivated
+    // Gateway providers (openrouter, siliconflow-video, etc.) are the source of models
+    // and must always remain active
+    if (dto.isActive === false && provider.isGateway) {
+      throw new BadRequestException(
+        `Gateway provider "${provider.slug}" cannot be deactivated. Gateway providers are the source of AI models and must always remain active.`,
+      );
     }
 
     return prisma.provider.update({
@@ -148,7 +157,15 @@ export class AdminService {
   }
 
   async deleteProvider(id: string): Promise<any> {
-    await this.findProviderById(id);
+    const provider = await this.findProviderById(id);
+
+    // Protect gateway providers from being deleted
+    if (provider.isGateway) {
+      throw new BadRequestException(
+        `Gateway provider "${provider.slug}" cannot be deleted. Gateway providers are the source of AI models.`,
+      );
+    }
+
     return prisma.provider.delete({ where: { id } });
   }
 

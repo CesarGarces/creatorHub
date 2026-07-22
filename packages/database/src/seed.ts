@@ -230,7 +230,8 @@ async function main() {
       tier: "FREE" as const,
       costPerCredit: 50,
       isActive: true,
-      supportedTasks: ["video"],
+      supportedTasks: ["video-generation"],
+      isGateway: true,
     },
   ];
 
@@ -240,6 +241,19 @@ async function main() {
     });
     if (!exists) {
       await prisma.provider.create({ data: p });
+    } else if (p.isGateway && (!exists.isActive || !exists.isGateway)) {
+      // Gateway providers must ALWAYS be active and marked as gateway
+      await prisma.provider.update({
+        where: { slug: p.slug },
+        data: {
+          isActive: true,
+          isGateway: true,
+          supportedTasks: p.supportedTasks,
+        },
+      });
+      console.log(
+        `⚡ ${p.slug} provider re-activated (gateway providers must always be active)`,
+      );
     }
   }
 
@@ -519,6 +533,7 @@ async function main() {
   }
 
   // Add OpenRouter as a gateway provider
+  // Gateway providers must ALWAYS be active — they are the source of AI models
   const openrouterProviderExists = await prisma.provider.findUnique({
     where: { slug: "openrouter" },
   });
@@ -545,11 +560,17 @@ async function main() {
       },
     });
   } else {
-    // Update supportedTasks if provider exists but missing video-generation
-    if (!openrouterProviderExists.supportedTasks.includes("video-generation")) {
+    // Ensure gateway provider is ALWAYS active and has all required tasks
+    const needsUpdate =
+      !openrouterProviderExists.isActive ||
+      !openrouterProviderExists.supportedTasks.includes("video-generation") ||
+      !openrouterProviderExists.supportedTasks.includes("image-generation");
+
+    if (needsUpdate) {
       await prisma.provider.update({
         where: { slug: "openrouter" },
         data: {
+          isActive: true, // Force active — gateway providers must always be active
           supportedTasks: [
             "thumbnail",
             "text-generation",
@@ -558,6 +579,9 @@ async function main() {
           ],
         },
       });
+      console.log(
+        "⚡ OpenRouter provider re-activated (gateway providers must always be active)",
+      );
     }
   }
 
