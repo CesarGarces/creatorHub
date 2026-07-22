@@ -2,6 +2,8 @@ import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { STTEngineModule } from "@creator-hub/stt-engine";
+import { BillingModule } from "@creator-hub/billing";
+import { AnalyticsModule } from "@creator-hub/analytics";
 import { AppGateway } from "./websocket.gateway";
 
 @Module({
@@ -14,6 +16,8 @@ import { AppGateway } from "./websocket.gateway";
       inject: [ConfigService],
     }),
     STTEngineModule,
+    BillingModule,
+    AnalyticsModule,
   ],
   providers: [AppGateway],
   exports: [AppGateway],

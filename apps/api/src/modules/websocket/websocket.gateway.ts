@@ -12,6 +12,8 @@ import { JwtService } from "@nestjs/jwt";
 import { Server, Socket } from "socket.io";
 import { prisma } from "@creator-hub/database";
 import { STTEngineService } from "@creator-hub/stt-engine";
+import { CreditService } from "@creator-hub/billing";
+import { PlatformUsageLogger } from "@creator-hub/analytics";
 import {
   MIN_CREDITS_FOR_STT,
   type STTProviderName,
@@ -37,6 +39,8 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private jwtService: JwtService,
     private sttEngine: STTEngineService,
+    private creditService: CreditService,
+    private usageLogger: PlatformUsageLogger,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -298,40 +302,20 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (userId && credits > 0) {
         try {
-          const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { currentCredits: true },
-          });
+          const deducted = await this.creditService.deduct(
+            userId,
+            credits,
+            "speech-to-text",
+            `STT session (${result.wordCount} words, ${(result.durationMs / 1000).toFixed(1)}s)`,
+          );
 
-          if (user) {
-            const deduct = Math.min(user.currentCredits, credits);
-            if (deduct > 0) {
-              const updatedUser = await prisma.user.update({
-                where: { id: userId },
-                data: { currentCredits: { decrement: deduct } },
-                select: { currentCredits: true },
-              });
-
-              this.server.to(userId).emit("credits.deducted", {
-                currentCredits: updatedUser?.currentCredits ?? 0,
-                purchasedCredits: 0,
-                totalCredits: updatedUser?.currentCredits ?? 0,
-              });
-
-              // Breadcrumb: STT credits deducted
-              Sentry.addBreadcrumb({
-                type: "default",
-                category: "billing.credit",
-                message: `Deducted ${credits} credits for STT session`,
-                level: "info",
-                data: {
-                  userId,
-                  credits,
-                  durationMs: result.durationMs,
-                  newBalance: updatedUser?.currentCredits,
-                },
-              });
-            }
+          if (deducted) {
+            const balance = await this.creditService.getBalance(userId);
+            this.server.to(userId).emit("credits.deducted", {
+              currentCredits: balance,
+              purchasedCredits: 0,
+              totalCredits: balance,
+            });
           }
         } catch (error) {
           this.logger.error("Failed to deduct STT credits", {
@@ -340,7 +324,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
             error: (error as Error).message,
           });
 
-          // Breadcrumb: STT credit deduction failed
           Sentry.addBreadcrumb({
             type: "default",
             category: "billing.credit",
@@ -368,6 +351,16 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         durationMs: result.durationMs,
         wordCount: result.wordCount,
         credits,
+      });
+
+      // Platform usage log
+      await this.usageLogger.logUsage({
+        userId,
+        toolId: "speech-to-text",
+        duration: result.durationMs,
+        success: true,
+        credits,
+        metadata: { wordCount: result.wordCount, provider: "deepgram" },
       });
     }
   }

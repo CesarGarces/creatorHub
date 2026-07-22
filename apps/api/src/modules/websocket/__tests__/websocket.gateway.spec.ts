@@ -14,6 +14,8 @@ describe("AppGateway - WebSocket Auth & Refresh Token Unit Tests", () => {
   let gateway: AppGateway;
   let mockJwtService: any;
   let mockSttEngine: any;
+  let mockCreditService: any;
+  let mockUsageLogger: any;
   let mockSocket: any;
 
   beforeEach(() => {
@@ -29,7 +31,21 @@ describe("AppGateway - WebSocket Auth & Refresh Token Unit Tests", () => {
       closeSession: vi.fn(),
     };
 
-    gateway = new AppGateway(mockJwtService as any, mockSttEngine as any);
+    mockCreditService = {
+      deduct: vi.fn().mockResolvedValue(true),
+      getBalance: vi.fn().mockResolvedValue(0),
+    };
+
+    mockUsageLogger = {
+      logUsage: vi.fn().mockResolvedValue(undefined),
+    };
+
+    gateway = new AppGateway(
+      mockJwtService as any,
+      mockSttEngine as any,
+      mockCreditService as any,
+      mockUsageLogger as any,
+    );
 
     mockSocket = {
       id: "mock_socket_123",

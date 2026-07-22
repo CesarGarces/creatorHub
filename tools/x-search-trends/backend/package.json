@@ -17,7 +17,8 @@
     "@creator-hub/shared-utils": "workspace:*",
     "@creator-hub/social-research-backend": "workspace:*",
     "@creator-hub/x-post-tweet-backend": "workspace:*",
-    "@nestjs/common": "^11.1.27"
+    "@nestjs/common": "^11.1.27",
+    "@creator-hub/analytics": "workspace:*"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

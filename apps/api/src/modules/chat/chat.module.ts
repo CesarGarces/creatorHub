@@ -8,9 +8,16 @@ import { AIEngineModule } from "@creator-hub/ai-engine";
 import { ToolSdkModule } from "../../tool-sdk.module";
 import { BillingModule } from "@creator-hub/billing";
 import { UserStyleModule } from "../user-style/user-style.module";
+import { AnalyticsModule } from "@creator-hub/analytics";
 
 @Module({
-  imports: [AIEngineModule, ToolSdkModule, BillingModule, UserStyleModule],
+  imports: [
+    AIEngineModule,
+    ToolSdkModule,
+    BillingModule,
+    UserStyleModule,
+    AnalyticsModule,
+  ],
   controllers: [ChatController],
   providers: [
     ChatService,

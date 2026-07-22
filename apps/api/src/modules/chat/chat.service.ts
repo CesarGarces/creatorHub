@@ -6,6 +6,7 @@ import { ChatSettingsService } from "./chat-settings.service";
 import { Logger } from "@creator-hub/shared-utils";
 import { prisma } from "@creator-hub/database";
 import { CreditService } from "@creator-hub/billing";
+import { PlatformUsageLogger } from "@creator-hub/analytics";
 import { Readable } from "stream";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -20,6 +21,7 @@ export class ChatService {
     private historyService: ChatHistoryService,
     private settingsService: ChatSettingsService,
     private creditService: CreditService,
+    private usageLogger: PlatformUsageLogger,
   ) {}
 
   async createSession(
@@ -74,6 +76,9 @@ export class ChatService {
     content: string,
     stream: Readable,
   ) {
+    const startTime = Date.now();
+    let model = "unknown";
+    let creditCost = 0;
     try {
       const session = await prisma.chatSession.findUnique({
         where: { id: sessionId },
@@ -83,12 +88,12 @@ export class ChatService {
         throw new Error(`Session not found: ${sessionId}`);
       }
 
-      const model = session.model;
+      model = session.model;
 
       const providerRecord = await prisma.provider.findFirst({
         where: { model, isActive: true },
       });
-      const creditCost = providerRecord?.costPerCredit ?? 1;
+      creditCost = providerRecord?.costPerCredit ?? 1;
 
       const hasCredits = await this.creditService.hasEnoughCredits(
         userId,
@@ -198,16 +203,38 @@ export class ChatService {
       stream.push(`data: ${doneData}\n\n`);
 
       stream.push(null);
+
+      // Platform usage log
+      await this.usageLogger.logUsage({
+        userId,
+        toolId: "chat",
+        modelId: model,
+        duration: Date.now() - startTime,
+        success: true,
+        credits: creditCost,
+      });
     } catch (error) {
+      const errMsg = (error as Error).message;
       this.logger.error("Handle stream failed", {
-        error: (error as Error).message,
+        error: errMsg,
       });
       const data = JSON.stringify({
         type: "error",
-        error: (error as Error).message,
+        error: errMsg,
       });
       stream.push(`data: ${data}\n\n`);
       stream.push(null);
+
+      // Platform usage log
+      await this.usageLogger.logUsage({
+        userId,
+        toolId: "chat",
+        modelId: model,
+        duration: Date.now() - startTime,
+        success: false,
+        credits: 0,
+        error: errMsg,
+      });
     }
   }
 

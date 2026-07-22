@@ -4,6 +4,7 @@ import { Logger } from "@creator-hub/shared-utils";
 import { SocialResearchService } from "@creator-hub/social-research-backend";
 import { TrendCacheService } from "@creator-hub/social-research-backend";
 import { AIEngineService } from "@creator-hub/ai-engine";
+import { PlatformUsageLogger } from "@creator-hub/analytics";
 import {
   XApiService,
   type SearchResultTweet,
@@ -57,6 +58,7 @@ export class XSearchTrendsService {
     private cacheService: TrendCacheService,
     private tweetAnalysis: TweetAnalysisService,
     private aiEngine: AIEngineService,
+    private usageLogger: PlatformUsageLogger,
   ) {}
 
   async search(
@@ -68,6 +70,8 @@ export class XSearchTrendsService {
     if (!options.topic?.trim()) {
       throw new BadRequestException("Topic is required");
     }
+
+    const searchStartTime = Date.now();
 
     const session = await this.socialResearch.getOrCreateSession(
       userId,
@@ -99,6 +103,16 @@ export class XSearchTrendsService {
         provider: "x",
         creditsUsed: 0,
         cacheHit: true,
+      });
+
+      // Platform usage log (cache hit)
+      await this.usageLogger.logUsage({
+        userId,
+        toolId: "x-search-trends",
+        duration: Date.now() - searchStartTime,
+        success: true,
+        credits: 0,
+        metadata: { topic: options.topic, cacheHit: true },
       });
 
       return { ...result, sessionId: session.id };
@@ -357,6 +371,16 @@ export class XSearchTrendsService {
       originalCount: originalTweetCount,
       filteredCount: filteredTweets.length,
       insufficientData,
+    });
+
+    // Platform usage log
+    await this.usageLogger.logUsage({
+      userId,
+      toolId: "x-search-trends",
+      duration: Date.now() - searchStartTime,
+      success: true,
+      credits: totalCreditsNeeded,
+      metadata: { topic: options.topic, tweetCount: filteredTweets.length },
     });
 
     return { ...result, sessionId: session.id };

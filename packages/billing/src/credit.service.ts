@@ -34,6 +34,11 @@ export class CreditService {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
+      this.logger.warn("Credit deduction failed: user not found", {
+        userId,
+        amount,
+        toolId,
+      });
       Sentry.addBreadcrumb({
         type: "default",
         category: "billing.credit",
@@ -45,6 +50,12 @@ export class CreditService {
     }
 
     if (user.currentCredits < amount) {
+      this.logger.warn("Insufficient credits", {
+        userId,
+        currentCredits: user.currentCredits,
+        requested: amount,
+        toolId,
+      });
       Sentry.addBreadcrumb({
         type: "default",
         category: "billing.credit",
@@ -112,6 +123,14 @@ export class CreditService {
           toolId: validToolId,
           description,
         },
+      });
+
+      this.logger.info(`Deducted ${amount} credits`, {
+        userId,
+        amount,
+        newBalance,
+        toolId: validToolId,
+        description,
       });
     });
 

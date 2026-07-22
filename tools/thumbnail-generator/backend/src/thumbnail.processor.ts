@@ -7,6 +7,7 @@ import { StorageService } from "@creator-hub/storage";
 import { prisma } from "@creator-hub/database";
 import { Logger } from "@creator-hub/shared-utils";
 import { getFriendlyError } from "@creator-hub/shared-utils";
+import { PlatformUsageLogger } from "@creator-hub/analytics";
 import {
   DomainEventPublisher,
   DOMAIN_EVENT_PUBLISHER,
@@ -27,6 +28,7 @@ export class ThumbnailProcessor extends WorkerHost {
     private aiEngine: AIEngineService,
     private creditService: CreditService,
     private storageService: StorageService,
+    private usageLogger: PlatformUsageLogger,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private eventPublisher: DomainEventPublisher,
   ) {
@@ -218,6 +220,17 @@ export class ThumbnailProcessor extends WorkerHost {
       key: uploadResult.key,
     });
 
+    // Platform usage log
+    await this.usageLogger.logUsage({
+      userId,
+      toolId: "thumbnail-generator",
+      modelId: model,
+      providerSlug: provider,
+      duration,
+      success: true,
+      credits: creditCost,
+    });
+
     return {
       userId,
       key: uploadResult.key,
@@ -274,6 +287,17 @@ export class ThumbnailProcessor extends WorkerHost {
         jobId: job.id,
       };
       await this.eventPublisher.publish(THUMBNAIL_FAILED_CHANNEL, event);
+
+      // Platform usage log
+      await this.usageLogger.logUsage({
+        userId,
+        toolId: "thumbnail-generator",
+        modelId: job.data?.model,
+        providerSlug: job.data?.provider,
+        success: false,
+        credits: 0,
+        error: friendlyMessage,
+      });
     }
   }
 }

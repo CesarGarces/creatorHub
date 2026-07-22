@@ -931,6 +931,9 @@ importers:
       '@creator-hub/ai-engine':
         specifier: workspace:*
         version: link:../../../packages/ai-engine
+      '@creator-hub/analytics':
+        specifier: workspace:*
+        version: link:../../../packages/analytics
       '@creator-hub/auth':
         specifier: workspace:*
         version: link:../../../packages/auth
@@ -1049,6 +1052,9 @@ importers:
       '@creator-hub/ai-engine':
         specifier: workspace:*
         version: link:../../../packages/ai-engine
+      '@creator-hub/analytics':
+        specifier: workspace:*
+        version: link:../../../packages/analytics
       '@creator-hub/auth':
         specifier: workspace:*
         version: link:../../../packages/auth
@@ -1145,6 +1151,9 @@ importers:
       '@creator-hub/ai-engine':
         specifier: workspace:*
         version: link:../../../packages/ai-engine
+      '@creator-hub/analytics':
+        specifier: workspace:*
+        version: link:../../../packages/analytics
       '@creator-hub/auth':
         specifier: workspace:*
         version: link:../../../packages/auth
@@ -1207,6 +1216,9 @@ importers:
 
   tools/x-post-tweet/backend:
     dependencies:
+      '@creator-hub/analytics':
+        specifier: workspace:*
+        version: link:../../../packages/analytics
       '@creator-hub/auth':
         specifier: workspace:*
         version: link:../../../packages/auth
@@ -1257,6 +1269,9 @@ importers:
       '@creator-hub/ai-engine':
         specifier: workspace:*
         version: link:../../../packages/ai-engine
+      '@creator-hub/analytics':
+        specifier: workspace:*
+        version: link:../../../packages/analytics
       '@creator-hub/auth':
         specifier: workspace:*
         version: link:../../../packages/auth

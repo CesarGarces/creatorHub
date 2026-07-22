@@ -6,6 +6,7 @@ import { CreditService } from "@creator-hub/billing";
 import { StorageService } from "@creator-hub/storage";
 import { prisma } from "@creator-hub/database";
 import { Logger, getFriendlyError } from "@creator-hub/shared-utils";
+import { PlatformUsageLogger } from "@creator-hub/analytics";
 import {
   DomainEventPublisher,
   DOMAIN_EVENT_PUBLISHER,
@@ -26,6 +27,7 @@ export class VideoProcessor extends WorkerHost {
     private aiEngine: AIEngineService,
     private creditService: CreditService,
     private storageService: StorageService,
+    private usageLogger: PlatformUsageLogger,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private eventPublisher: DomainEventPublisher,
   ) {
@@ -197,6 +199,17 @@ export class VideoProcessor extends WorkerHost {
       duration,
     });
 
+    // Platform usage log
+    await this.usageLogger.logUsage({
+      userId,
+      toolId: "video-generator",
+      modelId: model,
+      providerSlug: provider,
+      duration,
+      success: true,
+      credits: creditCost,
+    });
+
     return {
       userId,
       key: uploadResult.key,
@@ -238,6 +251,17 @@ export class VideoProcessor extends WorkerHost {
         jobId: job.id,
       };
       await this.eventPublisher.publish(VIDEO_FAILED_CHANNEL, event);
+
+      // Platform usage log
+      await this.usageLogger.logUsage({
+        userId,
+        toolId: "video-generator",
+        modelId: job.data?.model,
+        providerSlug: job.data?.provider,
+        success: false,
+        credits: 0,
+        error: friendlyMessage,
+      });
     }
   }
 }

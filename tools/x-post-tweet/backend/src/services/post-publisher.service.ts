@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { CreditService } from "@creator-hub/billing";
 import { Logger } from "@creator-hub/shared-utils";
+import { PlatformUsageLogger } from "@creator-hub/analytics";
 import { prisma, type TweetDraft } from "@creator-hub/database";
 import { XApiService } from "./x-api.service";
 
@@ -25,9 +26,11 @@ export class PostPublisherService {
   constructor(
     private xApiService: XApiService,
     private creditService: CreditService,
+    private usageLogger: PlatformUsageLogger,
   ) {}
 
   async publishDraft(options: PublishOptions): Promise<PublishResult> {
+    const startTime = Date.now();
     this.logger.info("Publishing draft", {
       userId: options.userId,
       draftId: options.draftId,
@@ -90,6 +93,15 @@ export class PostPublisherService {
         tweetId: tweetResult.id,
       });
 
+      // Platform usage log
+      await this.usageLogger.logUsage({
+        userId: options.userId,
+        toolId: "x-post-tweet",
+        duration: Date.now() - startTime,
+        success: true,
+        credits: PUBLISH_CREDIT_COST,
+      });
+
       return {
         draft: updatedDraft,
         tweetId: tweetResult.id,
@@ -110,6 +122,16 @@ export class PostPublisherService {
       this.logger.error("Failed to publish draft", {
         userId: options.userId,
         draftId: options.draftId,
+        error: (error as Error).message,
+      });
+
+      // Platform usage log
+      await this.usageLogger.logUsage({
+        userId: options.userId,
+        toolId: "x-post-tweet",
+        duration: Date.now() - startTime,
+        success: false,
+        credits: 0,
         error: (error as Error).message,
       });
 

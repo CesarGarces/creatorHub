@@ -19,7 +19,8 @@
     "@creator-hub/storage": "workspace:*",
     "@nestjs/common": "^11.1.27",
     "@nestjs/bullmq": "^11.0.0",
-    "bullmq": "^5.0.0"
+    "bullmq": "^5.0.0",
+    "@creator-hub/analytics": "workspace:*"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

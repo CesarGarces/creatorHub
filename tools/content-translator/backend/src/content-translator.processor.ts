@@ -6,6 +6,7 @@ import { CreditService } from "@creator-hub/billing";
 import { prisma } from "@creator-hub/database";
 import { Logger } from "@creator-hub/shared-utils";
 import { getFriendlyError } from "@creator-hub/shared-utils";
+import { PlatformUsageLogger } from "@creator-hub/analytics";
 import {
   DomainEventPublisher,
   DOMAIN_EVENT_PUBLISHER,
@@ -29,6 +30,7 @@ export class ContentTranslatorProcessor extends WorkerHost {
   constructor(
     private aiEngine: AIEngineService,
     private creditService: CreditService,
+    private usageLogger: PlatformUsageLogger,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private eventPublisher: DomainEventPublisher,
   ) {
@@ -153,6 +155,17 @@ export class ContentTranslatorProcessor extends WorkerHost {
       duration,
     });
 
+    // Platform usage log
+    await this.usageLogger.logUsage({
+      userId,
+      toolId: "content-translator",
+      modelId: model,
+      providerSlug: provider,
+      duration,
+      success: true,
+      credits: creditCost,
+    });
+
     return {
       userId,
       translationId: log.id,
@@ -209,6 +222,17 @@ export class ContentTranslatorProcessor extends WorkerHost {
         jobId: job.id,
       };
       await this.eventPublisher.publish(TRANSLATION_FAILED_CHANNEL, event);
+
+      // Platform usage log
+      await this.usageLogger.logUsage({
+        userId,
+        toolId: "content-translator",
+        modelId: job.data?.model,
+        providerSlug: job.data?.provider,
+        success: false,
+        credits: 0,
+        error: friendlyMessage,
+      });
     }
   }
 }

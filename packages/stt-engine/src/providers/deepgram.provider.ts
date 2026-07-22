@@ -1,6 +1,7 @@
 import WebSocket from "ws";
 import { randomUUID } from "crypto";
 import { STTProviderBase } from "./stt-provider.base";
+import { Logger } from "@creator-hub/shared-utils";
 import type {
   STTProviderName,
   STTStreamParams,
@@ -31,6 +32,7 @@ interface DeepgramTranscriptMessage {
 }
 
 export class DeepgramProvider extends STTProviderBase {
+  private logger = new Logger("DeepgramProvider");
   readonly name: STTProviderName = "deepgram";
   readonly supportedLanguages = [
     "en",
@@ -147,11 +149,10 @@ export class DeepgramProvider extends STTProviderBase {
     ws.on("message", (data: Buffer) => {
       try {
         const msg: DeepgramTranscriptMessage = JSON.parse(data.toString());
-        console.log(
-          "[Deepgram] Message type:",
-          msg.type,
-          msg.is_final ? "(final)" : "(interim)",
-        );
+        this.logger.debug("Message received", {
+          type: msg.type,
+          isFinal: msg.is_final,
+        });
 
         if (msg.type === "Results" && msg.channel) {
           const transcript = msg.channel.alternatives[0]?.transcript || "";
@@ -177,11 +178,11 @@ export class DeepgramProvider extends STTProviderBase {
     });
 
     ws.on("open", () => {
-      console.log("[Deepgram] WebSocket connected for stream", streamId);
+      this.logger.info("WebSocket connected", { streamId });
     });
 
     ws.on("error", (err: Error) => {
-      console.error("[Deepgram] WebSocket error:", err.message);
+      this.logger.error("WebSocket error", { error: err.message, streamId });
       params.onError(err);
       closed = true;
     });

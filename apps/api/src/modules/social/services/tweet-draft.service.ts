@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from "@nestjs/common";
 import { AIEngineService } from "@creator-hub/ai-engine";
 import { CreditService } from "@creator-hub/billing";
 import { Logger } from "@creator-hub/shared-utils";
+import { PlatformUsageLogger } from "@creator-hub/analytics";
 import { prisma, type TweetDraft } from "@creator-hub/database";
 import { StyleInjectionService } from "../../user-style/services/style-injection.service";
 
@@ -30,6 +31,7 @@ export class TweetDraftService {
     private aiEngine: AIEngineService,
     private styleInjection: StyleInjectionService,
     private creditService: CreditService,
+    private usageLogger: PlatformUsageLogger,
   ) {}
 
   async createDraft(options: CreateDraftOptions): Promise<TweetDraft> {
@@ -53,6 +55,7 @@ export class TweetDraftService {
   }
 
   async generateTweet(options: GenerateTweetOptions): Promise<TweetDraft> {
+    const startTime = Date.now();
     this.logger.info("Generating tweet with AI", {
       userId: options.userId,
       topic: options.topic,
@@ -123,6 +126,18 @@ Respond with ONLY the tweet text, no explanations or quotes.`;
         error: (error as Error).message,
         stack: (error as Error).stack,
       });
+
+      // Platform usage log
+      await this.usageLogger.logUsage({
+        userId: options.userId,
+        toolId: "x-post-tweet",
+        modelId: model,
+        duration: Date.now() - startTime,
+        success: false,
+        credits: 0,
+        error: (error as Error).message,
+      });
+
       throw new BadRequestException(
         `Failed to generate tweet: ${(error as Error).message}`,
       );
@@ -171,6 +186,16 @@ Respond with ONLY the tweet text, no explanations or quotes.`;
       userId: options.userId,
       draftId: draft.id,
       charCount: draft.content.length,
+    });
+
+    // Platform usage log
+    await this.usageLogger.logUsage({
+      userId: options.userId,
+      toolId: "x-post-tweet",
+      modelId: model,
+      duration: Date.now() - startTime,
+      success: true,
+      credits: creditCost,
     });
 
     return draft;
