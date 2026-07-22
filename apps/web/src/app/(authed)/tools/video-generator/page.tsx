@@ -8,18 +8,40 @@ import { useToolsStore } from "@/store/tools.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { useVideoStore } from "@/store/video.store";
 import api from "@/lib/api";
-import { Button, Badge, EmptyState, LoadingSpinner } from "@creator-hub/ui";
+import {
+  Button,
+  Badge,
+  EmptyState,
+  LoadingSpinner,
+  Switch,
+  Tooltip,
+} from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { LiquidEtherBackground } from "@/components/animations";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
 import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 import { ProviderSelect } from "@/components/provider-select";
+import { Volume2, VolumeX } from "lucide-react";
 
 const videoAspectRatios = [
   { id: "16:9", label: "16:9", width: 1280, height: 720, iconClass: "w-8 h-5" },
   { id: "9:16", label: "9:16", width: 720, height: 1280, iconClass: "w-5 h-8" },
   { id: "1:1", label: "1:1", width: 720, height: 720, iconClass: "w-8 h-8" },
 ];
+
+// Quality options by model type
+const QUALITY_OPTIONS = {
+  default: [
+    { id: "480p", label: "480p" },
+    { id: "720p", label: "720p" },
+  ],
+  seedance2: [
+    { id: "480p", label: "480p" },
+    { id: "720p", label: "720p" },
+    { id: "1080p", label: "1080p" },
+    { id: "4k", label: "4K" },
+  ],
+} as const;
 
 const planLabels: Record<
   string,
@@ -52,12 +74,18 @@ export default function VideoGeneratorPage() {
     aspectRatio,
     model,
     imageUrl,
+    duration,
+    audioEnabled,
+    quality,
     variations,
     setPrompt,
     setAiProvider,
     setAspectRatio,
     setModel,
     setImageUrl,
+    setDuration,
+    setAudioEnabled,
+    setQuality,
     startGeneration,
     setRevealing,
     setReady,
@@ -74,6 +102,22 @@ export default function VideoGeneratorPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isI2V = model === "Wan-AI/Wan2.2-I2V-A14B";
+
+  // Detect Seedance models for advanced settings
+  const isSeedance = model.toLowerCase().includes("seedance");
+  const isSeedance2 =
+    model.toLowerCase().includes("seedance-2") ||
+    model.toLowerCase().includes("seedance2");
+  const supportsAdvancedSettings = isSeedance;
+  const qualityOptions = isSeedance2
+    ? QUALITY_OPTIONS.seedance2
+    : QUALITY_OPTIONS.default;
+
+  // Calculate dynamic credits: cost per second × duration
+  const [selectedModelCreditCost, setSelectedModelCreditCost] = useState(50);
+  const estimatedCredits = supportsAdvancedSettings
+    ? selectedModelCreditCost * duration
+    : selectedModelCreditCost;
 
   const promptFromUrl = useToolQueryParams();
 
@@ -208,6 +252,9 @@ export default function VideoGeneratorPage() {
       provider: aiProvider,
       aspectRatio,
       imageUrl: isI2V ? imageUrl : undefined,
+      duration: supportsAdvancedSettings ? duration : undefined,
+      audioEnabled: supportsAdvancedSettings ? audioEnabled : undefined,
+      quality: supportsAdvancedSettings ? quality : undefined,
     };
     reset();
     generateMutation.reset();
@@ -271,7 +318,12 @@ export default function VideoGeneratorPage() {
               </button>
             )}
             <Badge variant="primary" size="sm">
-              ⚡ 50 credits
+              ⚡ {estimatedCredits} credits
+              {supportsAdvancedSettings && (
+                <span className="text-[10px] ml-1 opacity-70">
+                  ({selectedModelCreditCost}/sec × {duration}s)
+                </span>
+              )}
             </Badge>
             {plan && planLabels[plan] && (
               <Badge variant={planLabels[plan].variant} size="sm">
@@ -442,10 +494,104 @@ export default function VideoGeneratorPage() {
             onChange={(_modelId, m) => {
               setModel(m.modelId);
               setAiProvider(m.providerSlug);
+              setSelectedModelCreditCost(m.creditCost);
             }}
             disabled={isProcessing}
             label="Video Model"
           />
+
+          {/* Advanced Settings - Only for Seedance models */}
+          {supportsAdvancedSettings && (
+            <div className="space-y-4 pt-4 border-t border-border">
+              <div className="text-xs font-medium text-text-muted uppercase tracking-wider">
+                Advanced Settings
+              </div>
+
+              {/* Duration Slider */}
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label
+                    htmlFor="duration-slider"
+                    className="text-xs font-medium text-text-dim"
+                  >
+                    Duration
+                  </label>
+                  <span className="text-xs font-mono text-text tabular-nums">
+                    {duration}s
+                  </span>
+                </div>
+                <input
+                  id="duration-slider"
+                  type="range"
+                  min="4"
+                  max="15"
+                  step="1"
+                  value={duration}
+                  onChange={(e) => setDuration(parseInt(e.target.value))}
+                  disabled={isProcessing}
+                  className="w-full accent-primary h-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <div className="mt-1 flex justify-between text-[10px] text-text-dim">
+                  <span>4s</span>
+                  <span>15s</span>
+                </div>
+              </div>
+
+              {/* Audio Switch */}
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="audio-switch"
+                  className="text-xs font-medium text-text-dim flex items-center gap-2"
+                >
+                  {audioEnabled ? (
+                    <Volume2 size={16} className="text-primary" />
+                  ) : (
+                    <VolumeX size={16} className="text-text-dim" />
+                  )}
+                  Audio
+                </label>
+                <Switch
+                  id="audio-switch"
+                  checked={audioEnabled}
+                  onCheckedChange={setAudioEnabled}
+                  disabled={isProcessing}
+                />
+              </div>
+
+              {/* Quality Selector */}
+              <div>
+                <label className="text-xs font-medium text-text-dim mb-2 block">
+                  Quality
+                </label>
+                <div
+                  className="flex gap-1.5"
+                  role="radiogroup"
+                  aria-label="Quality selection"
+                >
+                  {qualityOptions.map((q) => {
+                    const isSelected = quality === q.id;
+                    return (
+                      <button
+                        key={q.id}
+                        role="radio"
+                        aria-checked={isSelected}
+                        aria-label={`${q.label} quality`}
+                        onClick={() => !isProcessing && setQuality(q.id)}
+                        disabled={isProcessing}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                          isSelected
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-surface-elevated text-text-dim hover:border-primary/50 hover:bg-primary/5"
+                        }`}
+                      >
+                        {q.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="pt-2">
             <Button
@@ -456,7 +602,7 @@ export default function VideoGeneratorPage() {
               disabled={
                 !prompt.trim() ||
                 !creditsHydrated ||
-                balance < 50 ||
+                balance < estimatedCredits ||
                 isProcessing ||
                 (isI2V && !imageUrl)
               }
@@ -464,9 +610,9 @@ export default function VideoGeneratorPage() {
             >
               {isProcessing ? "Generating..." : "Generate Video"}
             </Button>
-            {creditsHydrated && balance < 50 && (
+            {creditsHydrated && balance < estimatedCredits && (
               <p className="mt-2 text-xs text-error text-center">
-                Insufficient credits.{" "}
+                Insufficient credits. Need {estimatedCredits} credits.{" "}
                 <button
                   onClick={() => router.push("/credits")}
                   className="underline cursor-pointer"

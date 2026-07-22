@@ -91,7 +91,9 @@ export class AIEngineService {
                 aspectRatio: request.parameters?.aspectRatio as string,
                 model: request.model,
               })
-            : await provider.generate(request);
+            : request.taskType === "video-generation" && provider.generateVideo
+              ? await provider.generateVideo(request)
+              : await provider.generate(request);
         const latency = Date.now() - startTime;
 
         // Breadcrumb: Success

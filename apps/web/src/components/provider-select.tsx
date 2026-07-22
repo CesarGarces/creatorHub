@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { ChevronDown, Check, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { useCreditsStore } from "@/store/credits.store";
+import { Tooltip } from "@creator-hub/ui";
 
 // ─── Mode → TaskType mapping ───────────────────────────────────────────────
 // A model appears in the dropdown only if its taskType matches one of the
@@ -207,50 +208,55 @@ export function ProviderSelect({
                 const isProDisabled = model.tier === "pro" && plan === "FREE";
 
                 return (
-                  <button
+                  <Tooltip
                     key={model.id}
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    disabled={disabled || isProDisabled}
-                    onClick={() => {
-                      if (isProDisabled) return;
-                      onChange(model.modelId, model);
-                      setIsOpen(false);
-                    }}
-                    className={`flex w-full items-center justify-between px-3 py-3 text-sm text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] ${
-                      isSelected
-                        ? "bg-primary/10 text-primary"
-                        : "hover:bg-surface text-text"
-                    }`}
+                    content={model.displayName}
+                    side="right"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-medium truncate">
-                        {model.displayName}
-                      </span>
-                      {model.tier === "pro" && (
-                        <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600">
-                          PRO
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      disabled={disabled || isProDisabled}
+                      onClick={() => {
+                        if (isProDisabled) return;
+                        onChange(model.modelId, model);
+                        setIsOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between px-3 py-3 text-sm text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] ${
+                        isSelected
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-surface text-text"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-medium truncate">
+                          {model.displayName}
                         </span>
-                      )}
-                      {isProDisabled && (
-                        <span className="text-[10px] text-text-dim whitespace-nowrap">
-                          (upgrade)
+                        {model.tier === "pro" && (
+                          <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600">
+                            PRO
+                          </span>
+                        )}
+                        {isProDisabled && (
+                          <span className="text-[10px] text-text-dim whitespace-nowrap">
+                            (upgrade)
+                          </span>
+                        )}
+                        <span className="rounded bg-surface-elevated px-1.5 py-0.5 text-[9px] font-medium text-text-dim">
+                          {taskTypeLabel[model.taskType] ?? model.taskType}
                         </span>
-                      )}
-                      <span className="rounded bg-surface-elevated px-1.5 py-0.5 text-[9px] font-medium text-text-dim">
-                        {taskTypeLabel[model.taskType] ?? model.taskType}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <span className="text-xs text-text-muted tabular-nums">
-                        {model.creditCost} cr
-                      </span>
-                      {isSelected && (
-                        <Check size={16} className="text-primary" />
-                      )}
-                    </div>
-                  </button>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <span className="text-xs text-text-muted tabular-nums">
+                          {model.creditCost} cr
+                        </span>
+                        {isSelected && (
+                          <Check size={16} className="text-primary" />
+                        )}
+                      </div>
+                    </button>
+                  </Tooltip>
                 );
               })}
             </div>

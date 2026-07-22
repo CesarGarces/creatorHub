@@ -46,6 +46,9 @@ export class VideoProcessor extends WorkerHost {
       creditCost: number;
       width: number;
       height: number;
+      duration?: number;
+      audioEnabled?: boolean;
+      quality?: string;
     }>,
   ): Promise<{
     userId: string;
@@ -64,6 +67,9 @@ export class VideoProcessor extends WorkerHost {
       creditCost,
       width,
       height,
+      duration,
+      audioEnabled,
+      quality,
     } = job.data;
 
     this.logger.info(`Processing video job ${job.id}`, {
@@ -113,7 +119,14 @@ export class VideoProcessor extends WorkerHost {
         provider: provider as any,
         model: model as any,
         prompt,
-        parameters: { imageUrl: resolvedImageUrl, width, height },
+        parameters: {
+          imageUrl: resolvedImageUrl,
+          width,
+          height,
+          duration,
+          audioEnabled,
+          quality,
+        },
         userId,
         toolId: "video-generator",
       });
@@ -173,7 +186,7 @@ export class VideoProcessor extends WorkerHost {
       `Generated video: ${prompt.slice(0, 50)}...`,
     );
 
-    const duration = Date.now() - startTime;
+    const processingTimeMs = Date.now() - startTime;
     const isProModel = providerTier === "PRO";
 
     const video = await prisma.generatedImage.create({
@@ -196,7 +209,7 @@ export class VideoProcessor extends WorkerHost {
 
     this.logger.info(`Video job ${job.id} completed`, {
       videoId: video.id,
-      duration,
+      processingTimeMs,
     });
 
     // Platform usage log
@@ -205,7 +218,7 @@ export class VideoProcessor extends WorkerHost {
       toolId: "video-generator",
       modelId: model,
       providerSlug: provider,
-      duration,
+      duration: processingTimeMs,
       success: true,
       credits: creditCost,
     });

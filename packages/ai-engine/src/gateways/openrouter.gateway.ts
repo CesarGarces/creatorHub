@@ -386,6 +386,155 @@ export class OpenRouterGateway implements AIGatewayInterface {
   }
 
   // ──────────────────────────────────────────────
+  // VIDEO GENERATION
+  // ──────────────────────────────────────────────
+
+  async videoGeneration(params: {
+    model: string;
+    prompt: string;
+    width?: number;
+    height?: number;
+    imageUrl?: string;
+    duration?: number;
+    audioEnabled?: boolean;
+    quality?: string;
+  }): Promise<GatewayResponse> {
+    const startTime = Date.now();
+
+    const body: Record<string, unknown> = {
+      model: params.model,
+      prompt: params.prompt,
+    };
+
+    if (params.width && params.height) {
+      body.size = `${params.width}x${params.height}`;
+    }
+
+    if (params.imageUrl) {
+      body.image_url = params.imageUrl;
+    }
+
+    if (params.duration) {
+      body.duration = params.duration;
+    }
+
+    if (params.audioEnabled !== undefined) {
+      body.audio = params.audioEnabled;
+    }
+
+    if (params.quality) {
+      body.resolution = params.quality;
+    }
+
+    this.logger.info("Submitting video generation", {
+      model: params.model,
+      duration: params.duration,
+      quality: params.quality,
+      audioEnabled: params.audioEnabled,
+    });
+
+    const response = await fetch(`${this.baseUrl}/videos/generations`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.config.apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.APP_URL || "https://creatorhub.app",
+        "X-Title": "Creator Hub",
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(this.config.timeout || 120_000),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenRouter API error ${response.status}: ${errorText}`);
+    }
+
+    const data = (await response.json()) as { id: string };
+    const generationId = data.id;
+
+    if (!generationId) {
+      throw new Error("OpenRouter returned no generation ID");
+    }
+
+    // Poll for completion
+    const maxAttempts = 120;
+    const pollInterval = 5000;
+    let videoUrl: string | null = null;
+
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, pollInterval));
+
+      let statusRes: Response;
+      try {
+        statusRes = await fetch(
+          `${this.baseUrl}/videos/generations/${generationId}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${this.config.apiKey}`,
+              "HTTP-Referer": process.env.APP_URL || "https://creatorhub.app",
+              "X-Title": "Creator Hub",
+            },
+            signal: AbortSignal.timeout(30_000),
+          },
+        );
+      } catch {
+        continue;
+      }
+
+      if (!statusRes.ok) continue;
+
+      const statusData = (await statusRes.json()) as {
+        status?: string;
+        video_url?: string;
+        error?: { message?: string };
+      };
+
+      const status = statusData.status?.toLowerCase();
+      const resolvedUrl = statusData.video_url;
+
+      if (i === 0 || (i + 1) % 10 === 0 || resolvedUrl || status === "failed") {
+        this.logger.info(`Video generation poll #${i + 1}/${maxAttempts}`, {
+          generationId,
+          status,
+          hasUrl: !!resolvedUrl,
+        });
+      }
+
+      if ((status === "completed" || status === "succeeded") && resolvedUrl) {
+        videoUrl = resolvedUrl;
+        break;
+      }
+
+      if (status === "failed") {
+        throw new Error(
+          `OpenRouter video generation failed: ${statusData.error?.message || "unknown"}`,
+        );
+      }
+    }
+
+    if (!videoUrl) {
+      throw new Error("OpenRouter video generation timed out after 10 minutes");
+    }
+
+    const latency = Date.now() - startTime;
+
+    this.logger.info("Video generation completed", {
+      model: params.model,
+      generationId,
+      latency,
+    });
+
+    return {
+      id: generationId,
+      model: params.model,
+      imageUrl: videoUrl, // Reusing imageUrl field for video URL
+      rawResponse: { videoUrl, generationId },
+    };
+  }
+
+  // ──────────────────────────────────────────────
   // LIST MODELS
   // ──────────────────────────────────────────────
 

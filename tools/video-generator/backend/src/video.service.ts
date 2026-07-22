@@ -36,6 +36,9 @@ export class VideoService {
     model?: string;
     provider?: string;
     aspectRatio?: string;
+    duration?: number;
+    audioEnabled?: boolean;
+    quality?: string;
   }): Promise<EnqueuedVideo> {
     const user = await prisma.user.findUnique({
       where: { id: params.userId },
@@ -62,26 +65,45 @@ export class VideoService {
       throw new NotFoundException("Selected provider is not available");
     }
 
-    // Verify the specific model is active (if a modelId was provided)
-    const modelId = params.model || params.provider;
-    if (modelId) {
-      const modelMetadata = await prisma.modelMetadata.findUnique({
-        where: {
-          providerSlug_modelId: { providerSlug, modelId },
-        },
-        select: { isActive: true, displayName: true },
-      });
-      if (modelMetadata && !modelMetadata.isActive) {
-        throw new BadRequestException(
-          `Model "${modelMetadata.displayName}" is currently inactive. Please select a different model.`,
-        );
-      }
+    // Verify the specific model is active
+    const modelId = params.model || "Wan-AI/Wan2.2-T2V-A14B";
+    const modelMetadataCheck = await prisma.modelMetadata.findUnique({
+      where: {
+        providerSlug_modelId: { providerSlug, modelId },
+      },
+      select: { isActive: true, displayName: true, creditCost: true },
+    });
+    if (modelMetadataCheck && !modelMetadataCheck.isActive) {
+      throw new BadRequestException(
+        `Model "${modelMetadataCheck.displayName}" is currently inactive. Please select a different model.`,
+      );
     }
 
-    const creditCost = provider.costPerCredit;
+    // Determine if model supports advanced settings (Seedance models)
+    const isSeedance = model.toLowerCase().includes("seedance");
+    const supportsAdvancedSettings = isSeedance;
+
+    // Validate and normalize duration (4-15 seconds for Seedance)
+    const duration = supportsAdvancedSettings
+      ? Math.min(Math.max(params.duration || 4, 4), 15)
+      : undefined;
+
+    // Calculate credits: base cost per second × duration
+    const modelMetadata = await prisma.modelMetadata.findUnique({
+      where: {
+        providerSlug_modelId: { providerSlug, modelId },
+      },
+      select: { creditCost: true },
+    });
+    const baseCostPerSecond =
+      modelMetadata?.creditCost || provider.costPerCredit;
+    const creditCost = duration
+      ? baseCostPerSecond * duration
+      : baseCostPerSecond;
+
     if (user.currentCredits < creditCost) {
       throw new BadRequestException(
-        "Insufficient credits. Please upgrade your plan or purchase credits.",
+        `Insufficient credits. Need ${creditCost} credits (${baseCostPerSecond}/sec × ${duration || 1}s), but you have ${user.currentCredits}.`,
       );
     }
 
@@ -98,11 +120,16 @@ export class VideoService {
       creditCost,
       width: dimensions.width,
       height: dimensions.height,
+      duration: supportsAdvancedSettings ? duration : undefined,
+      audioEnabled: supportsAdvancedSettings ? params.audioEnabled : undefined,
+      quality: supportsAdvancedSettings ? params.quality : undefined,
     });
 
     this.logger.info(`Video job enqueued`, {
       jobId: job.id,
       userId: params.userId,
+      creditCost,
+      duration,
     });
     return { jobId: job.id! };
   }

@@ -124,6 +124,21 @@ export interface AIGatewayInterface {
   }): Promise<GatewayResponse>;
 
   /**
+   * Generate a video
+   * Optional method - not all gateways support video generation
+   */
+  videoGeneration?(params: {
+    model: string;
+    prompt: string;
+    width?: number;
+    height?: number;
+    imageUrl?: string; // For image-to-video
+    duration?: number; // Duration in seconds
+    audioEnabled?: boolean; // Enable/disable audio
+    quality?: string; // Resolution quality (480p, 720p, 1080p, 4k)
+  }): Promise<GatewayResponse>;
+
+  /**
    * List available models from the provider
    */
   listModels(): Promise<ModelInfo[]>;

@@ -17,12 +17,16 @@ export class SiliconFlowVideoProvider extends AIProviderBase {
   readonly tier = "free" as const;
 
   async generate(request: AIRequest): Promise<AIResponse> {
+    return this.generateVideo(request);
+  }
+
+  async generateVideo(request: AIRequest): Promise<AIResponse> {
     const model = (request.model as string) || "Wan-AI/Wan2.2-T2V-A14B";
     const width = (request.parameters?.width as number) || 1280;
     const height = (request.parameters?.height as number) || 720;
     const imageUrl = request.parameters?.imageUrl as string | undefined;
 
-    return this.generateVideo({
+    return this._generateVideoInternal({
       prompt: request.prompt,
       imageUrl,
       model,
@@ -37,7 +41,7 @@ export class SiliconFlowVideoProvider extends AIProviderBase {
     );
   }
 
-  private async generateVideo(options: {
+  private async _generateVideoInternal(options: {
     prompt: string;
     imageUrl?: string;
     model: string;

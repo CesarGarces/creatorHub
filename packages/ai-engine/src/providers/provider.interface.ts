@@ -26,6 +26,7 @@ export interface AIProviderInterface {
 
   generate(request: AIRequest): Promise<AIResponse>;
   generateImage(options: ImageGenerationOptions): Promise<AIResponse>;
+  generateVideo?(request: AIRequest): Promise<AIResponse>;
   generateStream?(request: AIRequest): AsyncGenerator<AIStreamChunk>;
   validateConfig(): boolean;
 }

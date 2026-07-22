@@ -153,6 +153,65 @@ export class OpenRouterProvider extends AIProviderBase {
   }
 
   // ──────────────────────────────────────────────
+  // VIDEO GENERATION
+  // ──────────────────────────────────────────────
+
+  async generateVideo(request: AIRequest): Promise<AIResponse> {
+    if (!this.gateway) {
+      throw new Error("OpenRouter gateway not configured");
+    }
+
+    if (!this.gateway.videoGeneration) {
+      throw new Error("OpenRouter gateway does not support video generation");
+    }
+
+    const model = this.getModel(request);
+    const startTime = Date.now();
+
+    const width = (request.parameters?.width as number) || 1280;
+    const height = (request.parameters?.height as number) || 720;
+    const imageUrl = request.parameters?.imageUrl as string | undefined;
+    const duration = request.parameters?.duration as number | undefined;
+    const audioEnabled = request.parameters?.audioEnabled as
+      | boolean
+      | undefined;
+    const quality = request.parameters?.quality as string | undefined;
+
+    const response = await this.gateway.videoGeneration({
+      model,
+      prompt: request.prompt,
+      width,
+      height,
+      imageUrl,
+      duration,
+      audioEnabled,
+      quality,
+    });
+
+    const latency = Date.now() - startTime;
+
+    return {
+      id: response.id,
+      provider: this.name,
+      model: response.model,
+      output: {
+        type: "video",
+        url: response.imageUrl || "",
+        width,
+        height,
+        duration,
+      },
+      usage: {
+        credits: 1, // Will be overridden by credit service
+      },
+      latency,
+      metadata: {
+        generationId: response.id,
+      },
+    };
+  }
+
+  // ──────────────────────────────────────────────
   // STREAMING
   // ──────────────────────────────────────────────
 

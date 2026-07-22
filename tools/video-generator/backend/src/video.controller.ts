@@ -27,6 +27,9 @@ export class VideoController {
       model?: string;
       provider?: string;
       aspectRatio?: string;
+      duration?: number;
+      audioEnabled?: boolean;
+      quality?: string;
     },
   ): Promise<{ success: boolean; data: { jobId: string } }> {
     if (!dto.prompt?.trim()) {
@@ -40,6 +43,9 @@ export class VideoController {
         model: dto.model,
         provider: dto.provider,
         aspectRatio: dto.aspectRatio,
+        duration: dto.duration,
+        audioEnabled: dto.audioEnabled,
+        quality: dto.quality,
       });
       return { success: true, data: result };
     } catch (error) {

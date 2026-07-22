@@ -380,12 +380,21 @@ export class SiliconFlowGateway implements AIGatewayInterface {
   async videoGeneration(params: {
     model: string;
     prompt: string;
+    width?: number;
+    height?: number;
     imageUrl?: string;
-  }): Promise<{ requestId: string }> {
+    duration?: number;
+    audioEnabled?: boolean;
+    quality?: string;
+  }): Promise<GatewayResponse> {
     const body: Record<string, unknown> = {
       model: params.model,
       prompt: params.prompt,
     };
+
+    if (params.width && params.height) {
+      body.image_size = `${params.width}x${params.height}`;
+    }
 
     if (params.imageUrl) {
       body.image = params.imageUrl;
@@ -404,7 +413,11 @@ export class SiliconFlowGateway implements AIGatewayInterface {
     }
 
     const data = (await response.json()) as SiliconFlowVideoResponse;
-    return { requestId: data.request_id };
+    return {
+      id: data.request_id,
+      model: params.model,
+      rawResponse: data as unknown as Record<string, unknown>,
+    };
   }
 
   // ──────────────────────────────────────────────

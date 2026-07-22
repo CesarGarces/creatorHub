@@ -112,7 +112,8 @@ describe("SiliconFlowGateway", () => {
         prompt: "A dancing cat",
       });
 
-      expect(result.requestId).toBe("video-123");
+      expect(result.id).toBe("video-123");
+      expect(result.model).toBe("Wan-AI/Wan2.2-T2V-A14B");
     });
   });
 
