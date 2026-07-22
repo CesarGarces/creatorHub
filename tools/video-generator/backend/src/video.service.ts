@@ -59,10 +59,14 @@ export class VideoService {
       where: { slug: providerSlug },
     });
     if (!provider) {
-      throw new NotFoundException("Selected provider is not available");
+      throw new NotFoundException(
+        `Provider "${providerSlug}" not found in database. Please run the seed script.`,
+      );
     }
     if (!provider.isActive) {
-      throw new NotFoundException("Selected provider is not available");
+      throw new NotFoundException(
+        `Provider "${providerSlug}" is currently inactive. Please contact support.`,
+      );
     }
 
     // Verify the specific model is active

@@ -531,7 +531,12 @@ async function main() {
         tier: "PRO",
         costPerCredit: 5,
         isActive: true,
-        supportedTasks: ["thumbnail", "text-generation", "video"],
+        supportedTasks: [
+          "thumbnail",
+          "text-generation",
+          "image-generation",
+          "video-generation",
+        ],
         isGateway: true,
         config: {
           baseUrl: "https://openrouter.ai/api/v1",
@@ -539,6 +544,21 @@ async function main() {
         },
       },
     });
+  } else {
+    // Update supportedTasks if provider exists but missing video-generation
+    if (!openrouterProviderExists.supportedTasks.includes("video-generation")) {
+      await prisma.provider.update({
+        where: { slug: "openrouter" },
+        data: {
+          supportedTasks: [
+            "thumbnail",
+            "text-generation",
+            "image-generation",
+            "video-generation",
+          ],
+        },
+      });
+    }
   }
 
   console.log("Seed completed");
