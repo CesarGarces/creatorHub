@@ -95,7 +95,9 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
                 src={asset.url}
                 controls
                 className="max-w-full max-h-[70vh] rounded-lg"
-                poster={asset.thumbnailUrl || undefined}
+                poster={
+                  asset.thumbnailUrl || "/video-thumbnail-placeholder.png"
+                }
                 aria-label={asset.prompt}
               />
             ) : (

@@ -76,8 +76,13 @@ export async function generateMetadata({
     `Join free and create your own.`;
 
   // Use thumbnail for videos (social media crawlers can't process video files)
-  // Fall back to the asset URL for images
-  const imageUrl = asset.thumbnailUrl || asset.url;
+  // For images, use the asset URL directly
+  // For videos without thumbnails, use the static placeholder
+  const VIDEO_PLACEHOLDER = `${FRONTEND_URL}/video-thumbnail-placeholder.png`;
+  const imageUrl =
+    asset.type === "VIDEO"
+      ? asset.thumbnailUrl || VIDEO_PLACEHOLDER
+      : asset.url;
   const pageUrl = `${FRONTEND_URL}/share/${assetId}`;
 
   return {
