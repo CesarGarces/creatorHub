@@ -43,10 +43,13 @@ export class PlatformUsageLogger {
     } = params;
 
     // Resolve human-readable names (non-blocking, best-effort)
-    const [toolName, modelName] = await Promise.all([
-      this.resolveToolName(toolId),
+    const [toolResult, modelName] = await Promise.all([
+      this.resolveTool(toolId),
       modelId ? this.resolveModelName(modelId) : Promise.resolve(undefined),
     ]);
+
+    const toolName = toolResult.name;
+    const toolExists = toolResult.exists;
 
     const durationStr = duration ? `${(duration / 1000).toFixed(1)}s` : "n/a";
 
@@ -68,39 +71,43 @@ export class PlatformUsageLogger {
       },
     );
 
-    // Write to UsageLog table (best-effort, don't crash on failure)
-    try {
-      await this.usageTracker.track({
-        userId,
-        toolId,
-        credits: credits ?? 0,
-        duration,
-        success,
-        error,
-        metadata: {
-          toolName: toolName ?? toolId,
-          modelName: modelName ?? modelId ?? "n/a",
-          ...metadata,
-        },
-      });
-    } catch (err) {
-      this.logger.warn("Failed to write UsageLog", {
-        error: (err as Error).message,
-        toolId,
-        userId,
-      });
+    // Write to UsageLog table (best-effort, skip if tool doesn't exist in Tool table)
+    if (toolExists) {
+      try {
+        await this.usageTracker.track({
+          userId,
+          toolId,
+          credits: credits ?? 0,
+          duration,
+          success,
+          error,
+          metadata: {
+            toolName: toolName ?? toolId,
+            modelName: modelName ?? modelId ?? "n/a",
+            ...metadata,
+          },
+        });
+      } catch (err) {
+        this.logger.warn("Failed to write UsageLog", {
+          error: (err as Error).message,
+          toolId,
+          userId,
+        });
+      }
     }
   }
 
-  private async resolveToolName(toolId: string): Promise<string | null> {
+  private async resolveTool(
+    toolId: string,
+  ): Promise<{ name: string | null; exists: boolean }> {
     try {
       const tool = await prisma.tool.findUnique({
         where: { id: toolId },
         select: { name: true },
       });
-      return tool?.name ?? null;
+      return { name: tool?.name ?? null, exists: !!tool };
     } catch {
-      return null;
+      return { name: null, exists: false };
     }
   }
 

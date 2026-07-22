@@ -1,7 +1,6 @@
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { ProviderRegistry } from "./provider-registry";
 import { OpenAIImageProvider } from "./openai.provider";
-import { GeminiProvider } from "./gemini.provider";
 import { StabilityAIProvider } from "./stability-ai.provider";
 import { FluxProvider } from "./flux.provider";
 import { SiliconFlowProvider } from "./siliconflow.provider";
@@ -29,7 +28,6 @@ export class ProviderFactory implements OnModuleInit {
   private registerBuiltInProviders() {
     const providers: AIProviderInterface[] = [
       new OpenAIImageProvider(),
-      new GeminiProvider(),
       new StabilityAIProvider(),
       new FluxProvider(),
       new SiliconFlowProvider(),

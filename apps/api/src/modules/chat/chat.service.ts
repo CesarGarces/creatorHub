@@ -123,8 +123,11 @@ export class ChatService {
       );
 
       const streamingProvider =
-        this.providerRegistry.getStreamingProviderForModel(model);
-      const fallbackProvider = this.providerRegistry.getProviderForModel(model);
+        await this.providerRegistry.getStreamingProviderForModel(model);
+      const dbProvider = await this.providerRegistry.getProviderForModel(model);
+      const fallbackProvider =
+        dbProvider ||
+        this.providerRegistry.getAnyProviderForTask("text-generation");
 
       if (!streamingProvider && !fallbackProvider) {
         throw new Error(`No provider available for model: ${model}`);

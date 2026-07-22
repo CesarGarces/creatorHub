@@ -6,6 +6,7 @@ import type {
   AIRequest,
   AIStreamChunk,
 } from "@creator-hub/shared-types";
+import { prisma } from "@creator-hub/database";
 
 @Injectable()
 export class ProviderRegistry {
@@ -91,15 +92,61 @@ export class ProviderRegistry {
     );
   }
 
-  getStreamingProviderForModel(model: string): AIProviderInterface | undefined {
+  /**
+   * Resolve which registered provider handles a given model.
+   * Source of truth: ModelMetadata table in DB (synced from OpenRouter + SiliconFlow APIs).
+   * Falls back to hardcoded supportedModels if DB lookup fails.
+   */
+  async getProviderForModel(
+    model: string,
+  ): Promise<AIProviderInterface | undefined> {
+    // 1. Query DB: find active ModelMetadata record for this modelId
+    const modelMeta = await prisma.modelMetadata.findFirst({
+      where: { modelId: model, isActive: true },
+    });
+
+    if (modelMeta) {
+      const provider = this.providers.get(modelMeta.providerSlug as AIProvider);
+      if (provider) return provider;
+    }
+
+    // 2. Fallback: check hardcoded supportedModels (legacy providers)
+    return Array.from(this.providers.values()).find((p) =>
+      p.supportedModels.includes(model),
+    );
+  }
+
+  /**
+   * Resolve which registered streaming-capable provider handles a given model.
+   * Source of truth: ModelMetadata table (supportsStreaming field).
+   * Falls back to hardcoded supportedModels if DB lookup fails.
+   */
+  async getStreamingProviderForModel(
+    model: string,
+  ): Promise<AIProviderInterface | undefined> {
+    // 1. Query DB: find active model that supports streaming
+    const modelMeta = await prisma.modelMetadata.findFirst({
+      where: { modelId: model, isActive: true, supportsStreaming: true },
+    });
+
+    if (modelMeta) {
+      const provider = this.providers.get(modelMeta.providerSlug as AIProvider);
+      if (provider && typeof provider.generateStream === "function") {
+        return provider;
+      }
+    }
+
+    // 2. Fallback: check hardcoded supportedModels (legacy providers)
     return this.getStreamingProviders().find((p) =>
       p.supportedModels.includes(model),
     );
   }
 
-  getProviderForModel(model: string): AIProviderInterface | undefined {
-    return Array.from(this.providers.values()).find((p) =>
-      p.supportedModels.includes(model),
-    );
+  /**
+   * Returns any provider that supports the given task type.
+   * Used as fallback when model-specific lookup fails.
+   */
+  getAnyProviderForTask(taskType: AITaskType): AIProviderInterface | undefined {
+    return this.getProvidersByTask(taskType)[0];
   }
 }

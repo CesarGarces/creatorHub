@@ -21,7 +21,7 @@ export class AIEngineService {
     const providers = requestedProvider
       ? [this.providerRegistry.getProvider(requestedProvider)]
       : request.model
-        ? this.findProviderByModel(request.model, request.taskType)
+        ? await this.findProviderByModel(request.model, request.taskType)
         : this.providerRegistry.getProvidersByTask(request.taskType);
 
     if (providers.length === 0) {
@@ -206,12 +206,17 @@ export class AIEngineService {
     });
   }
 
-  private findProviderByModel(
+  private async findProviderByModel(
     model: string,
     taskType: AITaskType,
-  ): AIProviderInterface[] {
-    const allForTask = this.providerRegistry.getProvidersByTask(taskType);
-    const match = allForTask.find((p) => p.supportedModels.includes(model));
-    return match ? [match] : allForTask;
+  ): Promise<AIProviderInterface[]> {
+    // 1. DB-based resolution: ModelMetadata tells us which provider handles this model
+    const dbProvider = await this.providerRegistry.getProviderForModel(model);
+    if (dbProvider) {
+      return [dbProvider];
+    }
+
+    // 2. Fallback: return all providers registered for this task type
+    return this.providerRegistry.getProvidersByTask(taskType);
   }
 }
