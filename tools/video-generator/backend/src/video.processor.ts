@@ -142,11 +142,16 @@ export class VideoProcessor extends WorkerHost {
     const output = result.output as { type: string; url: string };
     if (!output?.url) throw new Error("AI provider returned no video URL");
 
+    // Get download headers if provided (e.g. Authorization for OpenRouter)
+    const downloadHeaders = result.videoDownloadHeaders || {};
+
     let buffer: Buffer;
     let mimeType = "video/mp4";
 
     if (output.url.startsWith("http")) {
-      const response = await fetch(output.url);
+      const response = await fetch(output.url, {
+        headers: downloadHeaders,
+      });
       if (!response.ok)
         throw new Error(
           `Failed to fetch video from provider: ${response.status}`,

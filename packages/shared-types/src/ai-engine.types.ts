@@ -62,6 +62,8 @@ export interface AIResponse {
   usage: AIUsage;
   latency: number;
   metadata?: Record<string, unknown>;
+  /** Headers needed to download the video content (e.g. Authorization for OpenRouter) */
+  videoDownloadHeaders?: Record<string, string>;
 }
 
 export type AIOutput =

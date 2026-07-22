@@ -71,6 +71,8 @@ export interface GatewayResponse {
   finishReason?: string;
   rateLimit?: RateLimitInfo;
   rawResponse?: Record<string, unknown>;
+  /** Headers needed to download the video content (e.g. Authorization for OpenRouter) */
+  videoDownloadHeaders?: Record<string, string>;
 }
 
 // ──────────────────────────────────────────────

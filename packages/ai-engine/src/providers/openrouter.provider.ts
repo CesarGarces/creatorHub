@@ -205,6 +205,7 @@ export class OpenRouterProvider extends AIProviderBase {
         credits: 1, // Will be overridden by credit service
       },
       latency,
+      videoDownloadHeaders: response.videoDownloadHeaders,
       metadata: {
         generationId: response.id,
       },

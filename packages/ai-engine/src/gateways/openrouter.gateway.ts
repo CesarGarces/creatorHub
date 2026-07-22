@@ -563,6 +563,9 @@ export class OpenRouterGateway implements AIGatewayInterface {
       model: params.model,
       imageUrl: videoUrl, // Reusing imageUrl field for video URL
       rawResponse: { videoUrl, jobId },
+      videoDownloadHeaders: {
+        Authorization: `Bearer ${this.config.apiKey}`,
+      },
     };
   }
 
