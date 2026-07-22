@@ -401,27 +401,39 @@ export class OpenRouterGateway implements AIGatewayInterface {
   }): Promise<GatewayResponse> {
     const startTime = Date.now();
 
+    // Build request body using OpenRouter Videos API schema
+    // https://openrouter.ai/api/v1/videos
     const body: Record<string, unknown> = {
       model: params.model,
       prompt: params.prompt,
     };
 
+    // Map width/height to aspect_ratio
     if (params.width && params.height) {
-      body.size = `${params.width}x${params.height}`;
+      body.aspect_ratio = this.resolveAspectRatio(params.width, params.height);
     }
 
+    // Image-to-Video: use frame_images for first frame
     if (params.imageUrl) {
-      body.image_url = params.imageUrl;
+      body.frame_images = [
+        {
+          frame_type: "first_frame",
+          url: params.imageUrl,
+        },
+      ];
     }
 
+    // Duration in seconds
     if (params.duration) {
       body.duration = params.duration;
     }
 
+    // Audio generation flag
     if (params.audioEnabled !== undefined) {
-      body.audio = params.audioEnabled;
+      body.generate_audio = params.audioEnabled;
     }
 
+    // Resolution quality
     if (params.quality) {
       body.resolution = params.quality;
     }
@@ -429,11 +441,13 @@ export class OpenRouterGateway implements AIGatewayInterface {
     this.logger.info("Submitting video generation", {
       model: params.model,
       duration: params.duration,
-      quality: params.quality,
-      audioEnabled: params.audioEnabled,
+      resolution: params.quality,
+      generateAudio: params.audioEnabled,
+      aspectRatio: body.aspect_ratio,
     });
 
-    const response = await fetch(`${this.baseUrl}/videos/generations`, {
+    // Submit video generation job
+    const response = await fetch(`${this.baseUrl}/videos`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.config.apiKey}`,
@@ -450,14 +464,28 @@ export class OpenRouterGateway implements AIGatewayInterface {
       throw new Error(`OpenRouter API error ${response.status}: ${errorText}`);
     }
 
-    const data = (await response.json()) as { id: string };
-    const generationId = data.id;
+    const submitData = (await response.json()) as {
+      id: string;
+      polling_url: string;
+      status: string;
+      generation_id?: string;
+    };
 
-    if (!generationId) {
-      throw new Error("OpenRouter returned no generation ID");
+    const jobId = submitData.id;
+
+    if (!jobId) {
+      throw new Error(
+        `OpenRouter returned no job ID. Response: ${JSON.stringify(submitData)}`,
+      );
     }
 
-    // Poll for completion
+    this.logger.info("Video generation job submitted", {
+      jobId,
+      generationId: submitData.generation_id,
+      status: submitData.status,
+    });
+
+    // Poll for completion using the job ID
     const maxAttempts = 120;
     const pollInterval = 5000;
     let videoUrl: string | null = null;
@@ -467,18 +495,15 @@ export class OpenRouterGateway implements AIGatewayInterface {
 
       let statusRes: Response;
       try {
-        statusRes = await fetch(
-          `${this.baseUrl}/videos/generations/${generationId}`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${this.config.apiKey}`,
-              "HTTP-Referer": process.env.APP_URL || "https://creatorhub.app",
-              "X-Title": "Creator Hub",
-            },
-            signal: AbortSignal.timeout(30_000),
+        statusRes = await fetch(`${this.baseUrl}/videos/${jobId}`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${this.config.apiKey}`,
+            "HTTP-Referer": process.env.APP_URL || "https://creatorhub.app",
+            "X-Title": "Creator Hub",
           },
-        );
+          signal: AbortSignal.timeout(30_000),
+        });
       } catch {
         continue;
       }
@@ -486,30 +511,37 @@ export class OpenRouterGateway implements AIGatewayInterface {
       if (!statusRes.ok) continue;
 
       const statusData = (await statusRes.json()) as {
-        status?: string;
-        video_url?: string;
-        error?: { message?: string };
+        id: string;
+        status: string;
+        unsigned_urls?: string[];
+        generation_id?: string;
+        error?: string;
       };
 
       const status = statusData.status?.toLowerCase();
-      const resolvedUrl = statusData.video_url;
+      const resolvedUrl = statusData.unsigned_urls?.[0];
 
       if (i === 0 || (i + 1) % 10 === 0 || resolvedUrl || status === "failed") {
         this.logger.info(`Video generation poll #${i + 1}/${maxAttempts}`, {
-          generationId,
+          jobId,
           status,
           hasUrl: !!resolvedUrl,
+          error: statusData.error,
         });
       }
 
-      if ((status === "completed" || status === "succeeded") && resolvedUrl) {
+      if (status === "completed" && resolvedUrl) {
         videoUrl = resolvedUrl;
         break;
       }
 
-      if (status === "failed") {
+      if (
+        status === "failed" ||
+        status === "cancelled" ||
+        status === "expired"
+      ) {
         throw new Error(
-          `OpenRouter video generation failed: ${statusData.error?.message || "unknown"}`,
+          `OpenRouter video generation ${status}: ${statusData.error || "unknown"}`,
         );
       }
     }
@@ -522,16 +554,37 @@ export class OpenRouterGateway implements AIGatewayInterface {
 
     this.logger.info("Video generation completed", {
       model: params.model,
-      generationId,
+      jobId,
       latency,
     });
 
     return {
-      id: generationId,
+      id: jobId,
       model: params.model,
       imageUrl: videoUrl, // Reusing imageUrl field for video URL
-      rawResponse: { videoUrl, generationId },
+      rawResponse: { videoUrl, jobId },
     };
+  }
+
+  /**
+   * Resolve width/height to the closest supported aspect ratio string
+   */
+  private resolveAspectRatio(width: number, height: number): string {
+    const ratio = width / height;
+
+    // Common aspect ratios
+    if (Math.abs(ratio - 16 / 9) < 0.1) return "16:9";
+    if (Math.abs(ratio - 9 / 16) < 0.1) return "9:16";
+    if (Math.abs(ratio - 1) < 0.1) return "1:1";
+    if (Math.abs(ratio - 4 / 3) < 0.1) return "4:3";
+    if (Math.abs(ratio - 3 / 4) < 0.1) return "3:4";
+    if (Math.abs(ratio - 3 / 2) < 0.1) return "3:2";
+    if (Math.abs(ratio - 2 / 3) < 0.1) return "2:3";
+    if (Math.abs(ratio - 21 / 9) < 0.1) return "21:9";
+    if (Math.abs(ratio - 9 / 21) < 0.1) return "9:21";
+
+    // Default to 16:9
+    return "16:9";
   }
 
   // ──────────────────────────────────────────────
