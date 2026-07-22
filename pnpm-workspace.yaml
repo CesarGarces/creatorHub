@@ -13,6 +13,7 @@ allowBuilds:
   '@sentry/node-cpu-profiler': true
   cypress: true
   esbuild: true
+  ffmpeg-static: true
   msgpackr-extract: true
   prisma: true
   protobufjs: true

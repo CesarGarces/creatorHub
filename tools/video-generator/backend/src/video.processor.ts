@@ -15,6 +15,14 @@ import type {
   VideoCompletedEvent,
   VideoFailedEvent,
 } from "@creator-hub/shared-types";
+import ffmpegPath from "ffmpeg-static";
+import { execFile } from "child_process";
+import { promisify } from "util";
+import { writeFile, unlink, readFile } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
+
+const execFileAsync = promisify(execFile);
 
 const VIDEO_COMPLETED_CHANNEL = "video:completed";
 const VIDEO_FAILED_CHANNEL = "video:failed";
@@ -184,6 +192,17 @@ export class VideoProcessor extends WorkerHost {
       throw new Error(`Storage upload failed: ${msg}`);
     }
 
+    // Extract first frame as thumbnail for social media previews
+    let thumbnailKey: string | null = null;
+    try {
+      thumbnailKey = await this.extractVideoThumbnail(buffer, userId, bucket);
+    } catch (error) {
+      // Thumbnail extraction is non-critical — log and continue
+      this.logger.warn(`Thumbnail extraction failed for video job ${job.id}`, {
+        error: (error as Error).message,
+      });
+    }
+
     await this.creditService.deduct(
       userId,
       creditCost,
@@ -209,6 +228,9 @@ export class VideoProcessor extends WorkerHost {
         url: `${uploadResult.bucket}/${uploadResult.key}`,
         credits: creditCost,
         isProModel,
+        metadata: thumbnailKey
+          ? { thumbnailKey: `${uploadResult.bucket}/${thumbnailKey}` }
+          : undefined,
       },
     });
 
@@ -280,6 +302,82 @@ export class VideoProcessor extends WorkerHost {
         credits: 0,
         error: friendlyMessage,
       });
+    }
+  }
+
+  /**
+   * Extract the first frame from a video buffer and upload as JPEG thumbnail.
+   * Uses ffmpeg-static which bundles a static ffmpeg binary.
+   * Returns the R2 key for the thumbnail, or null if extraction fails.
+   */
+  private async extractVideoThumbnail(
+    videoBuffer: Buffer,
+    userId: string,
+    bucket: string,
+  ): Promise<string | null> {
+    if (!ffmpegPath) {
+      this.logger.warn("ffmpeg-static not available, skipping thumbnail");
+      return null;
+    }
+
+    const tmpVideoPath = join(tmpdir(), `video-${Date.now()}-input.mp4`);
+    const tmpThumbPath = join(tmpdir(), `video-${Date.now()}-thumb.jpg`);
+
+    try {
+      // Write video buffer to temp file
+      await writeFile(tmpVideoPath, videoBuffer);
+
+      // Extract first frame at 1 second mark (more reliable than 0)
+      await execFileAsync(
+        ffmpegPath,
+        [
+          "-i",
+          tmpVideoPath,
+          "-ss",
+          "00:00:01",
+          "-vframes",
+          "1",
+          "-vf",
+          "scale=1280:-2", // Max width 1280, maintain aspect ratio
+          "-q:v",
+          "3", // Good quality JPEG
+          "-y", // Overwrite output
+          tmpThumbPath,
+        ],
+        { timeout: 30_000 },
+      );
+
+      // Read the thumbnail buffer
+      const thumbBuffer = await readFile(tmpThumbPath);
+      const thumbKey = `${userId}/${Date.now()}-video_thumb.jpg`;
+
+      // Upload thumbnail to R2
+      await this.storageService.uploadBuffer(
+        bucket,
+        thumbKey,
+        thumbBuffer,
+        "image/jpeg",
+      );
+
+      this.logger.info("Video thumbnail extracted and uploaded", {
+        thumbKey,
+        size: thumbBuffer.length,
+      });
+
+      return thumbKey;
+    } catch (error) {
+      this.logger.warn("ffmpeg thumbnail extraction failed", {
+        error: (error as Error).message,
+      });
+      return null;
+    } finally {
+      // Clean up temp files
+      try {
+        await unlink(tmpVideoPath);
+      } catch {}
+      try {
+        await unlink(tmpThumbPath);
+      } catch {}
     }
   }
 }

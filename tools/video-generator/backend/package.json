@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@creator-hub/ai-engine": "workspace:*",
+    "@creator-hub/analytics": "workspace:*",
     "@creator-hub/auth": "workspace:*",
     "@creator-hub/billing": "workspace:*",
     "@creator-hub/database": "workspace:*",
@@ -18,10 +19,10 @@
     "@creator-hub/shared-types": "workspace:*",
     "@creator-hub/shared-utils": "workspace:*",
     "@creator-hub/storage": "workspace:*",
-    "@nestjs/common": "^11.1.27",
     "@nestjs/bullmq": "^11.0.0",
+    "@nestjs/common": "^11.1.27",
     "bullmq": "^5.0.0",
-    "@creator-hub/analytics": "workspace:*"
+    "ffmpeg-static": "^5.3.0"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

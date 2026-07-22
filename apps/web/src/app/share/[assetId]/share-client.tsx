@@ -16,6 +16,7 @@ export interface PublicAsset {
   model: string;
   provider: string;
   url: string;
+  thumbnailUrl: string | null;
   likeCount: number;
   viewCount: number;
   createdAt: string;
@@ -94,7 +95,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
                 src={asset.url}
                 controls
                 className="max-w-full max-h-[70vh] rounded-lg"
-                poster={asset.url.replace(/\.[^/.]+$/, ".jpg")}
+                poster={asset.thumbnailUrl || undefined}
                 aria-label={asset.prompt}
               />
             ) : (

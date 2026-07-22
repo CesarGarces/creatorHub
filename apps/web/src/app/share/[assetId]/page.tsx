@@ -23,6 +23,7 @@ interface AssetData {
   model: string;
   provider: string;
   url: string;
+  thumbnailUrl: string | null;
   likeCount: number;
   viewCount: number;
   createdAt: string;
@@ -74,7 +75,9 @@ export async function generateMetadata({
     `${asset.type.toLowerCase()} by ${asset.creator.name || "a Creator Hub user"}. ` +
     `Join free and create your own.`;
 
-  const imageUrl = asset.url;
+  // Use thumbnail for videos (social media crawlers can't process video files)
+  // Fall back to the asset URL for images
+  const imageUrl = asset.thumbnailUrl || asset.url;
   const pageUrl = `${FRONTEND_URL}/share/${assetId}`;
 
   return {
@@ -92,7 +95,7 @@ export async function generateMetadata({
           width: asset.width,
           height: asset.height,
           alt: asset.prompt,
-          type: asset.type === "VIDEO" ? "video.other" : "image/png",
+          type: "image/jpeg",
         },
       ],
     },

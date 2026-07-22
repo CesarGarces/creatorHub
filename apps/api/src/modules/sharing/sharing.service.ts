@@ -124,6 +124,31 @@ export class SharingService {
       }
     }
 
+    // Re-sign thumbnail URL for videos (used for og:image and video poster)
+    let thumbnailUrl: string | null = null;
+    const metadata = asset.metadata as Record<string, unknown> | null;
+    const thumbnailKey = metadata?.thumbnailKey as string | undefined;
+    if (thumbnailKey && !thumbnailKey.startsWith("http")) {
+      const parts = thumbnailKey.split("/");
+      const bucket = parts[0] || "";
+      const key = parts.slice(1).join("/");
+      if (bucket && key) {
+        try {
+          thumbnailUrl = await this.storageService.getPresignedDownloadUrl(
+            bucket,
+            key,
+            7 * 24 * 60 * 60, // 7 days
+          );
+        } catch {
+          // Thumbnail URL generation failed — non-critical
+          this.logger.warn("Failed to generate thumbnail URL", {
+            assetId,
+            thumbnailKey,
+          });
+        }
+      }
+    }
+
     // Track view: only increment if this IP hasn't viewed in last 24h
     let viewIncremented = false;
     if (ip && userAgent && acceptLanguage) {
@@ -154,6 +179,7 @@ export class SharingService {
       model: asset.model,
       provider: asset.provider,
       url,
+      thumbnailUrl,
       likeCount: asset.likeCount,
       viewCount: asset.viewCount + (viewIncremented ? 1 : 0),
       createdAt: asset.createdAt,
