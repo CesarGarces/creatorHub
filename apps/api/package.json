@@ -1,6 +1,6 @@
 {
   "name": "@creator-hub/api",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "nest start --watch",
