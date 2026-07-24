@@ -53,6 +53,8 @@ import { XSearchTrendsModule } from "@creator-hub/x-search-trends-backend";
 import { SocialResearchModule } from "@creator-hub/social-research-backend";
 import "@creator-hub/x-post-tweet";
 import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
+import "@creator-hub/script-writer";
+import { ScriptWriterModule } from "@creator-hub/script-writer-backend";
 
 // Redis storage for rate limiting: limits stay consistent across replicas
 // and restarts (in-memory storage would multiply the effective limit per
@@ -131,6 +133,7 @@ const throttlerStorage = process.env.REDIS_URL
     XSearchTrendsModule,
     XPostTweetModule,
     SocialResearchModule,
+    ScriptWriterModule,
   ],
   controllers: [
     AuthController,

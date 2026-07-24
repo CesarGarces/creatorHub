@@ -1,0 +1,28 @@
+{
+  "name": "@creator-hub/script-writer-backend",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "echo 'ok'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@creator-hub/ai-engine": "workspace:*",
+    "@creator-hub/auth": "workspace:*",
+    "@creator-hub/billing": "workspace:*",
+    "@creator-hub/database": "workspace:*",
+    "@creator-hub/shared-types": "workspace:*",
+    "@creator-hub/shared-utils": "workspace:*",
+    "@creator-hub/analytics": "workspace:*",
+    "@nestjs/common": "^11.1.27",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0"
+  }
+}
