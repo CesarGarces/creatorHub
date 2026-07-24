@@ -6,6 +6,7 @@ vi.mock("@creator-hub/database", () => ({
     user: {
       findUnique: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
     creditTransaction: {
       create: vi.fn(),
@@ -36,7 +37,23 @@ describe("CreditService", () => {
   };
 
   beforeEach(() => {
+    // Reset all prisma mocks to clear leftover mockResolvedValueOnce queues
+    // from previous tests (clearAllMocks alone doesn't clear return value queues).
+    (prisma.user.findUnique as any).mockReset();
+    (prisma.user.update as any).mockReset();
+    (prisma.user.updateMany as any).mockReset();
+    (prisma.creditTransaction.create as any).mockReset();
+    (prisma.tool.findUnique as any).mockReset();
+    (prisma.$transaction as any).mockReset();
+    (prisma.$transaction as any).mockImplementation(
+      async (fn: (tx: any) => Promise<any>) => fn(prisma),
+    );
+
     vi.clearAllMocks();
+    mockQueue.add.mockReset();
+    mockQueue.add.mockResolvedValue({});
+    mockEventEmitter.emit.mockReset();
+
     service = new CreditService(mockQueue as any, mockEventEmitter as any);
   });
 
@@ -67,7 +84,7 @@ describe("CreditService", () => {
 
   describe("hasEnoughCredits", () => {
     it("should return true when balance is sufficient", async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
         currentCredits: 100,
       });
@@ -78,7 +95,7 @@ describe("CreditService", () => {
     });
 
     it("should return false when balance is insufficient", async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      (prisma.user.findUnique as any).mockResolvedValue({
         id: "user-1",
         currentCredits: 5,
       });
@@ -89,7 +106,7 @@ describe("CreditService", () => {
     });
 
     it("should return false when user has no balance", async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.user.findUnique as any).mockResolvedValue(null);
 
       const result = await service.hasEnoughCredits("user-1", 50);
 
@@ -98,39 +115,53 @@ describe("CreditService", () => {
   });
 
   describe("deduct", () => {
-    it("should deduct credits from currentCredits", async () => {
+    it("should deduct credits using atomic updateMany and record transaction", async () => {
+      // Initial user existence check (outside $transaction)
       (prisma.user.findUnique as any)
-        .mockResolvedValueOnce({
-          id: "user-1",
-          currentCredits: 80,
-        })
-        .mockResolvedValueOnce({
-          id: "user-1",
-          currentCredits: 70,
-        });
+        .mockResolvedValueOnce({ id: "user-1", currentCredits: 80 })
+        // Fresh balance read inside $transaction (after updateMany)
+        .mockResolvedValueOnce({ currentCredits: 70 });
       (prisma.tool.findUnique as any).mockResolvedValue({ id: "tool-1" });
+      (prisma.user.updateMany as any).mockResolvedValue({ count: 1 });
       (prisma.creditTransaction.create as any).mockResolvedValue({});
 
       const result = await service.deduct("user-1", 10, "tool-1", "Test usage");
 
       expect(result).toBe(true);
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: "user-1" },
-        data: {
-          currentCredits: { decrement: 10 },
-        },
+
+      // Atomic conditional debit — the core of SEC-07
+      expect(prisma.user.updateMany).toHaveBeenCalledWith({
+        where: { id: "user-1", currentCredits: { gte: 10 } },
+        data: { currentCredits: { decrement: 10 } },
+      });
+
+      // Balance recorded in the transaction
+      expect(prisma.creditTransaction.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: "user-1",
+          amount: -10,
+          type: "USAGE",
+          toolId: "tool-1",
+          balance: 70,
+        }),
       });
     });
 
     it("should return false and queue credit-depleted when balance is insufficient", async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        id: "user-1",
-        currentCredits: 3,
-      });
+      (prisma.user.findUnique as any)
+        // Initial check (user exists)
+        .mockResolvedValueOnce({ id: "user-1", currentCredits: 3 })
+        // Balance read for the depleted event (after $transaction returns null)
+        .mockResolvedValueOnce({ currentCredits: 3 });
+      (prisma.user.updateMany as any).mockResolvedValue({ count: 0 });
 
       const result = await service.deduct("user-1", 10);
 
       expect(result).toBe(false);
+
+      // updateMany returned count 0 → insufficient funds, no creditTransaction created
+      expect(prisma.creditTransaction.create).not.toHaveBeenCalled();
+
       expect(mockQueue.add).toHaveBeenCalledWith("credit-depleted", {
         userId: "user-1",
         balance: 3,
@@ -145,24 +176,20 @@ describe("CreditService", () => {
     });
 
     it("should return false when user does not exist", async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.user.findUnique as any).mockResolvedValue(null);
 
       const result = await service.deduct("user-1", 10);
 
       expect(result).toBe(false);
+      expect(prisma.user.updateMany).not.toHaveBeenCalled();
     });
 
     it("should validate toolId exists before deducting", async () => {
       (prisma.user.findUnique as any)
-        .mockResolvedValueOnce({
-          id: "user-1",
-          currentCredits: 80,
-        })
-        .mockResolvedValueOnce({
-          id: "user-1",
-          currentCredits: 70,
-        });
+        .mockResolvedValueOnce({ id: "user-1", currentCredits: 80 })
+        .mockResolvedValueOnce({ currentCredits: 70 });
       (prisma.tool.findUnique as any).mockResolvedValue({ id: "tool-1" });
+      (prisma.user.updateMany as any).mockResolvedValue({ count: 1 });
       (prisma.creditTransaction.create as any).mockResolvedValue({});
 
       await service.deduct("user-1", 10, "tool-1");
@@ -170,19 +197,17 @@ describe("CreditService", () => {
       expect(prisma.tool.findUnique).toHaveBeenCalledWith({
         where: { id: "tool-1" },
       });
+      expect(prisma.creditTransaction.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ toolId: "tool-1" }),
+      });
     });
 
     it("should set toolId to null when tool does not exist", async () => {
       (prisma.user.findUnique as any)
-        .mockResolvedValueOnce({
-          id: "user-1",
-          currentCredits: 80,
-        })
-        .mockResolvedValueOnce({
-          id: "user-1",
-          currentCredits: 70,
-        });
+        .mockResolvedValueOnce({ id: "user-1", currentCredits: 80 })
+        .mockResolvedValueOnce({ currentCredits: 70 });
       (prisma.tool.findUnique as any).mockResolvedValue(null);
+      (prisma.user.updateMany as any).mockResolvedValue({ count: 1 });
       (prisma.creditTransaction.create as any).mockResolvedValue({});
 
       await service.deduct("user-1", 10, "nonexistent-tool");
