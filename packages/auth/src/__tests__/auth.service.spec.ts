@@ -1,9 +1,12 @@
 import { ConflictException, UnauthorizedException } from "@nestjs/common";
 import { AuthService } from "../auth.service";
-import { prisma } from "@creator-hub/database";
+import { prisma, Prisma } from "@creator-hub/database";
 
-jest.mock("@creator-hub/database", () => ({
-  prisma: {
+jest.mock("@creator-hub/database", () => {
+  // Keep the real Prisma namespace so instanceof checks against
+  // PrismaClientKnownRequestError (P2002 handling) work under test.
+  const actual = jest.requireActual("@creator-hub/database");
+  const mockedPrisma = {
     user: {
       findUnique: jest.fn(),
       create: jest.fn(),
@@ -16,9 +19,15 @@ jest.mock("@creator-hub/database", () => ({
     subscription: {
       create: jest.fn(),
     },
-    $transaction: jest.fn(async (fn: (tx: any) => Promise<any>) => fn(prisma)),
-  },
-}));
+    creditTransaction: {
+      create: jest.fn(),
+    },
+    $transaction: jest.fn(async (fn: (tx: any) => Promise<any>) =>
+      fn(mockedPrisma),
+    ),
+  };
+  return { Prisma: actual.Prisma, prisma: mockedPrisma };
+});
 
 jest.mock("bcryptjs", () => ({
   hash: jest.fn().mockResolvedValue("$2a$12$hashedpassword"),
@@ -67,9 +76,25 @@ describe("AuthService", () => {
           plan: "FREE",
           currentCredits: 100,
           purchasedCredits: 0,
+          verificationCode: expect.any(String),
+          verificationExpires: expect.any(Date),
         },
       });
       expect(prisma.subscription.create).toHaveBeenCalled();
+      // Signup bonus must be recorded in the ledger with a deterministic
+      // idempotency key (protected by unique index at DB level).
+      expect(prisma.creditTransaction.create).toHaveBeenCalledWith({
+        data: {
+          userId: "user-1",
+          amount: 100,
+          type: "BONUS",
+          description: "Signup bonus",
+          referenceId: "signup:user-1",
+          balance: 100,
+        },
+      });
+      // Registration must run atomically inside a single transaction.
+      expect(prisma.$transaction).toHaveBeenCalled();
     });
 
     it("should throw ConflictException if email already exists", async () => {
@@ -77,6 +102,19 @@ describe("AuthService", () => {
         id: "existing-user",
         email: "test@example.com",
       });
+
+      await expect(
+        service.register("test@example.com", "password123"),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("should map a lost unique-constraint race (P2002) to ConflictException", async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+      const p2002 = new Prisma.PrismaClientKnownRequestError(
+        "Unique constraint failed",
+        { code: "P2002", clientVersion: "6.19.0" },
+      );
+      (prisma.$transaction as jest.Mock).mockRejectedValueOnce(p2002);
 
       await expect(
         service.register("test@example.com", "password123"),

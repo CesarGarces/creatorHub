@@ -31,7 +31,10 @@ export class CreditService {
     toolId?: string,
     description?: string,
   ): Promise<boolean> {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, currentCredits: true },
+    });
 
     if (!user) {
       this.logger.warn("Credit deduction failed: user not found", {
@@ -49,21 +52,66 @@ export class CreditService {
       return false;
     }
 
-    if (user.currentCredits < amount) {
+    let validToolId: string | null = null;
+    if (toolId) {
+      const tool = await prisma.tool.findUnique({ where: { id: toolId } });
+      if (tool) validToolId = tool.id;
+    }
+
+    // Atomic conditional debit (SEC-07): the balance check and the decrement
+    // are a single UPDATE ... WHERE currentCredits >= amount, which takes the
+    // row lock. Concurrent debits can no longer both pass a stale pre-check
+    // and drive the balance negative (the old read-check-then-decrement flow
+    // had that race outside the transaction).
+    const newBalance = await prisma.$transaction(async (tx) => {
+      const debit = await tx.user.updateMany({
+        where: { id: userId, currentCredits: { gte: amount } },
+        data: { currentCredits: { decrement: amount } },
+      });
+      if (debit.count === 0) return null; // insufficient funds — race-free
+
+      const fresh = await tx.user.findUnique({
+        where: { id: userId },
+        select: { currentCredits: true },
+      });
+      const balance = fresh?.currentCredits ?? 0;
+
+      await tx.creditTransaction.create({
+        data: {
+          userId,
+          amount: -amount,
+          type: "USAGE",
+          description: description || `Tool usage: ${toolId}`,
+          toolId: validToolId,
+          balance,
+        },
+      });
+
+      return balance;
+    });
+
+    if (newBalance === null) {
+      // Insufficient funds — authoritative, race-free result.
+      const fresh = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { currentCredits: true },
+      });
+      const currentCredits = fresh?.currentCredits ?? 0;
+
       this.logger.warn("Insufficient credits", {
         userId,
-        currentCredits: user.currentCredits,
+        currentCredits,
         requested: amount,
         toolId,
       });
       Sentry.addBreadcrumb({
         type: "default",
         category: "billing.credit",
-        message: `Insufficient credits: ${user.currentCredits} < ${amount}`,
+        message: `Insufficient credits: ${currentCredits} < ${amount}`,
         level: "warning",
         data: {
           userId,
-          currentCredits: user.currentCredits,
+          currentCredits,
           requested: amount,
           toolId,
         },
@@ -71,7 +119,7 @@ export class CreditService {
 
       await this.creditsQueue.add("credit-depleted", {
         userId,
-        balance: user.currentCredits,
+        balance: currentCredits,
       });
 
       this.eventEmitter.emit("marketing.credit_depleted", {
@@ -82,56 +130,27 @@ export class CreditService {
       return false;
     }
 
-    let validToolId: string | null = null;
-    if (toolId) {
-      const tool = await prisma.tool.findUnique({ where: { id: toolId } });
-      if (tool) validToolId = tool.id;
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          currentCredits: { decrement: amount },
-        },
-      });
-
-      const updated = await tx.user.findUnique({ where: { id: userId } });
-      const newBalance = updated?.currentCredits || 0;
-
-      await tx.creditTransaction.create({
-        data: {
-          userId,
-          amount: -amount,
-          type: "USAGE",
-          description: description || `Tool usage: ${toolId}`,
-          toolId: validToolId,
-          balance: newBalance,
-        },
-      });
-
-      // Breadcrumb: Credit deduction success
-      Sentry.addBreadcrumb({
-        type: "default",
-        category: "billing.credit",
-        message: `Deducted ${amount} credits for user ${userId}`,
-        level: "info",
-        data: {
-          userId,
-          amount,
-          newBalance,
-          toolId: validToolId,
-          description,
-        },
-      });
-
-      this.logger.info(`Deducted ${amount} credits`, {
+    // Breadcrumb: Credit deduction success
+    Sentry.addBreadcrumb({
+      type: "default",
+      category: "billing.credit",
+      message: `Deducted ${amount} credits for user ${userId}`,
+      level: "info",
+      data: {
         userId,
         amount,
         newBalance,
         toolId: validToolId,
         description,
-      });
+      },
+    });
+
+    this.logger.info(`Deducted ${amount} credits`, {
+      userId,
+      amount,
+      newBalance,
+      toolId: validToolId,
+      description,
     });
 
     return true;

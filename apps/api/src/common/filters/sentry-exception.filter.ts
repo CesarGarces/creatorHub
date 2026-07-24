@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import { Request, Response } from "express";
 import * as Sentry from "@sentry/nestjs";
+import { Prisma } from "@creator-hub/database";
 
 /**
  * Sentry Exception Filter
@@ -102,7 +103,21 @@ export class SentryExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       return exception.getStatus();
     }
+    // Defense in depth: an unhandled Prisma unique-constraint violation
+    // (P2002, e.g. a lost duplicate-registration race) is a client conflict,
+    // never a 500. Code paths should still handle P2002 locally with a
+    // domain-specific message — this is the global safety net.
+    if (this.isPrismaUniqueViolation(exception)) {
+      return HttpStatus.CONFLICT;
+    }
     return HttpStatus.INTERNAL_SERVER_ERROR;
+  }
+
+  private isPrismaUniqueViolation(exception: unknown): boolean {
+    return (
+      exception instanceof Prisma.PrismaClientKnownRequestError &&
+      exception.code === "P2002"
+    );
   }
 
   /**
@@ -118,6 +133,10 @@ export class SentryExceptionFilter implements ExceptionFilter {
 
     // Ignore 404 Not Found (client requesting nonexistent resource)
     if (status === HttpStatus.NOT_FOUND) return true;
+
+    // Ignore 409 Conflict (expected duplicate/unique conflicts — fast-path
+    // domain checks and rare lost races, both are client errors, not bugs)
+    if (status === HttpStatus.CONFLICT) return true;
 
     // Ignore health check endpoints
     if (request.url.includes("/health") || request.url.includes("/ready")) {
@@ -178,6 +197,14 @@ export class SentryExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const exceptionResponse = exception.getResponse();
       response.status(status).json(exceptionResponse);
+    } else if (this.isPrismaUniqueViolation(exception)) {
+      // Don't leak which unique field conflicted (information disclosure):
+      // a generic conflict message is enough for the client to retry sanely.
+      response.status(status).json({
+        statusCode: status,
+        message: "A resource with the same unique value already exists",
+        error: "Conflict",
+      });
     } else {
       response.status(status).json({
         statusCode: status,

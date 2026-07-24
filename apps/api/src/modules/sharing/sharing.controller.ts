@@ -13,7 +13,7 @@ import { Request, Response } from "express";
 import { SharingService } from "./sharing.service";
 import { Public } from "@creator-hub/auth";
 import { JwtAuthGuard } from "@creator-hub/auth";
-import { ThrottlerGuard } from "@nestjs/throttler";
+// Rate limiting is applied globally (APP_GUARD ThrottlerGuard in AppModule).
 
 @Controller("sharing")
 export class SharingController {
@@ -26,7 +26,6 @@ export class SharingController {
    */
   @Public()
   @Get(":assetId")
-  @UseGuards(ThrottlerGuard)
   async getPublicAsset(@Param("assetId") assetId: string, @Req() req: Request) {
     const ip =
       (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
@@ -52,7 +51,6 @@ export class SharingController {
   @Public()
   @Post(":assetId/like")
   @HttpCode(HttpStatus.OK)
-  @UseGuards(ThrottlerGuard)
   async toggleLike(@Param("assetId") assetId: string, @Req() req: Request) {
     const ip =
       (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
@@ -88,7 +86,6 @@ export class SharingController {
    */
   @Public()
   @Get(":assetId/liked")
-  @UseGuards(ThrottlerGuard)
   async hasLiked(@Param("assetId") assetId: string, @Req() req: Request) {
     const ip =
       (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
@@ -126,7 +123,6 @@ export class SharingController {
    */
   @Public()
   @Get(":assetId/share-url")
-  @UseGuards(ThrottlerGuard)
   async getShareUrl(@Param("assetId") assetId: string) {
     return { url: this.sharingService.getShareUrl(assetId) };
   }

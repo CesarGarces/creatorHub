@@ -27,7 +27,12 @@ interface AuthState {
 
   hydrate: () => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name?: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    name?: string,
+    idempotencyKey?: string,
+  ) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
 }
@@ -84,7 +89,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     }
   },
 
-  register: async (email, password, name) => {
+  register: async (email, password, name, idempotencyKey) => {
     set({ isLoading: true });
     try {
       const res = await api.post<{
@@ -92,11 +97,19 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         refreshToken?: string;
         user: User;
         emailVerified?: boolean;
-      }>("/auth/register", {
-        email,
-        password,
-        name,
-      });
+      }>(
+        "/auth/register",
+        {
+          email,
+          password,
+          name,
+        },
+        // Idempotency-Key lets the API safely replay this exact request
+        // instead of executing a duplicate registration on retries.
+        idempotencyKey
+          ? { headers: { "Idempotency-Key": idempotencyKey } }
+          : undefined,
+      );
       setAccessToken(res.accessToken);
       if (res.refreshToken) {
         setRefreshToken(res.refreshToken);

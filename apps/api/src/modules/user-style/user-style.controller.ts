@@ -12,7 +12,7 @@ import {
   DefaultValuePipe,
 } from "@nestjs/common";
 import { JwtAuthGuard, CurrentUser } from "@creator-hub/auth";
-import { ThrottlerGuard } from "@nestjs/throttler";
+// Rate limiting is applied globally (APP_GUARD ThrottlerGuard in AppModule).
 import { StyleProfileService } from "./services/style-profile.service";
 import { StyleAnalyzerService } from "./services/style-analyzer.service";
 import { ContentSampleService } from "./services/content-sample.service";
@@ -51,7 +51,6 @@ export class UserStyleController {
   }
 
   @Post("analyze")
-  @UseGuards(ThrottlerGuard)
   async analyze(@CurrentUser("id") userId: string) {
     const result = await this.analyzerService.analyze(userId);
     return { success: true, data: result };

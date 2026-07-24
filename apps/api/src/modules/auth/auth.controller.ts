@@ -9,11 +9,14 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { AuthService } from "@creator-hub/auth";
 import { Public, CurrentUser, JwtAuthGuard } from "@creator-hub/auth";
 import { EmailService } from "@creator-hub/email";
 import { prisma } from "@creator-hub/database";
+import { IdempotencyInterceptor } from "../../common/idempotency/idempotency.interceptor";
 import { IsEmail, IsString, MinLength, Length } from "class-validator";
 
 class RegisterDto {
@@ -85,45 +88,48 @@ export class AuthController {
     private emailService: EmailService,
   ) {}
 
+  // 5 registrations/hour per IP: account-creation abuse costs 100 credits each.
+  // Idempotency-Key support: safe client retries without duplicate side effects.
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 3_600_000 } })
+  @UseInterceptors(IdempotencyInterceptor)
   @Post("register")
   async register(@Body() dto: RegisterDto) {
-    const result = await this.authService.register(
-      dto.email,
-      dto.password,
-      dto.name,
-    );
+    // verificationCode/userName are internal-only: stripped from the response.
+    const { verificationCode, userName, ...result } =
+      await this.authService.register(dto.email, dto.password, dto.name);
 
-    const user = await prisma.user.findUnique({
-      where: { email: dto.email },
-      select: { verificationCode: true, name: true },
-    });
-
-    if (user?.verificationCode) {
+    if (verificationCode) {
       await this.emailService.sendVerificationEmail(dto.email, {
-        code: user.verificationCode,
-        userName: user.name || undefined,
+        code: verificationCode,
+        userName: userName || undefined,
       });
     }
 
     return result;
   }
 
+  // 10 logins/minute per IP: slows credential brute force.
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("login")
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto.email, dto.password);
   }
 
+  // 10 attempts/5min per IP: the 6-digit code (1M combinations) must not be brute-forceable.
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 300_000 } })
   @Post("verify-email")
   @HttpCode(HttpStatus.OK)
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.authService.verifyEmail(dto.email, dto.code);
   }
 
+  // 3 resends/5min per IP: verification-email spam protection.
   @Public()
+  @Throttle({ default: { limit: 3, ttl: 300_000 } })
   @Post("resend-verification")
   @HttpCode(HttpStatus.OK)
   async resendVerification(@Body() dto: ResendVerificationDto) {
@@ -150,7 +156,9 @@ export class AuthController {
     return this.authService.getVerificationStatus(email);
   }
 
+  // 3 requests/5min per IP: reset-email spam protection.
   @Public()
+  @Throttle({ default: { limit: 3, ttl: 300_000 } })
   @Post("forgot-password")
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
@@ -173,6 +181,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 300_000 } })
   @Post("reset-password")
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() dto: ResetPasswordDto) {

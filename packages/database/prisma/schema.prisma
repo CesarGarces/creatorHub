@@ -232,11 +232,17 @@ model CreditTransaction {
   description String
   toolId      String?
   provider    String?
-  referenceId String?
+  // Idempotency key for credit grants (e.g. "signup:{userId}", payment gateway IDs).
+  // Unique at DB level so concurrent duplicate grants fail instead of double-crediting.
+  // PostgreSQL allows multiple NULLs in unique columns, so non-referenced rows are unaffected.
+  referenceId String?               @unique
   balance     Int
   createdAt   DateTime              @default(now())
   tool        Tool?                 @relation(fields: [toolId], references: [id])
   user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([type])
 }
 
 model CreditPlan {

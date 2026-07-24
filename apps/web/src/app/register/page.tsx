@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { Button, Input, Card, CardContent, CardHeader } from "@creator-hub/ui";
@@ -17,6 +17,14 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
 
+  // One Idempotency-Key per registration attempt session: if the request is
+  // retried (double submit, network retry), the API replays the original
+  // response instead of creating a duplicate account.
+  const idempotencyKeyRef = useRef<string | null>(null);
+  if (idempotencyKeyRef.current === null) {
+    idempotencyKeyRef.current = crypto.randomUUID();
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -32,7 +40,12 @@ export default function RegisterPage() {
     }
 
     try {
-      await register(email, password, name);
+      await register(
+        email,
+        password,
+        name,
+        idempotencyKeyRef.current ?? undefined,
+      );
       router.push("/auth/verify");
     } catch {
       setError("Registration failed");

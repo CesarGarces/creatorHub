@@ -1,5 +1,5 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
-import { prisma } from "@creator-hub/database";
+import { prisma, Prisma } from "@creator-hub/database";
 import { CreditService } from "../credit.service";
 import {
   PaymentGateway,
@@ -205,165 +205,186 @@ export class CreditBillingService {
     // Handle SUCCESSFUL status - add credits
     if (verification.status !== "SUCCESSFUL") return false;
 
-    // Idempotency + credit addition in a single transaction to prevent double-processing
-    const result = await prisma.$transaction(async (tx) => {
-      const existing = await tx.creditTransaction.findFirst({
-        where: { referenceId },
-      });
-      if (existing) {
-        this.logger.log(`Payment already reconciled: ${referenceId}`);
-        return { skipped: true };
-      }
+    // Idempotency + credit addition in a single transaction to prevent double-processing.
+    // The findFirst pre-check is only a fast path for the common sequential
+    // duplicate. The REAL guarantee against concurrent duplicate webhooks is
+    // the unique index on CreditTransaction.referenceId: the loser's insert
+    // fails with P2002 and is treated as "already reconciled" below.
+    const reconcile = () =>
+      prisma.$transaction(async (tx) => {
+        const existing = await tx.creditTransaction.findFirst({
+          where: { referenceId },
+        });
+        if (existing) {
+          this.logger.log(`Payment already reconciled: ${referenceId}`);
+          return { skipped: true };
+        }
 
-      // MercadoPago webhook only sends { action, data: { id } }
-      // We need to fetch full payment details from the API
-      let userId: string | undefined;
-      let amountValue = 0;
-      let creditsFromMetadata: number | null = null;
-      let planSlugFromMetadata: string | null = null;
+        // MercadoPago webhook only sends { action, data: { id } }
+        // We need to fetch full payment details from the API
+        let userId: string | undefined;
+        let amountValue = 0;
+        let creditsFromMetadata: number | null = null;
+        let planSlugFromMetadata: string | null = null;
 
-      // Try to get from raw body first (in case some gateways send it directly)
-      userId =
-        raw?.external_reference ||
-        raw?.data?.external_reference ||
-        raw?.resource?.external_reference;
-      amountValue =
-        raw?.transaction_amount ||
-        raw?.amount ||
-        raw?.data?.amount ||
-        raw?.resource?.amount ||
-        0;
+        // Try to get from raw body first (in case some gateways send it directly)
+        userId =
+          raw?.external_reference ||
+          raw?.data?.external_reference ||
+          raw?.resource?.external_reference;
+        amountValue =
+          raw?.transaction_amount ||
+          raw?.amount ||
+          raw?.data?.amount ||
+          raw?.resource?.amount ||
+          0;
 
-      // If not found in raw body, fetch from MercadoPago API
-      if (!userId || !amountValue) {
-        const mpClient = this.getMercadoPagoClient();
-        if (mpClient && referenceId) {
-          try {
-            const paymentClient = new Payment(mpClient);
-            const payment = await paymentClient.get({ id: referenceId });
-            const paymentAny = payment as any;
+        // If not found in raw body, fetch from MercadoPago API
+        if (!userId || !amountValue) {
+          const mpClient = this.getMercadoPagoClient();
+          if (mpClient && referenceId) {
+            try {
+              const paymentClient = new Payment(mpClient);
+              const payment = await paymentClient.get({ id: referenceId });
+              const paymentAny = payment as any;
 
-            if (!userId) {
-              userId = paymentAny.external_reference;
+              if (!userId) {
+                userId = paymentAny.external_reference;
+              }
+              if (!amountValue) {
+                amountValue = paymentAny.transaction_amount || 0;
+              }
+
+              // Read credits and plan from preference metadata (stored at checkout time)
+              if (paymentAny.metadata?.credits) {
+                creditsFromMetadata = Number(paymentAny.metadata.credits);
+              }
+              if (paymentAny.metadata?.plan_slug) {
+                planSlugFromMetadata = String(paymentAny.metadata.plan_slug);
+              }
+
+              this.logger.log(
+                `Fetched payment ${referenceId} from MP API: userId=${userId}, amount=${amountValue}, creditsFromMetadata=${creditsFromMetadata}, planSlug=${planSlugFromMetadata}`,
+              );
+            } catch (err) {
+              this.logger.error(
+                `Failed to fetch payment ${referenceId} from MP API`,
+                err as any,
+              );
             }
-            if (!amountValue) {
-              amountValue = paymentAny.transaction_amount || 0;
-            }
+          }
+        }
 
-            // Read credits and plan from preference metadata (stored at checkout time)
-            if (paymentAny.metadata?.credits) {
-              creditsFromMetadata = Number(paymentAny.metadata.credits);
-            }
-            if (paymentAny.metadata?.plan_slug) {
-              planSlugFromMetadata = String(paymentAny.metadata.plan_slug);
-            }
+        if (!userId) {
+          this.logger.warn(
+            `Cannot reconcile payment ${referenceId}: userId not found`,
+          );
+          return { skipped: false };
+        }
 
+        if (!amountValue || amountValue <= 0) {
+          this.logger.warn(
+            `Cannot reconcile payment ${referenceId}: invalid amount ${amountValue}`,
+          );
+          return { skipped: false };
+        }
+
+        // Prefer credits from metadata (exact amount from checkout time)
+        // Fallback: calculate from plan (only works correctly if amount is in USD)
+        let credits: number;
+        if (creditsFromMetadata && creditsFromMetadata > 0) {
+          credits = creditsFromMetadata;
+          this.logger.log(
+            `Using credits from metadata for ${referenceId}: ${credits}`,
+          );
+        } else {
+          // Fallback: look up PAY_AS_YOU_GO plan for credit conversion rate
+          const paygPlan = await tx.creditPlan.findUnique({
+            where: { slug: "PAY_AS_YOU_GO" },
+          });
+
+          // NOTE: amountValue from MP may be in ARS (seller currency), not USD
+          // This fallback is only accurate if amount is in USD
+          credits = paygPlan
+            ? Math.floor(
+                (amountValue / paygPlan.usdAmount) * paygPlan.creditsGiven,
+              )
+            : Math.floor(amountValue * 100);
+
+          this.logger.warn(
+            `Credits from metadata missing for ${referenceId}, fell back to calculation: ${credits} (amount=${amountValue})`,
+          );
+        }
+
+        if (credits <= 0) {
+          this.logger.warn(`Calculated 0 credits for payment ${referenceId}`);
+          return { skipped: false };
+        }
+
+        this.logger.log(
+          `Reconciling payment ${referenceId}: userId=${userId}, amount=${amountValue}, credits=${credits}`,
+        );
+
+        // Add credits to currentCredits (the single source of truth)
+        const userUpdateData: any = {
+          currentCredits: { increment: credits },
+          purchasedCredits: { increment: credits },
+        };
+
+        // Update user's plan based on the credit plan they purchased
+        if (planSlugFromMetadata) {
+          const planMap: Record<string, string> = {
+            PAY_AS_YOU_GO: "PAY_AS_YOU_GO",
+            STARTER: "STARTER",
+            PRO: "PRO",
+          };
+          const newUserPlan = planMap[planSlugFromMetadata];
+          if (newUserPlan) {
+            userUpdateData.plan = newUserPlan;
             this.logger.log(
-              `Fetched payment ${referenceId} from MP API: userId=${userId}, amount=${amountValue}, creditsFromMetadata=${creditsFromMetadata}, planSlug=${planSlugFromMetadata}`,
-            );
-          } catch (err) {
-            this.logger.error(
-              `Failed to fetch payment ${referenceId} from MP API`,
-              err as any,
+              `Updating user ${userId} plan to ${newUserPlan} (from plan_slug=${planSlugFromMetadata})`,
             );
           }
         }
-      }
 
-      if (!userId) {
-        this.logger.warn(
-          `Cannot reconcile payment ${referenceId}: userId not found`,
-        );
-        return { skipped: false };
-      }
-
-      if (!amountValue || amountValue <= 0) {
-        this.logger.warn(
-          `Cannot reconcile payment ${referenceId}: invalid amount ${amountValue}`,
-        );
-        return { skipped: false };
-      }
-
-      // Prefer credits from metadata (exact amount from checkout time)
-      // Fallback: calculate from plan (only works correctly if amount is in USD)
-      let credits: number;
-      if (creditsFromMetadata && creditsFromMetadata > 0) {
-        credits = creditsFromMetadata;
-        this.logger.log(
-          `Using credits from metadata for ${referenceId}: ${credits}`,
-        );
-      } else {
-        // Fallback: look up PAY_AS_YOU_GO plan for credit conversion rate
-        const paygPlan = await tx.creditPlan.findUnique({
-          where: { slug: "PAY_AS_YOU_GO" },
+        await tx.user.update({
+          where: { id: userId },
+          data: userUpdateData,
         });
 
-        // NOTE: amountValue from MP may be in ARS (seller currency), not USD
-        // This fallback is only accurate if amount is in USD
-        credits = paygPlan
-          ? Math.floor(
-              (amountValue / paygPlan.usdAmount) * paygPlan.creditsGiven,
-            )
-          : Math.floor(amountValue * 100);
+        const updated = await tx.user.findUnique({ where: { id: userId } });
+        const newBalance = updated?.currentCredits || 0;
 
-        this.logger.warn(
-          `Credits from metadata missing for ${referenceId}, fell back to calculation: ${credits} (amount=${amountValue})`,
+        await tx.creditTransaction.create({
+          data: {
+            userId,
+            amount: credits,
+            type: "PURCHASE",
+            description: `Payment ${gateway} - ${referenceId}`,
+            balance: newBalance,
+            provider: gateway,
+            referenceId,
+          },
+        });
+
+        return { skipped: false, userId, credits, referenceId };
+      });
+
+    let result: Awaited<ReturnType<typeof reconcile>>;
+    try {
+      result = await reconcile();
+    } catch (error) {
+      if (this.isReferenceUniqueViolation(error)) {
+        // Concurrent duplicate webhook: another instance already granted the
+        // credits for this referenceId. Acknowledge so the gateway stops
+        // retrying — this is the idempotent-success path.
+        this.logger.log(
+          `Payment already reconciled (unique constraint): ${referenceId}`,
         );
+        return true;
       }
-
-      if (credits <= 0) {
-        this.logger.warn(`Calculated 0 credits for payment ${referenceId}`);
-        return { skipped: false };
-      }
-
-      this.logger.log(
-        `Reconciling payment ${referenceId}: userId=${userId}, amount=${amountValue}, credits=${credits}`,
-      );
-
-      // Add credits to currentCredits (the single source of truth)
-      const userUpdateData: any = {
-        currentCredits: { increment: credits },
-        purchasedCredits: { increment: credits },
-      };
-
-      // Update user's plan based on the credit plan they purchased
-      if (planSlugFromMetadata) {
-        const planMap: Record<string, string> = {
-          PAY_AS_YOU_GO: "PAY_AS_YOU_GO",
-          STARTER: "STARTER",
-          PRO: "PRO",
-        };
-        const newUserPlan = planMap[planSlugFromMetadata];
-        if (newUserPlan) {
-          userUpdateData.plan = newUserPlan;
-          this.logger.log(
-            `Updating user ${userId} plan to ${newUserPlan} (from plan_slug=${planSlugFromMetadata})`,
-          );
-        }
-      }
-
-      await tx.user.update({
-        where: { id: userId },
-        data: userUpdateData,
-      });
-
-      const updated = await tx.user.findUnique({ where: { id: userId } });
-      const newBalance = updated?.currentCredits || 0;
-
-      await tx.creditTransaction.create({
-        data: {
-          userId,
-          amount: credits,
-          type: "PURCHASE",
-          description: `Payment ${gateway} - ${referenceId}`,
-          balance: newBalance,
-          provider: gateway,
-          referenceId,
-        },
-      });
-
-      return { skipped: false, userId, credits, referenceId };
-    });
+      throw error;
+    }
 
     if (result.skipped) return true;
     if (!result.userId || !result.credits) return false;
@@ -384,5 +405,28 @@ export class CreditBillingService {
       this.logger.warn("Failed to emit payment success event", err as any);
     }
     return true;
+  }
+
+  /**
+   * True when the error is a unique-constraint violation on
+   * CreditTransaction.referenceId — i.e. a concurrent duplicate credit grant
+   * was rejected by the database (the definitive idempotency guarantee).
+   */
+  private isReferenceUniqueViolation(error: unknown): boolean {
+    if (
+      !(
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      )
+    ) {
+      return false;
+    }
+    const target = error.meta?.target;
+    // Substring match: the pg driver adapter reports targets with embedded
+    // quotes (e.g. ["\"referenceId\""]) instead of bare field names.
+    if (Array.isArray(target)) {
+      return target.some((t) => String(t).includes("referenceId"));
+    }
+    return String(target ?? "").includes("referenceId");
   }
 }

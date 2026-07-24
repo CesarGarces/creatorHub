@@ -1,11 +1,13 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { BullModule } from "@nestjs/bullmq";
-import { ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerStorageRedisService } from "@nest-lab/throttler-storage-redis";
 import { APP_GUARD } from "@nestjs/core";
 import { join } from "path";
 
 import { SentryModule } from "./common/sentry";
+import { IdempotencyModule } from "./common/idempotency/idempotency.module";
 import { AuthModule } from "@creator-hub/auth";
 import { AIEngineModule } from "@creator-hub/ai-engine";
 import { BillingModule } from "@creator-hub/billing";
@@ -52,10 +54,21 @@ import { SocialResearchModule } from "@creator-hub/social-research-backend";
 import "@creator-hub/x-post-tweet";
 import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
 
+// Redis storage for rate limiting: limits stay consistent across replicas
+// and restarts (in-memory storage would multiply the effective limit per
+// instance). Redis is already a hard dependency of this app (BullMQ, events).
+const throttlerStorage = process.env.REDIS_URL
+  ? new ThrottlerStorageRedisService(process.env.REDIS_URL)
+  : new ThrottlerStorageRedisService({
+      host: process.env.REDIS_HOST || "localhost",
+      port: parseInt(process.env.REDIS_PORT || "6379", 10),
+    });
+
 @Module({
   imports: [
     // Sentry MUST be first — captures errors in all subsequent modules
     SentryModule,
+    IdempotencyModule,
 
     ConfigModule.forRoot({
       isGlobal: true,
@@ -69,7 +82,15 @@ import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
             port: parseInt(process.env.REDIS_PORT || "6379"),
           },
     }),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
+    // Rate limiting (SEC-04). The guard is registered globally below — without
+    // APP_GUARD this config alone protects nothing.
+    // Default: 60 req/min per IP. Stricter per-endpoint limits live on
+    // AuthController via @Throttle(). Webhooks skip throttling (@SkipThrottle)
+    // so payment gateway retries are never rejected.
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: "default", ttl: 60_000, limit: 60 }],
+      storage: throttlerStorage,
+    }),
 
     // Core packages
     AuthModule,
@@ -120,6 +141,12 @@ import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
     WebhooksController,
   ],
   providers: [
+    // ThrottlerGuard runs BEFORE PlanGuard: cheap rejection of abusive
+    // traffic before any database work happens.
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: PlanGuard,

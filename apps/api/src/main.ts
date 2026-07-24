@@ -17,6 +17,11 @@ async function bootstrap() {
   // Disable built-in body parser so we can capture raw body for webhook verification
   const app = await NestFactory.create(AppModule, { bodyParser: false as any });
 
+  // Trust the first proxy hop (Render reverse proxy) so req.ip — and therefore
+  // rate limiting — sees the real client IP from X-Forwarded-For instead of
+  // the proxy's IP (which would bucket all users into a single rate limit).
+  app.getHttpAdapter().getInstance().set("trust proxy", 1);
+
   // ─── Sentry Global Filter & Interceptor ────────────────────────────────
   // Exception filter: captures errors → Sentry (with smart filtering)
   // Interceptor: tracks request performance + adds breadcrumbs

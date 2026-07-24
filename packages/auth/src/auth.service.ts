@@ -6,10 +6,17 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { prisma } from "@creator-hub/database";
+import { prisma, Prisma } from "@creator-hub/database";
 import * as bcrypt from "bcryptjs";
 import type { JwtPayload } from "./interfaces/jwt-payload.interface";
 import { StorageService } from "@creator-hub/storage";
+
+/**
+ * Credits granted once at registration. The grant is recorded as a BONUS
+ * CreditTransaction whose deterministic referenceId ("signup:{userId}") is
+ * protected by a unique index, making a double grant structurally impossible.
+ */
+const SIGNUP_BONUS_CREDITS = 100;
 
 @Injectable()
 export class AuthService {
@@ -30,6 +37,15 @@ export class AuthService {
     return expiry;
   }
 
+  /**
+   * Registers a user atomically: User + FREE Subscription + signup bonus
+   * ledger entry are created in a single transaction (all-or-nothing).
+   *
+   * Duplicate protection is defense-in-depth:
+   * 1. Fast-path findUnique for a clean UX error in the common case.
+   * 2. The unique index on User.email is the real guarantee; a lost race
+   *    surfaces as Prisma P2002 and is mapped to HTTP 409 (never a 500).
+   */
   async register(email: string, password: string, name?: string) {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) throw new ConflictException("Email already registered");
@@ -38,24 +54,70 @@ export class AuthService {
     const verificationCode = this.generateVerificationCode();
     const verificationExpires = this.getVerificationCodeExpiry();
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        passwordHash,
-        plan: "FREE",
-        currentCredits: 100,
-        purchasedCredits: 0,
-        verificationCode,
-        verificationExpires,
-      },
-    });
+    try {
+      const user = await prisma.$transaction(async (tx) =>
+        this.createUserWithSignupBonus(tx, {
+          email,
+          name,
+          passwordHash,
+          verificationCode,
+          verificationExpires,
+        }),
+      );
 
+      return {
+        ...this.generateTokens(user),
+        emailVerified: false,
+        requiresVerification: true,
+        // Returned for the controller to send the verification email.
+        // MUST be stripped from the HTTP response by the controller.
+        verificationCode,
+        userName: user.name,
+      };
+    } catch (error) {
+      if (this.isUniqueViolation(error)) {
+        // Concurrent duplicate registration — lost the race against the index.
+        throw new ConflictException("Email already registered");
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Creates the User, its FREE Subscription and the signup bonus
+   * CreditTransaction inside the given transaction. This is the single place
+   * where the "new user" invariant lives — every creation path must use it.
+   */
+  private async createUserWithSignupBonus(
+    tx: Prisma.TransactionClient,
+    data: {
+      email: string;
+      name?: string;
+      passwordHash?: string;
+      verificationCode?: string;
+      verificationExpires?: Date;
+      oauthAccount?: { provider: string; providerAccountId: string };
+    },
+  ) {
     const now = new Date();
     const periodEnd = new Date(now);
     periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-    await prisma.subscription.create({
+    const user = await tx.user.create({
+      data: {
+        email: data.email,
+        name: data.name,
+        passwordHash: data.passwordHash,
+        plan: "FREE",
+        currentCredits: SIGNUP_BONUS_CREDITS,
+        purchasedCredits: 0,
+        verificationCode: data.verificationCode,
+        verificationExpires: data.verificationExpires,
+        accounts: data.oauthAccount ? { create: data.oauthAccount } : undefined,
+      },
+    });
+
+    await tx.subscription.create({
       data: {
         userId: user.id,
         planId: "free",
@@ -65,11 +127,29 @@ export class AuthService {
       },
     });
 
-    return {
-      ...this.generateTokens(user),
-      emailVerified: false,
-      requiresVerification: true,
-    };
+    // Ledger entry with deterministic idempotency key. The unique index on
+    // CreditTransaction.referenceId guarantees the bonus is granted exactly once.
+    await tx.creditTransaction.create({
+      data: {
+        userId: user.id,
+        amount: SIGNUP_BONUS_CREDITS,
+        type: "BONUS",
+        description: "Signup bonus",
+        referenceId: `signup:${user.id}`,
+        balance: SIGNUP_BONUS_CREDITS,
+      },
+    });
+
+    return user;
+  }
+
+  private isUniqueViolation(
+    error: unknown,
+  ): error is Prisma.PrismaClientKnownRequestError {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    );
   }
 
   async login(email: string, password: string) {
@@ -429,41 +509,41 @@ export class AuthService {
 
     if (account) return this.generateTokens(account.user);
 
-    let user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email,
-          name,
-          plan: "FREE",
-          currentCredits: 100,
-          purchasedCredits: 0,
-          accounts: {
-            create: { provider, providerAccountId },
+    try {
+      const user = await prisma.$transaction(async (tx) => {
+        const existing = await tx.user.findUnique({ where: { email } });
+
+        if (!existing) {
+          return this.createUserWithSignupBonus(tx, {
+            email,
+            name,
+            oauthAccount: { provider, providerAccountId },
+          });
+        }
+
+        await tx.account.create({
+          data: { userId: existing.id, provider, providerAccountId },
+        });
+        return existing;
+      });
+
+      return this.generateTokens(user);
+    } catch (error) {
+      if (this.isUniqueViolation(error)) {
+        // Lost a concurrent race (account or user created meanwhile): re-read.
+        const retryAccount = await prisma.account.findUnique({
+          where: {
+            provider_providerAccountId: { provider, providerAccountId },
           },
-        },
-      });
+          include: { user: true },
+        });
+        if (retryAccount) return this.generateTokens(retryAccount.user);
 
-      const now = new Date();
-      const periodEnd = new Date(now);
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-
-      await prisma.subscription.create({
-        data: {
-          userId: user.id,
-          planId: "free",
-          currentPeriodStart: now,
-          currentPeriodEnd: periodEnd,
-          status: "ACTIVE",
-        },
-      });
-    } else {
-      await prisma.account.create({
-        data: { userId: user.id, provider, providerAccountId },
-      });
+        const retryUser = await prisma.user.findUnique({ where: { email } });
+        if (retryUser) return this.generateTokens(retryUser);
+      }
+      throw error;
     }
-
-    return this.generateTokens(user);
   }
 
   private generateTokens(user: {

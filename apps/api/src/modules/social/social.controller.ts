@@ -18,7 +18,7 @@ import {
   AuthenticatedPlanGuard,
   MinPlan,
 } from "@creator-hub/auth";
-import { ThrottlerGuard } from "@nestjs/throttler";
+// Rate limiting is applied globally (APP_GUARD ThrottlerGuard in AppModule).
 import { Response } from "express";
 import { SocialService } from "./services/social.service";
 import { XOAuthService } from "./services/x-oauth.service";
@@ -30,7 +30,7 @@ import {
 } from "@creator-hub/x-post-tweet-backend";
 
 @Controller("social")
-@UseGuards(JwtAuthGuard, ThrottlerGuard)
+@UseGuards(JwtAuthGuard)
 export class SocialController {
   private pendingOAuthStates = new Map<
     string,

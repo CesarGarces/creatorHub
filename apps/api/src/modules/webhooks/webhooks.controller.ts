@@ -10,6 +10,7 @@ import {
   Body,
 } from "@nestjs/common";
 import { Request, Response } from "express";
+import { SkipThrottle } from "@nestjs/throttler";
 import {
   PaymentRegistryService,
   CreditBillingService,
@@ -17,6 +18,9 @@ import {
 } from "@creator-hub/billing";
 import * as Sentry from "@sentry/nestjs";
 
+// Webhooks are exempt from rate limiting: payment gateway retries must
+// always get through (they are authenticated via HMAC signature instead).
+@SkipThrottle()
 @Controller("webhooks")
 export class WebhooksController {
   private readonly logger = new Logger(WebhooksController.name);
