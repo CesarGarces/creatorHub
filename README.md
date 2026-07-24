@@ -115,6 +115,10 @@ currentCredits → Error (out of credits)
 | `currentCredits`   | Total user balance (free + purchased + bonus)        |
 | `purchasedCredits` | Informative counter of purchased credits (read-only) |
 
+**Balance protection:** Deductions use an atomic `UPDATE ... WHERE currentCredits >= amount` — a single SQL statement that locks the row, checks the balance, and decrements in one operation. Concurrent debits serialize at the database level; insufficient funds return `null` (race-free, no negative balance possible).
+
+**Idempotency:** All credit grants use deterministic `referenceId` values with a database-level unique constraint (`CreditTransaction_referenceId_key`). Duplicate payment webhooks are safely ignored — the second insert hits a P2002 constraint violation and is caught by the application layer.
+
 ### Marketing Automation
 
 The system emits events when user credits reach certain thresholds:
@@ -1045,6 +1049,37 @@ The project uses **Husky** + **lint-staged** to ensure code quality before each 
 # Hooks are installed automatically with:
 pnpm install
 ```
+
+## Security
+
+Production-grade security measures protecting against race conditions, duplicates, and abuse:
+
+| Layer                   | Mechanism                                                    | Protects Against                                      |
+| ----------------------- | ------------------------------------------------------------ | ----------------------------------------------------- |
+| **Atomic Registration** | Single `prisma.$transaction` for user + subscription + bonus | Duplicate user creation on concurrent signups         |
+| **Atomic Debit**        | `UPDATE ... WHERE currentCredits >= amount` (single SQL)     | Concurrent debits driving balance negative            |
+| **Idempotent Payments** | `referenceId` unique constraint on `CreditTransaction`       | Duplicate credit grants from webhook retries          |
+| **Rate Limiting**       | Global `ThrottlerGuard` + Redis storage                      | Brute-force, credential stuffing, abuse               |
+| **Idempotency Key**     | `X-Idempotency-Key` header + Redis SET NX (24h TTL)          | Duplicate mutations from double-submits               |
+| **P2002 Mapping**       | `SentryExceptionFilter` maps constraint violations → 409     | 500 errors from unique constraint violations          |
+| **Trust Proxy**         | `app.set("trust proxy", 1)`                                  | Correct IP resolution for rate limiting behind Render |
+
+See [ARCHITECTURE.md §18](./ARCHITECTURE.md#18-security-hardening) and [`security_best_practices_report.md`](./security_best_practices_report.md) for full details.
+
+### Integration Tests
+
+Concurrency guarantees are verified against a real PostgreSQL database:
+
+- Two concurrent registrations → exactly one user, one 409
+- Duplicate payment webhooks → both acknowledged, one credit
+- 10 concurrent debits against balance 100 → exactly 3 succeed, never negative
+
+```sh
+# Requires DATABASE_URL pointing to a real PostgreSQL instance
+DATABASE_URL="postgresql://..." pnpm test -- --filter=api
+```
+
+---
 
 ## Commands
 

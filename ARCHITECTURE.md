@@ -2619,4 +2619,163 @@ SENTRY_PROJECT="creatorhub-web"
 
 ---
 
+## 18. Security Hardening
+
+### Overview
+
+A comprehensive security hardening pass addresses race conditions in user registration, credit grants, and payment reconciliation. All guarantees are enforced at the database level via unique constraints and atomic transactions — application code is a secondary defense.
+
+### SEC-01/SEC-02 — Atomic User Registration
+
+Registration is a single `$transaction` that creates the user, subscription, and signup bonus atomically. If a duplicate email arrives concurrently, Prisma P2002 is mapped to HTTP 409 (ConflictException) — never an unhandled 500.
+
+```
+AuthService.register()
+  └──► prisma.$transaction(async (tx) => {
+          1. tx.user.create({ email, passwordHash, plan: "FREE", currentCredits: 0 })
+          2. tx.subscription.create({ planId: "free", status: "ACTIVE" })
+          3. tx.creditTransaction.create({
+               type: "BONUS",
+               amount: 100,
+               referenceId: "signup:{userId}",   ← deterministic idempotency key
+             })
+        })
+  └──► P2002 on unique constraint → ConflictException (409)
+```
+
+**Shared helper:** `createUserWithSignupBonus(tx, email, passwordHash, name?)` is reused by both `register()` and `validateOAuth()` to guarantee consistent behavior.
+
+### SEC-03 — Idempotent Payment Reconciliation
+
+Duplicate payment webhooks (from gateway retries or network partitions) are safely ignored. `reconcilePayment()` catches Prisma P2002 on the `referenceId` unique constraint:
+
+```
+CreditBillingService.reconcilePayment()
+  └──► prisma.creditTransaction.create({ referenceId: gatewayTxId })
+        └──► P2002 → already processed, return true (acknowledged)
+```
+
+Both concurrent webhooks return `true` to the gateway (HTTP 200), preventing infinite retries.
+
+### SEC-06 — CreditTransaction.referenceId Unique Constraint
+
+The `referenceId` column on `CreditTransaction` has a database-level unique index. This makes duplicate credit grants physically impossible, regardless of application logic:
+
+```sql
+CREATE UNIQUE INDEX "CreditTransaction_referenceId_key"
+  ON "CreditTransaction"("referenceId");
+
+CREATE INDEX "CreditTransaction_userId_createdAt_idx"
+  ON "CreditTransaction"("userId", "createdAt");
+
+CREATE INDEX "CreditTransaction_type_idx"
+  ON "CreditTransaction"("type");
+```
+
+PostgreSQL allows multiple NULLs in unique columns, so rows without `referenceId` are unaffected.
+
+**Convention:** All credit-granting operations use deterministic reference IDs:
+
+- Signup bonus: `signup:{userId}`
+- Payment gateway: gateway transaction ID (e.g. `mp_tx_123`)
+
+### SEC-07 — Atomic Conditional Debit
+
+`CreditService.deduct()` uses an atomic `UPDATE ... WHERE currentCredits >= amount` instead of the previous read-check-then-decrement flow. This eliminates the race condition where concurrent debits could drive the balance negative.
+
+```sql
+-- Atomic conditional debit (single row lock)
+UPDATE "User"
+SET "currentCredits" = "currentCredits" - $amount
+WHERE id = $userId AND "currentCredits" >= $amount
+```
+
+```typescript
+// CreditService.deduct()
+const debit = await tx.user.updateMany({
+  where: { id: userId, currentCredits: { gte: amount } },
+  data: { currentCredits: { decrement: amount } },
+});
+if (debit.count === 0) return null; // insufficient funds — race-free
+```
+
+The balance check and decrement are a single SQL statement that takes a row lock. Concurrent debits serialize at the database level.
+
+### Rate Limiting (ThrottlerGuard)
+
+Global rate limiting via `@nestjs/throttler` with Redis storage (`@nest-lab/throttler-storage-redis`):
+
+| Endpoint                         | Limit          | Scope |
+| -------------------------------- | -------------- | ----- |
+| `POST /auth/register`            | 5 / hour       | IP    |
+| `POST /auth/login`               | 10 / minute    | IP    |
+| `POST /auth/verify-email`        | 10 / 5 minutes | IP    |
+| `POST /auth/resend-verification` | 3 / 5 minutes  | IP    |
+| `POST /auth/forgot-password`     | 3 / 5 minutes  | IP    |
+| `POST /auth/reset-password`      | 5 / 5 minutes  | IP    |
+| `POST /user-style/analyze`       | 5 / hour       | User  |
+| Sharing endpoints                | Default        | User  |
+
+- `ThrottlerGuard` is registered as `APP_GUARD` (applies globally)
+- `@SkipThrottle()` on webhook endpoints (payment gateways retry, authenticated via HMAC)
+- `trust proxy: 1` in `main.ts` for correct IP resolution behind Render's reverse proxy
+
+### Idempotency Interceptor
+
+A Stripe-style idempotency layer prevents duplicate mutations from double-submits:
+
+```
+IdempotencyInterceptor (on POST /auth/register)
+  1. Client generates UUID: crypto.randomUUID()
+  2. Frontend sends header: X-Idempotency-Key: <uuid>
+  3. Interceptor computes fingerprint: SHA-256(method + path + body)
+  4. Redis SET NX key=idempotency:{uuid} value={fingerprint, response} EX 86400
+  5. If key exists + fingerprint matches → return cached response
+  6. If key exists + fingerprint differs → 422 Unprocessable Entity
+  7. If key doesn't exist → proceed, cache response
+```
+
+### Sentry Integration — P2002 → 409 Mapping
+
+The `SentryExceptionFilter` maps Prisma P2002 (unique constraint violation) to HTTP 409, preventing duplicate/conflict errors from polluting Sentry dashboards. 409 errors are also ignored from Sentry reporting (`Sentry.captureException` is skipped for ConflictException).
+
+### trust proxy
+
+```typescript
+// main.ts
+app.set("trust proxy", 1);
+```
+
+Required for correct `X-Forwarded-For` IP resolution behind Render's reverse proxy. Without this, all requests appear to originate from the same internal IP, defeating rate limiting.
+
+### Integration Tests
+
+Concurrency guarantees are verified by integration tests that run against a real PostgreSQL database:
+
+| Test                                     | Validates                             |
+| ---------------------------------------- | ------------------------------------- |
+| Two concurrent registrations             | Exactly one user, one 409             |
+| Duplicate signup bonus referenceId       | P2002 at DB level                     |
+| Two concurrent payment webhooks          | Exactly one credit, both acknowledged |
+| 10 concurrent debits against balance 100 | Exactly 3 succeed, never negative     |
+
+Tests use `vitest` with real Prisma queries against a test database. In CI without a database, tests gracefully skip via `beforeAll` schema check.
+
+### Database Migration
+
+```sql
+-- packages/database/prisma/migrations/20260723213000_credit_txn_referenceid_unique_indexes/migration.sql
+CREATE UNIQUE INDEX "CreditTransaction_referenceId_key" ON "CreditTransaction"("referenceId");
+CREATE INDEX "CreditTransaction_userId_createdAt_idx" ON "CreditTransaction"("userId", "createdAt");
+CREATE INDEX "CreditTransaction_type_idx" ON "CreditTransaction"("type");
+```
+
+Deployed via `prisma db push --accept-data-loss` on Render (safe because 0 duplicate referenceIds were verified before applying).
+
+### Security Report
+
+Full audit report: [`security_best_practices_report.md`](./security_best_practices_report.md)
+
+---
+
 > **Creator Hub** — Built for 1 tool today, 50 tools tomorrow.
