@@ -1,0 +1,23 @@
+{
+  "name": "@creator-hub/community-bot",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@creator-hub/database": "workspace:*",
+    "@creator-hub/shared-types": "workspace:*",
+    "@nestjs/common": "^11.1.27",
+    "telegraf": "^4.16.3"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0"
+  }
+}

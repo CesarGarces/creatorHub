@@ -17,6 +17,7 @@
     "@creator-hub/analytics": "workspace:*",
     "@creator-hub/auth": "workspace:*",
     "@creator-hub/billing": "workspace:*",
+    "@creator-hub/community-bot": "workspace:*",
     "@creator-hub/content-translator": "workspace:*",
     "@creator-hub/content-translator-backend": "workspace:*",
     "@creator-hub/database": "workspace:*",

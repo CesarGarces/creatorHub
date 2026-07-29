@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "turbo run dev --filter='!@creator-hub/api'",
-    "dev:api": "pnpm --filter @creator-hub/api dev",
+    "dev:api": "pnpm --filter @creator-hub/api dev & pnpm --filter @creator-hub/community-worker dev",
     "dev:all": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",

@@ -5,3 +5,4 @@ export * from "./credit.types";
 export * from "./event.types";
 export * from "./api.types";
 export * from "./stt.types";
+export * from "./community-bot.types";

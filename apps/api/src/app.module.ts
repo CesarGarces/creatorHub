@@ -40,6 +40,7 @@ import { VideoListenerModule } from "./modules/video-listener/video-listener.mod
 import { ChatModule } from "./modules/chat/chat.module";
 import { UserStyleModule } from "./modules/user-style/user-style.module";
 import { SocialModule } from "./modules/social/social.module";
+import { CommunityBotModule } from "./modules/community-bot/community-bot.module";
 
 // Import tools (registers them via registerTool)
 import "@creator-hub/thumbnail-generator";
@@ -119,6 +120,9 @@ const throttlerStorage = process.env.REDIS_URL
     ChatModule,
     UserStyleModule,
     SocialModule,
+
+    // Community bot (auto-replies to the creator's community channels)
+    CommunityBotModule,
 
     // Sharing (public asset viewing)
     SharingModule,
