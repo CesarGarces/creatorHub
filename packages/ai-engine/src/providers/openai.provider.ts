@@ -33,11 +33,17 @@ export class OpenAIImageProvider extends AIProviderBase {
     "gpt-4o-mini",
   ];
 
-  private client: OpenAI;
+  private client!: OpenAI;
 
   constructor() {
     super();
-    this.client = new OpenAI({ apiKey: this.getApiKey() });
+  }
+
+  private getClient(): OpenAI {
+    if (!this.client) {
+      this.client = new OpenAI({ apiKey: this.getApiKey() });
+    }
+    return this.client;
   }
 
   async generate(request: AIRequest): Promise<AIResponse> {
@@ -51,7 +57,7 @@ export class OpenAIImageProvider extends AIProviderBase {
       });
     }
 
-    const completion = await this.client.chat.completions.create({
+    const completion = await this.getClient().chat.completions.create({
       model: request.model || "gpt-4o-mini",
       messages: [{ role: "user", content: request.prompt }],
     });
@@ -74,7 +80,7 @@ export class OpenAIImageProvider extends AIProviderBase {
 
     try {
       const size = this.getSizeForModel(model, options.width, options.height);
-      const response = await this.client.images.generate({
+      const response = await this.getClient().images.generate({
         model,
         prompt: options.prompt,
         n: options.numberOfImages || 1,
