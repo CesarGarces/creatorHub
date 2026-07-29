@@ -24,6 +24,8 @@ services:
         value: creatorhub-assets
       - key: SILICONFLOW_API_KEY
         sync: false
+      - key: COMMUNITY_BOT_ENCRYPTION_KEY
+        sync: false
       - key: NODE_ENV
         value: production
       - key: NODE_OPTIONS
@@ -64,4 +66,6 @@ services:
       - key: NODE_OPTIONS
         value: "--max-old-space-size=512"
       - key: SILICONFLOW_API_KEY
+        sync: false
+      - key: COMMUNITY_BOT_ENCRYPTION_KEY
         sync: false
