@@ -103,8 +103,7 @@ export class WhatsAppConnector implements ChannelConnector {
     sock.ev.on("connection.update", (update) => {
       const { connection, lastDisconnect, qr } = update;
 
-      if (qr && !this._qrGenerated) {
-        this._qrGenerated = true;
+      if (qr) {
         void this.emitQrCode(qr);
       }
 
@@ -124,9 +123,11 @@ export class WhatsAppConnector implements ChannelConnector {
             error: "Connection replaced by another session",
           });
         } else if (statusCode !== DisconnectReason.connectionClosed) {
+          const reasonText =
+            statusCode !== undefined ? String(statusCode) : "unknown reason";
           void events.onStatusChange({
             status: "DISCONNECTED",
-            error: `Connection closed (${statusCode}), reconnecting…`,
+            error: `Connection closed (${reasonText}), reconnecting…`,
           });
         }
       }
@@ -183,24 +184,62 @@ export class WhatsAppConnector implements ChannelConnector {
       }
     });
 
-    // Always wait for either a real connection or QR code generation.
-    // "connection: open" without sock.user means Baileys connected to WS
-    // but hasn't completed auth — keep waiting for QR.
-    await new Promise<void>((resolve) => {
-      const timeout = setTimeout(() => resolve(), 15000);
-      const handler = (update: { connection?: string; qr?: string }) => {
-        const isRealConnection = update.connection === "open" && sock.user?.id;
-        if (isRealConnection || update.qr) {
+    // Wait for a *real* connection (user authenticated) or a terminal close.
+    // We do NOT resolve on QR alone — the UI shows the QR via the onQrCode
+    // event while this Promise keeps the connect() call in-flight.
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        sock.ev.off("connection.update", handler);
+        reject(
+          new Error(
+            "WhatsApp connection timed out — QR was not scanned in time",
+          ),
+        );
+      }, 90_000);
+
+      const handler = (update: {
+        connection?: string;
+        qr?: string;
+        lastDisconnect?: { error?: Error };
+      }) => {
+        const { connection, lastDisconnect, qr } = update;
+
+        if (qr) {
+          // Emit QR to the UI but KEEP WAITING for the user to scan it.
+          void this.emitQrCode(qr);
+          return;
+        }
+
+        if (connection === "close") {
+          const statusCode = (lastDisconnect?.error as Boom)?.output
+            ?.statusCode;
+          const reason = lastDisconnect?.error?.message || "unknown reason";
+
+          clearTimeout(timeout);
+          sock.ev.off("connection.update", handler);
+
+          if (statusCode === DisconnectReason.loggedOut) {
+            reject(new Error("Session expired — scan QR again"));
+          } else if (statusCode === DisconnectReason.connectionReplaced) {
+            reject(new Error("Connection replaced by another session"));
+          } else {
+            reject(new Error(`Connection closed: ${reason}`));
+          }
+          return;
+        }
+
+        if (connection === "open" && sock.user?.id) {
           clearTimeout(timeout);
           sock.ev.off("connection.update", handler);
           resolve();
         }
       };
+
       sock.ev.on("connection.update", handler);
     });
 
     return {
-      externalIdentity: sock.user?.id?.replace(/:.*@/, "@"),
+      externalIdentity: sock.user!.id.replace(/:.*@/, "@"),
     };
   }
 

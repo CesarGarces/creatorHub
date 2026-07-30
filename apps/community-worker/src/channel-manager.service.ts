@@ -47,7 +47,7 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit(): Promise<void> {
     const activeChannels = await prisma.communityChannel.findMany({
-      where: { status: { in: ["ACTIVE", "CONNECTING"] } },
+      where: { status: { in: ["ACTIVE", "CONNECTING", "AWAITING_QR"] } },
       select: { id: true, type: true },
     });
 
@@ -60,11 +60,21 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
     // Reconnect sequentially: each Baileys/Telegram handshake is
     // rate-limited by the external platform, bursts risk bans.
     for (const channel of activeChannels) {
-      await this.connectChannel(channel.id).catch((error) => {
-        this.logger.error(
-          `Failed to restore channel ${channel.id}: ${(error as Error).message}`,
-        );
-      });
+      if (channel.type === "WHATSAPP") {
+        // WhatsApp may sit in AWAITING_QR for a long time; don't block
+        // the restore loop (or the BullMQ job) waiting for a scan.
+        this.connectChannel(channel.id).catch((error) => {
+          this.logger.error(
+            `Failed to restore channel ${channel.id}: ${(error as Error).message}`,
+          );
+        });
+      } else {
+        await this.connectChannel(channel.id).catch((error) => {
+          this.logger.error(
+            `Failed to restore channel ${channel.id}: ${(error as Error).message}`,
+          );
+        });
+      }
     }
   }
 

@@ -26,9 +26,24 @@ export class ChannelCommandProcessor extends WorkerHost {
     const command = job.data;
 
     switch (command.action) {
-      case "CONNECT":
-        await this.channelManager.connectChannel(command.channelId);
+      case "CONNECT": {
+        // WhatsApp requires the user to scan a QR code — this can take
+        // 10-60 s. We fire-and-forget so the BullMQ job completes
+        // immediately; status updates flow back through Redis pub/sub.
+        const connectPromise = this.channelManager.connectChannel(
+          command.channelId,
+        );
+        if (command.channelType === "WHATSAPP") {
+          connectPromise.catch((error: Error) => {
+            this.logger.error(
+              `WhatsApp connect failed for ${command.channelId}: ${error.message}`,
+            );
+          });
+        } else {
+          await connectPromise;
+        }
         break;
+      }
 
       case "DISCONNECT": {
         await this.channelManager.disconnectChannel(command.channelId);
