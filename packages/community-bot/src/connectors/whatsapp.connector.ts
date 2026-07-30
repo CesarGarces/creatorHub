@@ -105,7 +105,6 @@ export class WhatsAppConnector implements ChannelConnector {
 
       if (qr && !this._qrGenerated) {
         this._qrGenerated = true;
-        // Generate QR code image and emit
         void this.emitQrCode(qr);
       }
 
@@ -132,9 +131,11 @@ export class WhatsAppConnector implements ChannelConnector {
         }
       }
 
-      if (connection === "open") {
+      // Only mark as connected if we have a valid user identity.
+      // Baileys may emit "open" before full auth on fresh sessions.
+      if (connection === "open" && sock.user?.id) {
         this._connected = true;
-        const phone = sock.user?.id?.replace(/:.*@/, "@");
+        const phone = sock.user.id.replace(/:.*@/, "@");
         void events.onStatusChange({
           status: "CONNECTED",
           externalIdentity: phone,
@@ -182,13 +183,14 @@ export class WhatsAppConnector implements ChannelConnector {
       }
     });
 
-    // Always wait for either connection or QR code generation.
-    // On first connect: Baileys will emit QR.
-    // On reconnect with stored creds: Baileys will connect directly.
+    // Always wait for either a real connection or QR code generation.
+    // "connection: open" without sock.user means Baileys connected to WS
+    // but hasn't completed auth — keep waiting for QR.
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(() => resolve(), 15000);
       const handler = (update: { connection?: string; qr?: string }) => {
-        if (update.connection === "open" || update.qr) {
+        const isRealConnection = update.connection === "open" && sock.user?.id;
+        if (isRealConnection || update.qr) {
           clearTimeout(timeout);
           sock.ev.off("connection.update", handler);
           resolve();
