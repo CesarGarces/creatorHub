@@ -67,6 +67,12 @@ export class CommunityBotController {
     return { success: true, data: channel };
   }
 
+  @Post("channels/whatsapp/connect")
+  async connectWhatsApp(@CurrentUser("id") userId: string) {
+    const channel = await this.channelService.connectWhatsApp(userId);
+    return { success: true, data: channel };
+  }
+
   @Delete("channels/:type/disconnect")
   async disconnectChannel(
     @CurrentUser("id") userId: string,

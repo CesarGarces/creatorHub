@@ -68,6 +68,7 @@ export default function CommunityBotPage() {
             | "ERROR";
           externalIdentity?: string;
           error?: string;
+          qrDataUrl?: string;
         }) => {
           applyChannelStatus(event);
           if (event.status === "ACTIVE") {

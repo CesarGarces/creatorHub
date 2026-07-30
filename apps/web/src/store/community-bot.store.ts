@@ -100,6 +100,7 @@ interface CommunityBotState {
   isConnecting: boolean;
   isPlaygroundLoading: boolean;
   error: string | null;
+  qrDataUrl: string | null;
 
   fetchConfig: () => Promise<void>;
   updateConfig: (
@@ -107,6 +108,7 @@ interface CommunityBotState {
   ) => Promise<CommunityBotConfig | null>;
   fetchChannels: () => Promise<void>;
   connectTelegram: (botToken: string) => Promise<boolean>;
+  connectWhatsApp: () => Promise<boolean>;
   disconnectChannel: (type: CommunityChannel["type"]) => Promise<void>;
   fetchConversations: (page?: number) => Promise<void>;
   openConversation: (conversationId: string) => Promise<void>;
@@ -117,6 +119,7 @@ interface CommunityBotState {
     status: ChannelStatus;
     externalIdentity?: string;
     error?: string;
+    qrDataUrl?: string;
   }) => void;
 }
 
@@ -136,6 +139,7 @@ export const useCommunityBotStore = create<CommunityBotState>()((set, get) => ({
   isConnecting: false,
   isPlaygroundLoading: false,
   error: null,
+  qrDataUrl: null,
 
   fetchConfig: async () => {
     set({ isLoadingConfig: true, error: null });
@@ -203,6 +207,26 @@ export const useCommunityBotStore = create<CommunityBotState>()((set, get) => ({
       set({
         error:
           err instanceof Error ? err.message : "Failed to connect Telegram",
+      });
+      return false;
+    } finally {
+      set({ isConnecting: false });
+    }
+  },
+
+  connectWhatsApp: async () => {
+    set({ isConnecting: true, error: null });
+    try {
+      await api.post<ApiEnvelope<CommunityChannel>>(
+        "/community-bot/channels/whatsapp/connect",
+      );
+      // The worker will start Baileys, generate QR, and push via WebSocket
+      await get().fetchChannels();
+      return true;
+    } catch (err) {
+      set({
+        error:
+          err instanceof Error ? err.message : "Failed to connect WhatsApp",
       });
       return false;
     } finally {
@@ -305,5 +329,10 @@ export const useCommunityBotStore = create<CommunityBotState>()((set, get) => ({
             }
           : channel,
       ),
+      // Clear QR data when connected or on error
+      qrDataUrl:
+        update.status === "ACTIVE" || update.status === "ERROR"
+          ? null
+          : (update.qrDataUrl ?? get().qrDataUrl),
     }),
 }));

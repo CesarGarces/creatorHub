@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Power, Send } from "lucide-react";
+import { Loader2, Power, Send, MessageCircle } from "lucide-react";
 import {
   Badge,
   Button,
@@ -51,11 +51,7 @@ export function ChannelsTab() {
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <TelegramChannelCard />
-      <ComingSoonChannelCard
-        title="WhatsApp"
-        description="Link a number via QR code (WhatsApp Web). Unlimited and free — no Meta API fees."
-        phase="Phase 2"
-      />
+      <WhatsAppChannelCard />
       <ComingSoonChannelCard
         title="Instagram"
         description="Reply to DMs and comments through the official Meta API."
@@ -174,6 +170,114 @@ function TelegramChannelCard() {
               )}
             </Button>
           </div>
+        )}
+
+        {status === "ACTIVE" && (
+          <Button
+            variant="danger"
+            onClick={handleDisconnect}
+            className="w-full"
+          >
+            <Power size={16} /> Disconnect
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── WhatsApp ────────────────────────────────────────────────
+
+function WhatsAppChannelCard() {
+  const channel = useChannel("WHATSAPP");
+  const connectWhatsApp = useCommunityBotStore((s) => s.connectWhatsApp);
+  const disconnectChannel = useCommunityBotStore((s) => s.disconnectChannel);
+  const isConnecting = useCommunityBotStore((s) => s.isConnecting);
+  const qrDataUrl = useCommunityBotStore((s) => s.qrDataUrl);
+
+  const isBusy =
+    isConnecting ||
+    channel?.status === "CONNECTING" ||
+    channel?.status === "AWAITING_QR" ||
+    channel?.status === "ACTIVE";
+
+  const handleConnect = async () => {
+    const ok = await connectWhatsApp();
+    if (!ok) {
+      const currentError = useCommunityBotStore.getState().error;
+      toast.error(currentError || "Failed to connect WhatsApp");
+    }
+  };
+
+  const handleDisconnect = async () => {
+    await disconnectChannel("WHATSAPP");
+    toast.success("WhatsApp disconnected");
+  };
+
+  const status = channel?.status ?? "DISCONNECTED";
+  const meta = STATUS_META[status];
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MessageCircle size={18} className="text-green-500" />
+          <h3 className="font-semibold text-text">WhatsApp</h3>
+        </div>
+        <Badge variant={meta.variant}>{meta.label}</Badge>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-text-muted">
+          Link your personal WhatsApp number via QR code (like WhatsApp Web).
+          Unlimited and free — no Meta API fees.
+        </p>
+
+        {channel?.externalIdentity && status === "ACTIVE" && (
+          <p className="text-sm text-text">
+            Number:{" "}
+            <span className="font-medium text-green-500">
+              {channel.externalIdentity}
+            </span>
+          </p>
+        )}
+
+        {channel?.lastError && (
+          <p className="text-xs text-error">{channel.lastError}</p>
+        )}
+
+        {status === "AWAITING_QR" && qrDataUrl && (
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-sm text-text-muted">
+              Scan this QR code with WhatsApp:
+            </p>
+            <img
+              src={qrDataUrl}
+              alt="WhatsApp QR Code"
+              className="w-48 h-48 rounded-lg border border-border"
+            />
+            <p className="text-xs text-text-dim">
+              Open WhatsApp → Settings → Linked Devices → Link a Device
+            </p>
+          </div>
+        )}
+
+        {status === "AWAITING_QR" && !qrDataUrl && (
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 size={32} className="animate-spin text-green-500" />
+            <p className="text-sm text-text-muted">Generating QR code…</p>
+          </div>
+        )}
+
+        {status !== "ACTIVE" && status !== "AWAITING_QR" && (
+          <Button onClick={handleConnect} disabled={isBusy} className="w-full">
+            {isConnecting || status === "CONNECTING" ? (
+              <>
+                <Loader2 size={16} className="animate-spin" /> Connecting…
+              </>
+            ) : (
+              "Connect WhatsApp"
+            )}
+          </Button>
         )}
 
         {status === "ACTIVE" && (

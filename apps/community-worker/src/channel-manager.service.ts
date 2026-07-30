@@ -15,6 +15,7 @@ import {
 import {
   CredentialCipher,
   TelegramConnector,
+  WhatsAppConnector,
   type ChannelConnector,
   type NormalizedInboundMessage,
 } from "@creator-hub/community-bot";
@@ -101,6 +102,17 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
 
     this.connectors.set(channelId, connector);
 
+    // For WhatsApp: set up session persistence callback
+    if (connector instanceof WhatsAppConnector) {
+      connector.setSessionUpdater(async (state) => {
+        const encrypted = cipher.encryptJson(state);
+        await prisma.communityChannel.update({
+          where: { id: channelId },
+          data: { credentials: encrypted },
+        });
+      });
+    }
+
     try {
       const result = await connector.connect(credentials, {
         onMessage: (message) =>
@@ -116,6 +128,13 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
             externalIdentity: update.externalIdentity,
             error: update.error,
           }),
+        onQrCode: (qrDataUrl) =>
+          this.handleQrCode(
+            channel.id,
+            channel.userId,
+            channel.type,
+            qrDataUrl,
+          ),
       });
 
       await this.persistStatus(channelId, {
@@ -167,8 +186,8 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
     switch (type as CommunityChannelType) {
       case "TELEGRAM":
         return new TelegramConnector();
-      // WhatsApp (Baileys) and Instagram connectors plug in here without
-      // touching the pipeline — Open/Closed extension point.
+      case "WHATSAPP":
+        return new WhatsAppConnector();
       default:
         throw new Error(`No connector implemented for channel type: ${type}`);
     }
@@ -218,6 +237,32 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
     if (update.status === "ERROR" || update.status === "REQUIRES_RESCAN") {
       this.connectors.delete(channelId);
     }
+  }
+
+  private async handleQrCode(
+    channelId: string,
+    userId: string,
+    channelType: CommunityChannelType,
+    qrDataUrl: string,
+  ): Promise<void> {
+    // Persist AWAITING_QR status
+    await this.persistStatus(channelId, { status: "AWAITING_QR" });
+    // Publish QR code event to frontend
+    const event: CommunityChannelStatusEvent = {
+      userId,
+      channelId,
+      channelType,
+      status: "AWAITING_QR",
+      qrDataUrl,
+      timestamp: new Date(),
+    };
+    await this.events
+      .publish(COMMUNITY_CHANNEL_STATUS_EVENT, event)
+      .catch((error: unknown) => {
+        this.logger.warn(
+          `Could not publish QR code event: ${(error as Error).message}`,
+        );
+      });
   }
 
   private async persistStatus(

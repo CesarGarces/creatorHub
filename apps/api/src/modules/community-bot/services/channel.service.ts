@@ -82,6 +82,38 @@ export class ChannelService {
     return channel;
   }
 
+  async connectWhatsApp(userId: string) {
+    // WhatsApp uses QR code pairing — no token validation needed.
+    // The worker will start Baileys, generate a QR, and push it via WebSocket.
+    const cipher = CredentialCipher.fromEnv();
+    const encrypted = cipher.encryptJson({});
+
+    const channel = await prisma.communityChannel.upsert({
+      where: { userId_type: { userId, type: "WHATSAPP" } },
+      create: {
+        userId,
+        type: "WHATSAPP",
+        status: "AWAITING_QR",
+        credentials: encrypted,
+      },
+      update: {
+        status: "AWAITING_QR",
+        credentials: encrypted,
+        lastError: null,
+      },
+      select: CHANNEL_PUBLIC_SELECT,
+    });
+
+    await this.enqueueCommand({
+      action: "CONNECT",
+      channelId: channel.id,
+      userId,
+      channelType: "WHATSAPP",
+    });
+
+    return channel;
+  }
+
   async disconnect(
     userId: string,
     type: "TELEGRAM" | "WHATSAPP" | "INSTAGRAM",

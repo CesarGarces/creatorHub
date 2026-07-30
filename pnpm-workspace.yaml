@@ -11,6 +11,7 @@ allowBuilds:
   '@scarf/scarf': true
   '@sentry/cli': true
   '@sentry/node-cpu-profiler': true
+  '@whiskeysockets/baileys': true
   cypress: true
   esbuild: true
   ffmpeg-static: true
