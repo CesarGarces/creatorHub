@@ -182,20 +182,20 @@ export class WhatsAppConnector implements ChannelConnector {
       }
     });
 
-    // If we have stored credentials, wait for connection or QR
-    if (creds?.authState) {
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(() => resolve(), 8000);
-        const handler = (update: { connection?: string; qr?: string }) => {
-          if (update.connection === "open" || update.qr) {
-            clearTimeout(timeout);
-            sock.ev.off("connection.update", handler);
-            resolve();
-          }
-        };
-        sock.ev.on("connection.update", handler);
-      });
-    }
+    // Always wait for either connection or QR code generation.
+    // On first connect: Baileys will emit QR.
+    // On reconnect with stored creds: Baileys will connect directly.
+    await new Promise<void>((resolve) => {
+      const timeout = setTimeout(() => resolve(), 15000);
+      const handler = (update: { connection?: string; qr?: string }) => {
+        if (update.connection === "open" || update.qr) {
+          clearTimeout(timeout);
+          sock.ev.off("connection.update", handler);
+          resolve();
+        }
+      };
+      sock.ev.on("connection.update", handler);
+    });
 
     return {
       externalIdentity: sock.user?.id?.replace(/:.*@/, "@"),
