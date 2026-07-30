@@ -3,6 +3,7 @@ import makeWASocket, {
   initAuthCreds,
   makeCacheableSignalKeyStore,
   WASocket,
+  Browsers,
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import QRCode from "qrcode";
@@ -22,6 +23,20 @@ export interface WhatsAppCredentials {
   };
 }
 
+/*
+ * Simple console logger compatible with Baileys' pino interface.
+ * We forward 'warn' and 'error' to stderr so they show up in Render logs.
+ */
+const baileysLogger = {
+  trace: () => {},
+  debug: () => {},
+  info: (...args: unknown[]) => console.log("[Baileys]", ...args),
+  warn: (...args: unknown[]) => console.warn("[Baileys] WARN", ...args),
+  error: (...args: unknown[]) => console.error("[Baileys] ERROR", ...args),
+  child: () => baileysLogger,
+  level: "info",
+};
+
 /**
  * WhatsApp connector based on Baileys (WhatsApp Web multi-device protocol).
  *
@@ -37,7 +52,6 @@ export class WhatsAppConnector implements ChannelConnector {
   private _onSessionUpdate:
     | ((state: WhatsAppCredentials) => Promise<void>)
     | null = null;
-  private _qrGenerated = false;
 
   /**
    * Set a callback to persist session state updates. Called whenever
@@ -52,7 +66,6 @@ export class WhatsAppConnector implements ChannelConnector {
     events: ChannelConnectorEvents,
   ): Promise<ConnectResult> {
     this._events = events;
-    this._qrGenerated = false;
 
     await this.disconnect();
 
@@ -70,7 +83,10 @@ export class WhatsAppConnector implements ChannelConnector {
             get: async (type: any, ids: string[]) => {
               const result: Record<string, any> = {};
               for (const id of ids) {
-                result[id] = authState.keys[type]?.[id];
+                const val = authState.keys[type]?.[id];
+                if (val !== undefined) {
+                  result[id] = val;
+                }
               }
               return result;
             },
@@ -81,29 +97,45 @@ export class WhatsAppConnector implements ChannelConnector {
                   authState.keys[type] = {};
                 }
                 for (const id in data[type]) {
-                  authState.keys[type][id] = data[type][id];
+                  const value = data[type][id];
+                  if (value === undefined || value === null) {
+                    delete authState.keys[type][id];
+                  } else {
+                    authState.keys[type][id] = value;
+                  }
                 }
               }
             },
           },
-          undefined,
+          baileysLogger as never,
         ),
       },
-      browser: ["CreatorHub", "Safari", "3.0"],
+      // Use a standard browser fingerprint — WhatsApp is picky about unknown ones.
+      browser: Browsers.ubuntu("Chrome"),
       printQRInTerminal: false,
       syncFullHistory: false,
       markOnlineOnConnect: false,
       generateHighQualityLinkPreview: false,
       qrTimeout: 60_000,
+      logger: baileysLogger as never,
     });
 
     this.sock = sock;
+
+    // ─── Debug: log every connection.update event ──────────────
+    sock.ev.on("connection.update", (update) => {
+      console.log(
+        "[WhatsAppConnector] connection.update:",
+        JSON.stringify(update),
+      );
+    });
 
     // ─── Connection state handler ──────────────────────────────
     sock.ev.on("connection.update", (update) => {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
+        console.log("[WhatsAppConnector] QR received, emitting to UI");
         void this.emitQrCode(qr);
       }
 
