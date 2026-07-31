@@ -46,6 +46,9 @@ type AuthState = {
  * After pairing, WhatsApp forces a stream restart (error 515).
  * The connector handles this by reconnecting with the saved credentials.
  */
+const INITIAL_RECONNECT_DELAY = 3_000;
+const MAX_RECONNECT_DELAY = 300_000; // 5 minutes
+
 export class WhatsAppConnector implements ChannelConnector {
   readonly type: CommunityChannelType = "WHATSAPP";
 
@@ -56,6 +59,9 @@ export class WhatsAppConnector implements ChannelConnector {
     | ((state: WhatsAppCredentials) => Promise<void>)
     | null = null;
   private _destroyed = false;
+  private _authState: AuthState | null = null;
+  private _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private _reconnectAttempts = 0;
 
   setSessionUpdater(updater: (state: WhatsAppCredentials) => Promise<void>) {
     this._onSessionUpdate = updater;
@@ -68,9 +74,11 @@ export class WhatsAppConnector implements ChannelConnector {
     await this.disconnect();
     this._destroyed = false;
     this._events = events;
+    this._reconnectAttempts = 0;
 
     const creds = credentials as WhatsAppCredentials;
     const authState = this.buildAuthState(creds);
+    this._authState = authState;
 
     // ── Attempt 1: fresh socket (may need QR pairing) ──────────
     const sock = this.createSocket(authState);
@@ -118,6 +126,10 @@ export class WhatsAppConnector implements ChannelConnector {
 
   async disconnect(): Promise<void> {
     this._destroyed = true;
+    if (this._reconnectTimer) {
+      clearTimeout(this._reconnectTimer);
+      this._reconnectTimer = null;
+    }
     if (this.sock) {
       try {
         this.sock.end(undefined);
@@ -126,6 +138,7 @@ export class WhatsAppConnector implements ChannelConnector {
     this.sock = null;
     this._connected = false;
     this._events = null;
+    this._authState = null;
   }
 
   async sendMessage(externalUserId: string, text: string): Promise<void> {
@@ -228,10 +241,14 @@ export class WhatsAppConnector implements ChannelConnector {
           const reasonText =
             statusCode !== undefined ? String(statusCode) : "unknown reason";
           this._connected = false;
+          console.log(
+            `[WhatsAppConnector] Connection closed (${reasonText}), scheduling reconnect…`,
+          );
           void events.onStatusChange({
             status: "DISCONNECTED",
             error: `Connection closed (${reasonText}), reconnecting…`,
           });
+          this.scheduleReconnect(events);
         }
       }
 
@@ -372,6 +389,56 @@ export class WhatsAppConnector implements ChannelConnector {
   }
 
   // ─── Private helpers ─────────────────────────────────────────
+
+  private scheduleReconnect(events: ChannelConnectorEvents): void {
+    if (this._reconnectTimer || this._destroyed || !this._authState) return;
+
+    const delay = Math.min(
+      INITIAL_RECONNECT_DELAY * Math.pow(2, this._reconnectAttempts),
+      MAX_RECONNECT_DELAY,
+    );
+    this._reconnectAttempts++;
+
+    console.log(
+      `[WhatsAppConnector] Will reconnect in ${delay / 1000}s (attempt ${this._reconnectAttempts})`,
+    );
+
+    this._reconnectTimer = setTimeout(() => {
+      this._reconnectTimer = null;
+      void this.attemptReconnect(events);
+    }, delay);
+  }
+
+  private async attemptReconnect(
+    events: ChannelConnectorEvents,
+  ): Promise<void> {
+    if (this._destroyed || !this._authState) return;
+
+    console.log("[WhatsAppConnector] Attempting reconnect…");
+    const authState = this._authState;
+
+    try {
+      const sock = this.createSocket(authState);
+      this.sock = sock;
+      this.attachEventHandlers(sock, events, authState);
+
+      const outcome = await this.awaitOutcome(sock, 30_000);
+      if (outcome === "connected") {
+        console.log("[WhatsAppConnector] Reconnected successfully ✓");
+        this._reconnectAttempts = 0;
+        return;
+      }
+
+      console.log(`[WhatsAppConnector] Reconnect attempt failed: ${outcome}`);
+      this.scheduleReconnect(events);
+    } catch (error) {
+      console.error(
+        "[WhatsAppConnector] Reconnect error:",
+        error instanceof Error ? error.message : error,
+      );
+      this.scheduleReconnect(events);
+    }
+  }
 
   private buildAuthState(creds: WhatsAppCredentials): AuthState {
     if (creds?.authState) {
