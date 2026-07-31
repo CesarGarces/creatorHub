@@ -231,6 +231,9 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
       receivedAt: message.receivedAt,
     };
 
+    this.logger.log(
+      `Enqueueing inbound message: channel=${channelId} user=${message.externalUserId} msgId=${message.externalMessageId}`,
+    );
     await this.inboundQueue.add("process-message", job, {
       jobId: `${channelId}:${message.externalUserId}:${message.externalMessageId}`,
       attempts: 3,

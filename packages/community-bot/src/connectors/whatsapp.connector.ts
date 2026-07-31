@@ -234,6 +234,11 @@ export class WhatsAppConnector implements ChannelConnector {
     });
 
     sock.ev.on("messages.upsert", (msg) => {
+      console.log(
+        "[WhatsAppConnector] messages.upsert type=%s count=%d",
+        msg.type,
+        msg.messages.length,
+      );
       if (msg.type !== "notify") return;
       for (const message of msg.messages) {
         const remoteJid = message.key.remoteJid;
@@ -244,7 +249,13 @@ export class WhatsAppConnector implements ChannelConnector {
         const text =
           message.message?.conversation ||
           message.message?.extendedTextMessage?.text;
-        if (!text || !text.trim()) continue;
+        if (!text || !text.trim()) {
+          console.log(
+            "[WhatsAppConnector] Ignoring non-text message from %s",
+            remoteJid,
+          );
+          continue;
+        }
 
         const normalized: NormalizedInboundMessage = {
           externalMessageId: message.key.id || `${Date.now()}`,
@@ -256,6 +267,11 @@ export class WhatsAppConnector implements ChannelConnector {
             ? Number(message.messageTimestamp) * 1000
             : Date.now(),
         };
+        console.log(
+          "[WhatsAppConnector] Emitting message from %s: %s",
+          remoteJid,
+          text.trim().slice(0, 60),
+        );
         void events.onMessage(normalized);
       }
     });

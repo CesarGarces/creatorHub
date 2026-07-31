@@ -48,6 +48,9 @@ export class InboundProcessor extends WorkerHost {
 
   async process(job: Job<CommunityInboundJob>): Promise<void> {
     const data = job.data;
+    this.logger.log(
+      `[Inbound] Processing message from ${data.externalUserId} on channel ${data.channelId}: "${data.text.slice(0, 60)}"`,
+    );
 
     const channel = await prisma.communityChannel.findUnique({
       where: { id: data.channelId },
@@ -56,9 +59,13 @@ export class InboundProcessor extends WorkerHost {
       where: { userId: data.userId },
     });
 
+    this.logger.log(
+      `[Inbound] Channel status=${channel?.status ?? "NULL"} config.isEnabled=${config?.isEnabled ?? "NULL"} config.modelId=${config?.modelId ?? "NULL"}`,
+    );
+
     if (!channel || channel.status !== "ACTIVE") {
       this.logger.warn(
-        `Dropping inbound message: channel ${data.channelId} missing or not ACTIVE`,
+        `[Inbound] Dropping message: channel ${data.channelId} missing or status=${channel?.status ?? "NULL"} (expected ACTIVE)`,
       );
       return;
     }
@@ -108,6 +115,10 @@ export class InboundProcessor extends WorkerHost {
       creditCost,
     });
 
+    this.logger.log(
+      `[Inbound] Guard verdict: allowed=${verdict.allowed} reason=${verdict.reason ?? "none"} creditCost=${creditCost}`,
+    );
+
     if (!verdict.allowed) {
       await prisma.communityMessage.update({
         where: { id: inbound.id },
@@ -116,6 +127,10 @@ export class InboundProcessor extends WorkerHost {
       await this.publishReplySkipped(data, verdict.reason);
       return;
     }
+
+    this.logger.log(
+      `[Inbound] Generating reply for channel ${data.channelId}...`,
+    );
 
     const reply = await this.replyGenerator.generate({
       userId: data.userId,
@@ -130,6 +145,10 @@ export class InboundProcessor extends WorkerHost {
         systemPromptExtra: config!.systemPromptExtra,
       },
     });
+
+    this.logger.log(
+      `[Inbound] Reply generated (${reply.text.length} chars, ${reply.tokensUsed} tokens, model=${reply.modelId})`,
+    );
 
     // Credits are deducted only after a successful generation: the AI
     // cost is real at that point, and failed generations never bill.
@@ -188,6 +207,10 @@ export class InboundProcessor extends WorkerHost {
         removeOnComplete: { age: 3600, count: 1000 },
         removeOnFail: { age: 86400 },
       },
+    );
+
+    this.logger.log(
+      `[Inbound] Outbound reply enqueued for delivery to ${data.externalUserId}`,
     );
   }
 

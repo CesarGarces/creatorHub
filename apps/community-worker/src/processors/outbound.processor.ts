@@ -33,11 +33,16 @@ export class OutboundProcessor extends WorkerHost {
 
   async process(job: Job<CommunityOutboundJob>): Promise<void> {
     const data = job.data;
+    this.logger.log(
+      `[Outbound] Delivering reply to ${data.externalUserId} on channel ${data.channelId}...`,
+    );
 
     await this.humanDelay();
 
     const connector = await this.channelManager.getOrReconnect(data.channelId);
+    this.logger.log(`[Outbound] Connector ready, sending message...`);
     await connector.sendMessage(data.externalUserId, data.text);
+    this.logger.log(`[Outbound] Message sent to ${data.externalUserId}`);
 
     const message = await prisma.communityMessage.update({
       where: { id: data.outboundMessageId },
