@@ -65,9 +65,9 @@ export class WhatsAppConnector implements ChannelConnector {
     credentials: unknown,
     events: ChannelConnectorEvents,
   ): Promise<ConnectResult> {
-    this._events = events;
-
     await this.disconnect();
+
+    this._events = events;
 
     const creds = credentials as WhatsAppCredentials;
 
