@@ -116,7 +116,7 @@ export class InboundProcessor extends WorkerHost {
     });
 
     this.logger.log(
-      `[Inbound] Guard verdict: allowed=${verdict.allowed} reason=${verdict.reason ?? "none"} creditCost=${creditCost}`,
+      `[Inbound] Guard verdict: allowed=${verdict.allowed} reason=${"reason" in verdict ? verdict.reason : "none"} creditCost=${creditCost}`,
     );
 
     if (!verdict.allowed) {
