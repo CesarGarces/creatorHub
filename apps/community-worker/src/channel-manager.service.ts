@@ -219,6 +219,22 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
     const existing = this.connectors.get(channelId);
     if (existing?.isConnected()) return existing;
 
+    // WhatsApp connector auto-reconnects on disconnect. Give it up to
+    // 10s to come back before falling through to a full DB re-read
+    // (which may fail if credentials are temporarily corrupted).
+    if (existing && !existing.isConnected()) {
+      this.logger.log(
+        `Channel ${channelId}: connector exists but disconnected, waiting for auto-reconnect…`,
+      );
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 500));
+        if (existing.isConnected()) {
+          this.logger.log(`Channel ${channelId}: auto-reconnect succeeded`);
+          return existing;
+        }
+      }
+    }
+
     await this.connectChannel(channelId);
     const connector = this.connectors.get(channelId);
     if (!connector) {
