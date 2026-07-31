@@ -256,11 +256,23 @@ export class WhatsAppConnector implements ChannelConnector {
         msg.messages.length,
       );
       if (msg.type !== "notify") return;
+      const myJid = sock.user?.id?.replace(/:.*@/, "@");
       for (const message of msg.messages) {
         const remoteJid = message.key.remoteJid;
         if (!remoteJid) continue;
         if (remoteJid === "status@broadcast") continue;
-        if (!remoteJid.endsWith("@s.whatsapp.net")) continue;
+        if (message.key.fromMe) continue;
+        if (myJid && remoteJid === myJid) continue;
+
+        const isWhatsApp =
+          remoteJid.endsWith("@s.whatsapp.net") || remoteJid.endsWith("@lid");
+        if (!isWhatsApp) {
+          console.log(
+            "[WhatsAppConnector] Skipping non-WhatsApp JID: %s",
+            remoteJid,
+          );
+          continue;
+        }
 
         const text =
           message.message?.conversation ||
@@ -276,7 +288,7 @@ export class WhatsAppConnector implements ChannelConnector {
         const normalized: NormalizedInboundMessage = {
           externalMessageId: message.key.id || `${Date.now()}`,
           externalUserId: remoteJid,
-          username: remoteJid.replace(/@s\.whatsapp\.net$/, ""),
+          username: remoteJid.replace(/@(s\.whatsapp\.net|lid)$/, ""),
           displayName: message.pushName || "",
           text: text.trim(),
           receivedAt: message.messageTimestamp

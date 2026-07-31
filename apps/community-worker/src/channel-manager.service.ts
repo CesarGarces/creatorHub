@@ -112,7 +112,19 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
     await this.disconnectChannel(channelId);
 
     const cipher = CredentialCipher.fromEnv();
-    const credentials = cipher.decryptJson(channel.credentials);
+    let credentials: unknown;
+    try {
+      credentials = cipher.decryptJson(channel.credentials);
+    } catch {
+      this.logger.warn(
+        `Channel ${channelId}: credentials corrupted, clearing for fresh QR pairing`,
+      );
+      await prisma.communityChannel.update({
+        where: { id: channelId },
+        data: { credentials: null, status: "AWAITING_QR" },
+      });
+      throw new Error("Credentials corrupted — cleared for fresh pairing");
+    }
     const connector = this.createConnector(channel.type);
 
     this.connectors.set(channelId, connector);
@@ -163,6 +175,24 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.connectors.delete(channelId);
       const message = (error as Error).message;
+      this.logger.error(`Channel ${channelId} connect failed: ${message}`);
+
+      // If credentials are corrupted (NaN/Buffer errors), clear them so
+      // next connect triggers a fresh QR pairing instead of looping.
+      if (
+        message.includes("NaN") ||
+        message.includes("out of range") ||
+        message.includes("Credentials corrupted")
+      ) {
+        this.logger.warn(
+          `Clearing corrupted credentials for channel ${channelId}`,
+        );
+        await prisma.communityChannel.update({
+          where: { id: channelId },
+          data: { credentials: null, status: "AWAITING_QR" },
+        });
+      }
+
       await this.persistStatus(channelId, { status: "ERROR", error: message });
       await this.publishStatus(channel.userId, channelId, channel.type, {
         status: "ERROR",
