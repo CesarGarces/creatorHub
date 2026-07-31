@@ -16,17 +16,12 @@ import type {
 } from "./channel-connector.interface";
 
 export interface WhatsAppCredentials {
-  /** Stored Baileys auth state (creds + signal keys). Undefined on first connect. */
   authState?: {
     creds: ReturnType<typeof initAuthCreds>;
     keys: Record<string, Record<string, unknown>>;
   };
 }
 
-/*
- * Simple console logger compatible with Baileys' pino interface.
- * We forward 'warn' and 'error' to stderr so they show up in Render logs.
- */
 const baileysLogger = {
   trace: () => {},
   debug: () => {},
@@ -37,11 +32,19 @@ const baileysLogger = {
   level: "info",
 };
 
+type AuthState = {
+  creds: ReturnType<typeof initAuthCreds>;
+  keys: Record<string, Record<string, unknown>>;
+};
+
 /**
  * WhatsApp connector based on Baileys (WhatsApp Web multi-device protocol).
  *
  * First connection requires QR-code pairing (like WhatsApp Web).
  * Subsequent connections restore the session from stored credentials.
+ *
+ * After pairing, WhatsApp forces a stream restart (error 515).
+ * The connector handles this by reconnecting with the saved credentials.
  */
 export class WhatsAppConnector implements ChannelConnector {
   readonly type: CommunityChannelType = "WHATSAPP";
@@ -52,11 +55,8 @@ export class WhatsAppConnector implements ChannelConnector {
   private _onSessionUpdate:
     | ((state: WhatsAppCredentials) => Promise<void>)
     | null = null;
+  private _destroyed = false;
 
-  /**
-   * Set a callback to persist session state updates. Called whenever
-   * Baileys rotates keys or updates credentials.
-   */
   setSessionUpdater(updater: (state: WhatsAppCredentials) => Promise<void>) {
     this._onSessionUpdate = updater;
   }
@@ -66,15 +66,74 @@ export class WhatsAppConnector implements ChannelConnector {
     events: ChannelConnectorEvents,
   ): Promise<ConnectResult> {
     await this.disconnect();
-
+    this._destroyed = false;
     this._events = events;
 
     const creds = credentials as WhatsAppCredentials;
-
-    // Build auth state: restore from stored or start fresh
     const authState = this.buildAuthState(creds);
 
-    const sock = makeWASocket({
+    // ── Attempt 1: fresh socket (may need QR pairing) ──────────
+    const sock = this.createSocket(authState);
+    this.sock = sock;
+
+    this.attachEventHandlers(sock, events, authState);
+
+    const outcome = await this.awaitOutcome(sock, 90_000);
+
+    if (outcome === "connected") {
+      return { externalIdentity: sock.user!.id.replace(/:.*@/, "@") };
+    }
+
+    if (outcome === "paired") {
+      // ── Attempt 2: reconnect after pairing (515 restart) ────
+      console.log(
+        "[WhatsAppConnector] Pairing succeeded, reconnecting with saved credentials…",
+      );
+      const sock2 = this.createSocket(authState);
+      this.sock = sock2;
+
+      this.attachEventHandlers(sock2, events, authState);
+
+      const outcome2 = await this.awaitOutcome(sock2, 30_000);
+      if (outcome2 === "connected") {
+        return { externalIdentity: sock2.user!.id.replace(/:.*@/, "@") };
+      }
+
+      throw new Error("WhatsApp reconnection after pairing failed — try again");
+    }
+
+    throw new Error(outcome);
+  }
+
+  async disconnect(): Promise<void> {
+    this._destroyed = true;
+    if (this.sock) {
+      try {
+        this.sock.end(undefined);
+      } catch {}
+    }
+    this.sock = null;
+    this._connected = false;
+    this._events = null;
+  }
+
+  async sendMessage(externalUserId: string, text: string): Promise<void> {
+    if (!this.sock || !this._connected) {
+      throw new Error("WhatsApp connector is not connected");
+    }
+    for (const chunk of splitMessage(text, 4096)) {
+      await this.sock.sendMessage(externalUserId, { text: chunk });
+    }
+  }
+
+  isConnected(): boolean {
+    return this._connected;
+  }
+
+  // ─── Socket factory ───────────────────────────────────────────
+
+  private createSocket(authState: AuthState): WASocket {
+    return makeWASocket({
       auth: {
         creds: authState.creds,
         keys: makeCacheableSignalKeyStore(
@@ -84,18 +143,14 @@ export class WhatsAppConnector implements ChannelConnector {
               const result: Record<string, any> = {};
               for (const id of ids) {
                 const val = authState.keys[type]?.[id];
-                if (val !== undefined) {
-                  result[id] = val;
-                }
+                if (val !== undefined) result[id] = val;
               }
               return result;
             },
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             set: async (data: any) => {
               for (const type in data) {
-                if (!authState.keys[type]) {
-                  authState.keys[type] = {};
-                }
+                if (!authState.keys[type]) authState.keys[type] = {};
                 for (const id in data[type]) {
                   const value = data[type][id];
                   if (value === undefined || value === null) {
@@ -110,7 +165,6 @@ export class WhatsAppConnector implements ChannelConnector {
           baileysLogger as never,
         ),
       },
-      // Use a standard browser fingerprint — WhatsApp is picky about unknown ones.
       browser: Browsers.ubuntu("Chrome"),
       printQRInTerminal: false,
       syncFullHistory: false,
@@ -119,28 +173,28 @@ export class WhatsAppConnector implements ChannelConnector {
       qrTimeout: 60_000,
       logger: baileysLogger as never,
     });
+  }
 
-    this.sock = sock;
+  // ─── Attach Baileys event listeners ──────────────────────────
 
-    // ─── Debug: log every connection.update event ──────────────
+  private attachEventHandlers(
+    sock: WASocket,
+    events: ChannelConnectorEvents,
+    authState: AuthState,
+  ): void {
     sock.ev.on("connection.update", (update) => {
-      console.log(
-        "[WhatsAppConnector] connection.update:",
-        JSON.stringify(update),
-      );
-    });
+      const { connection, lastDisconnect } = update;
 
-    // ─── Connection state handler ──────────────────────────────
-    sock.ev.on("connection.update", (update) => {
-      const { connection, lastDisconnect, qr } = update;
-
-      if (qr) {
-        console.log("[WhatsAppConnector] QR received, emitting to UI");
-        void this.emitQrCode(qr);
+      if (update.qr) {
+        void this.emitQrCode(update.qr);
       }
 
       if (connection === "close") {
         const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+
+        // Error 515 = stream restart after pairing — expected, handled
+        // by the reconnect logic in connect(), so we skip it here.
+        if (statusCode === 515) return;
 
         if (statusCode === DisconnectReason.loggedOut) {
           this._connected = false;
@@ -154,9 +208,10 @@ export class WhatsAppConnector implements ChannelConnector {
             status: "ERROR",
             error: "Connection replaced by another session",
           });
-        } else if (statusCode !== DisconnectReason.connectionClosed) {
+        } else {
           const reasonText =
             statusCode !== undefined ? String(statusCode) : "unknown reason";
+          this._connected = false;
           void events.onStatusChange({
             status: "DISCONNECTED",
             error: `Connection closed (${reasonText}), reconnecting…`,
@@ -164,8 +219,6 @@ export class WhatsAppConnector implements ChannelConnector {
         }
       }
 
-      // Only mark as connected if we have a valid user identity.
-      // Baileys may emit "open" before full auth on fresh sessions.
       if (connection === "open" && sock.user?.id) {
         this._connected = true;
         const phone = sock.user.id.replace(/:.*@/, "@");
@@ -176,154 +229,118 @@ export class WhatsAppConnector implements ChannelConnector {
       }
     });
 
-    // ─── Credential update handler (key rotation) ──────────────
     sock.ev.on("creds.update", () => {
       void this.persistSession(authState);
     });
 
-    // ─── Message handler ───────────────────────────────────────
     sock.ev.on("messages.upsert", (msg) => {
       if (msg.type !== "notify") return;
-
       for (const message of msg.messages) {
         const remoteJid = message.key.remoteJid;
         if (!remoteJid) continue;
         if (remoteJid === "status@broadcast") continue;
-        // Only handle 1:1 chats (ending with @s.whatsapp.net)
         if (!remoteJid.endsWith("@s.whatsapp.net")) continue;
 
-        // Only process text messages
         const text =
           message.message?.conversation ||
           message.message?.extendedTextMessage?.text;
         if (!text || !text.trim()) continue;
 
-        const msgId = message.key.id || `${Date.now()}`;
-        const pushName = message.pushName || "";
-
         const normalized: NormalizedInboundMessage = {
-          externalMessageId: msgId,
+          externalMessageId: message.key.id || `${Date.now()}`,
           externalUserId: remoteJid,
           username: remoteJid.replace(/@s\.whatsapp\.net$/, ""),
-          displayName: pushName,
+          displayName: message.pushName || "",
           text: text.trim(),
           receivedAt: message.messageTimestamp
             ? Number(message.messageTimestamp) * 1000
             : Date.now(),
         };
-
         void events.onMessage(normalized);
       }
     });
+  }
 
-    // Wait for a *real* connection (user authenticated) or a terminal close.
-    // We do NOT resolve on QR alone — the UI shows the QR via the onQrCode
-    // event while this Promise keeps the connect() call in-flight.
-    await new Promise<void>((resolve, reject) => {
+  // ─── Wait for outcome: "connected" | "paired" | error msg ────
+
+  private awaitOutcome(
+    sock: WASocket,
+    timeoutMs: number,
+  ): Promise<"connected" | "paired" | string> {
+    return new Promise<"connected" | "paired" | string>((resolve) => {
+      let settled = false;
+
       const timeout = setTimeout(() => {
-        sock.ev.off("connection.update", handler);
-        reject(
-          new Error(
-            "WhatsApp connection timed out — QR was not scanned in time",
-          ),
-        );
-      }, 90_000);
+        if (!settled) {
+          settled = true;
+          resolve("WhatsApp connection timed out — QR was not scanned in time");
+        }
+      }, timeoutMs);
 
       const handler = (update: {
         connection?: string;
         qr?: string;
+        isNewLogin?: boolean;
         lastDisconnect?: { error?: Error };
       }) => {
-        const { connection, lastDisconnect, qr } = update;
+        if (settled) return;
 
-        if (qr) {
-          // Emit QR to the UI but KEEP WAITING for the user to scan it.
-          void this.emitQrCode(qr);
+        if (update.isNewLogin) {
+          // Pairing succeeded — credentials saved via creds.update.
+          settled = true;
+          clearTimeout(timeout);
+          sock.ev.off("connection.update", handler);
+          resolve("paired");
           return;
         }
 
-        if (connection === "close") {
-          const statusCode = (lastDisconnect?.error as Boom)?.output
+        if (update.connection === "open" && sock.user?.id) {
+          settled = true;
+          clearTimeout(timeout);
+          sock.ev.off("connection.update", handler);
+          resolve("connected");
+          return;
+        }
+
+        if (update.connection === "close") {
+          const statusCode = (update.lastDisconnect?.error as Boom)?.output
             ?.statusCode;
-          const reason = lastDisconnect?.error?.message || "unknown reason";
 
-          clearTimeout(timeout);
-          sock.ev.off("connection.update", handler);
-
-          if (statusCode === DisconnectReason.loggedOut) {
-            reject(new Error("Session expired — scan QR again"));
-          } else if (statusCode === DisconnectReason.connectionReplaced) {
-            reject(new Error("Connection replaced by another session"));
-          } else {
-            reject(new Error(`Connection closed: ${reason}`));
+          if (statusCode === 515) {
+            // 515 after pairing is expected — will be handled by caller
+            return;
           }
-          return;
-        }
 
-        if (connection === "open" && sock.user?.id) {
+          settled = true;
           clearTimeout(timeout);
           sock.ev.off("connection.update", handler);
-          resolve();
+          const reason =
+            update.lastDisconnect?.error?.message || "unknown reason";
+          resolve(`Connection closed: ${reason}`);
         }
       };
 
       sock.ev.on("connection.update", handler);
     });
-
-    return {
-      externalIdentity: sock.user!.id.replace(/:.*@/, "@"),
-    };
-  }
-
-  async disconnect(): Promise<void> {
-    if (this.sock) {
-      try {
-        this.sock.end(undefined);
-      } catch {
-        // end() throws if the socket never connected — safe to ignore
-      }
-    }
-    this.sock = null;
-    this._connected = false;
-    this._events = null;
-  }
-
-  async sendMessage(externalUserId: string, text: string): Promise<void> {
-    if (!this.sock || !this._connected) {
-      throw new Error("WhatsApp connector is not connected");
-    }
-
-    for (const chunk of splitMessage(text, 4096)) {
-      await this.sock.sendMessage(externalUserId, { text: chunk });
-    }
-  }
-
-  isConnected(): boolean {
-    return this._connected;
   }
 
   // ─── Private helpers ─────────────────────────────────────────
 
-  private buildAuthState(creds: WhatsAppCredentials) {
+  private buildAuthState(creds: WhatsAppCredentials): AuthState {
     if (creds?.authState) {
       return {
         creds: creds.authState.creds as ReturnType<typeof initAuthCreds>,
         keys: creds.authState.keys as Record<string, Record<string, unknown>>,
       };
     }
-
     return {
       creds: initAuthCreds(),
       keys: {} as Record<string, Record<string, unknown>>,
     };
   }
 
-  private async persistSession(authState: {
-    creds: ReturnType<typeof initAuthCreds>;
-    keys: Record<string, Record<string, unknown>>;
-  }): Promise<void> {
+  private async persistSession(authState: AuthState): Promise<void> {
     if (!this._onSessionUpdate) return;
-
     try {
       await this._onSessionUpdate({
         authState: {
@@ -341,18 +358,12 @@ export class WhatsAppConnector implements ChannelConnector {
 
   private async emitQrCode(qr: string): Promise<void> {
     if (!this._events?.onQrCode) return;
-
     try {
-      // Generate a PNG QR code as a base64 data URL
       const dataUrl = await QRCode.toDataURL(qr, {
         width: 256,
         margin: 2,
-        color: {
-          dark: "#000000",
-          light: "#ffffff",
-        },
+        color: { dark: "#000000", light: "#ffffff" },
       });
-
       void this._events.onQrCode(dataUrl);
     } catch (error) {
       console.error(

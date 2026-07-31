@@ -37,6 +37,8 @@ import {
 export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ChannelManagerService.name);
   private readonly connectors = new Map<string, ChannelConnector>();
+  /** While true, status events are suppressed (startup reconnection phase). */
+  private _initializing = true;
 
   constructor(
     @InjectQueue(COMMUNITY_INBOUND_QUEUE)
@@ -76,6 +78,9 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
         });
       }
     }
+
+    this._initializing = false;
+    this.logger.log("Channel restore complete");
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -255,6 +260,8 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
     channelType: CommunityChannelType,
     qrDataUrl: string,
   ): Promise<void> {
+    if (this._initializing) return;
+
     this.logger.log(
       `Publishing QR code event for channel ${channelId}, user ${userId}`,
     );
@@ -314,6 +321,9 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
     channelType: CommunityChannelType,
     update: { status: string; externalIdentity?: string; error?: string },
   ): Promise<void> {
+    // Skip status events during startup — avoids toast spam on every deploy.
+    if (this._initializing) return;
+
     const event: CommunityChannelStatusEvent = {
       userId,
       channelId,
