@@ -89,14 +89,25 @@ export class WhatsAppConnector implements ChannelConnector {
       console.log(
         "[WhatsAppConnector] Pairing succeeded, reconnecting with saved credentials…",
       );
-      const sock2 = this.createSocket(authState);
-      this.sock = sock2;
 
-      this.attachEventHandlers(sock2, events, authState);
+      for (let attempt = 2; attempt <= 3; attempt++) {
+        const sock2 = this.createSocket(authState);
+        this.sock = sock2;
+        this.attachEventHandlers(sock2, events, authState);
 
-      const outcome2 = await this.awaitOutcome(sock2, 30_000);
-      if (outcome2 === "connected") {
-        return { externalIdentity: sock2.user!.id.replace(/:.*@/, "@") };
+        const timeoutMs = attempt === 2 ? 60_000 : 30_000;
+        console.log(
+          `[WhatsAppConnector] Attempt ${attempt}: waiting for connection (timeout ${timeoutMs / 1000}s)…`,
+        );
+        const outcome2 = await this.awaitOutcome(sock2, timeoutMs);
+
+        if (outcome2 === "connected") {
+          return { externalIdentity: sock2.user!.id.replace(/:.*@/, "@") };
+        }
+
+        console.log(
+          `[WhatsAppConnector] Attempt ${attempt} failed: ${outcome2}`,
+        );
       }
 
       throw new Error("WhatsApp reconnection after pairing failed — try again");
@@ -194,7 +205,12 @@ export class WhatsAppConnector implements ChannelConnector {
 
         // Error 515 = stream restart after pairing — expected, handled
         // by the reconnect logic in connect(), so we skip it here.
-        if (statusCode === 515) return;
+        if (statusCode === 515) {
+          console.log(
+            "[WhatsAppConnector] 515 stream restart on active socket, ignoring",
+          );
+          return;
+        }
 
         if (statusCode === DisconnectReason.loggedOut) {
           this._connected = false;
@@ -324,6 +340,9 @@ export class WhatsAppConnector implements ChannelConnector {
 
           if (statusCode === 515) {
             // 515 after pairing is expected — will be handled by caller
+            console.log(
+              "[WhatsAppConnector] awaitOutcome: 515 received, waiting for auto-reconnect…",
+            );
             return;
           }
 
@@ -344,15 +363,38 @@ export class WhatsAppConnector implements ChannelConnector {
 
   private buildAuthState(creds: WhatsAppCredentials): AuthState {
     if (creds?.authState) {
+      const sanitizedKeys = this.sanitizeKeys(creds.authState.keys);
       return {
         creds: creds.authState.creds as ReturnType<typeof initAuthCreds>,
-        keys: creds.authState.keys as Record<string, Record<string, unknown>>,
+        keys: sanitizedKeys,
       };
     }
     return {
       creds: initAuthCreds(),
       keys: {} as Record<string, Record<string, unknown>>,
     };
+  }
+
+  private sanitizeKeys(
+    keys: Record<string, Record<string, unknown>>,
+  ): Record<string, Record<string, unknown>> {
+    const clean: Record<string, Record<string, unknown>> = {};
+    for (const type in keys) {
+      if (!keys[type] || typeof keys[type] !== "object") continue;
+      clean[type] = {};
+      for (const id in keys[type]) {
+        const val = keys[type][id];
+        if (val === undefined || val === null) continue;
+        if (typeof val === "number" && Number.isNaN(val)) {
+          console.warn(
+            `[WhatsAppConnector] Removing NaN key: type=${type} id=${id}`,
+          );
+          continue;
+        }
+        clean[type][id] = val;
+      }
+    }
+    return clean;
   }
 
   private async persistSession(authState: AuthState): Promise<void> {
