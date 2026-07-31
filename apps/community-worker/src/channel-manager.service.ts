@@ -255,6 +255,9 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
     channelType: CommunityChannelType,
     qrDataUrl: string,
   ): Promise<void> {
+    this.logger.log(
+      `Publishing QR code event for channel ${channelId}, user ${userId}`,
+    );
     // Persist AWAITING_QR status
     await this.persistStatus(channelId, { status: "AWAITING_QR" });
     // Publish QR code event to frontend
@@ -268,6 +271,11 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
     };
     await this.events
       .publish(COMMUNITY_CHANNEL_STATUS_EVENT, event)
+      .then(() => {
+        this.logger.log(
+          `QR code event published successfully for channel ${channelId}`,
+        );
+      })
       .catch((error: unknown) => {
         this.logger.warn(
           `Could not publish QR code event: ${(error as Error).message}`,

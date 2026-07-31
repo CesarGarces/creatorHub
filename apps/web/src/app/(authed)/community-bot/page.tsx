@@ -70,7 +70,12 @@ export default function CommunityBotPage() {
           error?: string;
           qrDataUrl?: string;
         }) => {
+          console.log("[Socket] community:channel_status received:", event);
           applyChannelStatus(event);
+          console.log(
+            "[Socket] Store after applyChannelStatus:",
+            useCommunityBotStore.getState().qrDataUrl?.slice(0, 50),
+          );
           if (event.status === "ACTIVE") {
             toast.success(
               `Channel connected${event.externalIdentity ? ` as ${event.externalIdentity}` : ""}`,

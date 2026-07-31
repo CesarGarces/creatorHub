@@ -83,6 +83,7 @@ export class CommunityBotListenerService
   }
 
   private forward(userId: string, wsEvent: string, payload: unknown) {
+    this.logger.log(`Forwarding ${wsEvent} to user ${userId}`);
     this.gateway.emitToUser(userId, wsEvent, payload);
   }
 }
