@@ -62,6 +62,7 @@ export class WhatsAppConnector implements ChannelConnector {
   private _authState: AuthState | null = null;
   private _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private _reconnectAttempts = 0;
+  private _keepaliveTimer: ReturnType<typeof setInterval> | null = null;
 
   setSessionUpdater(updater: (state: WhatsAppCredentials) => Promise<void>) {
     this._onSessionUpdate = updater;
@@ -124,7 +125,32 @@ export class WhatsAppConnector implements ChannelConnector {
     throw new Error(outcome);
   }
 
+  private startKeepalive(sock: WASocket): void {
+    this.stopKeepalive();
+    this._keepaliveTimer = setInterval(() => {
+      try {
+        const ws = (
+          sock as unknown as { ws: { readyState?: number; ping?: () => void } }
+        ).ws;
+        if (ws?.readyState === 1 && typeof ws.ping === "function") {
+          ws.ping();
+          console.log("[WhatsAppConnector] keepalive ping sent");
+        }
+      } catch {
+        // ignore — socket may be closing
+      }
+    }, 30_000);
+  }
+
+  private stopKeepalive(): void {
+    if (this._keepaliveTimer) {
+      clearInterval(this._keepaliveTimer);
+      this._keepaliveTimer = null;
+    }
+  }
+
   async disconnect(): Promise<void> {
+    this.stopKeepalive();
     this._destroyed = true;
     if (this._reconnectTimer) {
       clearTimeout(this._reconnectTimer);
@@ -227,12 +253,14 @@ export class WhatsAppConnector implements ChannelConnector {
 
         if (statusCode === DisconnectReason.loggedOut) {
           this._connected = false;
+          this.stopKeepalive();
           void events.onStatusChange({
             status: "REQUIRES_RESCAN",
             error: "Session expired — scan QR again",
           });
         } else if (statusCode === DisconnectReason.connectionReplaced) {
           this._connected = false;
+          this.stopKeepalive();
           this._destroyed = true; // prevent auto-reconnect
           void events.onStatusChange({
             status: "REQUIRES_RESCAN",
@@ -243,6 +271,8 @@ export class WhatsAppConnector implements ChannelConnector {
           const reasonText =
             statusCode !== undefined ? String(statusCode) : "unknown reason";
           this._connected = false;
+          this.stopKeepalive();
+          this._destroyed = false; // allow auto-reconnect on transient errors
           console.log(
             `[WhatsAppConnector] Connection closed (${reasonText}), scheduling reconnect…`,
           );
@@ -256,6 +286,8 @@ export class WhatsAppConnector implements ChannelConnector {
 
       if (connection === "open" && sock.user?.id) {
         this._connected = true;
+        this._reconnectAttempts = 0;
+        this.startKeepalive(sock);
         const phone = sock.user.id.replace(/:.*@/, "@");
         void events.onStatusChange({
           status: "CONNECTED",
