@@ -14,7 +14,12 @@ Creator Hub is a platform where content creators can access AI-powered tools to 
 - **Video Generator** — Generate videos with AI from text or images
 - **Image to Video** — Convert images into animated videos with AI
 - **Text to Video** — Generate videos directly from text descriptions
+- **Script Writer** — AI-powered structured video scripts for YouTube, TikTok, Instagram Reels. Multi-platform, multi-tone, with visual cues and streaming generation.
 - **AI Chat** — AI assistant with streaming, dynamic tool routing and integrated actions (opens tools directly from chat)
+
+**Community Bot:**
+
+- **Community Bot** — AI-powered auto-reply system for creators. Connect Telegram and WhatsApp channels, configure bot behavior, and have the AI reply to fans in the creator's own voice. Includes style profile injection, cost/abuse guards, conversation viewer, and playground for testing.
 
 **Tools in development:**
 
@@ -47,21 +52,23 @@ Creator Hub is a platform where content creators can access AI-powered tools to 
 ```
 creator-hub/
 ├── apps/
-│   ├── web/              # Next.js frontend
-│   └── api/              # NestJS backend
+│   ├── web/                  # Next.js frontend
+│   ├── api/                  # NestJS backend
+│   └── community-worker/     # Long-running worker for community bot channels
 ├── packages/
-│   ├── auth/             # JWT + Passport + EmailVerifiedGuard
-│   ├── ai-engine/        # Multi-provider AI abstraction (tier-aware) + streaming
-│   ├── email/            # Provider-agnostic email (Resend, Handlebars templates)
-│   ├── stt-engine/       # Speech-to-text streaming (Deepgram, Mock)
-│   ├── billing/          # Credit system (currentCredits as single source of truth)
-│   ├── storage/          # R2/MinIO abstraction
-│   ├── analytics/        # Usage tracking
-│   ├── database/         # Prisma ORM
-│   ├── domain-events/    # Redis Pub/Sub abstraction
-│   ├── tool-sdk/         # Tool Registry
-│   ├── shared-types/     # TypeScript interfaces
-│   └── shared-utils/     # Pure utilities
+│   ├── auth/                 # JWT + Passport + EmailVerifiedGuard
+│   ├── ai-engine/            # Multi-provider AI abstraction (tier-aware) + streaming
+│   ├── email/                # Provider-agnostic email (Resend, Handlebars templates)
+│   ├── stt-engine/           # Speech-to-text streaming (Deepgram, Mock)
+│   ├── billing/              # Credit system (currentCredits as single source of truth)
+│   ├── storage/              # R2/MinIO abstraction
+│   ├── analytics/            # Usage tracking
+│   ├── community-bot/        # Shared connectors, crypto, style prompt builder
+│   ├── database/             # Prisma ORM
+│   ├── domain-events/        # Redis Pub/Sub abstraction
+│   ├── tool-sdk/             # Tool Registry
+│   ├── shared-types/         # TypeScript interfaces
+│   └── shared-utils/         # Pure utilities
 ├── tools/
 │   ├── thumbnail-generator/  # First tool
 │   │   └── backend/          # BullMQ processor + controller
@@ -69,11 +76,15 @@ creator-hub/
 │   │   ├── backend/          # TranslatorProcessor + controller
 │   │   └── frontend/         # Full-screen UI with two textareas
 │   ├── image-to-image/       # AI image transformation
-│   └── video-generator/      # Video generation (text-to-video, image-to-video)
-│       └── backend/          # VideoProcessor + controller
-├── agents/               # Specialized agents
-│   └── chat-agent/       # Chat with dynamic tool routing
-└── skills/               # System skills (see .agents/skills/)
+│   ├── video-generator/      # Video generation (text-to-video, image-to-video)
+│   │   └── backend/          # VideoProcessor + controller
+│   ├── script-writer/        # AI video script generation (SSE streaming)
+│   │   └── backend/          # NestJS controller + service
+│   ├── x-search-trends/      # X trend research with AI analysis
+│   └── x-post-tweet/         # Tweet drafting with RAG style
+├── agents/                   # Specialized agents
+│   └── chat-agent/           # Chat with dynamic tool routing
+└── skills/                   # System skills (see .agents/skills/)
 ```
 
 The system follows **Clean Architecture** and **DDD** principles: each tool is a bounded context that automatically registers via `ToolRegistry`. Dependencies point inward — tools depend on the SDK, never the other way around.
@@ -920,6 +931,23 @@ GET    /api/v1/tools/thumbnail-generator/images          # User images
 
 POST   /api/v1/tools/content-translator/translate       # Translate content (text, targetLanguage, provider)
 GET    /api/v1/tools/content-translator/jobs/:id/status  # Job status
+
+# Script Writer (streaming SSE)
+POST   /api/v1/tools/script-writer/generate    # Generate script (streaming SSE)
+GET    /api/v1/tools/script-writer/scripts      # List generated scripts
+GET    /api/v1/tools/script-writer/scripts/:id  # Get a script
+DELETE /api/v1/tools/script-writer/scripts/:id  # Delete a script
+
+# Community Bot
+GET    /api/v1/community-bot/config                # Get bot config
+PUT    /api/v1/community-bot/config                # Update bot settings
+GET    /api/v1/community-bot/channels              # List channels
+POST   /api/v1/community-bot/channels/telegram/connect   # Connect Telegram
+POST   /api/v1/community-bot/channels/whatsapp/connect   # Connect WhatsApp (QR pairing)
+DELETE /api/v1/community-bot/channels/:type/disconnect   # Disconnect channel
+GET    /api/v1/community-bot/conversations              # List conversations
+GET    /api/v1/community-bot/conversations/:id/messages  # Message thread
+POST   /api/v1/community-bot/playground                  # Test reply (costs credits)
 
 # AI Chat (streaming SSE)
 POST   /api/v1/chat                    # Send message (streaming response)

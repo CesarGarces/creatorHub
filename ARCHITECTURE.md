@@ -18,10 +18,17 @@
 9. [Payment Gateway](#9-payment-gateway)
 10. [Storage System](#10-storage-system)
 11. [Authentication](#11-authentication)
-12. [Testing Strategy](#12-testing-strategy)
-13. [CI/CD Strategy](#13-cicd-strategy)
-14. [Scalability Roadmap](#14-scalability-roadmap)
-15. [Creating a New Tool](#15-creating-a-new-tool)
+12. [AI Chat System](#12-ai-chat-system)
+13. [User Style RAG System](#13-user-style-rag-system)
+14. [X (Twitter) Integration](#14b-x-twitter-integration)
+    14c. [Script Writer](#14c-script-writer)
+    14d. [Community Bot](#14d-community-bot)
+15. [Testing Strategy](#14-testing-strategy)
+16. [CI/CD Strategy](#14-cicd-strategy)
+17. [Scalability Roadmap](#15-scalability-roadmap)
+18. [Creating a New Tool](#16-creating-a-new-tool)
+19. [Observability — Sentry](#17-observability--sentry)
+20. [Security Hardening](#18-security-hardening)
 
 ---
 
@@ -121,10 +128,25 @@ creator-hub/
 │       │       ├── ai/             # DB-driven provider metadata
 │       │       ├── admin/
 │       │       ├── webhooks/       # Payment gateway webhooks
-│       │       └── websocket/      # WebSocket gateway + payment listener
+│       │       ├── websocket/      # WebSocket gateway + payment listener
+│       │       └── community-bot/  # Community bot REST + WS bridge
 │       ├── test/
 │       │   └── jest-e2e.json
 │       └── nest-cli.json
+│
+│   └── community-worker/     # Long-running worker for community bot
+│       ├── src/
+│       │   ├── main.ts
+│       │   ├── worker.module.ts
+│       │   ├── channel-manager.service.ts
+│       │   ├── processors/
+│       │   │   ├── inbound.processor.ts
+│       │   │   ├── outbound.processor.ts
+│       │   │   └── channel-command.processor.ts
+│       │   └── services/
+│       │       ├── reply-generator.service.ts
+│       │       └── community-guard.service.ts
+│       └── package.json
 │
 ├── packages/
 │   ├── shared-types/          # TypeScript interfaces (no runtime deps)
@@ -143,6 +165,18 @@ creator-hub/
 │   │       ├── string.utils.ts
 │   │       ├── async.utils.ts
 │   │       └── logger.utils.ts
+│   │
+│   ├── community-bot/         # Shared connectors, crypto, style prompt builder
+│   │   └── src/
+│   │       ├── connectors/
+│   │       │   ├── channel-connector.interface.ts
+│   │       │   ├── telegram.connector.ts
+│   │       │   └── whatsapp.connector.ts
+│   │       ├── crypto/
+│   │       │   └── credential-cipher.ts
+│   │       └── style/
+│   │           ├── style-prompt.ts
+│   │           └── style-context.service.ts
 │   │
 │   ├── database/              # Prisma ORM
 │   │   ├── prisma/
@@ -187,6 +221,16 @@ creator-hub/
 │       │       ├── content-translator.service.ts
 │       │       ├── content-translator.controller.ts
 │       │       └── content-translator.processor.ts
+│       └── package.json
+│
+│   └── script-writer/         # AI video script generation (SSE streaming)
+│       ├── index.ts           # Tool manifest (registerTool)
+│       ├── backend/
+│       │   └── src/
+│       │       ├── script-writer.module.ts
+│       │       ├── script-writer.controller.ts
+│       │       ├── script-writer.service.ts
+│       │       └── style-injection.service.ts
 │       └── package.json
 │
 └── .github/
@@ -595,6 +639,12 @@ The `AIController` exposes DB-driven provider metadata:
 - **`UserRole` enum** — `USER`, `ADMIN`
 - **`PaymentGateway` enum** — `MERCADO_PAGO`, `PAYPAL` (used in `CreditTransaction.provider`)
 - **`MarketingEvent`** — Tracks credit threshold events for conversion analytics
+- **`GeneratedScript`** — Stores AI-generated video scripts with platform, tone, hook type, and thumbnail prompt
+- **`CommunityBotConfig`** — Per-creator bot settings (model, temperature, limits, style toggle)
+- **`CommunityChannel`** — Connected Telegram/WhatsApp channels with encrypted credentials
+- **`CommunityContact`** — Fans who messaged the bot (external platform ID, blocked flag)
+- **`CommunityConversation`** — Thread between a channel and a contact
+- **`CommunityMessage`** — Individual messages (INBOUND/OUTBOUND, credits used, skip reason)
 - **`Provider` model** — Metadata de proveedores IA (slug, name, model, tier, costPerCredit, isActive, supportedTasks, config)
 - **`GeneratedImage.providerId`** — Relación con `Provider`; `isProModel` se deriva del tier del proveedor
 - **Soft delete** — Users use `isActive: false` instead of `DELETE`
@@ -623,6 +673,21 @@ GET    /api/v1/tools/thumbnail-generator/images     # User's images
 
 POST   /api/v1/tools/content-translator/translate   # Translate (text, targetLanguage, provider)
 GET    /api/v1/tools/content-translator/jobs/:id/status
+
+POST   /api/v1/tools/script-writer/generate    # Generate script (SSE streaming)
+GET    /api/v1/tools/script-writer/scripts      # List scripts
+GET    /api/v1/tools/script-writer/scripts/:id  # Get a script
+DELETE /api/v1/tools/script-writer/scripts/:id  # Delete a script
+
+GET    /api/v1/community-bot/config                # Get bot config
+PUT    /api/v1/community-bot/config                # Update bot settings
+GET    /api/v1/community-bot/channels              # List channels
+POST   /api/v1/community-bot/channels/telegram/connect  # Connect Telegram
+POST   /api/v1/community-bot/channels/whatsapp/connect  # Connect WhatsApp
+DELETE /api/v1/community-bot/channels/:type/disconnect   # Disconnect
+GET    /api/v1/community-bot/conversations              # List conversations
+GET    /api/v1/community-bot/conversations/:id/messages  # Message thread
+POST   /api/v1/community-bot/playground                  # Test reply
 
 GET    /api/v1/credits/balance       # Get balance (balance = currentCredits, plan)
 GET    /api/v1/credits/marketing-events  # Marketing events for user
@@ -693,22 +758,26 @@ POST   /api/v1/admin/tools/toggle    # Enable/disable tool
 
 ### Event Types
 
-| Event                       | Producer              | Consumer              | Purpose                 |
-| --------------------------- | --------------------- | --------------------- | ----------------------- |
-| `tool.used`                 | All tools             | Analytics, Credits    | Track usage             |
-| `credits.deducted`          | CreditService         | Notifications         | Alert user              |
-| `credits.depleted`          | CreditService         | Notifications         | Prompt purchase         |
-| `marketing.credit_depleted` | CreditService         | MarketingEventHandler | Marketing events        |
-| `marketing.threshold`       | MarketingEventHandler | MarketingEvent DB     | Threshold tracking      |
-| `payment:success`           | CreditBillingService  | PaymentListener       | Real-time credit update |
-| `ai.request.completed`      | AIEngine              | Analytics, Billing    | Track costs             |
-| `image.generated`           | Thumbnail             | Storage, Notify       | Save & notify           |
-| `translation.completed`     | ContentTranslator     | Notify                | Deliver result          |
-| `translation.failed`        | ContentTranslator     | Notify                | Error handling          |
-| `payment:success`           | CreditBillingService  | PaymentListener       | Notify user via WS      |
-| `stt:transcript`            | AppGateway            | Frontend              | Live transcript         |
-| `stt:done`                  | AppGateway            | Frontend              | Session complete        |
-| `stt:error`                 | AppGateway            | Frontend              | Session error           |
+| Event                        | Producer              | Consumer              | Purpose                  |
+| ---------------------------- | --------------------- | --------------------- | ------------------------ |
+| `tool.used`                  | All tools             | Analytics, Credits    | Track usage              |
+| `credits.deducted`           | CreditService         | Notifications         | Alert user               |
+| `credits.depleted`           | CreditService         | Notifications         | Prompt purchase          |
+| `marketing.credit_depleted`  | CreditService         | MarketingEventHandler | Marketing events         |
+| `community.channel.status`   | Worker (ChannelMgr)   | API (Listener) → WS   | Channel status updates   |
+| `community.message.received` | Worker (InboundProc)  | API → WS              | Fan message notification |
+| `community.reply.sent`       | Worker (OutboundProc) | API → WS              | Bot reply confirmation   |
+| `community.reply.skipped`    | Worker (InboundProc)  | API → WS              | Skip reason notification |
+| `marketing.threshold`        | MarketingEventHandler | MarketingEvent DB     | Threshold tracking       |
+| `payment:success`            | CreditBillingService  | PaymentListener       | Real-time credit update  |
+| `ai.request.completed`       | AIEngine              | Analytics, Billing    | Track costs              |
+| `image.generated`            | Thumbnail             | Storage, Notify       | Save & notify            |
+| `translation.completed`      | ContentTranslator     | Notify                | Deliver result           |
+| `translation.failed`         | ContentTranslator     | Notify                | Error handling           |
+| `payment:success`            | CreditBillingService  | PaymentListener       | Notify user via WS       |
+| `stt:transcript`             | AppGateway            | Frontend              | Live transcript          |
+| `stt:done`                   | AppGateway            | Frontend              | Session complete         |
+| `stt:error`                  | AppGateway            | Frontend              | Session error            |
 
 ### Event-Driven Flow Example — Thumbnail
 
@@ -2071,7 +2140,433 @@ POST   /api/v1/tools/x-search-trends/research    # Research trends (15 cr + 10 c
 
 ---
 
-## 14. Testing Strategy
+## 14c. Script Writer
+
+### Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Script Writer Tool                             │
+│  tools/script-writer/                                                │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  │
+│  │  Frontend         │  │  Controller      │  │  Service         │  │
+│  │  (Next.js page)   │  │  (REST + SSE)    │  │  (AI streaming)  │  │
+│  │                   │  │                  │  │                  │  │
+│  │ • Chat UI         │  │ • POST /generate │  │ • System prompt  │  │
+│  │ • Config panel    │  │   (SSE stream)   │  │ • Style inject   │  │
+│  │ • History sidebar │  │ • GET /scripts   │  │ • Credit billing │  │
+│  │ • Voice input     │  │ • DELETE /scripts│  │ • DB persistence │  │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘  │
+│                                                                      │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  │
+│  │  StyleInjection  │  │  AIEngine        │  │  BillingModule   │  │
+│  │  Service         │  │  (ProviderRegistry│  │  (CreditService) │  │
+│  │                  │  │   streaming)     │  │                  │  │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘  │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### How It Works
+
+1. User enters a topic, selects platform (YouTube/TikTok/Reels/Shorts), tone, hook type, and target duration
+2. Controller validates input, sets SSE headers, and pipes the service's readable stream
+3. Service builds a system prompt with platform-specific rules, optional style injection, and output format
+4. AI provider streams tokens → each chunk pushed as SSE `data:` event
+5. Post-processing extracts thumbnail prompt, word count, estimated duration
+6. Credits deducted after successful generation
+7. Script saved to `GeneratedScript` table
+
+### System Prompt Structure
+
+```
+Platform rules (YouTube Long / Shorts / TikTok / Reels)
+  + Output format (HOOK → DEVELOPMENT → CLIMAX → CTA → THUMBNAIL PROMPT)
+  + Hook type (Mystery / Shocking Data / Rhetorical / Contradiction)
+  + Tone preset (Emotional / Controversial / Analytical / Comedic / Direct)
+  + Visual cues in brackets [visual cue]
+  + Optional: User Style Profile (tone, vocab, sentence length, emoji, formality)
+  + Language matching (respond in user's language)
+```
+
+### Streaming SSE Protocol
+
+```
+Frontend: POST /tools/script-writer/generate
+  Body: { topic, platform, tone, hookType, targetDuration, model, useStyle }
+
+Response: text/event-stream
+
+data: {"type":"content","content":"HOOK\n[visual cue]..."}    ← token chunks
+data: {"type":"content","content":"opening phrase..."}
+...
+data: {"type":"done","scriptId":"...","wordCount":250,         ← final event
+        "estimatedDuration":120,"thumbnailPrompt":"..."}
+```
+
+### Database Model
+
+```prisma
+enum ScriptStatus {
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+model GeneratedScript {
+  id                String       @id @default(cuid())
+  userId            String
+  title             String?
+  topic             String
+  content           String       @db.Text
+  platform          String       // "youtube-long" | "youtube-shorts" | "tiktok" | "reels"
+  tone              String?
+  hookType          String?
+  targetDuration    Int?
+  estimatedDuration Int?
+  wordCount         Int?
+  thumbnailPrompt   String?      @db.Text
+  model             String?
+  metadata          Json?
+  status            ScriptStatus @default(COMPLETED)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, status])
+}
+```
+
+### API Endpoints
+
+```
+POST   /api/v1/tools/script-writer/generate    # Generate script (SSE streaming)
+GET    /api/v1/tools/script-writer/scripts      # List scripts (paginated)
+GET    /api/v1/tools/script-writer/scripts/:id  # Get a script
+DELETE /api/v1/tools/script-writer/scripts/:id  # Delete a script
+```
+
+### Package Structure
+
+```
+tools/script-writer/
+├── index.ts                              # Tool manifest (registerTool)
+├── package.json
+└── backend/
+    ├── src/
+    │   ├── index.ts                      # Barrel exports
+    │   ├── script-writer.module.ts       # NestJS module (AIEngine, Billing, Analytics)
+    │   ├── script-writer.controller.ts   # REST endpoints + SSE
+    │   ├── script-writer.service.ts      # Core logic + system prompt builder
+    │   └── style-injection.service.ts    # User style profile loader
+    └── package.json
+```
+
+---
+
+## 14d. Community Bot
+
+### Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                        COMMUNITY BOT SYSTEM                               │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  API (apps/api)                                                    │  │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │  │
+│  │  │ Controller    │  │ Config       │  │ Channel      │            │  │
+│  │  │ (REST)        │  │ Service      │  │ Service      │            │  │
+│  │  │               │  │              │  │              │            │  │
+│  │  │ • Config CRUD │  │ • Per-user   │  │ • Validate   │            │  │
+│  │  │ • Connect/    │  │   settings   │  │   tokens     │            │  │
+│  │  │   Disconnect  │  │ • Model tier │  │ • Encrypt    │            │  │
+│  │  │ • Conversations│  │   validation │  │   creds      │            │  │
+│  │  │ • Playground  │  │              │  │ • Enqueue    │            │  │
+│  │  └──────────────┘  └──────────────┘  │   commands   │            │  │
+│  │                                       └──────────────┘            │  │
+│  │  ┌──────────────┐  ┌──────────────┐                               │  │
+│  │  │ Playground   │  │ Listener     │  ← Redis domain events        │  │
+│  │  │ Service      │  │ Service      │  → Socket.IO → Frontend       │  │
+│  │  └──────────────┘  └──────────────┘                               │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                              │ BullMQ commands                           │
+│                              ▼                                           │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  Worker (apps/community-worker)                                    │  │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │  │
+│  │  │ ChannelMgr   │  │ Inbound      │  │ Outbound     │            │  │
+│  │  │ Service      │  │ Processor    │  │ Processor    │            │  │
+│  │  │              │  │              │  │              │            │  │
+│  │  │ • Live conn. │  │ • Persist    │  │ • Human delay│            │  │
+│  │  │ • Rehydrate  │  │   message    │  │ • Send via   │            │  │
+│  │  │ • Status     │  │ • Guard      │  │   connector  │            │  │
+│  │  │   events     │  │ • AI reply   │  │ • Mark sent  │            │  │
+│  │  │ • Keepalive  │  │ • Bill       │  │              │            │  │
+│  │  └──────────────┘  │ • Enqueue    │  └──────────────┘            │  │
+│  │                     │   outbound   │                               │  │
+│  │  ┌──────────────┐  └──────────────┘                               │  │
+│  │  │ ReplyGen     │  ┌──────────────┐                               │  │
+│  │  │ Service      │  │ Guard        │                               │  │
+│  │  │              │  │ Service      │                               │  │
+│  │  │ • Style ctx  │  │              │                               │  │
+│  │  │ • Conversation│ │ • Disabled?  │                               │  │
+│  │  │   history    │  │ • Blocked?   │                               │  │
+│  │  │ • AI engine  │  │ • Cooldown?  │                               │  │
+│  │  │              │  │ • Daily limit│                               │  │
+│  │  └──────────────┘  │ • Credits?   │                               │  │
+│  │                     └──────────────┘                               │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                              │                                           │
+│               ┌──────────────┴──────────────┐                           │
+│               ▼                              ▼                           │
+│  ┌──────────────────────┐      ┌──────────────────────┐                │
+│  │  Telegram Connector  │      │  WhatsApp Connector   │                │
+│  │  (telegraf)          │      │  (baileys)            │                │
+│  │                      │      │                       │                │
+│  │  • Long polling      │      │  • QR code pairing    │                │
+│  │  • Private chats only│      │  • Auto-reconnect     │                │
+│  │  • 4096 char split   │      │  • 30s keepalive      │                │
+│  └──────────────────────┘      │  • Auth state persist │                │
+│                                └──────────────────────┘                │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### Three-Process Architecture
+
+| Process            | Package                  | Role                                                     |
+| ------------------ | ------------------------ | -------------------------------------------------------- |
+| **Shared Package** | `packages/community-bot` | Connectors, credential encryption, style prompt builder  |
+| **API**            | `apps/api`               | REST endpoints, WebSocket bridge, playground             |
+| **Worker**         | `apps/community-worker`  | Live connections, BullMQ processors, AI reply generation |
+
+### Data Flow
+
+```
+Fan sends message on Telegram/WhatsApp
+  → ChannelConnector normalizes → NormalizedInboundMessage
+  → ChannelManagerService enqueues to BullMQ "community-inbound"
+  → InboundProcessor:
+      1. Persists fan message + upserts contact/conversation
+      2. Runs CommunityGuardService (cost/abuse checks)
+      3. Calls ReplyGeneratorService (StyleContextService + AIEngine)
+      4. Deducts credits via CreditService
+      5. Enqueues outbound reply to "community-outbound"
+  → OutboundProcessor:
+      1. Adds human-like delay (500-1500ms)
+      2. Sends reply through ChannelConnector
+      3. Marks message as SENT
+      4. Publishes domain event via Redis pub/sub
+  → CommunityBotListenerService (API) → Socket.IO → Frontend
+```
+
+### Queue Architecture
+
+| Queue Name                   | Processor                 | Purpose                                      |
+| ---------------------------- | ------------------------- | -------------------------------------------- |
+| `community-inbound`          | `InboundProcessor`        | Fan message processing + AI reply generation |
+| `community-outbound`         | `OutboundProcessor`       | Deliver replies through connectors           |
+| `community-channel-commands` | `ChannelCommandProcessor` | CONNECT/DISCONNECT commands from API         |
+
+### Guard Pipeline
+
+`CommunityGuardService` evaluates in order (cheapest checks first):
+
+1. **Bot disabled** — `isEnabled === false`
+2. **Blocked contact** — fan was manually blocked
+3. **Per-contact cooldown** — last reply was less than N seconds ago
+4. **Daily reply limit** — total outbound replies today exceeds cap
+5. **Sufficient credits** — creator has enough billing credits for the model's cost
+
+File: `apps/community-worker/src/services/community-guard.service.ts`
+
+### Style Profile Integration
+
+The bot uses the creator's `UserStyleProfile` and `UserContentSample` entries to generate replies in the creator's voice:
+
+```
+StyleContextService.buildSystemPrompt()
+  → Load UserStyleProfile (tone, vocab, sentence length, emoji, formality, language)
+  → Load last 5 UserContentSample entries
+  → Assemble system prompt: creator identity + style rules + few-shot examples + extra instructions
+```
+
+### Credential Encryption
+
+AES-256-GCM symmetric encryption for channel credentials at rest:
+
+```
+Format: v1:<base64 iv>:<base64 authTag>:<base64 ciphertext>
+Key: COMMUNITY_BOT_ENCRYPTION_KEY (env var, SHA-256 derived)
+```
+
+Used by both API (write) and worker (read) through the shared package.
+
+### Channel Connectors
+
+| Connector | Library                   | Connection Method                               |
+| --------- | ------------------------- | ----------------------------------------------- |
+| Telegram  | `telegraf`                | Long polling (no public URL needed)             |
+| WhatsApp  | `@whiskeysockets/baileys` | WhatsApp Web multi-device protocol (QR pairing) |
+
+WhatsApp-specific:
+
+- QR code pairing (same as WhatsApp Web)
+- 30-second keepalive pings to prevent idle disconnect
+- Auto-reconnect with exponential backoff (3s → 6s → 12s → ... → 5min max)
+- Auth state persistence with credential sanitization (NaN/Infinity stripping)
+- `@lid` JID support for WhatsApp v7 contacts
+
+### Domain Events
+
+| Event                        | Published By            | Consumed By                |
+| ---------------------------- | ----------------------- | -------------------------- |
+| `community.channel.status`   | Worker (ChannelManager) | API (Listener) → WebSocket |
+| `community.message.received` | Worker (InboundProc)    | API → WebSocket            |
+| `community.reply.sent`       | Worker (OutboundProc)   | API → WebSocket            |
+| `community.reply.skipped`    | Worker (InboundProc)    | API → WebSocket            |
+
+### WebSocket Events (Socket.IO)
+
+| WS Event Name                | Payload                           | Trigger                  |
+| ---------------------------- | --------------------------------- | ------------------------ |
+| `community:channel_status`   | Channel status + optional QR data | Connect/disconnect/error |
+| `community:message_received` | Preview text, contact name        | Fan sends message        |
+| `community:reply_sent`       | Credits used, model ID            | Bot sends reply          |
+| `community:reply_skipped`    | Reason string                     | Reply skipped            |
+
+### Database Models
+
+```prisma
+model CommunityBotConfig {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  isEnabled          Boolean  @default(true)
+  modelId            String?
+  temperature        Float    @default(0.7)
+  maxTokens          Int      @default(256)
+  useStyleProfile    Boolean  @default(true)
+  dailyReplyLimit    Int      @default(100)
+  perContactCooldown Int      @default(60)
+  conversationMemory Int      @default(10)
+  extraInstructions  String?  @db.Text
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channels CommunityChannel[]
+}
+
+model CommunityChannel {
+  id            String              @id @default(cuid())
+  configId      String
+  type          CommunityChannelType // TELEGRAM | WHATSAPP | INSTAGRAM
+  status        ChannelStatus       @default(AWAITING_QR)
+  credentials   String              @db.Text  // Encrypted JSON
+  externalId    String?
+  lastActiveAt  DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  config        CommunityBotConfig  @relation(fields: [configId], references: [id], onDelete: Cascade)
+  conversations CommunityConversation[]
+}
+
+model CommunityContact {
+  id            String   @id @default(cuid())
+  userId        String
+  externalId    String
+  displayName   String?
+  isBlocked     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations CommunityConversation[]
+
+  @@unique([userId, externalId])
+}
+
+model CommunityConversation {
+  id            String   @id @default(cuid())
+  channelId     String
+  contactId     String
+  messageCount  Int      @default(0)
+  lastMessageAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  channel       CommunityChannel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  contact       CommunityContact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  messages      CommunityMessage[]
+
+  @@unique([channelId, contactId])
+}
+
+model CommunityMessage {
+  id              String            @id @default(cuid())
+  conversationId  String
+  direction       MessageDirection  // INBOUND | OUTBOUND
+  content         String            @db.Text
+  status          MessageStatus     @default(PENDING)
+  creditsUsed     Int               @default(0)
+  modelId         String?
+  skipReason      String?
+  externalMessageId String?
+  createdAt       DateTime          @default(now())
+
+  conversation    CommunityConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+```
+
+### API Endpoints
+
+```
+GET    /api/v1/community-bot/config                # Get bot config
+PUT    /api/v1/community-bot/config                # Update bot settings
+GET    /api/v1/community-bot/channels              # List channels
+POST   /api/v1/community-bot/channels/telegram/connect  # Connect Telegram
+POST   /api/v1/community-bot/channels/whatsapp/connect  # Connect WhatsApp
+DELETE /api/v1/community-bot/channels/:type/disconnect   # Disconnect
+GET    /api/v1/community-bot/conversations              # List conversations
+GET    /api/v1/community-bot/conversations/:id/messages  # Message thread
+POST   /api/v1/community-bot/playground                  # Test reply
+```
+
+### Package Structure
+
+```
+packages/community-bot/
+├── src/
+│   ├── community-bot.module.ts
+│   ├── connectors/
+│   │   ├── channel-connector.interface.ts  # ChannelConnector contract
+│   │   ├── telegram.connector.ts           # Telegraf long polling
+│   │   └── whatsapp.connector.ts           # Baileys (QR, reconnect, keepalive)
+│   ├── crypto/
+│   │   └── credential-cipher.ts            # AES-256-GCM encryption
+│   └── style/
+│       ├── style-prompt.ts                 # buildCommunitySystemPrompt()
+│       └── style-context.service.ts        # Loads profile + samples
+
+apps/community-worker/
+├── src/
+│   ├── main.ts
+│   ├── worker.module.ts
+│   ├── channel-manager.service.ts          # Live connections, rehydration
+│   ├── processors/
+│   │   ├── inbound.processor.ts            # Full reply pipeline
+│   │   ├── outbound.processor.ts           # Delivery with human delay
+│   │   └── channel-command.processor.ts    # CONNECT/DISCONNECT
+│   └── services/
+│       ├── reply-generator.service.ts      # AI reply generation
+│       └── community-guard.service.ts      # Cost/abuse guards
+```
 
 ### Test Pyramid
 
