@@ -233,9 +233,11 @@ export class WhatsAppConnector implements ChannelConnector {
           });
         } else if (statusCode === DisconnectReason.connectionReplaced) {
           this._connected = false;
+          this._destroyed = true; // prevent auto-reconnect
           void events.onStatusChange({
-            status: "ERROR",
-            error: "Connection replaced by another session",
+            status: "REQUIRES_RESCAN",
+            error:
+              "Session replaced by another device (e.g. WhatsApp Web opened) — scan QR again",
           });
         } else {
           const reasonText =
@@ -481,8 +483,8 @@ export class WhatsAppConnector implements ChannelConnector {
     try {
       await this._onSessionUpdate({
         authState: {
-          creds: authState.creds,
-          keys: authState.keys,
+          creds: this.deepSanitize(authState.creds) as AuthState["creds"],
+          keys: this.sanitizeKeys(authState.keys),
         },
       });
     } catch (error) {
@@ -491,6 +493,33 @@ export class WhatsAppConnector implements ChannelConnector {
         error instanceof Error ? error.message : error,
       );
     }
+  }
+
+  private deepSanitize(obj: unknown): unknown {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj === "number" && Number.isNaN(obj)) return 0;
+    if (typeof obj === "number" && !Number.isFinite(obj)) return 0;
+    if (ArrayBuffer.isView(obj)) return obj;
+    if (Array.isArray(obj)) return obj.map((v) => this.deepSanitize(v));
+    if (typeof obj === "object") {
+      const result: Record<string, unknown> = {};
+      for (const key of Object.keys(obj as Record<string, unknown>)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const val = (obj as any)[key];
+        if (val === undefined || val === null) continue;
+        if (typeof val === "number" && Number.isNaN(val)) {
+          result[key] = 0;
+        } else if (ArrayBuffer.isView(val)) {
+          result[key] = val;
+        } else if (typeof val === "object") {
+          result[key] = this.deepSanitize(val);
+        } else {
+          result[key] = val;
+        }
+      }
+      return result;
+    }
+    return obj;
   }
 
   private async emitQrCode(qr: string): Promise<void> {
