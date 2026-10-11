@@ -13,6 +13,7 @@ export {
 } from "./components/card";
 export { Input } from "./components/input";
 export { Textarea } from "./components/textarea";
+export { Checkbox } from "./components/checkbox";
 export { Skeleton } from "./components/skeleton";
 export { Badge } from "./components/badge";
 export { Separator } from "./components/separator";

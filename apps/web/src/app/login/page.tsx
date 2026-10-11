@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { Button, Input, Card, CardContent, CardHeader } from "@creator-hub/ui";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -104,6 +105,17 @@ export default function LoginPage() {
               Register
             </a>
           </p>
+          <div className="mt-4 flex justify-center space-x-6 text-xs text-text-muted">
+            <Link href="/privacy" className="hover:underline">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:underline">
+              Terms of Service
+            </Link>
+            <Link href="/cookies" className="hover:underline">
+              Cookie Policy
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

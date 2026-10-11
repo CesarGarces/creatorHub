@@ -3,8 +3,16 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
-import { Button, Input, Card, CardContent, CardHeader } from "@creator-hub/ui";
+import {
+  Button,
+  Input,
+  Card,
+  CardContent,
+  CardHeader,
+  Checkbox,
+} from "@creator-hub/ui";
 import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -15,6 +23,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState("");
 
   // One Idempotency-Key per registration attempt session: if the request is
@@ -28,6 +37,11 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!acceptedTerms) {
+      setError("You must accept the Terms of Service and Privacy Policy");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
@@ -141,12 +155,43 @@ export default function RegisterPage() {
             {password && confirmPassword && password !== confirmPassword && (
               <p className="text-xs text-error">Passwords do not match</p>
             )}
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="acceptedTerms"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) =>
+                  setAcceptedTerms(checked === true)
+                }
+                className="mt-1"
+              />
+              <label
+                htmlFor="acceptedTerms"
+                className="text-sm text-text-muted leading-relaxed"
+              >
+                I agree to the{" "}
+                <Link
+                  href="/terms"
+                  className="text-primary hover:underline font-medium"
+                >
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link
+                  href="/privacy"
+                  className="text-primary hover:underline font-medium"
+                >
+                  Privacy Policy
+                </Link>
+                {"."}
+              </label>
+            </div>
             <Button
               type="submit"
               isLoading={isLoading}
               variant="glow"
               className="w-full"
               size="lg"
+              disabled={!acceptedTerms}
             >
               Create account
             </Button>
@@ -160,6 +205,17 @@ export default function RegisterPage() {
               Sign in
             </a>
           </p>
+          <div className="mt-4 flex justify-center space-x-6 text-xs text-text-muted">
+            <Link href="/privacy" className="hover:underline">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:underline">
+              Terms of Service
+            </Link>
+            <Link href="/cookies" className="hover:underline">
+              Cookie Policy
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

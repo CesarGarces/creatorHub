@@ -55,6 +55,12 @@
       "skillPath": "foundation/jsdoc-typescript-docs/SKILL.md",
       "computedHash": "5b4f9de4974d5200db813921484dd4784c77bea7f3c0c79b31472e9546c374fd"
     },
+    "legal-advisor": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/legal-advisor/SKILL.md",
+      "computedHash": "b259d187eb1f741374f6b367b49e4baf11f0893678711e5acc054fccc06b3c3e"
+    },
     "nestjs-best-practices": {
       "source": "kadajett/agent-nestjs-skills",
       "sourceType": "github",

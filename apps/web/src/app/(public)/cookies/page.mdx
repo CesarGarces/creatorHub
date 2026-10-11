@@ -1,0 +1,218 @@
+---
+title: "Cookie Policy"
+description: "Creator Hub Cookie Policy - How we use cookies and similar technologies"
+---
+
+# Cookie Policy
+
+**Last updated:** October 11, 2026
+
+This Cookie Policy explains how **Creator Hub** ("we", "our", "the Platform") uses cookies and similar tracking technologies when you visit our website and use our SaaS platform.
+
+---
+
+## 1. What Are Cookies
+
+Cookies are small text files stored on your device (computer, phone, tablet) when you visit a website. They allow the site to recognize your device, remember preferences, and improve your experience.
+
+**Similar technologies** include: local storage, session storage, tracking pixels, web beacons, and fingerprinting techniques. This policy covers all of them.
+
+---
+
+## 2. Cookie Categories We Use
+
+### 2.1 Strictly Necessary (Essential)
+**Always active - cannot be disabled.** Required for the Platform to function.
+
+| Cookie | Purpose | Duration | Provider |
+|--------|---------|----------|----------|
+| `session_id` / `__session` | Maintain login session, authenticate requests | Session / 30 days | First-party |
+| `csrf_token` | CSRF protection on forms | Session | First-party |
+| `auth_token` | Secure authentication (JWT in httpOnly cookie) | 15 min (access) / 30 days (refresh) | First-party |
+| `cookie_consent` | Remember your cookie preferences | 1 year | First-party |
+| `idempotency_key` | Prevent duplicate submissions (registration, payments) | Per request | First-party |
+
+**Legal basis:** Contract performance (GDPR Art. 6.1.b) / Legitimate interest (security)
+
+### 2.2 Preferences & Functionality
+**Optional - require your consent.** Remember choices and enhance UX.
+
+| Cookie | Purpose | Duration | Provider |
+|--------|---------|----------|----------|
+| `theme` | Dark/light/system theme preference | 1 year | First-party |
+| `language` | Preferred language/locale | 1 year | First-party |
+| `sidebar_state` | Collapsed/expanded sidebar state | Session | First-party |
+| `onboarding_completed` | Track onboarding progress | 1 year | First-party |
+| `tool_preferences` | Default tool settings, favorites | 1 year | First-party |
+
+**Legal basis:** Consent (GDPR Art. 6.1.a)
+
+### 2.3 Analytics & Performance
+**Optional - require your consent.** Understand usage to improve the Platform.
+
+| Cookie | Purpose | Duration | Provider |
+|--------|---------|----------|----------|
+| `ph_session` / `ph_event` | PostHog: session replay, funnels, feature usage | 1 year | PostHog (EU hosting) |
+| `_ga` / `_ga_*` | Google Analytics: traffic, conversions (if enabled) | 2 years | Google |
+| `plausible_session` | Plausible: lightweight privacy-friendly analytics | 30 min | Plausible (EU) |
+
+**Data collected:** Page views, clicks, feature usage, errors, performance metrics. **IP anonymized.** No PII.
+
+**Legal basis:** Consent (GDPR Art. 6.1.a / ePrivacy Art. 5.3)
+
+### 2.4 Marketing & Personalization
+**Optional - require your consent.** Relevant communications and onboarding.
+
+| Cookie | Purpose | Duration | Provider |
+|--------|---------|----------|----------|
+| `intercom-session-*` | Intercom: live chat, in-app messages, onboarding tours | 1 week | Intercom |
+| `customerio_*` | Customer.io: email automation, lifecycle campaigns | 1 year | Customer.io |
+| `utm_*` / `ref_*` | Attribution: campaign source, referral tracking | 30 days | First-party |
+
+**Legal basis:** Consent (GDPR Art. 6.1.a / ePrivacy Art. 5.3)
+
+### 2.5 Third-Party / Embedded Content
+**Set by external services when you interact with them.**
+
+| Service | Purpose | Cookies |
+|---------|---------|---------|
+| **Stripe / Mercado Pago** | Payment checkout, fraud prevention (3D Secure) | `__stripe_mid`, `__stripe_sid`, `mpsession` |
+| **YouTube / Twitch / Discord** | OAuth login, embedded players, widgets | `VISITOR_INFO1_LIVE`, `YSC`, `td` |
+| **OpenAI / Google / Anthropic** | API calls from our backend (no client cookies) | None client-side |
+
+---
+
+## 3. Cookie Consent Management
+
+### 3.1 Consent Banner
+On first visit, a **cookie banner** appears allowing you to:
+- **Accept all** (all categories)
+- **Reject non-essential** (only strictly necessary)
+- **Customize** (granular per-category toggle)
+
+### 3.2 Withdrawing/Changing Consent
+You can change preferences anytime via:
+- **Cookie icon** (bottom-left corner of Platform)
+- **Settings → Privacy → Cookies** (when logged in)
+- **Clear site data** in browser settings
+
+### 3.3 Consent Records
+We log: timestamp, IP (anonymized), user agent, categories accepted/rejected, banner version. Retained **1 year** for compliance evidence.
+
+---
+
+## 4. How to Control Cookies in Your Browser
+
+### 4.1 Browser Settings
+All major browsers let you:
+- View/delete cookies for specific sites
+- Block third-party cookies
+- Block all cookies (may break functionality)
+- Clear on exit
+
+**Guides:**
+- [Chrome](https://support.google.com/chrome/answer/95647)
+- [Firefox](https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer)
+- [Safari](https://support.apple.com/guide/safari/manage-cookies-and-website-data-sfri11471/mac)
+- [Edge](https://support.microsoft.com/en-us/microsoft-edge/delete-cookies-in-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09)
+
+### 4.2 Opt-Out Tools
+- **Network Advertising Initiative:** optout.networkadvertising.org
+- **Digital Advertising Alliance:** optout.aboutads.info
+- **EU Your Online Choices:** youronlinechoices.eu
+
+### 4.3 Do Not Track (DNT)
+We respect `DNT: 1` header as a signal to disable analytics/marketing cookies automatically.
+
+---
+
+## 5. Specific Technologies Detail
+
+### 5.1 Local Storage / Session Storage
+Used for:
+- **Client-side state:** UI preferences, draft content, tool inputs
+- **Offline support:** Service worker cache for PWA
+- **No expiry** (until cleared) for localStorage; sessionStorage clears on tab close
+
+### 5.2 Service Workers / PWA
+If you install Creator Hub as PWA:
+- **Cache API:** Static assets for offline use
+- **Background sync:** Queue mutations when offline
+- **Push notifications:** Only with explicit permission
+
+### 5.3 Tracking Pixels / Web Beacons
+Used in **transactional emails** (invoices, security alerts) to track delivery/open rates. **Not used in marketing emails without consent.**
+
+---
+
+## 6. Data Processing by Third Parties
+
+| Provider | Purpose | Location | Safeguards |
+|----------|---------|----------|------------|
+| **PostHog** | Product analytics (EU cloud) | EU (Frankfurt) | DPA + SCC, no data sold |
+| **Intercom** | Customer messaging | US / EU | DPA + SCC |
+| **Customer.io** | Email automation | US | DPA + SCC |
+| **Stripe** | Payment fraud detection | US | DPA + PCI-DSS |
+| **Google** | Analytics (if enabled), OAuth | US | DPA + SCC |
+
+**All processors sign DPAs.** Analytics providers configured for **data minimization** (no PII, IP anonymization).
+
+---
+
+## 7. Retention Periods
+
+| Category | Max Duration |
+|----------|--------------|
+| Strictly necessary | Session + 30 days (auth refresh) |
+| Preferences | 1 year |
+| Analytics | 13 months (PostHog) / 26 months (GA) |
+| Marketing | 1 year |
+| Consent logs | 1 year |
+
+---
+
+## 8. Your Rights Regarding Cookies
+
+| Right | How to Exercise |
+|-------|-----------------|
+| **Withdraw consent** | Cookie settings panel / Browser clear data |
+| **Access/Deletion** | Email privacy@creatorhub.example.com (for analytics IDs linked to account) |
+| **Object to profiling** | Disable analytics/marketing cookies |
+| **Portability** | Export analytics data via provider dashboards |
+
+---
+
+## 9. Cookies and Authentication
+
+**Critical:** Disabling **strictly necessary cookies** will break:
+- Login / session persistence
+- Payment flows (Stripe/Mercado Pago require cookies for 3D Secure)
+- CSRF protection (form submissions)
+- Multi-factor authentication
+
+---
+
+## 10. Updates to This Policy
+
+We'll update this policy when:
+- Adding/removing cookies or providers
+- Changing purposes or retention
+- Regulatory changes (ePrivacy, GDPR, CCPA)
+
+**Notification:** Banner on Platform + email (if material) + version history here.
+
+---
+
+## 11. Contact
+
+**Questions about cookies:**
+
+📧 **privacy@creatorhub.example.com**  
+📮 **Creator Hub - Privacy Team**  
+[Full postal address]
+
+**DPO:** dpo@creatorhub.example.com
+
+---
+
+> **Legal notice:** This document is an informational template. Adapt to your actual cookie inventory (audit with browser dev tools), jurisdiction, and have it reviewed by a qualified attorney. The ePrivacy Directive (Cookie Law) requires **prior informed consent** for non-essential cookies in the EU/UK.

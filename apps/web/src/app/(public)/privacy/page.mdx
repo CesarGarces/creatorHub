@@ -1,0 +1,213 @@
+---
+title: "Privacy Policy"
+description: "Creator Hub Privacy Policy - How we collect, use, and protect your data"
+---
+
+# Privacy Policy
+
+**Last updated:** October 11, 2026
+
+**Creator Hub** ("we", "our", "the Platform") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your personal information when you use our SaaS services for content creators.
+
+---
+
+## 1. Data Controller
+
+**Creator Hub**  
+Email: privacy@creatorhub.example.com  
+Address: [Your full legal address]
+
+**EU Representative (if applicable):** [Name and contact details]  
+**Data Protection Officer (DPO):** dpo@creatorhub.example.com
+
+---
+
+## 2. Data We Collect
+
+### 2.1 Registration and Account Data
+- **Identification data:** Full name, email address
+- **Access credentials:** Password hash (we never store passwords in plain text)
+- **Billing data:** Name, address, tax ID, payment data (processed by Stripe/Mercado Pago - see Section 5)
+
+### 2.2 Usage Data and Creative Context (RAG)
+To improve AI generation quality and personalize your experience:
+- **Creative style and habits:** Frequent topics, preferred formats, tone of voice, publishing patterns
+- **Generation history:** Prompts used, parameters selected, generated results
+- **Platform interactions:** Tools used, frequency of use, configuration preferences
+
+### 2.3 Generated and Uploaded Content
+- **Images:** Uploaded by you or generated via AI (thumbnails, illustrations, etc.)
+- **Scripts and texts:** Uploaded by you or generated via AI (video scripts, posts, etc.)
+- **Associated metadata:** Dates, tools used, generation parameters
+
+### 2.4 Technical and Navigation Data
+- **IP address** (anonymized after 30 days)
+- **Device type, browser, operating system**
+- **Access and error logs** (for security and debugging)
+- **Cookies and similar technologies** (see Cookie Policy)
+
+### 2.5 Third-Party Data (Integrations)
+When connecting external accounts:
+- **YouTube/Twitch/OTHER PLATFORMS:** Access token (OAuth), channel ID, public statistics
+- **Community data:** Chat messages, bot interactions (only if you explicitly authorize)
+
+---
+
+## 3. Purposes and Legal Basis for Processing
+
+| Purpose | Legal Basis (GDPR Art. 6) | Data Involved |
+|---------|---------------------------|---------------|
+| Create and manage your account | Contract performance (Art. 6.1.b) | Registration, credentials |
+| Provide AI services (image, script, thumbnail generation) | Contract performance / Legitimate interest (Art. 6.1.b/f) | Content, creative style, history |
+| Personalize results via RAG | Legitimate interest / Consent (Art. 6.1.a/f) | Creative habits, history |
+| Billing and credit/subscription management | Contract performance / Legal obligation (Art. 6.1.b/c) | Billing, payments |
+| Transactional communications (invoices, alerts, security) | Contract performance / Legitimate interest (Art. 6.1.b/f) | Email, name |
+| Marketing and updates (newsletter, releases) | **Explicit consent** (Art. 6.1.a) | Email, name |
+| Security, fraud prevention, legal compliance | Legitimate interest / Legal obligation (Art. 6.1.c/f) | IP, logs, access data |
+| Platform and model improvement (anonymized/aggregated data) | Legitimate interest (Art. 6.1.f) | Aggregated usage data |
+
+---
+
+## 4. Data Sharing with Third Parties
+
+### 4.1 Service Providers (Data Processors)
+
+| Provider | Purpose | Location | Safeguards |
+|----------|---------|----------|------------|
+| **Stripe / Mercado Pago** | Payment processing, billing | US / LATAM / EU | SCC + PCI-DSS Certifications |
+| **OpenAI / Google (Gemini) / Anthropic / Other AI providers** | Content generation (images, text) | US / Global | DPA + SCC + Technical measures |
+| **Hosting/cloud provider** (AWS, Vercel, etc.) | Infrastructure, hosting | EU / US | DPA + SCC |
+| **Transactional email services** (Resend, SendGrid) | Automated email sending | US / EU | DPA + SCC |
+| **Analytics** (PostHog, Plausible, etc.) | Anonymized usage metrics | EU / US | DPA + Anonymization |
+
+**All providers sign Data Processing Agreements (DPA) and apply Standard Contractual Clauses (SCC) for international transfers.**
+
+### 4.2 We Do Not Sell Your Data
+We do not sell, rent, or commercialize your personal information to third parties for their marketing purposes.
+
+### 4.3 Legal Disclosures
+We may disclose data if required by law, court order, or to protect our rights, safety, or those of others.
+
+---
+
+## 5. International Data Transfers
+
+Some providers (OpenAI, Stripe, cloud providers) are located in **the US or other countries outside the EEA**.
+
+**Safeguards applied:**
+- EU Standard Contractual Clauses (SCC)
+- Transfer Impact Assessments (TIAs)
+- Supplementary technical measures (encryption in transit and at rest)
+- Certifications (ISO 27001, SOC 2) where applicable
+
+---
+
+## 6. Retention Periods
+
+| Data Category | Retention Period |
+|---------------|------------------|
+| Account and billing data | 6 years after account closure (tax/accounting obligation) |
+| Generation history and creative style | While account active + 12 months inactivity |
+| Generated/uploaded content | While account active (you control deletion) |
+| Security and access logs | 12 months (IP anonymized at 30 days) |
+| Marketing data (if consent given) | Until consent withdrawal |
+| Anonymized/aggregated data | Indefinitely (not personal data) |
+
+**You can request early deletion** (see Section 8 - Your Rights).
+
+---
+
+## 7. Data Security
+
+- **Encryption in transit:** TLS 1.3 for all communications
+- **Encryption at rest:** AES-256 for databases and file storage
+- **Authentication:** bcrypt/argon2 for passwords, optional 2FA (TOTP)
+- **Access:** Least privilege principle, audit logs, periodic reviews
+- **Backups:** Encrypted, geo-redundant, 30-day retention
+- **Target certifications:** ISO 27001, SOC 2 Type II (in progress)
+
+---
+
+## 8. Your Rights (GDPR Arts. 15-22, CCPA, LGPD)
+
+| Right | Description | How to Exercise |
+|-------|-------------|-----------------|
+| **Access** | Obtain a copy of your personal data | User panel / Email to privacy@creatorhub.example.com |
+| **Rectification** | Correct inaccurate or incomplete data | User panel / Email |
+| **Erasure ("Right to be Forgotten")** | Delete your data (except legal obligations) | User panel → "Delete account" / Email |
+| **Restriction** | Temporarily restrict processing | Email to privacy@creatorhub.example.com |
+| **Portability** | Receive your data in structured format | User panel → "Export data" / Email |
+| **Objection** | Object to processing (marketing, legitimate interest) | "Unsubscribe" link in emails / Panel / Email |
+| **Withdraw consent** | At any time (does not affect prior lawfulness) | User panel / Link in communications |
+| **No automated decisions** | Right to human intervention in significant decisions | Email to privacy@creatorhub.example.com |
+
+**Response time:** 1 month (extendable by 2 months for complex cases).  
+**Free of charge:** Except for manifestly unfounded or excessive requests.
+
+**Supervisory authority:** You can lodge a complaint with AEPD (Spain), CNIL (France), ICO (UK), or your national authority.
+
+---
+
+## 9. Children's Privacy
+
+The Platform is **not directed to children under 16** (13 in jurisdictions where law permits with verified parental consent). We do not knowingly collect data from minors. If we detect minor data without valid authorization, we will delete it.
+
+---
+
+## 10. Artificial Intelligence and Your Data
+
+### 10.1 Third-Party Model Usage
+We use **OpenAI, Google (Gemini), Anthropic** and other provider APIs to generate content.
+
+**Important:** Your prompts, uploaded images, and creative context **are sent to these providers** to generate responses. Review their privacy policies:
+- [OpenAI Privacy Policy](https://openai.com/policies/privacy-policy)
+- [Google AI Privacy](https://policies.google.com/privacy)
+- [Anthropic Privacy](https://www.anthropic.com/legal/privacy)
+
+### 10.2 Model Training
+**We do not use your data to train or improve AI models** (neither ours nor third parties'), unless you give explicit, separate consent for this.
+
+### 10.3 RAG and Local Context
+Your creative style and history are processed **locally on our infrastructure** (vector database) to improve responses. Not shared with third parties for this purpose.
+
+---
+
+## 11. Payments and Financial Data
+
+Payments are processed exclusively through **Stripe** and **Mercado Pago**.
+
+- **We DO NOT store** full card numbers, CVV, or complete banking credentials.
+- We receive **payment tokens** and necessary billing info (name, address, tax ID).
+- Stripe and Mercado Pago are independent controllers of payment data.
+- See their policies: [Stripe Privacy](https://stripe.com/privacy) | [Mercado Pago Privacy](https://www.mercadopago.com.ar/privacidad)
+
+---
+
+## 12. Changes to This Policy
+
+We will notify material changes via:
+- Email to your registered address (30 days in advance)
+- Banner on the Platform
+- Version history on this page
+
+Continued use after notification implies acceptance.
+
+---
+
+## 13. Contact
+
+**To exercise your rights, questions, or complaints:**
+
+📧 **privacy@creatorhub.example.com**  
+📮 **Creator Hub - Privacy Team**  
+[Full postal address]
+
+**DPO:** dpo@creatorhub.example.com
+
+---
+
+*This policy complies with GDPR (EU 2016/679), CCPA/CPRA (California), LGPD (Brazil Law 13.709/2018), and LOPD-GDD (Spain 3/2018).*
+
+---
+
+> **Legal notice:** This document is an informational template. Adapt it to your jurisdiction, exact business model, and have it reviewed by a qualified attorney specializing in privacy and technology before putting it into production.
