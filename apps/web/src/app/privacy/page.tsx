@@ -203,11 +203,7 @@ export function PrivacyModal({ open, onOpenChange }: PrivacyModalProps) {
               <p>
                 We use cookies and local storage to maintain user sessions,
                 remember preferences, and analyze traffic. For detailed
-                information, please review our
-                <a href="/cookies" className="text-primary underline">
-                  Cookie Policy
-                </a>
-                .
+                information, please review our Cookie Policy.
               </p>
             </section>
 

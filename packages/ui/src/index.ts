@@ -100,3 +100,6 @@ export { BorderGlow } from "./components/border-glow";
 
 // Tool-specific
 export { ToolCard } from "./components/tool-card";
+
+// Cookie Consent
+export { CookieConsent } from "./components/CookieConsent";

@@ -81,10 +81,10 @@ export function TermsModal({ open, onOpenChange }: TermsModalProps) {
                   <strong>Unauthorized Use:</strong> You must notify us
                   immediately at{" "}
                   <a
-                    href="mailto:legal@creatorhubplatform.com"
+                    href="mailto:privacy@creatorhubplatform.com"
                     className="text-primary underline"
                   >
-                    legal@creatorhubplatform.com
+                    privacy@creatorhubplatform.com
                   </a>{" "}
                   if you suspect unauthorized access to your account.
                 </li>
@@ -314,10 +314,10 @@ export function TermsModal({ open, onOpenChange }: TermsModalProps) {
                 <br />
                 Email:{" "}
                 <a
-                  href="mailto:legal@creatorhubplatform.com"
+                  href="mailto:privacy@creatorhubplatform.com"
                   className="text-primary underline"
                 >
-                  legal@creatorhubplatform.com
+                  privacy@creatorhubplatform.com
                 </a>
               </address>
             </section>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "./providers";
+import { CookieConsent } from "@creator-hub/ui";
 import "./globals.css";
 
 const inter = Inter({
@@ -25,6 +26,7 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans`} suppressHydrationWarning>
         <Providers>{children}</Providers>
+        <CookieConsent />
       </body>
     </html>
   );
