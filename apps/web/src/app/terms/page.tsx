@@ -6,7 +6,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@creator-hub/ui";
+import { Button } from "@creator-hub/ui";
 
 interface TermsModalProps {
   open: boolean;
@@ -37,9 +39,10 @@ export function TermsModal({ open, onOpenChange }: TermsModalProps) {
                 1. Agreement to Terms
               </h3>
               <p>
-                By accessing or using Creator Hub ("the Service"), you agree to
-                be bound by these Terms of Service ("Terms"). If you disagree
-                with any part of these Terms, you may not access the Service.
+                By accessing or using Creator Hub ("the Service," "we," "our,"
+                or "us"), you agree to be bound by these Terms of Service
+                ("Terms"). If you do not agree to these Terms, you may not
+                access or use the Service.
               </p>
             </section>
 
@@ -48,252 +51,287 @@ export function TermsModal({ open, onOpenChange }: TermsModalProps) {
                 2. Description of Service
               </h3>
               <p>
-                Creator Hub provides AI-powered tools for content creators,
-                including but not limited to: video generation, script writing,
-                social media content creation, trend analysis, and other
-                creative assistance tools ("Tools").
+                Creator Hub provides AI-powered software, workflows, and tools
+                for content creators, including but not limited to script
+                generation, thumbnail design, image synthesis, user style/RAG
+                context management, credit billing systems, and community bot
+                integrations ("Tools").
               </p>
             </section>
 
             <section className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">3. Accounts</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                3. Accounts & Registration
+              </h3>
               <ul className="list-disc list-inside space-y-1 ml-4">
                 <li>
-                  You must provide accurate, complete, and current registration
-                  information.
+                  <strong>Eligibility:</strong> You must be at least 13 years
+                  old (or 16 in the European Union) to create an account.
                 </li>
                 <li>
-                  You are responsible for safeguarding your password and for all
-                  activities under your account.
+                  <strong>Accuracy:</strong> You agree to provide accurate and
+                  complete registration information.
                 </li>
                 <li>
-                  You must notify us immediately of any unauthorized use of your
-                  account.
+                  <strong>Security:</strong> You are responsible for maintaining
+                  the confidentiality of your account credentials and for all
+                  activities conducted under your account.
                 </li>
                 <li>
-                  You must be at least 13 years old (16 in the EU) to create an
-                  account.
+                  <strong>Unauthorized Use:</strong> You must notify us
+                  immediately at{" "}
+                  <a
+                    href="mailto:legal@creatorhubplatform.com"
+                    className="text-primary underline"
+                  >
+                    legal@creatorhubplatform.com
+                  </a>{" "}
+                  if you suspect unauthorized access to your account.
                 </li>
               </ul>
             </section>
 
             <section className="mb-6">
               <h3 className="text-lg font-semibold mb-2">
-                4. Subscriptions and Billing
+                4. Subscriptions, Payments & Refunds
               </h3>
               <ul className="list-disc list-inside space-y-1 ml-4">
                 <li>
-                  Some features require a paid subscription. Prices are subject
-                  to change with notice.
+                  <strong>Billing:</strong> Access to certain features and
+                  credit allocations requires a paid subscription or
+                  pay-as-you-go purchase.
                 </li>
                 <li>
-                  Subscriptions auto-renew unless cancelled before the renewal
-                  date.
-                </li>
-                <li>
-                  Refunds are handled per our Refund Policy and applicable law.
-                </li>
-                <li>
-                  Payments are processed by Stripe. We do not store full payment
+                  <strong>Payment Processors:</strong> Payments are securely
+                  handled through third-party payment gateways (e.g., Stripe,
+                  Mercado Pago). We do not store or process complete credit card
                   details.
                 </li>
+                <li>
+                  <strong>Auto-Renewal:</strong> Subscription plans
+                  automatically renew at the end of each billing cycle unless
+                  cancelled prior to the renewal date.
+                </li>
+                <li>
+                  <strong>Refund Policy:</strong> Purchases and credit top-ups
+                  are non-refundable once credits have been partially or fully
+                  consumed, except where required by applicable law.
+                </li>
               </ul>
             </section>
 
             <section className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">5. Credits System</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                5. Credit System & Fair Usage
+              </h3>
               <ul className="list-disc list-inside space-y-1 ml-4">
                 <li>
-                  Tools consume credits. Credit amounts per tool may vary and
-                  are subject to change.
+                  <strong>Credit Consumption:</strong> Platform tools consume
+                  credits based on compute complexity (e.g., text generation vs.
+                  image rendering). Credit costs per action are displayed within
+                  the platform and may be adjusted with prior notice.
                 </li>
                 <li>
-                  Credits do not roll over month-to-month unless otherwise
-                  stated.
+                  <strong>Expiration & Exclusions:</strong> Unless explicitly
+                  stated in your subscription plan, monthly credits do not roll
+                  over to subsequent billing periods and expire at the end of
+                  each cycle.
                 </li>
                 <li>
-                  Unused credits expire at the end of each billing period.
-                </li>
-                <li>
-                  We reserve the right to adjust credit allocations with
-                  reasonable notice.
+                  <strong>Adjustments:</strong> Creator Hub reserves the right
+                  to adjust credit pricing or allocations to account for
+                  underlying API operational costs.
                 </li>
               </ul>
             </section>
 
             <section className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">6. Acceptable Use</h3>
-              <p>You agree not to:</p>
+              <h3 className="text-lg font-semibold mb-2">
+                6. User Content & Intellectual Property
+              </h3>
+              <h4 className="font-medium mb-1">
+                Your Ownership & License Grant
+              </h4>
+              <ul className="list-disc list-inside space-y-1 ml-4">
+                <li>
+                  <strong>User Inputs:</strong> You retain all ownership rights
+                  over the text, style guides, brand assets, and prompts you
+                  upload to the Service ("User Content").
+                </li>
+                <li>
+                  <strong>License to Creator Hub:</strong> You grant Creator Hub
+                  a non-exclusive, worldwide, royalty-free license to host,
+                  store, run, and display your User Content{" "}
+                  <strong>solely</strong>
+                  for the purpose of operating, rendering, and providing the
+                  Service to you. We do not sell your content or use your
+                  private inputs to train public third-party AI models.
+                </li>
+              </ul>
+              <h4 className="font-medium mb-1 mt-4">AI-Generated Outputs</h4>
+              <ul className="list-disc list-inside space-y-1 ml-4">
+                <li>
+                  <strong>Ownership of Generated Content:</strong> Subject to
+                  compliance with these Terms and applicable copyright laws,
+                  Creator Hub assigns to you all its rights, title, and interest
+                  in the outputs generated for you by the Tools ("Generated
+                  Content").
+                </li>
+                <li>
+                  <strong>Third-Party AI Constraints:</strong> Generated Content
+                  is subject to the terms of underlying AI infrastructure
+                  providers. You acknowledge that AI-generated outputs may not
+                  be unique across different users and that copyright protection
+                  for AI output varies by jurisdiction.
+                </li>
+              </ul>
+            </section>
+
+            <section className="mb-6">
+              <h3 className="text-lg font-semibold mb-2">
+                7. Acceptable Use Policy
+              </h3>
+              <p>You agree not to use the Service to:</p>
               <ul className="list-disc list-inside space-y-1 ml-4 mt-2">
+                <li>Violate any local, national, or international law.</li>
                 <li>
-                  Use the Service for illegal purposes or to violate any laws
-                </li>
-                <li>Infringe intellectual property rights</li>
-                <li>Generate harmful, illegal, or offensive content</li>
-                <li>Attempt to gain unauthorized access to systems or data</li>
-                <li>Interfere with or disrupt the Service</li>
-                <li>Reverse engineer or extract source code</li>
-                <li>
-                  Use automated systems to access the Service (scraping, bots)
+                  Generate, upload, or distribute content that is defamatory,
+                  hateful, abusive, illegal, or infringes on third-party
+                  intellectual property or privacy rights.
                 </li>
                 <li>
-                  Resell or redistribute the Service without authorization
-                </li>
-              </ul>
-            </section>
-
-            <section className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">
-                7. Intellectual Property
-              </h3>
-              <ul className="list-disc list-inside space-y-1 ml-4">
-                <li>
-                  The Service and its original content, features, and
-                  functionality are owned by Creator Hub and are protected by
-                  international copyright, trademark, and other intellectual
-                  property laws.
+                  Reverse engineer, decompile, or attempt to extract source code
+                  from Creator Hub.
                 </li>
                 <li>
-                  You retain ownership of content you create using the Tools
-                  ("User Content").
+                  Scrap, harvest, or utilize unauthorized automated bots to
+                  bypass API limits or credit systems (excluding official
+                  community bots provided by Creator Hub).
                 </li>
                 <li>
-                  By using the Service, you grant us a license to use, modify,
-                  and display your User Content solely to provide the Service.
-                </li>
-                <li>
-                  AI-generated content ownership follows the terms of the
-                  underlying AI providers.
-                </li>
-              </ul>
-            </section>
-
-            <section className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">8. User Content</h3>
-              <ul className="list-disc list-insite space-y-1 ml-4">
-                <li>You are solely responsible for your User Content.</li>
-                <li>
-                  We do not pre-screen User Content but reserve the right to
-                  remove content that violates these Terms.
-                </li>
-                <li>
-                  You grant us a worldwide, non-exclusive, royalty-free license
-                  to use your User Content to operate and improve the Service.
+                  Abuse, overload, or disrupt the integrity or performance of
+                  the platform or its infrastructure.
                 </li>
               </ul>
             </section>
 
             <section className="mb-6">
               <h3 className="text-lg font-semibold mb-2">
-                9. Third-Party Services
+                8. Third-Party Services & Integrations
               </h3>
               <p>
-                The Service may contain links to third-party websites or
-                services. We have no control over and assume no responsibility
-                for their content, privacy policies, or practices.
+                The Service integrates with third-party tools, APIs, and
+                community platforms (e.g., external LLM providers, social
+                channels, webhooks). Creator Hub is not responsible for the
+                availability, uptime, or privacy practices of these third-party
+                services.
               </p>
             </section>
 
             <section className="mb-6">
               <h3 className="text-lg font-semibold mb-2">
-                10. Disclaimer of Warranties
+                9. Disclaimer of Warranties
               </h3>
               <p>
-                THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT
-                WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
-                LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-                PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+                THE SERVICE IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS.
+                CREATOR HUB DISCLAIMS ALL WARRANTIES OF ANY KIND, EXPRESS OR
+                IMPLIED, INCLUDING BUT NOT LIMITED TO MERCHANTABILITY, FITNESS
+                FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT
+                GUARANTEE THAT AI GENERATED CONTENT WILL BE ACCURATE,
+                UNINTERRUPTED, OR ERROR-FREE.
               </p>
             </section>
 
             <section className="mb-6">
               <h3 className="text-lg font-semibold mb-2">
-                11. Limitation of Liability
+                10. Limitation of Liability
               </h3>
               <p>
-                TO THE MAXIMUM EXTENT PERMITTED BY LAW, CREATOR HUB SHALL NOT BE
-                LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR
-                PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, DATA, OR GOODWILL,
-                ARISING FROM YOUR USE OF THE SERVICE.
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, CREATOR HUB AND ITS
+                AFFILIATES SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL,
+                SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF
+                PROFITS, DATA, OR GOODWILL, ARISING FROM YOUR USE OF OR
+                INABILITY TO USE THE SERVICE.
               </p>
             </section>
 
             <section className="mb-6">
               <h3 className="text-lg font-semibold mb-2">
-                12. Indemnification
+                11. Indemnification
               </h3>
               <p>
-                You agree to defend, indemnify, and hold harmless Creator Hub
-                and its officers, directors, employees, and agents from any
-                claims, damages, or expenses arising from your use of the
-                Service, violation of these Terms, or violation of any rights of
-                third parties.
-              </p>
-            </section>
-
-            <section className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">13. Termination</h3>
-              <ul className="list-disc list-inside space-y-1 ml-4">
-                <li>
-                  We may terminate or suspend your account immediately, without
-                  prior notice, for violation of these Terms.
-                </li>
-                <li>
-                  Upon termination, your right to use the Service ceases
-                  immediately.
-                </li>
-                <li>
-                  Provisions that should survive termination will survive (IP,
-                  disclaimers, limitations).
-                </li>
-              </ul>
-            </section>
-
-            <section className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">14. Governing Law</h3>
-              <p>
-                These Terms shall be governed by the laws of [Your
-                Jurisdiction], without regard to conflict of law principles.
-                Disputes will be resolved in the courts of [Your Jurisdiction].
+                You agree to indemnify and hold harmless Creator Hub, its team,
+                and affiliates against any claims, liabilities, damages, or
+                legal expenses arising from your User Content, your misuse of
+                Generated Content, or your violation of these Terms.
               </p>
             </section>
 
             <section className="mb-6">
               <h3 className="text-lg font-semibold mb-2">
-                15. Changes to Terms
+                12. Account Suspension & Termination
               </h3>
               <p>
-                We may modify these Terms at any time. Material changes will be
-                communicated via email or through the Service at least 30 days
-                before taking effect. Continued use constitutes acceptance.
+                We reserve the right to suspend or terminate your access to the
+                Service immediately, without prior notice, if you breach these
+                Terms or engage in fraudulent, abusive, or unauthorized credit
+                activity. Upon termination, unused credits are forfeited.
               </p>
             </section>
 
             <section className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">16. Contact Us</h3>
-              <p>If you have questions about these Terms, contact us at:</p>
+              <h3 className="text-lg font-semibold mb-2">13. Governing Law</h3>
+              <p>
+                These Terms shall be governed by and construed in accordance
+                with applicable laws, without regard to conflict of law
+                principles. Any legal suit or proceeding shall be instituted in
+                the competent courts of your operational jurisdiction.
+              </p>
+            </section>
+
+            <section className="mb-6">
+              <h3 className="text-lg font-semibold mb-2">
+                14. Changes to Terms
+              </h3>
+              <p>
+                We may revise these Terms from time to time. Material
+                modifications will be notified via in-app banners or email at
+                least 30 days prior to enforcement. Your continued use of
+                Creator Hub constitutes acceptance of the updated Terms.
+              </p>
+            </section>
+
+            <section className="mb-6">
+              <h3 className="text-lg font-semibold mb-2">
+                15. Contact Information
+              </h3>
+              <p>
+                For questions or legal inquiries regarding these Terms, please
+                contact us at:
+              </p>
               <address className="not-italic mt-2">
-                Creator Hub
+                Creator Hub Legal Team
                 <br />
                 Email:{" "}
                 <a
-                  href="mailto:legal@creatorhub.example"
+                  href="mailto:legal@creatorhubplatform.com"
                   className="text-primary underline"
                 >
-                  legal@creatorhub.example
+                  legal@creatorhubplatform.com
                 </a>
               </address>
             </section>
-
-            <hr className="my-6 border-border" />
-            <p className="text-sm text-text-muted">
-              <em>
-                This is a template for informational purposes. Consult with a
-                qualified attorney for legal advice specific to your situation.
-              </em>
-            </p>
           </div>
         </div>
+        <DialogFooter>
+          <Button
+            variant="glow"
+            className="w-full sm:w-auto"
+            onClick={() => onOpenChange(false)}
+          >
+            Agree
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

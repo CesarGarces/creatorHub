@@ -6,7 +6,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@creator-hub/ui";
+import { Button } from "@creator-hub/ui";
 
 interface PrivacyModalProps {
   open: boolean;
@@ -38,7 +40,7 @@ export function PrivacyModal({ open, onOpenChange }: PrivacyModalProps) {
                 Welcome to Creator Hub ("we," "our," "us"). We are committed to
                 protecting your personal information and your right to privacy.
                 This Privacy Policy explains how we collect, use, disclose, and
-                safeguard your information when you visit our website and use
+                safeguard your information when you visit our platform and use
                 our services.
               </p>
             </section>
@@ -47,24 +49,44 @@ export function PrivacyModal({ open, onOpenChange }: PrivacyModalProps) {
               <h3 className="text-lg font-semibold mb-2">
                 2. Information We Collect
               </h3>
-              <h4 className="font-medium mb-1">Personal Information</h4>
+              <h4 className="font-medium mb-1">
+                Personal Information Provided by You
+              </h4>
               <ul className="list-disc list-inside space-y-1 ml-4">
-                <li>Name and email address (provided during registration)</li>
-                <li>Account credentials (hashed passwords)</li>
                 <li>
-                  Payment information (processed by Stripe, we don't store full
-                  card details)
+                  <strong>Account Data:</strong> Name, email address, and hashed
+                  credentials provided during registration.
                 </li>
-                <li>Usage data and analytics</li>
+                <li>
+                  <strong>Creator Style & RAG Context:</strong> User-submitted
+                  brand guidelines, preferences, past scripts, or style context
+                  uploaded to personalize AI outputs.
+                </li>
+                <li>
+                  <strong>User Content:</strong> Prompts, scripts, images,
+                  thumbnails, and other content created or uploaded within the
+                  platform.
+                </li>
+                <li>
+                  <strong>Payment & Transaction Data:</strong> Subscription
+                  plans, credit purchase history, and credit balance. Payment
+                  processing is handled directly by third-party processors
+                  (e.g., Stripe, Mercado Pago); we do not store full payment
+                  card details.
+                </li>
               </ul>
               <h4 className="font-medium mb-1 mt-4">
                 Automatically Collected Information
               </h4>
               <ul className="list-disc list-inside space-y-1 ml-4">
-                <li>IP address and browser type</li>
-                <li>Device information and operating system</li>
-                <li>Pages visited and time spent</li>
-                <li>Referral source</li>
+                <li>
+                  IP address, browser type, device details, and operating
+                  system.
+                </li>
+                <li>
+                  Usage analytics, feature engagement, pages visited, and
+                  referral sources.
+                </li>
               </ul>
             </section>
 
@@ -73,68 +95,102 @@ export function PrivacyModal({ open, onOpenChange }: PrivacyModalProps) {
                 3. How We Use Your Information
               </h3>
               <ul className="list-disc list-inside space-y-1 ml-4">
-                <li>Provide and maintain our services</li>
-                <li>Process transactions and send related communications</li>
                 <li>
-                  Send administrative information (security updates, policy
-                  changes)
+                  Provide, maintain, and personalize our AI-powered creator
+                  tools and services.
                 </li>
-                <li>Improve our website and services through analytics</li>
-                <li>Respond to your inquiries and provide customer support</li>
-                <li>Comply with legal obligations</li>
+                <li>
+                  Process transactions, manage credit balances, and send billing
+                  receipts.
+                </li>
+                <li>
+                  Manage community bot integrations and user workflow
+                  automation.
+                </li>
+                <li>
+                  Improve platform functionality, security, and performance
+                  through analytics.
+                </li>
+                <li>
+                  Send administrative updates, security alerts, and customer
+                  support responses.
+                </li>
+                <li>Comply with legal and regulatory obligations.</li>
               </ul>
             </section>
 
             <section className="mb-6">
               <h3 className="text-lg font-semibold mb-2">
-                4. Sharing Your Information
+                4. Sharing Your Information & Third-Party Vendors
               </h3>
               <p>
-                We do not sell your personal information. We may share
-                information with:
+                We do not sell your personal data. We share necessary data only
+                with trusted service providers:
               </p>
               <ul className="list-disc list-inside space-y-1 ml-4 mt-2">
                 <li>
-                  Service providers (Stripe for payments, Vercel for hosting,
-                  etc.)
+                  <strong>AI Model Providers:</strong> Prompts and input assets
+                  are processed via secure API endpoints (e.g., OpenAI, Google
+                  Gemini, and image synthesis services). Data processed via
+                  these API services is not used to train third-party foundation
+                  models.
                 </li>
-                <li>Legal authorities when required by law</li>
                 <li>
-                  Business transfers (merger, acquisition, sale of assets)
+                  <strong>Payment Processors:</strong> Stripe and Mercado Pago
+                  for secure transaction handling.
+                </li>
+                <li>
+                  <strong>Hosting & Infrastructure:</strong> Cloud hosting
+                  (e.g., Vercel) and database providers.
+                </li>
+                <li>
+                  <strong>Legal Authorities:</strong> When required by
+                  applicable law or enforceable governmental request.
                 </li>
               </ul>
             </section>
 
             <section className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">5. Data Retention</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                5. Data Retention & Account Deletion
+              </h3>
               <p>
-                We retain your personal information only as long as necessary
-                for the purposes described in this policy, or as required by
-                law. Account data is retained while your account is active. You
-                may request deletion of your account at any time.
+                We retain your personal information, credit usage history, and
+                AI outputs as long as your account remains active. You may
+                request full account and data deletion at any time by contacting
+                support. Upon account termination, personal data and associated
+                style context will be permanently erased or anonymized, subject
+                to retention required by tax or accounting laws.
               </p>
             </section>
 
             <section className="mb-6">
               <h3 className="text-lg font-semibold mb-2">
-                6. Your Rights (GDPR/CCPA)
+                6. Your Rights (GDPR / CCPA)
               </h3>
-              <p>Depending on your location, you may have the right to:</p>
+              <p>Depending on your location, you have the right to:</p>
               <ul className="list-disc list-inside space-y-1 ml-4 mt-2">
-                <li>Access your personal data</li>
-                <li>Rectify inaccurate data</li>
-                <li>Erase your data ("right to be forgotten")</li>
-                <li>Restrict or object to processing</li>
-                <li>Data portability</li>
-                <li>Withdraw consent (where processing is based on consent)</li>
+                <li>
+                  Access, download, or transfer your personal data and generated
+                  content.
+                </li>
+                <li>Rectify inaccurate personal information.</li>
+                <li>
+                  Request erasure of your account and creator context ("Right to
+                  be forgotten").
+                </li>
+                <li>
+                  Restrict or object to certain data processing activities.
+                </li>
+                <li>Withdraw consent at any time.</li>
               </ul>
               <p className="mt-2">
-                To exercise these rights, contact us at{" "}
+                To exercise any of these rights, contact us at{" "}
                 <a
-                  href="mailto:privacy@creatorhub.example"
+                  href="mailto:privacy@creatorhubplatform.com"
                   className="text-primary underline"
                 >
-                  privacy@creatorhub.example
+                  privacy@creatorhubplatform.com
                 </a>
                 .
               </p>
@@ -145,33 +201,34 @@ export function PrivacyModal({ open, onOpenChange }: PrivacyModalProps) {
                 7. Cookies and Tracking
               </h3>
               <p>
-                We use cookies and similar technologies to improve your
-                experience. See our
+                We use cookies and local storage to maintain user sessions,
+                remember preferences, and analyze traffic. For detailed
+                information, please review our
                 <a href="/cookies" className="text-primary underline">
                   Cookie Policy
-                </a>{" "}
-                for details.
+                </a>
+                .
               </p>
             </section>
 
             <section className="mb-6">
               <h3 className="text-lg font-semibold mb-2">8. Security</h3>
               <p>
-                We implement appropriate technical and organizational measures
-                to protect your personal information. However, no method of
-                transmission over the Internet or electronic storage is 100%
-                secure.
+                We implement industry-standard technical and organizational
+                security measures, including encryption at rest and in transit,
+                to protect your personal data and generated content.
               </p>
             </section>
 
             <section className="mb-6">
               <h3 className="text-lg font-semibold mb-2">
-                9. International Transfers
+                9. International Data Transfers
               </h3>
               <p>
-                Your information may be transferred to and processed in
-                countries other than your own. We ensure appropriate safeguards
-                are in place (Standard Contractual Clauses, adequacy decisions).
+                Your data may be transferred to and processed in servers outside
+                your country of residence. We ensure all cross-border data
+                transfers comply with applicable privacy regulations through
+                standard contractual clauses.
               </p>
             </section>
 
@@ -180,10 +237,9 @@ export function PrivacyModal({ open, onOpenChange }: PrivacyModalProps) {
                 10. Children's Privacy
               </h3>
               <p>
-                Our services are not directed to children under 13 (or 16 in the
-                EU). We do not knowingly collect personal information from
-                children. If you believe we have collected such information,
-                please contact us.
+                Creator Hub is not intended for use by individuals under the age
+                of 13 (or 16 in the EU). We do not knowingly collect personal
+                data from children.
               </p>
             </section>
 
@@ -192,39 +248,41 @@ export function PrivacyModal({ open, onOpenChange }: PrivacyModalProps) {
                 11. Changes to This Policy
               </h3>
               <p>
-                We may update this Privacy Policy from time to time. We will
-                notify you of any material changes by posting the new policy on
-                this page and updating the "Last updated" date.
+                We may update this Privacy Policy periodically. Material changes
+                will be communicated via platform notifications or email prior
+                to taking effect.
               </p>
             </section>
 
             <section className="mb-6">
               <h3 className="text-lg font-semibold mb-2">12. Contact Us</h3>
               <p>
-                If you have questions about this Privacy Policy, contact us at:
+                If you have any questions or requests regarding this Privacy
+                Policy, please contact us at:
               </p>
               <address className="not-italic mt-2">
-                Creator Hub
+                Creator Hub Legal Team
                 <br />
                 Email:{" "}
                 <a
-                  href="mailto:privacy@creatorhub.example"
+                  href="mailto:privacy@creatorhubplatform.com"
                   className="text-primary underline"
                 >
-                  privacy@creatorhub.example
+                  privacy@creatorhubplatform.com
                 </a>
               </address>
             </section>
-
-            <hr className="my-6 border-border" />
-            <p className="text-sm text-text-muted">
-              <em>
-                This is a template for informational purposes. Consult with a
-                qualified attorney for legal advice specific to your situation.
-              </em>
-            </p>
           </div>
         </div>
+        <DialogFooter>
+          <Button
+            variant="glow"
+            className="w-full sm:w-auto"
+            onClick={() => onOpenChange(false)}
+          >
+            Agree
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

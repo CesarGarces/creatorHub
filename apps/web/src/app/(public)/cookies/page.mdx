@@ -7,212 +7,59 @@ description: "Creator Hub Cookie Policy - How we use cookies and similar technol
 
 **Last updated:** October 11, 2026
 
-This Cookie Policy explains how **Creator Hub** ("we", "our", "the Platform") uses cookies and similar tracking technologies when you visit our website and use our SaaS platform.
+## 1. What Are Cookies and Local Storage?
 
----
+Cookies are small text files placed on your device (computer, tablet, or mobile) when you visit websites. In addition to cookies, Creator Hub ("we," "our," or "us") utilizes standard browser storage technologies, such as **Local Storage** and **Session Storage** (collectively, "Storage Technologies"), to ensure seamless service functionality, authentication, and user preferences.
 
-## 1. What Are Cookies
+## 2. How We Use Storage Technologies
 
-Cookies are small text files stored on your device (computer, phone, tablet) when you visit a website. They allow the site to recognize your device, remember preferences, and improve your experience.
+We use cookies and browser storage for the following purposes:
 
-**Similar technologies** include: local storage, session storage, tracking pixels, web beacons, and fingerprinting techniques. This policy covers all of them.
+- **Essential & Security:** Required for core service operations, user authentication, session persistence, and Cross-Site Request Forgery (CSRF) protection.
+- **Preferences & State:** Remember your UI settings, theme (light/dark mode), credit balance display preferences, and temporary script/editor drafts.
+- **Analytics & Performance:** Help us understand user traffic, application latency, and platform performance to improve features (e.g., Vercel Analytics, Google Analytics).
+- **Payment & Fraud Prevention:** Placed by payment processors during checkout to ensure secure transaction processing and prevent fraudulent chargebacks.
 
----
+## 3. Storage Technologies Used by Creator Hub
 
-## 2. Cookie Categories We Use
+| Category           | Storage Method / Name            | Purpose                                                          | Duration               |
+| :----------------- | :------------------------------- | :--------------------------------------------------------------- | :--------------------- |
+| **Authentication** | Session / Auth Token             | Keeps you securely logged in and manages active API requests     | Session / 30 Days      |
+| **Security**       | CSRF Token                       | Protects against unauthorized cross-site request forgery         | Session                |
+| **Preferences**    | `theme`, `creator_settings`      | Remembers your UI preferences and workspace layout               | 1 Year (Local Storage) |
+| **Analytics**      | Vercel Analytics                 | Measures page responsiveness, bundle performance, and error logs | 1 Year                 |
+| **Analytics**      | Google Analytics (`_ga`, `_gid`) | Tracks usage metrics, page views, and feature adoption           | Up to 2 Years          |
+| **Payments**       | Stripe / Payment Gateway Cookies | Facilitates secure credit purchases and fraud detection          | Session / 1 Year       |
 
-### 2.1 Strictly Necessary (Essential)
-**Always active - cannot be disabled.** Required for the Platform to function.
+## 4. Third-Party Services
 
-| Cookie | Purpose | Duration | Provider |
-|--------|---------|----------|----------|
-| `session_id` / `__session` | Maintain login session, authenticate requests | Session / 30 days | First-party |
-| `csrf_token` | CSRF protection on forms | Session | First-party |
-| `auth_token` | Secure authentication (JWT in httpOnly cookie) | 15 min (access) / 30 days (refresh) | First-party |
-| `cookie_consent` | Remember your cookie preferences | 1 year | First-party |
-| `idempotency_key` | Prevent duplicate submissions (registration, payments) | Per request | First-party |
+We rely on trusted third-party service providers that may place cookies or access browser storage when you interact with Creator Hub:
 
-**Legal basis:** Contract performance (GDPR Art. 6.1.b) / Legitimate interest (security)
+- **Vercel Analytics:** Performance and reliability monitoring.
+- **Google Analytics:** Traffic analysis and aggregated user flow insights.
+- **Payment Gateways (Stripe / Mercado Pago):** Fraud prevention and secure checkout processing.
 
-### 2.2 Preferences & Functionality
-**Optional - require your consent.** Remember choices and enhance UX.
+## 5. Your Cookie Choices & Controls
 
-| Cookie | Purpose | Duration | Provider |
-|--------|---------|----------|----------|
-| `theme` | Dark/light/system theme preference | 1 year | First-party |
-| `language` | Preferred language/locale | 1 year | First-party |
-| `sidebar_state` | Collapsed/expanded sidebar state | Session | First-party |
-| `onboarding_completed` | Track onboarding progress | 1 year | First-party |
-| `tool_preferences` | Default tool settings, favorites | 1 year | First-party |
+- **Browser Settings:** Most web browsers allow you to manage, block, or delete cookies and cleared Local Storage via your browser preferences/settings.
+- **Essential Storage:** Please note that disabling essential cookies or local storage may prevent you from logging in or using Creator Hub features.
+- **Analytics Opt-Out:** You can opt out of Google Analytics tracking across all websites by visiting [Google Analytics Opt-out Browser Add-on](https://tools.google.com/dlpage/gaoptout).
 
-**Legal basis:** Consent (GDPR Art. 6.1.a)
+## 6. Cookie Consent & Banner
 
-### 2.3 Analytics & Performance
-**Optional - require your consent.** Understand usage to improve the Platform.
+When you first access Creator Hub, a cookie banner will notify you about our use of Storage Technologies. Essential cookies are loaded automatically to enable core platform operation. By continuing to use our platform or accepting non-essential cookies through the banner, you consent to our use of these technologies as outlined in this policy.
 
-| Cookie | Purpose | Duration | Provider |
-|--------|---------|----------|----------|
-| `ph_session` / `ph_event` | PostHog: session replay, funnels, feature usage | 1 year | PostHog (EU hosting) |
-| `_ga` / `_ga_*` | Google Analytics: traffic, conversions (if enabled) | 2 years | Google |
-| `plausible_session` | Plausible: lightweight privacy-friendly analytics | 30 min | Plausible (EU) |
+## 7. Do Not Track (DNT) Signals
 
-**Data collected:** Page views, clicks, feature usage, errors, performance metrics. **IP anonymized.** No PII.
+Some browsers include a "Do Not Track" setting. Because uniform standards for DNT compliance have not been broadly established across the industry, Creator Hub does not currently respond to DNT signals.
 
-**Legal basis:** Consent (GDPR Art. 6.1.a / ePrivacy Art. 5.3)
+## 8. Changes to This Cookie Policy
 
-### 2.4 Marketing & Personalization
-**Optional - require your consent.** Relevant communications and onboarding.
+We may update this Cookie Policy to reflect technical, operational, or legal changes. We will notify users of any material updates by posting the revised version with an updated "Last updated" date.
 
-| Cookie | Purpose | Duration | Provider |
-|--------|---------|----------|----------|
-| `intercom-session-*` | Intercom: live chat, in-app messages, onboarding tours | 1 week | Intercom |
-| `customerio_*` | Customer.io: email automation, lifecycle campaigns | 1 year | Customer.io |
-| `utm_*` / `ref_*` | Attribution: campaign source, referral tracking | 30 days | First-party |
+## 9. Contact Us
 
-**Legal basis:** Consent (GDPR Art. 6.1.a / ePrivacy Art. 5.3)
+If you have any questions or concerns regarding our use of cookies and local storage, please contact us at:
 
-### 2.5 Third-Party / Embedded Content
-**Set by external services when you interact with them.**
-
-| Service | Purpose | Cookies |
-|---------|---------|---------|
-| **Stripe / Mercado Pago** | Payment checkout, fraud prevention (3D Secure) | `__stripe_mid`, `__stripe_sid`, `mpsession` |
-| **YouTube / Twitch / Discord** | OAuth login, embedded players, widgets | `VISITOR_INFO1_LIVE`, `YSC`, `td` |
-| **OpenAI / Google / Anthropic** | API calls from our backend (no client cookies) | None client-side |
-
----
-
-## 3. Cookie Consent Management
-
-### 3.1 Consent Banner
-On first visit, a **cookie banner** appears allowing you to:
-- **Accept all** (all categories)
-- **Reject non-essential** (only strictly necessary)
-- **Customize** (granular per-category toggle)
-
-### 3.2 Withdrawing/Changing Consent
-You can change preferences anytime via:
-- **Cookie icon** (bottom-left corner of Platform)
-- **Settings → Privacy → Cookies** (when logged in)
-- **Clear site data** in browser settings
-
-### 3.3 Consent Records
-We log: timestamp, IP (anonymized), user agent, categories accepted/rejected, banner version. Retained **1 year** for compliance evidence.
-
----
-
-## 4. How to Control Cookies in Your Browser
-
-### 4.1 Browser Settings
-All major browsers let you:
-- View/delete cookies for specific sites
-- Block third-party cookies
-- Block all cookies (may break functionality)
-- Clear on exit
-
-**Guides:**
-- [Chrome](https://support.google.com/chrome/answer/95647)
-- [Firefox](https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer)
-- [Safari](https://support.apple.com/guide/safari/manage-cookies-and-website-data-sfri11471/mac)
-- [Edge](https://support.microsoft.com/en-us/microsoft-edge/delete-cookies-in-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09)
-
-### 4.2 Opt-Out Tools
-- **Network Advertising Initiative:** optout.networkadvertising.org
-- **Digital Advertising Alliance:** optout.aboutads.info
-- **EU Your Online Choices:** youronlinechoices.eu
-
-### 4.3 Do Not Track (DNT)
-We respect `DNT: 1` header as a signal to disable analytics/marketing cookies automatically.
-
----
-
-## 5. Specific Technologies Detail
-
-### 5.1 Local Storage / Session Storage
-Used for:
-- **Client-side state:** UI preferences, draft content, tool inputs
-- **Offline support:** Service worker cache for PWA
-- **No expiry** (until cleared) for localStorage; sessionStorage clears on tab close
-
-### 5.2 Service Workers / PWA
-If you install Creator Hub as PWA:
-- **Cache API:** Static assets for offline use
-- **Background sync:** Queue mutations when offline
-- **Push notifications:** Only with explicit permission
-
-### 5.3 Tracking Pixels / Web Beacons
-Used in **transactional emails** (invoices, security alerts) to track delivery/open rates. **Not used in marketing emails without consent.**
-
----
-
-## 6. Data Processing by Third Parties
-
-| Provider | Purpose | Location | Safeguards |
-|----------|---------|----------|------------|
-| **PostHog** | Product analytics (EU cloud) | EU (Frankfurt) | DPA + SCC, no data sold |
-| **Intercom** | Customer messaging | US / EU | DPA + SCC |
-| **Customer.io** | Email automation | US | DPA + SCC |
-| **Stripe** | Payment fraud detection | US | DPA + PCI-DSS |
-| **Google** | Analytics (if enabled), OAuth | US | DPA + SCC |
-
-**All processors sign DPAs.** Analytics providers configured for **data minimization** (no PII, IP anonymization).
-
----
-
-## 7. Retention Periods
-
-| Category | Max Duration |
-|----------|--------------|
-| Strictly necessary | Session + 30 days (auth refresh) |
-| Preferences | 1 year |
-| Analytics | 13 months (PostHog) / 26 months (GA) |
-| Marketing | 1 year |
-| Consent logs | 1 year |
-
----
-
-## 8. Your Rights Regarding Cookies
-
-| Right | How to Exercise |
-|-------|-----------------|
-| **Withdraw consent** | Cookie settings panel / Browser clear data |
-| **Access/Deletion** | Email privacy@creatorhub.example.com (for analytics IDs linked to account) |
-| **Object to profiling** | Disable analytics/marketing cookies |
-| **Portability** | Export analytics data via provider dashboards |
-
----
-
-## 9. Cookies and Authentication
-
-**Critical:** Disabling **strictly necessary cookies** will break:
-- Login / session persistence
-- Payment flows (Stripe/Mercado Pago require cookies for 3D Secure)
-- CSRF protection (form submissions)
-- Multi-factor authentication
-
----
-
-## 10. Updates to This Policy
-
-We'll update this policy when:
-- Adding/removing cookies or providers
-- Changing purposes or retention
-- Regulatory changes (ePrivacy, GDPR, CCPA)
-
-**Notification:** Banner on Platform + email (if material) + version history here.
-
----
-
-## 11. Contact
-
-**Questions about cookies:**
-
-📧 **privacy@creatorhub.example.com**  
-📮 **Creator Hub - Privacy Team**  
-[Full postal address]
-
-**DPO:** dpo@creatorhub.example.com
-
----
-
-> **Legal notice:** This document is an informational template. Adapt to your actual cookie inventory (audit with browser dev tools), jurisdiction, and have it reviewed by a qualified attorney. The ePrivacy Directive (Cookie Law) requires **prior informed consent** for non-essential cookies in the EU/UK.
+- **Creator Hub Legal & Privacy Team**
+- **Email:** privacy@creatorhubplatform.com
