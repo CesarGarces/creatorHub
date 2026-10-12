@@ -23,14 +23,7 @@ export function PrivacyModal({ open, onOpenChange }: PrivacyModalProps) {
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Privacy Policy</DialogTitle>
-          <DialogDescription>
-            Last updated:{" "}
-            {new Date().toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </DialogDescription>
+          <DialogDescription>Last updated: October 11, 2026</DialogDescription>
         </DialogHeader>
         <div className="p-6 pb-0">
           <div className="max-h-[60vh] overflow-y-auto prose prose-sm text-text">
