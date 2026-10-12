@@ -12,7 +12,9 @@ import {
   Checkbox,
 } from "@creator-hub/ui";
 import { Eye, EyeOff } from "lucide-react";
-import Link from "next/link";
+import { PrivacyModal } from "@/app/privacy/page";
+import { TermsModal } from "@/app/terms/page";
+import { CookiesModal } from "@/app/cookies/page";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -25,6 +27,9 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState("");
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showCookies, setShowCookies] = useState(false);
 
   // One Idempotency-Key per registration attempt session: if the request is
   // retried (double submit, network retry), the API replays the original
@@ -169,19 +174,21 @@ export default function RegisterPage() {
                 className="text-sm text-text-muted leading-relaxed"
               >
                 I agree to the{" "}
-                <Link
-                  href="/terms"
+                <button
+                  type="button"
+                  onClick={() => setShowTerms(true)}
                   className="text-primary hover:underline font-medium"
                 >
                   Terms of Service
-                </Link>{" "}
+                </button>{" "}
                 and{" "}
-                <Link
-                  href="/privacy"
+                <button
+                  type="button"
+                  onClick={() => setShowPrivacy(true)}
                   className="text-primary hover:underline font-medium"
                 >
                   Privacy Policy
-                </Link>
+                </button>
                 {"."}
               </label>
             </div>
@@ -206,16 +213,33 @@ export default function RegisterPage() {
             </a>
           </p>
           <div className="mt-4 flex justify-center space-x-6 text-xs text-text-muted">
-            <Link href="/privacy" className="hover:underline">
+            <button
+              type="button"
+              onClick={() => setShowPrivacy(true)}
+              className="hover:underline text-primary hover:text-primary-hover transition-colors"
+            >
               Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:underline">
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowTerms(true)}
+              className="hover:underline text-primary hover:text-primary-hover transition-colors"
+            >
               Terms of Service
-            </Link>
-            <Link href="/cookies" className="hover:underline">
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCookies(true)}
+              className="hover:underline text-primary hover:text-primary-hover transition-colors"
+            >
               Cookie Policy
-            </Link>
+            </button>
           </div>
+
+          {/* Modals */}
+          <PrivacyModal open={showPrivacy} onOpenChange={setShowPrivacy} />
+          <TermsModal open={showTerms} onOpenChange={setShowTerms} />
+          <CookiesModal open={showCookies} onOpenChange={setShowCookies} />
         </CardContent>
       </Card>
     </div>
