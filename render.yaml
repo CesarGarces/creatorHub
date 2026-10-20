@@ -69,3 +69,5 @@ services:
         sync: false
       - key: COMMUNITY_BOT_ENCRYPTION_KEY
         sync: false
+      - key: COMMUNITY_WORKER_HEALTH_TOKEN
+        sync: false

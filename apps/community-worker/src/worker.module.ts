@@ -12,6 +12,7 @@ import {
   COMMUNITY_OUTBOUND_QUEUE,
   COMMUNITY_CHANNEL_COMMAND_QUEUE,
 } from "@creator-hub/shared-types";
+import { HealthModule } from "./health/health.module";
 import { ChannelManagerService } from "./channel-manager.service";
 import { CommunityGuardService } from "./services/community-guard.service";
 import { ReplyGeneratorService } from "./services/reply-generator.service";
@@ -43,6 +44,7 @@ import { ChannelCommandProcessor } from "./processors/channel-command.processor"
     BillingModule,
     DomainEventsModule,
     CommunityBotModule,
+    HealthModule,
   ],
   providers: [
     ChannelManagerService,

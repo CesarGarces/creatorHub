@@ -13,14 +13,17 @@ async function bootstrap() {
   });
 
   app.enableShutdownHooks();
-  app.enableCors();
 
-  // Minimal health check so Render detects the open port
-  app
-    .getHttpAdapter()
-    .get("/", (_req, res) =>
-      res.json({ status: "ok", service: "community-worker" }),
-    );
+  // This service has no browser clients. Leaving CORS open would only widen
+  // the attack surface of the internal HTTP port.
+  app.getHttpAdapter().getInstance().disable("x-powered-by");
+
+  // Unauthenticated, dependency-free liveness probe used by the platform to
+  // detect that the process is listening. It exposes no internal details.
+  app.getHttpAdapter().get("/", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ status: "ok" });
+  });
 
   const port = process.env.PORT || 8080;
   await app.listen(port);
