@@ -43,6 +43,20 @@ const PROVIDERS = [
   { value: "siliconflow", label: "SiliconFlow" },
 ];
 
+const SORTS = [
+  { value: "", label: "Default order" },
+  { value: "newest", label: "Newest first" },
+];
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function ModelsPage() {
   // Data
   const [models, setModels] = useState<ModelMetadata[]>([]);
@@ -59,6 +73,7 @@ export default function ModelsPage() {
   const [taskType, setTaskType] = useState("");
   const [tier, setTier] = useState("");
   const [providerSlug, setProviderSlug] = useState("");
+  const [sort, setSort] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const debouncedSearch = useDebounce(search, 300);
 
@@ -93,6 +108,7 @@ export default function ModelsPage() {
         if (taskType) params.taskType = taskType;
         if (tier) params.tier = tier;
         if (providerSlug) params.providerSlug = providerSlug;
+        if (sort) params.sort = sort;
         if (!showInactive) params.isActive = "true";
 
         const res = await api.get<PaginatedResponse<ModelMetadata>>(
@@ -107,7 +123,7 @@ export default function ModelsPage() {
         setLoading(false);
       }
     },
-    [debouncedSearch, taskType, tier, providerSlug, showInactive],
+    [debouncedSearch, taskType, tier, providerSlug, sort, showInactive],
   );
 
   const fetchStats = useCallback(async () => {
@@ -319,6 +335,19 @@ export default function ModelsPage() {
           ))}
         </select>
 
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value)}
+          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-primary"
+          aria-label="Sort models"
+        >
+          {SORTS.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+
         <div className="flex items-center gap-2">
           <Switch checked={showInactive} onCheckedChange={setShowInactive} />
           <span className="text-sm text-text-muted">Show inactive</span>
@@ -368,6 +397,7 @@ export default function ModelsPage() {
               <th className="px-4 py-3 font-medium text-right">Credits</th>
               <th className="px-4 py-3 font-medium text-right">Margin</th>
               <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Integrated</th>
               <th className="px-4 py-3 font-medium text-right">Actions</th>
             </tr>
           </thead>
@@ -375,7 +405,7 @@ export default function ModelsPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>
-                  <td colSpan={9} className="px-4 py-4">
+                  <td colSpan={10} className="px-4 py-4">
                     <Skeleton className="h-8 w-full" />
                   </td>
                 </tr>
@@ -383,7 +413,7 @@ export default function ModelsPage() {
             ) : models.length === 0 ? (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={10}
                   className="px-4 py-12 text-center text-text-dim"
                 >
                   <BrainCircuit className="mx-auto mb-3 h-10 w-10 opacity-30" />
@@ -464,6 +494,12 @@ export default function ModelsPage() {
                     >
                       {model.isActive ? "Active" : "Inactive"}
                     </Badge>
+                  </td>
+                  <td
+                    className="whitespace-nowrap px-4 py-3 text-text-muted"
+                    title={new Date(model.integratedAt).toLocaleString()}
+                  >
+                    {formatDate(model.integratedAt)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">

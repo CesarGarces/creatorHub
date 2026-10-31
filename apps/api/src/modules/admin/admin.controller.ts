@@ -303,6 +303,7 @@ export class AdminController {
     isActive?: boolean,
     @Query("search") search?: string,
     @Query("tags") tags?: string,
+    @Query("sort") sort?: string,
   ): Promise<any> {
     const tagArray = tags ? tags.split(",") : undefined;
     return this.adminService.findAllModels({
@@ -314,6 +315,7 @@ export class AdminController {
       isActive,
       search,
       tags: tagArray,
+      sort,
     });
   }
 

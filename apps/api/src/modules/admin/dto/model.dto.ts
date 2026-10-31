@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsBoolean,
   IsArray,
+  IsIn,
   Min,
   Max,
 } from "class-validator";
@@ -44,6 +45,10 @@ export class ModelFilterDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional()
+  @IsIn(["default", "newest", "oldest"])
+  sort?: "default" | "newest" | "oldest";
 }
 
 export class ModelConfigDto {

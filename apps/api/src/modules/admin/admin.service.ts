@@ -788,6 +788,7 @@ export class AdminService {
     isActive?: boolean;
     search?: string;
     tags?: string[];
+    sort?: string;
   }): Promise<any> {
     const page = Math.max(1, params.page ?? 1);
     const limit = Math.max(1, Math.min(100, params.limit ?? 20));
@@ -823,10 +824,17 @@ export class AdminService {
       where.tags = { hasSome: params.tags };
     }
 
+    const orderBy: Prisma.ModelMetadataOrderByWithRelationInput[] =
+      params.sort === "newest"
+        ? [{ integratedAt: "desc" }, { id: "asc" }]
+        : params.sort === "oldest"
+          ? [{ integratedAt: "asc" }, { id: "asc" }]
+          : [{ tier: "asc" }, { taskType: "asc" }, { displayName: "asc" }];
+
     const [data, total] = await Promise.all([
       prisma.modelMetadata.findMany({
         where,
-        orderBy: [{ tier: "asc" }, { taskType: "asc" }, { displayName: "asc" }],
+        orderBy,
         skip,
         take: limit,
       }),

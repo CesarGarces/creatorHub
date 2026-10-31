@@ -130,6 +130,7 @@ export interface ModelMetadata {
   isActive: boolean;
   description: string | null;
   tags: string[];
+  integratedAt: string;
   createdAt: string;
   updatedAt: string;
 }

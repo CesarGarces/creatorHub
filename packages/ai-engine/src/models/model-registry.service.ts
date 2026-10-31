@@ -157,6 +157,7 @@ export class ModelRegistryService {
         isActive: false, // New models are inactive by default
         creditCost: this.calculateDefaultCreditCost(model),
         profitMargin: 2.0,
+        integratedAt: new Date(), // Set once, when the model is added to the platform
         lastSyncedAt: new Date(),
       }));
 
