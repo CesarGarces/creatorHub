@@ -8,9 +8,13 @@ import Link from "next/link";
 import { PrivacyModal } from "@/app/privacy/page";
 import { TermsModal } from "@/app/terms/page";
 import { CookiesModal } from "@/app/cookies/page";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
+import { AuthLanguageSwitcher } from "@/components/i18n/auth-language-switcher";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { login, isLoading, user, isHydrated, hydrate } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,13 +39,14 @@ export default function LoginPage() {
     try {
       await login(email, password);
       router.push("/dashboard");
-    } catch {
-      setError("Invalid credentials");
+    } catch (err) {
+      setError(localizeError(err, "auth.login.invalidCredentials"));
     }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg relative overflow-hidden">
+      <AuthLanguageSwitcher />
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
       <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
@@ -51,13 +56,13 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <img
             src="/isologo_white.png"
-            alt="Creator Hub"
+            alt={t("common.appName")}
             className="mx-auto mb-4 h-14 w-auto"
           />
           <h1 className="text-2xl font-bold text-text">
-            Welcome to Creator Hub
+            {t("auth.login.title")}
           </h1>
-          <p className="text-sm text-text-muted">Sign in to your account</p>
+          <p className="text-sm text-text-muted">{t("auth.login.subtitle")}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -67,16 +72,16 @@ export default function LoginPage() {
               </div>
             )}
             <Input
-              label="Email"
+              label={t("auth.fields.email")}
               type="email"
               name="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("auth.fields.emailPlaceholder")}
               required
             />
             <Input
-              label="Password"
+              label={t("auth.fields.password")}
               type="password"
               name="password"
               value={password}
@@ -89,7 +94,7 @@ export default function LoginPage() {
                 href={`/auth/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`}
                 className="text-sm text-primary hover:text-primary-hover transition-colors"
               >
-                Forgot password?
+                {t("auth.login.forgotPassword")}
               </a>
             </div>
             <Button
@@ -99,39 +104,39 @@ export default function LoginPage() {
               className="w-full"
               size="lg"
             >
-              Sign in
+              {t("auth.login.submit")}
             </Button>
           </form>
           <p className="mt-6 text-center text-sm text-text-muted">
-            Don&apos;t have an account?{" "}
+            {t("auth.login.noAccount")}{" "}
             <a
               href="/register"
               className="text-primary hover:text-primary-hover font-medium transition-colors"
             >
-              Register
+              {t("auth.login.register")}
             </a>
           </p>
-          <div className="mt-4 flex justify-center space-x-6 text-xs text-text-muted">
+          <div className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-2 whitespace-nowrap text-xs text-text-muted">
             <button
               type="button"
               onClick={() => setShowPrivacy(true)}
               className="hover:underline text-primary hover:text-primary-hover transition-colors"
             >
-              Privacy Policy
+              {t("auth.legal.privacy")}
             </button>
             <button
               type="button"
               onClick={() => setShowTerms(true)}
               className="hover:underline text-primary hover:text-primary-hover transition-colors"
             >
-              Terms of Service
+              {t("auth.legal.terms")}
             </button>
             <button
               type="button"
               onClick={() => setShowCookies(true)}
               className="hover:underline text-primary hover:text-primary-hover transition-colors"
             >
-              Cookie Policy
+              {t("auth.legal.cookies")}
             </button>
           </div>
 

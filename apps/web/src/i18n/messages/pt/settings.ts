@@ -1,0 +1,78 @@
+import type { Messages } from "../../translate";
+
+export const settings: Messages["settings"] = {
+  title: "Configurações",
+  subtitle: "Gerencie as preferências da sua conta",
+  profile: {
+    title: "Perfil",
+    description: "Atualize suas informações pessoais",
+    editAvatar: "Editar perfil",
+    credits_one: "{count} crédito",
+    credits_other: "{count} créditos",
+  },
+  password: {
+    title: "Alterar senha",
+    description: "Atualize sua senha para manter sua conta segura",
+    current: "Senha atual",
+    new: "Nova senha",
+    confirm: "Confirmar nova senha",
+    submit: "Alterar senha",
+    showPassword: "Mostrar senha",
+    hidePassword: "Ocultar senha",
+    confirmTitle: "Confirmar alteração de senha",
+    confirmDescription:
+      "Tem certeza de que deseja alterar sua senha? Você precisará usar a nova senha nos próximos logins.",
+    confirmButton: "Sim, alterar senha",
+  },
+  danger: {
+    title: "Zona de perigo",
+    description: "Ações irreversíveis",
+    deleteTitle: "Excluir conta",
+    deleteDescription: "Exclua permanentemente sua conta e todos os dados",
+    deleteButton: "Excluir conta",
+    modalDescription:
+      "Esta ação é irreversível. Todos os seus dados serão excluídos permanentemente, incluindo suas imagens e informações da conta.",
+    typeToConfirm: "Digite <word>{word}</word> para confirmar.",
+    confirmationLabel: "Confirmação",
+    confirmWord: "EXCLUIR",
+  },
+  editProfile: {
+    title: "Editar perfil",
+    name: "Nome",
+  },
+  toasts: {
+    nameUpdated: "Nome atualizado com sucesso",
+    nameUpdateFailed: "Não foi possível atualizar o nome",
+    passwordsDoNotMatch: "As novas senhas não coincidem",
+    passwordTooShort: "A nova senha deve ter pelo menos 8 caracteres",
+    passwordUpdated: "Senha atualizada com sucesso",
+    passwordUpdateFailed: "Não foi possível alterar a senha",
+    typeToConfirm: 'Digite "{word}" para confirmar',
+    accountDeleted: "Conta excluída com sucesso",
+    accountDeleteFailed: "Não foi possível excluir a conta",
+  },
+  integrations: {
+    title: "Integrações",
+    description: "Conecte suas contas de redes sociais",
+    xName: "X (Twitter)",
+    notConnected: "Não conectada",
+    reconnect: "Reconectar",
+    connect: "Conectar",
+    connecting: "Conectando...",
+    disconnect: "Desconectar",
+    disconnecting: "Desconectando...",
+    status: {
+      ACTIVE: "Ativa",
+      EXPIRED: "Expirada",
+      REVOKED: "Revogada",
+      ERROR: "Erro",
+    },
+    toasts: {
+      connectFailed: "Não foi possível iniciar a conexão com o X",
+      disconnected: "Conta do X desconectada",
+      disconnectFailed: "Não foi possível desconectar a conta",
+      refreshed: "Tokens atualizados com sucesso",
+      refreshFailed: "Não foi possível atualizar os tokens",
+    },
+  },
+};

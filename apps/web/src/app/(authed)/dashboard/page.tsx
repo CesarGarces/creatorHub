@@ -36,22 +36,15 @@ import {
 import { TopBar } from "@/components/layout/top-bar";
 import { CommandPalette } from "@/components/layout/command-palette";
 import api from "@/lib/api";
+import { useI18n } from "@/i18n/i18n-provider";
+import { useToolText } from "@/i18n/use-tool-text";
+import type { TranslationKey } from "@/i18n/translate";
 
-function getGreeting(): string {
+function getGreetingKey(): TranslationKey {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
-
-function formatTimeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = 60_000;
-  const hr = 3_600_000;
-  if (diff < min) return "Just now";
-  if (diff < hr) return `${Math.floor(diff / min)}m ago`;
-  if (diff < 86_400_000) return `${Math.floor(diff / hr)}h ago`;
-  return `${Math.floor(diff / 86_400_000)}d ago`;
+  if (hour < 12) return "dashboard.greeting.morning";
+  if (hour < 18) return "dashboard.greeting.afternoon";
+  return "dashboard.greeting.evening";
 }
 
 interface Transaction {
@@ -68,6 +61,8 @@ interface Transaction {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { t, formatRelativeTime } = useI18n();
+  const { toolName, toolDescription, categoryLabel } = useToolText();
   const { user } = useAuthStore();
   const { tools, fetchTools } = useToolsStore();
   const { balance, fetchBalance } = useCreditsStore();
@@ -89,7 +84,9 @@ export default function DashboardPage() {
     const isPending = tx.description?.toLowerCase().includes("pending");
     return {
       isPending,
-      label: isPending ? "Pending" : "Completed",
+      label: isPending
+        ? t("common.status.pending")
+        : t("common.status.completed"),
       color: isPending
         ? "bg-warning/10 text-warning border-warning/30"
         : "bg-success/10 text-success border-success/30",
@@ -147,7 +144,7 @@ export default function DashboardPage() {
     <>
       <CommandPalette isOpen={cmdOpen} onClose={() => setCmdOpen(false)} />
       <TopBar
-        breadcrumbs={[{ label: "Dashboard" }]}
+        breadcrumbs={[{ label: t("nav.dashboard") }]}
         actions={
           <button
             type="button"
@@ -165,7 +162,7 @@ export default function DashboardPage() {
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
             </svg>
-            <span>Search...</span>
+            <span>{t("dashboard.search")}</span>
             <kbd className="ml-2 rounded border border-border bg-surface-elevated px-1 py-0.5 text-[10px] font-mono">
               ⌘K
             </kbd>
@@ -176,9 +173,11 @@ export default function DashboardPage() {
         {/* Greeting */}
         <div>
           <h1 className="text-2xl font-bold text-text">
-            {getGreeting()}, {user?.name || user?.email?.split("@")[0]} 👋
+            {t(getGreetingKey(), {
+              name: user?.name || user?.email?.split("@")[0] || "",
+            })}
           </h1>
-          <p className="mt-1 text-text-muted">What will you create today?</p>
+          <p className="mt-1 text-text-muted">{t("dashboard.subtitle")}</p>
         </div>
 
         {/* Dashboard Grid: Main Content + Chat */}
@@ -192,8 +191,8 @@ export default function DashboardPage() {
                   type="text"
                   value={quickPrompt}
                   onChange={(e) => setQuickPrompt(e.target.value)}
-                  placeholder="Describe what you want to create..."
-                  aria-label="Describe what you want to create"
+                  placeholder={t("dashboard.quickPrompt.placeholder")}
+                  aria-label={t("dashboard.quickPrompt.ariaLabel")}
                   className="flex-1 bg-transparent text-sm text-text placeholder:text-text-dim outline-none"
                   onKeyDown={(e) => {
                     if (
@@ -219,40 +218,48 @@ export default function DashboardPage() {
                   disabled={isStreaming || !quickPrompt.trim()}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {isStreaming ? "Making..." : "Generate"}
+                  {isStreaming
+                    ? t("dashboard.quickPrompt.making")
+                    : t("dashboard.quickPrompt.generate")}
                 </button>
               </div>
             </div>
             <div className="absolute -bottom-6 left-4 flex gap-2 text-xs text-text-dim">
-              <span>Try:</span>
+              <span>{t("dashboard.quickPrompt.try")}</span>
               <button
                 type="button"
                 onClick={() => {
-                  setQuickPrompt("Gaming thumbnail");
+                  setQuickPrompt(
+                    t("dashboard.quickPrompt.examples.gamingThumbnail"),
+                  );
                 }}
                 className="text-primary/70 hover:text-primary transition-colors"
               >
-                Gaming thumbnail
+                {t("dashboard.quickPrompt.examples.gamingThumbnail")}
               </button>
               <span>·</span>
               <button
                 type="button"
                 onClick={() => {
-                  setQuickPrompt("YouTube intro script");
+                  setQuickPrompt(
+                    t("dashboard.quickPrompt.examples.youtubeIntro"),
+                  );
                 }}
                 className="text-primary/70 hover:text-primary transition-colors"
               >
-                YouTube intro script
+                {t("dashboard.quickPrompt.examples.youtubeIntro")}
               </button>
               <span>·</span>
               <button
                 type="button"
                 onClick={() => {
-                  setQuickPrompt("Viral video title");
+                  setQuickPrompt(
+                    t("dashboard.quickPrompt.examples.viralTitle"),
+                  );
                 }}
                 className="text-primary/70 hover:text-primary transition-colors"
               >
-                Viral video title
+                {t("dashboard.quickPrompt.examples.viralTitle")}
               </button>
             </div>
           </div>
@@ -261,8 +268,8 @@ export default function DashboardPage() {
           <div className="mt-8">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
               {favoriteTools.length > 0
-                ? "Favorite Tools — drag to reorder"
-                : "Quick Access"}
+                ? t("dashboard.favoriteTools")
+                : t("dashboard.quickAccess")}
             </h2>
             {isDraggable ? (
               <DndContext
@@ -278,7 +285,15 @@ export default function DashboardPage() {
                     {recentTools.map((tool) => (
                       <SortableToolCard
                         key={tool.id}
-                        tool={tool}
+                        tool={{
+                          ...tool,
+                          name: toolName(tool),
+                          description: toolDescription(tool),
+                          category: categoryLabel(tool.category),
+                        }}
+                        dragLabel={t("dashboard.dragToReorder", {
+                          name: toolName(tool),
+                        })}
                         isFavorite={favoriteIds?.includes(tool.id) ?? false}
                         onToggleFavorite={() => toggleFavorite(tool.id)}
                         onClick={() => router.push(`/tools/${tool.id}`)}
@@ -292,12 +307,12 @@ export default function DashboardPage() {
                 {recentTools.map((tool) => (
                   <ToolCard
                     key={tool.id}
-                    name={tool.name}
-                    description={tool.description}
+                    name={toolName(tool)}
+                    description={toolDescription(tool)}
                     icon={tool.icon}
                     credits={tool.creditsPerUse}
                     status={tool.status}
-                    category={tool.category}
+                    category={categoryLabel(tool.category)}
                     isFavorite={favoriteIds?.includes(tool.id) ?? false}
                     onToggleFavorite={() => toggleFavorite(tool.id)}
                     onClick={() => router.push(`/tools/${tool.id}`)}
@@ -306,8 +321,8 @@ export default function DashboardPage() {
                 {recentTools.length === 0 && (
                   <EmptyState
                     icon="🛠️"
-                    title="No tools available"
-                    description="Tools will appear here once they are activated."
+                    title={t("dashboard.noToolsTitle")}
+                    description={t("dashboard.noToolsDescription")}
                   />
                 )}
               </div>
@@ -318,14 +333,14 @@ export default function DashboardPage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim">
-                Recent Activity
+                {t("dashboard.recentActivity")}
               </h2>
               <button
                 type="button"
                 onClick={() => router.push("/history")}
                 className="text-xs text-primary hover:text-primary-hover transition-colors"
               >
-                View all →
+                {t("common.actions.viewAll")}
               </button>
             </div>
             <div className="rounded-xl border border-border bg-surface divide-y divide-border">
@@ -365,23 +380,25 @@ export default function DashboardPage() {
                         )}
                       </div>
                       <p className="text-xs text-text-dim">
-                        {formatTimeAgo(tx.createdAt)} · {Math.abs(tx.amount)}{" "}
-                        credits
+                        {t("dashboard.activityMeta", {
+                          time: formatRelativeTime(tx.createdAt),
+                          count: Math.abs(tx.amount),
+                        })}
                       </p>
                     </div>
                     <Badge variant="primary" size="sm">
                       {tx.type === "USAGE"
-                        ? tx.toolName || "Tool"
+                        ? tx.toolName || t("dashboard.txType.tool")
                         : tx.type === "PURCHASE"
-                          ? "Purchase"
-                          : "Bonus"}
+                          ? t("dashboard.txType.purchase")
+                          : t("dashboard.txType.bonus")}
                     </Badge>
                   </div>
                 );
               })}
               {recentActivity.length === 0 && (
                 <div className="px-5 py-8 text-center text-sm text-text-dim">
-                  No activity yet
+                  {t("dashboard.noActivity")}
                 </div>
               )}
             </div>
@@ -390,7 +407,7 @@ export default function DashboardPage() {
           {/* Recommended Agents */}
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
-              Recommended Agents
+              {t("dashboard.recommendedAgents")}
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div
@@ -402,13 +419,15 @@ export default function DashboardPage() {
                     💬
                   </div>
                   <div>
-                    <h3 className="font-semibold text-text">X Post Agent</h3>
+                    <h3 className="font-semibold text-text">
+                      {t("agents.items.xPost.name")}
+                    </h3>
                     <p className="mt-1 text-sm text-text-muted">
-                      Publish tweets and threads to your X account
+                      {t("agents.items.xPost.shortDescription")}
                     </p>
                     <div className="mt-3 flex items-center gap-2">
                       <Badge variant="primary" size="sm">
-                        Social
+                        {t("agents.badges.social")}
                       </Badge>
                     </div>
                   </div>
@@ -424,14 +443,14 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-text">
-                      X Research Agent
+                      {t("agents.items.xResearch.name")}
                     </h3>
                     <p className="mt-1 text-sm text-text-muted">
-                      Search and analyze trending topics on X
+                      {t("agents.items.xResearch.shortDescription")}
                     </p>
                     <div className="mt-3 flex items-center gap-2">
                       <Badge variant="accent" size="sm">
-                        Research
+                        {t("agents.badges.research")}
                       </Badge>
                     </div>
                   </div>
@@ -445,11 +464,11 @@ export default function DashboardPage() {
             <div className="flex items-start gap-3">
               <span className="text-lg">💡</span>
               <div>
-                <h3 className="text-sm font-semibold text-text">Pro Tip</h3>
+                <h3 className="text-sm font-semibold text-text">
+                  {t("dashboard.proTip.title")}
+                </h3>
                 <p className="mt-1 text-sm text-text-muted">
-                  Use negative prompts to exclude unwanted elements from your
-                  generated images. For example: "no text, no watermark, no
-                  blurry" for cleaner results.
+                  {t("dashboard.proTip.body")}
                 </p>
               </div>
             </div>
@@ -462,11 +481,13 @@ export default function DashboardPage() {
 
 function SortableToolCard({
   tool,
+  dragLabel,
   isFavorite,
   onToggleFavorite,
   onClick,
 }: {
   tool: any;
+  dragLabel: string;
   isFavorite: boolean;
   onToggleFavorite: () => void;
   onClick: () => void;
@@ -500,7 +521,7 @@ function SortableToolCard({
         {...listeners}
         {...attributes}
         role="button"
-        aria-label={`Drag to reorder ${tool.name}`}
+        aria-label={dragLabel}
         tabIndex={0}
         className={cn(
           "absolute -top-2 -left-2 z-20",

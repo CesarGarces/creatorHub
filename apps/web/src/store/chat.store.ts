@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { t } from "@/i18n/runtime";
+import { localizeError } from "@/i18n/errors";
 import api from "@/lib/api";
 
 interface ChatMessage {
@@ -246,7 +248,9 @@ export const useChatStore = create<ChatState>()((set, get) => ({
           {
             id: `error-${Date.now()}`,
             role: "assistant",
-            content: `Error: ${(error as Error).message}`,
+            content: t("chat.errorMessage", {
+              message: localizeError(error, "chat.sendFailed"),
+            }),
             createdAt: new Date().toISOString(),
           },
         ],

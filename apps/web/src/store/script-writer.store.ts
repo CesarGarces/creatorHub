@@ -2,6 +2,8 @@ import { create } from "zustand";
 import api from "@/lib/api";
 import { getAccessToken } from "@/lib/cookie";
 import { type ModelSettings } from "@/components/chat/model-settings-panel";
+import { t } from "@/i18n/runtime";
+import { localizeError } from "@/i18n/errors";
 
 export interface ScriptMessage {
   id: string;
@@ -12,6 +14,8 @@ export interface ScriptMessage {
   duration?: number;
   wordCount?: number;
   thumbnailPrompt?: string;
+  /** True when `content` holds an error message instead of a script. */
+  isError?: boolean;
 }
 
 export interface GeneratedScript {
@@ -178,7 +182,13 @@ export const useScriptWriterStore = create<ScriptWriterState>()((set, get) => ({
                     msg.id === assistantMessage.id
                       ? {
                           ...msg,
-                          content: `Error: ${event.error}`,
+                          content: t("scriptWriter.errorMessage", {
+                            message: localizeError(
+                              event.error,
+                              "scriptWriter.failed",
+                            ),
+                          }),
+                          isError: true,
                           isStreaming: false,
                         }
                       : msg,
@@ -230,7 +240,13 @@ export const useScriptWriterStore = create<ScriptWriterState>()((set, get) => ({
                   msg.id === assistantMessage.id
                     ? {
                         ...msg,
-                        content: `Error: ${event.error}`,
+                        content: t("scriptWriter.errorMessage", {
+                          message: localizeError(
+                            event.error,
+                            "scriptWriter.failed",
+                          ),
+                        }),
+                        isError: true,
                         isStreaming: false,
                       }
                     : msg,
@@ -244,14 +260,14 @@ export const useScriptWriterStore = create<ScriptWriterState>()((set, get) => ({
         }
       }
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to generate script";
+      const message = localizeError(error, "scriptWriter.failed");
       set((state) => ({
         messages: state.messages.map((msg) =>
           msg.id === assistantMessage.id
             ? {
                 ...msg,
-                content: `Error: ${message}`,
+                content: t("scriptWriter.errorMessage", { message }),
+                isError: true,
                 isStreaming: false,
               }
             : msg,

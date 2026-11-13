@@ -1,0 +1,50 @@
+import type { Messages } from "../../translate";
+
+export const assets: Messages["assets"] = {
+  title: "Recursos",
+  subtitle: "Tus imágenes y videos generados",
+  filters: {
+    all: "Todos",
+    images: "Imágenes",
+    videos: "Videos",
+  },
+  emptyTitle: "Aún no hay recursos",
+  emptyAll: "Las imágenes y videos generados aparecerán aquí.",
+  emptyImages: "Aún no has generado imágenes.",
+  emptyVideos: "Aún no has generado videos.",
+  firstVideo: "Genera tu primer video",
+  firstThumbnail: "Genera tu primera miniatura",
+  videoPreview: "Vista previa del video: {title}",
+  videoPlayer: "Reproductor de video: {title}",
+  untitled: "Sin título",
+  public: "Público",
+  private: "Privado",
+  type: {
+    video: "Video",
+    image: "Imagen",
+  },
+  usePrompt: "Usar prompt",
+  usePromptButton: "Usar prompt",
+  download: "Descargar",
+  share: "Compartir",
+  deleteAsset: "Eliminar recurso",
+  delete: "Eliminar",
+  previous: "Anterior",
+  next: "Siguiente",
+  closePreview: "Cerrar vista previa",
+  deleteDialog: {
+    title: "Eliminar recurso",
+    description:
+      "Este recurso se eliminará permanentemente de tu galería. Esta acción no se puede deshacer.",
+    confirm: "Sí, eliminar",
+    cancel: "No, conservarlo",
+  },
+  toasts: {
+    deleted: "Recurso eliminado",
+    deleteFailed: "No se pudo eliminar el recurso",
+    nowPublic: "El recurso ahora es público. ¡Compártelo!",
+    nowPrivate: "El recurso ahora es privado",
+    visibilityFailed: "No se pudo actualizar la visibilidad",
+    linkCopied: "¡Enlace para compartir copiado!",
+  },
+};

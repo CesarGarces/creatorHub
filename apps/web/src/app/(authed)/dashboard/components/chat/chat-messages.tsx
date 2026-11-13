@@ -2,8 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { useChatStore } from "@/store/chat.store";
+import { useI18n } from "@/i18n/i18n-provider";
 
 export function ChatMessages() {
+  const { t } = useI18n();
   const { messages, isStreaming } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -17,9 +19,11 @@ export function ChatMessages() {
         <div className="flex h-full items-center justify-center">
           <div className="text-center">
             <div className="mb-3 text-4xl">💬</div>
-            <h3 className="text-sm font-semibold text-text">Ask anything</h3>
+            <h3 className="text-sm font-semibold text-text">
+              {t("chat.emptyPanelTitle")}
+            </h3>
             <p className="mt-1 text-xs text-text-dim">
-              I can help with thumbnails, videos, translations, and more.
+              {t("chat.emptyPanelDescription")}
             </p>
           </div>
         </div>
@@ -41,7 +45,7 @@ export function ChatMessages() {
               <div className="mb-1 flex items-center gap-1.5">
                 <span className="text-xs font-medium text-primary">✦</span>
                 <span className="text-[10px] font-medium uppercase tracking-wider text-text-dim">
-                  Creator Hub AI
+                  {t("chat.assistantName")}
                 </span>
               </div>
             )}
@@ -52,7 +56,7 @@ export function ChatMessages() {
                 message.id.startsWith("assistant-") ? (
                   <span className="inline-flex items-center gap-1.5 text-text-dim">
                     <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-                    Making...
+                    {t("chat.making")}
                   </span>
                 ) : (
                   message.content

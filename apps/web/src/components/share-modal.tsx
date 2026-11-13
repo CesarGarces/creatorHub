@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Copy, Check, Share2, Globe, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/i18n-provider";
 
 interface ShareModalProps {
   assetId: string;
@@ -24,6 +25,7 @@ export function ShareModal({
   onTogglePublic,
   onClose,
 }: ShareModalProps) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
@@ -33,29 +35,34 @@ export function ShareModal({
 
   const handleCopyLink = async () => {
     if (!isPublic) {
-      toast.error("Make the asset public first to share it");
+      toast.error(t("share.makePublicFirst"));
       return;
     }
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
-      toast.success("Link copied to clipboard!");
+      toast.success(t("share.linkCopied"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Failed to copy link");
+      toast.error(t("share.copyFailed"));
     }
   };
 
   const handleNativeShare = async () => {
     if (!isPublic) {
-      toast.error("Make the asset public first to share it");
+      toast.error(t("share.makePublicFirst"));
       return;
     }
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Created with Creator Hub`,
-          text: `Check out this ${assetType.toLowerCase()} on Creator Hub: "${assetPrompt}"`,
+          title: t("share.nativeTitle"),
+          text: t(
+            assetType === "VIDEO"
+              ? "share.nativeTextVideo"
+              : "share.nativeTextImage",
+            { prompt: assetPrompt },
+          ),
           url: shareUrl,
         });
       } catch {
@@ -66,7 +73,11 @@ export function ShareModal({
 
   const getShareUrl = (platform: string) => {
     const text = encodeURIComponent(
-      `Check out this ${assetType.toLowerCase()} I made on Creator Hub`,
+      t(
+        assetType === "VIDEO"
+          ? "share.socialTextVideo"
+          : "share.socialTextImage",
+      ),
     );
     const url = encodeURIComponent(shareUrl);
 
@@ -92,7 +103,7 @@ export function ShareModal({
 
   const handleShare = (platform: string) => {
     if (!isPublic) {
-      toast.error("Make the asset public first to share it");
+      toast.error(t("share.makePublicFirst"));
       return;
     }
     const url = getShareUrl(platform);
@@ -176,11 +187,12 @@ export function ShareModal({
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Share2 size={18} className="text-primary" />
-            <h3 className="font-semibold text-text">Share Asset</h3>
+            <h3 className="font-semibold text-text">{t("share.title")}</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label={t("share.close")}
             className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
           >
             <X size={18} />
@@ -195,11 +207,10 @@ export function ShareModal({
               <Lock size={16} className="text-amber-500 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-amber-500 font-medium">
-                  This asset is private
+                  {t("share.privateTitle")}
                 </p>
                 <p className="text-xs text-text-muted mt-0.5">
-                  Make it public to enable sharing and get a link anyone can
-                  view.
+                  {t("share.privateDescription")}
                 </p>
                 {onTogglePublic && (
                   <button
@@ -207,7 +218,7 @@ export function ShareModal({
                     onClick={onTogglePublic}
                     className="mt-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                   >
-                    Make public now
+                    {t("share.makePublicNow")}
                   </button>
                 )}
               </div>
@@ -217,12 +228,12 @@ export function ShareModal({
           {/* Copy Link */}
           <div>
             <label className="block text-sm font-medium text-text mb-2">
-              Share Link
+              {t("share.shareLink")}
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
-                aria-label="Share link"
+                aria-label={t("share.shareLink")}
                 value={shareUrl}
                 readOnly
                 className="flex-1 px-3 py-2 bg-surface-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -238,7 +249,7 @@ export function ShareModal({
                 }`}
               >
                 {copied ? <Check size={16} /> : <Copy size={16} />}
-                {copied ? "Copied!" : "Copy"}
+                {copied ? t("share.copied") : t("share.copy")}
               </button>
             </div>
           </div>
@@ -246,7 +257,7 @@ export function ShareModal({
           {/* Social Share Buttons */}
           <div>
             <label className="block text-sm font-medium text-text mb-3">
-              Share on Social Media
+              {t("share.shareOnSocial")}
             </label>
             <div className="grid grid-cols-3 gap-2">
               {socialPlatforms.map((platform) => (
@@ -281,7 +292,7 @@ export function ShareModal({
               }`}
             >
               <Share2 size={18} />
-              Share via Device
+              {t("share.shareViaDevice")}
             </button>
           )}
         </div>
@@ -289,9 +300,7 @@ export function ShareModal({
         {/* Footer */}
         <div className="p-4 border-t border-border bg-surface-elevated/50">
           <p className="text-xs text-text-muted text-center">
-            {isPublic
-              ? "Anyone with this link can view this asset and give it a like"
-              : "Only you can see this asset until you make it public"}
+            {isPublic ? t("share.publicFooter") : t("share.privateFooter")}
           </p>
         </div>
       </div>

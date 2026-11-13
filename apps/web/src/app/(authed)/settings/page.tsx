@@ -18,18 +18,18 @@ import { XAccountCard } from "@/components/settings/x-account-card";
 import { useAuthStore } from "@/store/auth.store";
 import { useCreditsStore } from "@/store/credits.store";
 import api from "@/lib/api";
-import { Pencil, Eye, EyeOff } from "lucide-react";
+import { Pencil, Eye, EyeOff, Globe } from "lucide-react";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
+import { LanguageOptions } from "@/components/i18n/language-selector";
 
-const planLabels: Record<
-  string,
-  { label: string; variant: "free" | "primary" | "premium" }
-> = {
-  FREE: { label: "FREE PLAN", variant: "free" },
-  PAY_AS_YOU_GO: { label: "PAY AS YOU GO", variant: "primary" },
-  PREMIUM: { label: "PREMIUM", variant: "premium" },
-  STARTER: { label: "STARTER", variant: "primary" },
-  PRO: { label: "PRO", variant: "premium" },
+const planVariants: Record<string, "free" | "primary" | "premium"> = {
+  FREE: "free",
+  PAY_AS_YOU_GO: "primary",
+  PREMIUM: "premium",
+  STARTER: "primary",
+  PRO: "premium",
 };
 
 function PasswordInput({
@@ -44,6 +44,7 @@ function PasswordInput({
   autoComplete?: string;
 }) {
   const [show, setShow] = useState(false);
+  const { t } = useI18n();
   return (
     <div className="relative">
       <Input
@@ -57,6 +58,11 @@ function PasswordInput({
       <button
         type="button"
         onClick={() => setShow(!show)}
+        aria-label={
+          show
+            ? t("settings.password.hidePassword")
+            : t("settings.password.showPassword")
+        }
         className="absolute right-3 top-[38px] text-text-dim hover:text-text-muted transition-colors"
       >
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -67,6 +73,7 @@ function PasswordInput({
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { t, tOptional, rich } = useI18n();
   const { user, setUser, logout } = useAuthStore();
   const { balance, plan, fetchBalance } = useCreditsStore();
 
@@ -98,10 +105,10 @@ export default function SettingsPage() {
     try {
       await api.patch("/auth/profile", { name: profileName });
       setUser({ ...user!, name: profileName });
-      toast.success("Name updated successfully");
+      toast.success(t("settings.toasts.nameUpdated"));
       setProfileOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update name");
+    } catch (err: unknown) {
+      toast.error(localizeError(err, "settings.toasts.nameUpdateFailed"));
     } finally {
       setProfileLoading(false);
     }
@@ -109,11 +116,11 @@ export default function SettingsPage() {
 
   const handlePasswordChange = async () => {
     if (newPassword !== confirmPassword) {
-      toast.error("New passwords do not match");
+      toast.error(t("settings.toasts.passwordsDoNotMatch"));
       return;
     }
     if (newPassword.length < 8) {
-      toast.error("New password must be at least 8 characters");
+      toast.error(t("settings.toasts.passwordTooShort"));
       return;
     }
     setPwLoading(true);
@@ -122,31 +129,34 @@ export default function SettingsPage() {
         currentPassword,
         newPassword,
       });
-      toast.success("Password updated successfully");
+      toast.success(t("settings.toasts.passwordUpdated"));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       setConfirmOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to change password");
+    } catch (err: unknown) {
+      toast.error(localizeError(err, "settings.toasts.passwordUpdateFailed"));
     } finally {
       setPwLoading(false);
     }
   };
 
+  // The confirmation word follows the interface language (DELETE / ELIMINAR / EXCLUIR).
+  const confirmWord = t("settings.danger.confirmWord");
+
   const handleDeleteAccount = async () => {
-    if (deleteConfirmation !== "ELIMINAR") {
-      toast.error('Type "ELIMINAR" to confirm');
+    if (deleteConfirmation !== confirmWord) {
+      toast.error(t("settings.toasts.typeToConfirm", { word: confirmWord }));
       return;
     }
     setDeleteLoading(true);
     try {
       await api.delete("/auth/account");
-      toast.success("Account deleted successfully");
+      toast.success(t("settings.toasts.accountDeleted"));
       logout();
       router.push("/login");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete account");
+    } catch (err: unknown) {
+      toast.error(localizeError(err, "settings.toasts.accountDeleteFailed"));
     } finally {
       setDeleteLoading(false);
     }
@@ -158,24 +168,26 @@ export default function SettingsPage() {
     <>
       <TopBar
         breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Settings" },
+          { label: t("nav.dashboard"), href: "/dashboard" },
+          { label: t("nav.settings") },
         ]}
       />
       <div className="p-6 space-y-8 max-w-3xl mx-auto animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold text-text">Settings</h1>
-          <p className="mt-1 text-text-muted">
-            Manage your account preferences
-          </p>
+          <h1 className="text-2xl font-bold text-text">
+            {t("settings.title")}
+          </h1>
+          <p className="mt-1 text-text-muted">{t("settings.subtitle")}</p>
         </div>
 
         {/* Profile */}
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold text-text">Profile</h2>
+            <h2 className="text-lg font-semibold text-text">
+              {t("settings.profile.title")}
+            </h2>
             <p className="text-sm text-text-muted">
-              Update your personal information
+              {t("settings.profile.description")}
             </p>
           </CardHeader>
           <CardContent>
@@ -192,6 +204,7 @@ export default function SettingsPage() {
                     );
                     setProfileOpen(true);
                   }}
+                  aria-label={t("settings.profile.editAvatar")}
                   className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-surface-elevated border border-border text-text-muted hover:text-primary hover:border-primary transition-colors"
                 >
                   <Pencil className="h-3.5 w-3.5" />
@@ -204,20 +217,36 @@ export default function SettingsPage() {
               <div className="mt-3 flex items-center gap-2">
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    planLabels[plan]?.variant === "free"
+                    planVariants[plan] === "free"
                       ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
-                      : planLabels[plan]?.variant === "premium"
+                      : planVariants[plan] === "premium"
                         ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
                         : "bg-primary-light text-primary"
                   }`}
                 >
-                  {planLabels[plan]?.label || plan}
+                  {tOptional(`common.plans.${plan}`, plan)}
                 </span>
                 <span className="text-sm text-text-muted">
-                  {balance} credits
+                  {t("settings.profile.credits", { count: balance })}
                 </span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Interface language */}
+        <Card>
+          <CardHeader>
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-text">
+              <Globe className="h-5 w-5 text-primary" aria-hidden="true" />
+              {t("language.settingsTitle")}
+            </h2>
+            <p className="text-sm text-text-muted">
+              {t("language.settingsDescription")}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <LanguageOptions savedToAccount={!!user} />
           </CardContent>
         </Card>
 
@@ -227,25 +256,27 @@ export default function SettingsPage() {
         {/* Change Password */}
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold text-text">Change Password</h2>
+            <h2 className="text-lg font-semibold text-text">
+              {t("settings.password.title")}
+            </h2>
             <p className="text-sm text-text-muted">
-              Update your password to keep your account secure
+              {t("settings.password.description")}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <PasswordInput
-              label="Current Password"
+              label={t("settings.password.current")}
               value={currentPassword}
               onChange={setCurrentPassword}
             />
             <PasswordInput
-              label="New Password"
+              label={t("settings.password.new")}
               value={newPassword}
               onChange={setNewPassword}
               autoComplete="new-password"
             />
             <PasswordInput
-              label="Confirm New Password"
+              label={t("settings.password.confirm")}
               value={confirmPassword}
               onChange={setConfirmPassword}
               autoComplete="new-password"
@@ -260,7 +291,7 @@ export default function SettingsPage() {
               }
               onClick={() => setConfirmOpen(true)}
             >
-              Change Password
+              {t("settings.password.submit")}
             </Button>
           </CardContent>
         </Card>
@@ -268,15 +299,21 @@ export default function SettingsPage() {
         {/* Danger Zone */}
         <Card className="border-error/30">
           <CardHeader>
-            <h2 className="text-lg font-semibold text-error">Danger Zone</h2>
-            <p className="text-sm text-text-muted">Irreversible actions</p>
+            <h2 className="text-lg font-semibold text-error">
+              {t("settings.danger.title")}
+            </h2>
+            <p className="text-sm text-text-muted">
+              {t("settings.danger.description")}
+            </p>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between rounded-lg border border-error/20 bg-error/5 p-4">
               <div>
-                <p className="text-sm font-medium text-text">Delete Account</p>
+                <p className="text-sm font-medium text-text">
+                  {t("settings.danger.deleteTitle")}
+                </p>
                 <p className="text-xs text-text-muted">
-                  Permanently delete your account and all data
+                  {t("settings.danger.deleteDescription")}
                 </p>
               </div>
               <Button
@@ -287,7 +324,7 @@ export default function SettingsPage() {
                   setDeleteOpen(true);
                 }}
               >
-                Delete Account
+                {t("settings.danger.deleteButton")}
               </Button>
             </div>
           </CardContent>
@@ -301,11 +338,11 @@ export default function SettingsPage() {
           onClose={() => setProfileOpen(false)}
         >
           <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogTitle>{t("settings.editProfile.title")}</DialogTitle>
           </DialogHeader>
           <div className="px-6 pb-6 space-y-4">
             <Input
-              label="Name"
+              label={t("settings.editProfile.name")}
               value={profileName}
               onChange={(e) => setProfileName(e.target.value)}
             />
@@ -315,7 +352,7 @@ export default function SettingsPage() {
                 onClick={() => setProfileOpen(false)}
                 disabled={profileLoading}
               >
-                Cancel
+                {t("common.actions.cancel")}
               </Button>
               <Button
                 variant="primary"
@@ -323,7 +360,7 @@ export default function SettingsPage() {
                 isLoading={profileLoading}
                 disabled={!profileName.trim()}
               >
-                Save Changes
+                {t("common.actions.saveChanges")}
               </Button>
             </div>
           </div>
@@ -337,12 +374,11 @@ export default function SettingsPage() {
           onClose={() => setConfirmOpen(false)}
         >
           <DialogHeader>
-            <DialogTitle>Confirm Password Change</DialogTitle>
+            <DialogTitle>{t("settings.password.confirmTitle")}</DialogTitle>
           </DialogHeader>
           <div className="px-6 pb-6 space-y-4">
             <p className="text-sm text-text-muted">
-              Are you sure you want to change your password? You will need to
-              use the new password for future logins.
+              {t("settings.password.confirmDescription")}
             </p>
             <div className="flex justify-end gap-3">
               <Button
@@ -350,14 +386,14 @@ export default function SettingsPage() {
                 onClick={() => setConfirmOpen(false)}
                 disabled={pwLoading}
               >
-                Cancel
+                {t("common.actions.cancel")}
               </Button>
               <Button
                 variant="primary"
                 onClick={handlePasswordChange}
                 isLoading={pwLoading}
               >
-                Yes, Change Password
+                {t("settings.password.confirmButton")}
               </Button>
             </div>
           </div>
@@ -371,22 +407,30 @@ export default function SettingsPage() {
           onClose={() => setDeleteOpen(false)}
         >
           <DialogHeader>
-            <DialogTitle className="text-error">Delete Account</DialogTitle>
+            <DialogTitle className="text-error">
+              {t("settings.danger.deleteTitle")}
+            </DialogTitle>
           </DialogHeader>
           <div className="px-6 pb-6 space-y-4">
             <p className="text-sm text-text-muted">
-              This action is irreversible. All your data will be permanently
-              deleted including your images and account information.
+              {t("settings.danger.modalDescription")}
             </p>
             <p className="text-sm text-text-muted">
-              Type <span className="font-bold text-error">ELIMINAR</span> to
-              confirm.
+              {rich(
+                "settings.danger.typeToConfirm",
+                {
+                  word: (chunks) => (
+                    <span className="font-bold text-error">{chunks}</span>
+                  ),
+                },
+                { word: confirmWord },
+              )}
             </p>
             <Input
-              label="Confirmation"
+              label={t("settings.danger.confirmationLabel")}
               value={deleteConfirmation}
               onChange={(e) => setDeleteConfirmation(e.target.value)}
-              placeholder="ELIMINAR"
+              placeholder={confirmWord}
             />
             <div className="flex justify-end gap-3">
               <Button
@@ -394,15 +438,15 @@ export default function SettingsPage() {
                 onClick={() => setDeleteOpen(false)}
                 disabled={deleteLoading}
               >
-                Cancel
+                {t("common.actions.cancel")}
               </Button>
               <Button
                 variant="danger"
                 onClick={handleDeleteAccount}
                 isLoading={deleteLoading}
-                disabled={deleteConfirmation !== "ELIMINAR"}
+                disabled={deleteConfirmation !== confirmWord}
               >
-                Delete Account
+                {t("settings.danger.deleteButton")}
               </Button>
             </div>
           </div>

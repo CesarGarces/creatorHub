@@ -17,17 +17,19 @@ import {
   type CommunityChannel,
   type ChannelStatus,
 } from "@/store/community-bot.store";
+import { useI18n } from "@/i18n/i18n-provider";
 
-const STATUS_META: Record<
+// Labels come from `communityBot.status.<STATUS>`.
+const STATUS_VARIANT: Record<
   ChannelStatus,
-  { label: string; variant: "primary" | "secondary" | "warning" | "error" }
+  "primary" | "secondary" | "warning" | "error"
 > = {
-  ACTIVE: { label: "Connected", variant: "primary" },
-  CONNECTING: { label: "Connecting…", variant: "warning" },
-  AWAITING_QR: { label: "Scan QR code", variant: "warning" },
-  DISCONNECTED: { label: "Disconnected", variant: "secondary" },
-  REQUIRES_RESCAN: { label: "Re-link required", variant: "error" },
-  ERROR: { label: "Error", variant: "error" },
+  ACTIVE: "primary",
+  CONNECTING: "warning",
+  AWAITING_QR: "warning",
+  DISCONNECTED: "secondary",
+  REQUIRES_RESCAN: "error",
+  ERROR: "error",
 };
 
 function useChannel(type: CommunityChannel["type"]) {
@@ -36,6 +38,7 @@ function useChannel(type: CommunityChannel["type"]) {
 }
 
 export function ChannelsTab() {
+  const { t } = useI18n();
   const isLoading = useCommunityBotStore((s) => s.isLoadingChannels);
 
   if (isLoading) {
@@ -54,8 +57,8 @@ export function ChannelsTab() {
       <WhatsAppChannelCard />
       <ComingSoonChannelCard
         title="Instagram"
-        description="Reply to DMs and comments through the official Meta API."
-        phase="Phase 4"
+        description={t("communityBot.channels.instagramDescription")}
+        phase={t("communityBot.channels.phase", { number: 4 })}
       />
     </div>
   );
@@ -64,6 +67,7 @@ export function ChannelsTab() {
 // ─── Telegram ────────────────────────────────────────────────
 
 function TelegramChannelCard() {
+  const { t, rich } = useI18n();
   const channel = useChannel("TELEGRAM");
   const connectTelegram = useCommunityBotStore((s) => s.connectTelegram);
   const disconnectChannel = useCommunityBotStore((s) => s.disconnectChannel);
@@ -79,27 +83,27 @@ function TelegramChannelCard() {
 
   const handleConnect = async () => {
     if (!botToken.trim()) {
-      toast.error("Paste your bot token from @BotFather first");
+      toast.error(t("communityBot.channels.telegram.pasteTokenFirst"));
       return;
     }
     const ok = await connectTelegram(botToken.trim());
     if (ok) {
-      toast.success("Token accepted — the worker is bringing your bot online");
+      toast.success(t("communityBot.channels.telegram.tokenAccepted"));
       setBotToken("");
     } else {
       // Read error after async: Zustand state updated after connectTelegram returned
       const currentError = useCommunityBotStore.getState().error;
-      toast.error(currentError || "Failed to connect Telegram");
+      toast.error(currentError || t("communityBot.channels.telegram.failed"));
     }
   };
 
   const handleDisconnect = async () => {
     await disconnectChannel("TELEGRAM");
-    toast.success("Telegram bot disconnected");
+    toast.success(t("communityBot.channels.telegram.disconnected"));
   };
 
   const status = channel?.status ?? "DISCONNECTED";
-  const meta = STATUS_META[status];
+  const statusVariant = STATUS_VARIANT[status];
 
   return (
     <Card>
@@ -108,26 +112,29 @@ function TelegramChannelCard() {
           <Send size={18} className="text-primary" />
           <h3 className="font-semibold text-text">Telegram</h3>
         </div>
-        <Badge variant={meta.variant}>{meta.label}</Badge>
+        <Badge variant={statusVariant}>
+          {t(`communityBot.status.${status}`)}
+        </Badge>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-text-muted">
-          Create a bot with{" "}
-          <a
-            href="https://t.me/BotFather"
-            target="_blank"
-            rel="noreferrer"
-            className="text-primary hover:underline"
-          >
-            @BotFather
-          </a>{" "}
-          (free, 2 minutes) and paste the token here. The bot replies to private
-          messages in your voice.
+          {rich("communityBot.channels.telegram.description", {
+            link: (chunks) => (
+              <a
+                href="https://t.me/BotFather"
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary hover:underline"
+              >
+                {chunks}
+              </a>
+            ),
+          })}
         </p>
 
         {channel?.externalIdentity && (
           <p className="text-sm text-text">
-            Bot:{" "}
+            {t("communityBot.channels.telegram.bot")}{" "}
             <span className="font-medium text-primary">
               {channel.externalIdentity}
             </span>
@@ -142,7 +149,7 @@ function TelegramChannelCard() {
           <div className="space-y-2">
             <div className="relative">
               <Input
-                label="Bot token"
+                label={t("communityBot.channels.telegram.tokenLabel")}
                 type={showToken ? "text" : "password"}
                 placeholder="123456789:AAE…"
                 value={botToken}
@@ -153,7 +160,9 @@ function TelegramChannelCard() {
                 onClick={() => setShowToken(!showToken)}
                 className="absolute right-3 top-8 text-xs text-text-dim hover:text-text"
               >
-                {showToken ? "Hide" : "Show"}
+                {showToken
+                  ? t("communityBot.channels.telegram.hide")
+                  : t("communityBot.channels.telegram.show")}
               </button>
             </div>
             <Button
@@ -163,10 +172,11 @@ function TelegramChannelCard() {
             >
               {isConnecting || status === "CONNECTING" ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" /> Connecting…
+                  <Loader2 size={16} className="animate-spin" />{" "}
+                  {t("communityBot.channels.connecting")}
                 </>
               ) : (
-                "Connect Telegram"
+                t("communityBot.channels.telegram.connect")
               )}
             </Button>
           </div>
@@ -178,7 +188,7 @@ function TelegramChannelCard() {
             onClick={handleDisconnect}
             className="w-full"
           >
-            <Power size={16} /> Disconnect
+            <Power size={16} /> {t("communityBot.channels.disconnect")}
           </Button>
         )}
       </CardContent>
@@ -189,6 +199,7 @@ function TelegramChannelCard() {
 // ─── WhatsApp ────────────────────────────────────────────────
 
 function WhatsAppChannelCard() {
+  const { t } = useI18n();
   const channel = useChannel("WHATSAPP");
   const connectWhatsApp = useCommunityBotStore((s) => s.connectWhatsApp);
   const disconnectChannel = useCommunityBotStore((s) => s.disconnectChannel);
@@ -205,17 +216,17 @@ function WhatsAppChannelCard() {
     const ok = await connectWhatsApp();
     if (!ok) {
       const currentError = useCommunityBotStore.getState().error;
-      toast.error(currentError || "Failed to connect WhatsApp");
+      toast.error(currentError || t("communityBot.channels.whatsapp.failed"));
     }
   };
 
   const handleDisconnect = async () => {
     await disconnectChannel("WHATSAPP");
-    toast.success("WhatsApp disconnected");
+    toast.success(t("communityBot.channels.whatsapp.disconnected"));
   };
 
   const status = channel?.status ?? "DISCONNECTED";
-  const meta = STATUS_META[status];
+  const statusVariant = STATUS_VARIANT[status];
 
   return (
     <Card>
@@ -224,17 +235,18 @@ function WhatsAppChannelCard() {
           <MessageCircle size={18} className="text-green-500" />
           <h3 className="font-semibold text-text">WhatsApp</h3>
         </div>
-        <Badge variant={meta.variant}>{meta.label}</Badge>
+        <Badge variant={statusVariant}>
+          {t(`communityBot.status.${status}`)}
+        </Badge>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-text-muted">
-          Link your personal WhatsApp number via QR code (like WhatsApp Web).
-          Unlimited and free — no Meta API fees.
+          {t("communityBot.channels.whatsapp.description")}
         </p>
 
         {channel?.externalIdentity && status === "ACTIVE" && (
           <p className="text-sm text-text">
-            Number:{" "}
+            {t("communityBot.channels.whatsapp.number")}{" "}
             <span className="font-medium text-green-500">
               {channel.externalIdentity}
             </span>
@@ -248,15 +260,15 @@ function WhatsAppChannelCard() {
         {status === "AWAITING_QR" && qrDataUrl && (
           <div className="flex flex-col items-center gap-2">
             <p className="text-sm text-text-muted">
-              Scan this QR code with WhatsApp:
+              {t("communityBot.channels.whatsapp.scanQr")}
             </p>
             <img
               src={qrDataUrl}
-              alt="WhatsApp QR Code"
+              alt={t("communityBot.channels.whatsapp.qrAlt")}
               className="w-48 h-48 rounded-lg border border-border"
             />
             <p className="text-xs text-text-dim">
-              Open WhatsApp → Settings → Linked Devices → Link a Device
+              {t("communityBot.channels.whatsapp.qrInstructions")}
             </p>
           </div>
         )}
@@ -264,7 +276,9 @@ function WhatsAppChannelCard() {
         {status === "AWAITING_QR" && !qrDataUrl && (
           <div className="flex flex-col items-center gap-2">
             <Loader2 size={32} className="animate-spin text-green-500" />
-            <p className="text-sm text-text-muted">Generating QR code…</p>
+            <p className="text-sm text-text-muted">
+              {t("communityBot.channels.whatsapp.generatingQr")}
+            </p>
           </div>
         )}
 
@@ -272,10 +286,11 @@ function WhatsAppChannelCard() {
           <Button onClick={handleConnect} disabled={isBusy} className="w-full">
             {isConnecting || status === "CONNECTING" ? (
               <>
-                <Loader2 size={16} className="animate-spin" /> Connecting…
+                <Loader2 size={16} className="animate-spin" />{" "}
+                {t("communityBot.channels.connecting")}
               </>
             ) : (
-              "Connect WhatsApp"
+              t("communityBot.channels.whatsapp.connect")
             )}
           </Button>
         )}
@@ -286,7 +301,7 @@ function WhatsAppChannelCard() {
             onClick={handleDisconnect}
             className="w-full"
           >
-            <Power size={16} /> Disconnect
+            <Power size={16} /> {t("communityBot.channels.disconnect")}
           </Button>
         )}
       </CardContent>
@@ -305,6 +320,7 @@ function ComingSoonChannelCard({
   description: string;
   phase: string;
 }) {
+  const { t } = useI18n();
   return (
     <Card className="opacity-70">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -314,7 +330,7 @@ function ComingSoonChannelCard({
       <CardContent className="space-y-4">
         <p className="text-sm text-text-muted">{description}</p>
         <Button disabled variant="secondary" className="w-full">
-          Coming soon
+          {t("communityBot.channels.comingSoon")}
         </Button>
       </CardContent>
     </Card>

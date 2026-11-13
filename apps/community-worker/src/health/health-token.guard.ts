@@ -1,7 +1,6 @@
 import {
   CanActivate,
   ExecutionContext,
-  Inject,
   Injectable,
   Logger,
   OnModuleInit,
@@ -41,7 +40,7 @@ export class HealthTokenGuard implements CanActivate, OnModuleInit {
   private readonly logger = new Logger(HealthTokenGuard.name);
   private readonly expectedTokenHash: Buffer | null;
 
-  constructor(@Inject(ConfigService) private readonly config: ConfigService) {
+  constructor(private readonly config: ConfigService) {
     const token = this.config.get<string>(TOKEN_ENV)?.trim();
 
     if (token && token.length >= MIN_TOKEN_LENGTH) {

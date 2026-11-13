@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { ComponentType } from "react";
 import { Button } from "./button";
 import { cn } from "../lib/utils";
+import { useUiLabels } from "../lib/labels";
 
 const CONSENT_KEY = "creator_hub_cookie_consent";
 
@@ -19,6 +20,7 @@ interface CookieConsentProps {
 }
 
 export function CookieConsent({ CookiesModal }: CookieConsentProps) {
+  const { cookieConsent: labels } = useUiLabels();
   const [showBanner, setShowBanner] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -50,14 +52,10 @@ export function CookieConsent({ CookiesModal }: CookieConsentProps) {
             "overflow-hidden",
           )}
           role="dialog"
-          aria-label="Cookie consent"
+          aria-label={labels.ariaLabel}
         >
           <div className="p-5">
-            <p className="text-sm text-slate-200 mb-4">
-              We use cookies and local storage to keep your session active,
-              manage your credit balance, and optimize your experience on
-              Creator Hub.
-            </p>
+            <p className="text-sm text-slate-200 mb-4">{labels.message}</p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 variant="primary"
@@ -65,7 +63,7 @@ export function CookieConsent({ CookiesModal }: CookieConsentProps) {
                 className="w-full sm:w-auto flex-1"
                 onClick={() => handleAccept("granted")}
               >
-                Accept all
+                {labels.acceptAll}
               </Button>
               <Button
                 variant="outline"
@@ -73,7 +71,7 @@ export function CookieConsent({ CookiesModal }: CookieConsentProps) {
                 className="w-full sm:w-auto flex-1 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
                 onClick={() => handleAccept("essential_only")}
               >
-                Essential only
+                {labels.essentialOnly}
               </Button>
             </div>
             <p className="mt-3 text-center">
@@ -82,7 +80,7 @@ export function CookieConsent({ CookiesModal }: CookieConsentProps) {
                 onClick={() => setShowModal(true)}
                 className="text-xs text-slate-400 hover:text-primary underline transition-colors"
               >
-                Cookie policy
+                {labels.cookiePolicy}
               </button>
             </p>
           </div>

@@ -13,6 +13,7 @@ import {
 } from "@creator-hub/ui";
 import { useCommunityBotStore } from "@/store/community-bot.store";
 import { useCreditsStore } from "@/store/credits.store";
+import { useI18n } from "@/i18n/i18n-provider";
 
 /**
  * Test-drive the bot's voice before going live. Each preview runs the
@@ -20,6 +21,7 @@ import { useCreditsStore } from "@/store/credits.store";
  * the model's credit cost, exactly like a live reply.
  */
 export function PlaygroundTab() {
+  const { t } = useI18n();
   const playgroundHistory = useCommunityBotStore((s) => s.playgroundHistory);
   const isLoading = useCommunityBotStore((s) => s.isPlaygroundLoading);
   const sendPlaygroundMessage = useCommunityBotStore(
@@ -51,12 +53,12 @@ export function PlaygroundTab() {
       <Card>
         <CardHeader>
           <h3 className="font-semibold text-text">
-            Preview how your bot replies
+            {t("communityBot.playground.title")}
           </h3>
         </CardHeader>
         <CardContent className="space-y-3">
           <Textarea
-            placeholder="Write a message as if you were a fan… e.g. “When is your next stream?”"
+            placeholder={t("communityBot.playground.placeholder")}
             rows={3}
             maxLength={2000}
             value={message}
@@ -69,17 +71,17 @@ export function PlaygroundTab() {
           >
             {isLoading ? (
               <>
-                <Loader2 size={16} className="animate-spin" /> Generating…
+                <Loader2 size={16} className="animate-spin" />{" "}
+                {t("communityBot.playground.generating")}
               </>
             ) : (
               <>
-                <Send size={16} /> Test reply
+                <Send size={16} /> {t("communityBot.playground.testReply")}
               </>
             )}
           </Button>
           <p className="text-xs text-text-muted">
-            Each preview runs a real generation with your configured model and
-            costs the same credits as a live reply.
+            {t("communityBot.playground.hint")}
           </p>
         </CardContent>
       </Card>
@@ -87,8 +89,8 @@ export function PlaygroundTab() {
       {playgroundHistory.length === 0 ? (
         <EmptyState
           icon="🧪"
-          title="No previews yet"
-          description="Tune the model and instructions in the Behavior tab, then test the voice here before enabling live replies."
+          title={t("communityBot.playground.emptyTitle")}
+          description={t("communityBot.playground.emptyDescription")}
         />
       ) : (
         <div className="space-y-3">
@@ -97,22 +99,24 @@ export function PlaygroundTab() {
               <CardContent className="space-y-3 p-4">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-text-dim">
-                    Fan says
+                    {t("communityBot.playground.fanSays")}
                   </p>
                   <p className="text-sm text-text">{entry.input}</p>
                 </div>
                 <div className="rounded-lg bg-primary/10 border border-primary/20 p-3">
                   <p className="text-xs font-medium uppercase tracking-wide text-primary">
-                    Your bot replies
+                    {t("communityBot.playground.botReplies")}
                   </p>
                   <p className="mt-1 text-sm text-text whitespace-pre-wrap">
                     {entry.result.reply}
                   </p>
                 </div>
                 <p className="text-[11px] text-text-dim">
-                  {entry.result.modelId} · {entry.result.creditsUsed} credit
-                  {entry.result.creditsUsed === 1 ? "" : "s"} · balance{" "}
-                  {entry.result.balance}
+                  {t("communityBot.playground.meta", {
+                    model: entry.result.modelId,
+                    count: entry.result.creditsUsed,
+                    balance: entry.result.balance,
+                  })}
                 </p>
               </CardContent>
             </Card>

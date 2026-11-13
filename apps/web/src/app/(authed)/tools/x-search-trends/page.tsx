@@ -14,16 +14,30 @@ import {
   type ModelSettings,
 } from "@/components/chat/model-settings-panel";
 import { VoiceButton, useVoiceButton } from "@/components/voice-button";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
+import type { TranslationKey } from "@/i18n/translate";
 
-const suggestions = [
-  "Analyze what's trending on X about AI today",
-  "Research trending topics about crypto on Twitter",
-  "What are people saying about Web3 on X?",
-  "Find trending hashtags about startups",
+const SUGGESTION_KEYS: TranslationKey[] = [
+  "xResearch.suggestions.ai",
+  "xResearch.suggestions.crypto",
+  "xResearch.suggestions.web3",
+  "xResearch.suggestions.startups",
 ];
+
+/** Escapes text inserted into the HTML string below. */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 export default function XSearchTrendsPage() {
   const router = useRouter();
+  const { t, tOptional, formatNumber: formatLocaleNumber } = useI18n();
+  const suggestions = SUGGESTION_KEYS.map((key) => t(key));
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { fetchBalance, plan } = useCreditsStore();
@@ -86,8 +100,8 @@ export default function XSearchTrendsPage() {
       <>
         <TopBar
           breadcrumbs={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "X Trend Research" },
+            { label: t("nav.dashboard"), href: "/dashboard" },
+            { label: t("xResearch.title") },
           ]}
         />
         <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)] p-6">
@@ -104,20 +118,19 @@ export default function XSearchTrendsPage() {
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-text mb-2">
-              X Trend Research
+              {t("xResearch.title")}
               <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-500">
-                PRO
+                {t("xResearch.pro")}
               </span>
             </h2>
             <p className="text-text-muted mb-6">
-              This tool requires a STARTER plan or higher. Upgrade to access X
-              trend research and analysis.
+              {t("xResearch.upgradeDescription")}
             </p>
             <button
               onClick={() => router.push("/credits")}
               className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white hover:bg-primary-hover transition-colors"
             >
-              Upgrade Plan
+              {t("xResearch.upgradePlan")}
             </button>
           </div>
         </div>
@@ -149,11 +162,9 @@ export default function XSearchTrendsPage() {
     }
   };
 
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toString();
-  };
+  // Compact, locale-aware counts: 1.2K / 1,2 mil / 1,2 mil.
+  const formatNumber = (num: number) =>
+    formatLocaleNumber(num, { notation: "compact", maximumFractionDigits: 1 });
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
@@ -182,13 +193,13 @@ export default function XSearchTrendsPage() {
       case "high":
         return (
           <span className="inline-flex items-center gap-0.5 text-[10px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded-full">
-            🔥 Influencer
+            {t("xResearch.influencer")}
           </span>
         );
       case "medium":
         return (
           <span className="inline-flex items-center gap-0.5 text-[10px] bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded-full">
-            ⚡ Active
+            {t("xResearch.active")}
           </span>
         );
       default:
@@ -200,8 +211,8 @@ export default function XSearchTrendsPage() {
     <>
       <TopBar
         breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "X Trend Research" },
+          { label: t("nav.dashboard"), href: "/dashboard" },
+          { label: t("xResearch.title") },
         ]}
         actions={
           <div className="flex items-center gap-3">
@@ -209,7 +220,9 @@ export default function XSearchTrendsPage() {
               onClick={() => setShowSidebar((v) => !v)}
               className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm text-text-muted hover:text-text transition-colors"
             >
-              {showSidebar ? "Hide History" : "Show History"}
+              {showSidebar
+                ? t("xResearch.hideHistory")
+                : t("xResearch.showHistory")}
             </button>
             <button
               onClick={() => {
@@ -218,7 +231,7 @@ export default function XSearchTrendsPage() {
               }}
               className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm text-text-muted hover:text-text transition-colors"
             >
-              New Search
+              {t("xResearch.newSearch")}
             </button>
           </div>
         }
@@ -227,12 +240,14 @@ export default function XSearchTrendsPage() {
         {showSidebar && (
           <div className="w-72 border-r border-border bg-surface flex flex-col">
             <div className="p-3 border-b border-border">
-              <h3 className="text-sm font-medium text-text">Search History</h3>
+              <h3 className="text-sm font-medium text-text">
+                {t("xResearch.searchHistory")}
+              </h3>
             </div>
             <div className="flex-1 overflow-y-auto">
               {sessions.length === 0 ? (
                 <div className="p-4 text-center text-text-muted text-sm">
-                  No searches yet
+                  {t("xResearch.noSearches")}
                 </div>
               ) : (
                 sessions.map((session) => (
@@ -246,13 +261,15 @@ export default function XSearchTrendsPage() {
                   >
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-text truncate">
-                        {session.title || "Untitled Search"}
+                        {session.title || t("xResearch.untitledSearch")}
                       </div>
                       <div className="text-xs text-text-muted mt-0.5">
-                        {session._count?.messages ||
-                          session.messages?.length ||
-                          0}{" "}
-                        messages
+                        {t("xResearch.messages", {
+                          count:
+                            session._count?.messages ||
+                            session.messages?.length ||
+                            0,
+                        })}
                       </div>
                     </div>
                     <button
@@ -260,6 +277,8 @@ export default function XSearchTrendsPage() {
                         e.stopPropagation();
                         deleteSession(session.id);
                       }}
+                      aria-label={t("xResearch.deleteSearch")}
+                      title={t("xResearch.deleteSearch")}
                       className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-500 transition-all p-1"
                     >
                       <svg
@@ -307,13 +326,13 @@ export default function XSearchTrendsPage() {
                   </svg>
                 </div>
                 <h2 className="text-xl font-semibold text-text mb-2">
-                  X Trend Research
+                  {t("xResearch.title")}
                   <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-500">
-                    PRO
+                    {t("xResearch.pro")}
                   </span>
                 </h2>
                 <p className="text-text-muted mb-8">
-                  Search and analyze trending topics on X (Twitter)
+                  {t("xResearch.emptyDescription")}
                 </p>
               </div>
             )}
@@ -351,7 +370,7 @@ export default function XSearchTrendsPage() {
                         msg.content
                           .replace(
                             /\[View on X →\]\((.*?)\)/g,
-                            '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">View on X →</a>',
+                            `<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">${escapeHtml(t("xResearch.viewOnX"))}</a>`,
                           )
                           .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
                           .replace(/\n/g, "<br/>"),
@@ -368,7 +387,7 @@ export default function XSearchTrendsPage() {
                           <div className="mb-4 p-3 bg-surface-elevated rounded-lg border border-border">
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-xs font-medium text-text">
-                                📊 Analysis Summary
+                                {t("xResearch.analysisSummary")}
                               </span>
                               <span
                                 className={cn(
@@ -385,7 +404,10 @@ export default function XSearchTrendsPage() {
                                 {getSentimentIcon(
                                   msg.resultData.analysis.overallSentiment,
                                 )}{" "}
-                                {msg.resultData.analysis.overallSentiment.toUpperCase()}
+                                {tOptional(
+                                  `xResearch.sentiment.${msg.resultData.analysis.overallSentiment}`,
+                                  msg.resultData.analysis.overallSentiment.toUpperCase(),
+                                )}
                               </span>
                             </div>
                             <p className="text-xs text-text-muted">
@@ -397,24 +419,26 @@ export default function XSearchTrendsPage() {
                         {/* Stats */}
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-xs font-medium text-text-muted">
-                            {msg.resultData.tweetCount} tweets found
+                            {t("xResearch.tweetsFound", {
+                              count: msg.resultData.tweetCount,
+                            })}
                             {msg.resultData.originalTweetCount >
                               msg.resultData.tweetCount && (
                               <span className="text-text-dim">
-                                {" "}
-                                (filtered from{" "}
-                                {msg.resultData.originalTweetCount})
+                                {t("xResearch.filteredFrom", {
+                                  count: msg.resultData.originalTweetCount,
+                                })}
                               </span>
                             )}
                           </span>
                           {msg.cacheHit && (
                             <span className="text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full">
-                              Cached
+                              {t("xResearch.cached")}
                             </span>
                           )}
                           {msg.resultData.fromCache && (
                             <span className="text-xs bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full">
-                              From Cache
+                              {t("xResearch.fromCache")}
                             </span>
                           )}
                         </div>
@@ -425,7 +449,7 @@ export default function XSearchTrendsPage() {
                           msg.resultData.analysis.themes.length > 0 && (
                             <div className="mb-3">
                               <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">
-                                Key Themes
+                                {t("xResearch.keyThemes")}
                               </span>
                               <div className="flex flex-wrap gap-1.5 mt-1">
                                 {msg.resultData.analysis.themes
@@ -455,19 +479,19 @@ export default function XSearchTrendsPage() {
                             <thead className="bg-surface-elevated">
                               <tr>
                                 <th className="px-3 py-2 text-left text-text-muted font-medium">
-                                  Author
+                                  {t("xResearch.table.author")}
                                 </th>
                                 <th className="px-3 py-2 text-left text-text-muted font-medium">
-                                  Tweet
+                                  {t("xResearch.table.tweet")}
                                 </th>
                                 <th className="px-3 py-2 text-right text-text-muted font-medium">
-                                  Likes
+                                  {t("xResearch.table.likes")}
                                 </th>
                                 <th className="px-3 py-2 text-right text-text-muted font-medium">
-                                  RTs
+                                  {t("xResearch.table.retweets")}
                                 </th>
                                 <th className="px-3 py-2 text-right text-text-muted font-medium">
-                                  Replies
+                                  {t("xResearch.table.replies")}
                                 </th>
                               </tr>
                             </thead>
@@ -486,7 +510,9 @@ export default function XSearchTrendsPage() {
                                           rel="noopener noreferrer"
                                           className="font-medium text-primary hover:underline"
                                         >
-                                          @{tweet.author?.username || "unknown"}
+                                          @
+                                          {tweet.author?.username ||
+                                            t("xResearch.unknownAuthor")}
                                         </a>
                                         {tweet.author?.verified && (
                                           <svg
@@ -500,10 +526,11 @@ export default function XSearchTrendsPage() {
                                         )}
                                       </div>
                                       <div className="text-text-muted">
-                                        {formatNumber(
-                                          tweet.author?.followers || 0,
-                                        )}{" "}
-                                        followers
+                                        {t("xResearch.followers", {
+                                          count: formatNumber(
+                                            tweet.author?.followers || 0,
+                                          ),
+                                        })}
                                       </div>
                                       {getAuthorityBadge(tweet.authority)}
                                     </td>
@@ -562,7 +589,7 @@ export default function XSearchTrendsPage() {
                   ⚠️
                 </div>
                 <div className="rounded-2xl px-5 py-3.5 bg-red-500/5 border border-red-500/20 text-sm text-red-400">
-                  {error}
+                  {localizeError(error, "xResearch.searchFailed")}
                 </div>
               </div>
             )}
@@ -589,7 +616,7 @@ export default function XSearchTrendsPage() {
                       />
                     </div>
                     <span className="text-sm text-text-muted">
-                      Analyzing trends...
+                      {t("xResearch.analyzing")}
                     </span>
                   </div>
                 </div>
@@ -626,7 +653,8 @@ export default function XSearchTrendsPage() {
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-surface-elevated text-text-muted hover:text-text hover:border-primary/30",
                 )}
-                title="Model settings"
+                title={t("xResearch.modelSettings")}
+                aria-label={t("xResearch.modelSettings")}
               >
                 <svg
                   width="18"
@@ -658,13 +686,14 @@ export default function XSearchTrendsPage() {
                 onKeyDown={(e) =>
                   e.key === "Enter" && !e.shiftKey && handleSend()
                 }
-                placeholder="Search for trends on X..."
+                placeholder={t("xResearch.inputPlaceholder")}
                 disabled={isSearching}
                 className="flex-1 rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary transition-colors disabled:opacity-50"
               />
               <button
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isSearching}
+                aria-label={t("xResearch.send")}
                 className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg

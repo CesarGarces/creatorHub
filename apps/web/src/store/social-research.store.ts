@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { t } from "@/i18n/runtime";
 import api from "@/lib/api";
 
 export interface ResearchMessage {
@@ -257,7 +258,7 @@ export const useSocialResearchStore = create<SocialResearchState>()(
               activeSession?.title ||
               params.topic?.slice(0, 50) ||
               params.prompt?.slice(0, 50) ||
-              "New Research",
+              t("xResearch.untitledSearch"),
             createdAt: activeSession?.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             messages: [
@@ -288,7 +289,7 @@ export const useSocialResearchStore = create<SocialResearchState>()(
           error?.response?.data?.message ||
           error?.response?.data?.error ||
           error?.message ||
-          "Search failed";
+          t("xResearch.searchFailed");
         set({ isSearching: false, error: message });
         throw error;
       }

@@ -203,6 +203,22 @@ export class AuthService {
     return { message: "Password updated successfully" };
   }
 
+  /**
+   * Saves user preferences. Currently only the interface language, which
+   * lets the web app restore the user's language on any device.
+   */
+  async updatePreferences(
+    userId: string,
+    preferences: { preferredLanguage: string },
+  ) {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { preferredLanguage: preferences.preferredLanguage },
+      select: { preferredLanguage: true },
+    });
+    return { preferredLanguage: user.preferredLanguage };
+  }
+
   async updateProfile(userId: string, name: string) {
     await prisma.user.update({
       where: { id: userId },
@@ -224,6 +240,7 @@ export class AuthService {
         purchasedCredits: true,
         avatarUrl: true,
         emailVerified: true,
+        preferredLanguage: true,
         createdAt: true,
       },
     });
@@ -551,6 +568,7 @@ export class AuthService {
     email: string;
     role: string;
     name?: string | null;
+    preferredLanguage?: string | null;
   }) {
     const payload: JwtPayload = {
       sub: user.id,
@@ -566,6 +584,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         name: user.name || null,
+        preferredLanguage: user.preferredLanguage ?? null,
       },
     };
   }

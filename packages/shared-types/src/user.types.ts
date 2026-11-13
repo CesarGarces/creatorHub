@@ -1,5 +1,10 @@
 export type UserRole = "user" | "premium" | "admin";
 
+/** Languages the web interface is available in. */
+export const UI_LANGUAGES = ["en", "es", "pt"] as const;
+
+export type UiLanguage = (typeof UI_LANGUAGES)[number];
+
 export type UserPlan = "free" | "pay_as_you_go" | "premium";
 
 export interface UserProfile {

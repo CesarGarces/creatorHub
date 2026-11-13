@@ -5,43 +5,45 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn, Tooltip, Separator, Avatar } from "@creator-hub/ui";
 import { useAuthStore } from "@/store/auth.store";
+import { useI18n } from "@/i18n/i18n-provider";
+import type { TranslationKey } from "@/i18n/translate";
 
 interface NavItem {
-  label: string;
+  labelKey: TranslationKey;
   href: string;
   icon: React.ReactNode;
-  section?: string;
+  sectionKey?: TranslationKey;
 }
 
 const navItems: NavItem[] = [
   {
-    label: "Dashboard",
+    labelKey: "nav.dashboard",
     href: "/dashboard",
     icon: <DashboardIcon />,
-    section: "DASHBOARD",
+    sectionKey: "nav.sections.dashboard",
   },
   {
-    label: "Agents",
+    labelKey: "nav.agents",
     href: "/agents",
     icon: <AgentIcon />,
-    section: "WORKSPACE",
+    sectionKey: "nav.sections.workspace",
   },
-  { label: "Tools", href: "/tools", icon: <ToolIcon /> },
-  { label: "Assets", href: "/assets", icon: <AssetIcon /> },
-  { label: "History", href: "/history", icon: <HistoryIcon /> },
+  { labelKey: "nav.tools", href: "/tools", icon: <ToolIcon /> },
+  { labelKey: "nav.assets", href: "/assets", icon: <AssetIcon /> },
+  { labelKey: "nav.history", href: "/history", icon: <HistoryIcon /> },
   {
-    label: "Community Bot",
+    labelKey: "nav.communityBot",
     href: "/community-bot",
     icon: <CommunityBotIcon />,
-    section: "COMMUNITY",
+    sectionKey: "nav.sections.community",
   },
   {
-    label: "Credits",
+    labelKey: "nav.credits",
     href: "/credits",
     icon: <CreditIcon />,
-    section: "ACCOUNT",
+    sectionKey: "nav.sections.account",
   },
-  { label: "Settings", href: "/settings", icon: <SettingsIcon /> },
+  { labelKey: "nav.settings", href: "/settings", icon: <SettingsIcon /> },
 ];
 
 export function Sidebar() {
@@ -49,6 +51,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const { t } = useI18n();
 
   const handleLogout = () => {
     logout();
@@ -57,8 +60,8 @@ export function Sidebar() {
 
   const groupedItems = navItems.reduce(
     (acc, item) => {
-      if (item.section) {
-        acc.push({ section: item.section, items: [item] });
+      if (item.sectionKey) {
+        acc.push({ section: t(item.sectionKey), items: [item] });
       } else {
         const lastGroup = acc[acc.length - 1];
         if (lastGroup && !lastGroup.section) {
@@ -85,7 +88,7 @@ export function Sidebar() {
           <Link href="/dashboard" className="flex items-center gap-2">
             <img
               src="/isologo_white.png"
-              alt="Creator Hub"
+              alt={t("nav.logoAlt")}
               className="h-8 w-auto"
             />
           </Link>
@@ -93,6 +96,9 @@ export function Sidebar() {
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
+          aria-label={
+            collapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")
+          }
           className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
         >
           {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
@@ -114,6 +120,7 @@ export function Sidebar() {
               </div>
             )}
             {group.items.map((item) => {
+              const label = t(item.labelKey);
               const isActive =
                 pathname === item.href || pathname.startsWith(item.href + "/");
               const link = (
@@ -128,12 +135,12 @@ export function Sidebar() {
                   )}
                 >
                   <span className="flex-shrink-0">{item.icon}</span>
-                  {!collapsed && <span>{item.label}</span>}
+                  {!collapsed && <span>{label}</span>}
                 </Link>
               );
 
               return collapsed ? (
-                <Tooltip key={item.href} content={item.label} side="right">
+                <Tooltip key={item.href} content={label} side="right">
                   {link}
                 </Tooltip>
               ) : (
@@ -147,7 +154,10 @@ export function Sidebar() {
       {/* Footer */}
       <div className="border-t border-border p-3 space-y-3">
         <div className="flex items-center gap-3">
-          <Avatar name={user?.name || user?.email || "User"} size="sm" />
+          <Avatar
+            name={user?.name || user?.email || t("nav.userFallback")}
+            size="sm"
+          />
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-text truncate">
@@ -161,7 +171,8 @@ export function Sidebar() {
               type="button"
               onClick={handleLogout}
               className="text-text-dim hover:text-error transition-colors"
-              title="Logout"
+              title={t("nav.logout")}
+              aria-label={t("nav.logout")}
             >
               <LogoutIcon />
             </button>

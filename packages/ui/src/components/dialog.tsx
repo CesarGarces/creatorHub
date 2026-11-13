@@ -3,6 +3,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useUiLabels } from "../lib/labels";
 import { cn } from "../lib/utils";
 
 interface DialogProps {
@@ -22,6 +23,7 @@ interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
   ({ className, children, onClose, ...props }, ref) => {
+    const labels = useUiLabels();
     const mounted = React.useSyncExternalStore(
       () => () => {},
       () => true,
@@ -70,7 +72,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
               className="absolute right-4 top-4 rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <X className="h-4 w-4 text-text-muted" />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{labels.close}</span>
             </button>
           )}
         </div>

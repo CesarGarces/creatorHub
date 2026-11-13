@@ -1,0 +1,60 @@
+import type { Messages } from "../../translate";
+
+export const scriptWriter: Messages["scriptWriter"] = {
+  platforms: {
+    "youtube-long": "YouTube longo (8-15 min)",
+    "youtube-short": "YouTube Shorts",
+    tiktok: "TikTok",
+    reels: "Instagram Reels",
+  },
+  tones: {
+    emotional: "Emocional",
+    controversial: "Polêmico",
+    analytical: "Analítico",
+    comedic: "Cômico",
+    direct: "Direto e rápido",
+  },
+  hooks: {
+    mystery: "Mistério / Incerteza",
+    "shocking-data": "Dado chocante",
+    "rhetorical-question": "Pergunta retórica",
+    contradiction: "Contradição",
+  },
+  suggestions: {
+    ai: "Escreva um roteiro sobre por que a IA vai mudar tudo",
+    anime:
+      "Roteiro de TikTok sobre um personagem de anime com um segredo sombrio",
+    habits: "Roteiro sobre 5 hábitos que deixam você mais produtivo",
+    remote:
+      "Roteiro polêmico sobre por que o trabalho remoto é melhor que o escritório",
+  },
+  hideHistory: "Ocultar histórico",
+  showHistory: "Mostrar histórico",
+  newScript: "Novo roteiro",
+  scriptHistory: "Histórico de roteiros",
+  noScripts: "Nenhum roteiro ainda",
+  deleteScript: "Excluir roteiro",
+  scriptConfiguration: "Configuração do roteiro",
+  closeConfig: "Fechar configuração do roteiro",
+  platform: "Plataforma",
+  tone: "Tom",
+  hook: "Gancho",
+  durationSec: "Duração (seg)",
+  emptyTitle: "Roteirista",
+  emptyDescription:
+    "Gere roteiros estruturados com gancho, desenvolvimento, clímax e chamada para ação",
+  generatingScript: "Gerando roteiro...",
+  generating: "Gerando...",
+  modelSettings: "Configurações do modelo",
+  scriptConfigToggle: "Configuração do roteiro",
+  inputPlaceholder: "Descreva o tema do seu roteiro...",
+  send: "Enviar",
+  words_one: "{count} palavra",
+  words_other: "{count} palavras",
+  copied: "Copiado",
+  copy: "Copiar",
+  export: "Exportar",
+  thumbnailPrompt: "Prompt da thumbnail",
+  errorMessage: "Erro: {message}",
+  failed: "Não foi possível gerar o roteiro",
+};

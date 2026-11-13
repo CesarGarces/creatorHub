@@ -6,26 +6,69 @@ import { useToolsStore } from "@/store/tools.store";
 import { useFavoritesStore } from "@/store/favorites.store";
 import { ToolCard, EmptyState, Badge } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
+import { useI18n } from "@/i18n/i18n-provider";
+import { useToolText } from "@/i18n/use-tool-text";
+import type { TranslationKey } from "@/i18n/translate";
 
-const categories = [
-  { id: "all", label: "All" },
+const categories: {
+  id: string;
+  labelKey: TranslationKey;
+  toolCategories?: string[];
+}[] = [
+  { id: "all", labelKey: "tools.filters.all" },
   {
     id: "ai-image",
-    label: "AI Image",
+    labelKey: "tools.filters.aiImage",
     toolCategories: ["thumbnail", "design"],
   },
   {
     id: "ai-text",
-    label: "AI Text",
+    labelKey: "tools.filters.aiText",
     toolCategories: ["title", "writing", "translator"],
   },
-  { id: "ai-video", label: "AI Video", toolCategories: ["video"] },
-  { id: "social", label: "Social", toolCategories: ["social"] },
-  { id: "analytics", label: "Analytics", toolCategories: ["analytics"] },
+  {
+    id: "ai-video",
+    labelKey: "tools.filters.aiVideo",
+    toolCategories: ["video"],
+  },
+  {
+    id: "social",
+    labelKey: "tools.filters.social",
+    toolCategories: ["social"],
+  },
+  {
+    id: "analytics",
+    labelKey: "tools.filters.analytics",
+    toolCategories: ["analytics"],
+  },
+];
+
+const upcomingTools: {
+  icon: string;
+  nameKey: TranslationKey;
+  descriptionKey: TranslationKey;
+}[] = [
+  {
+    icon: "🧠",
+    nameKey: "tools.upcoming.repurposer.name",
+    descriptionKey: "tools.upcoming.repurposer.description",
+  },
+  {
+    icon: "📈",
+    nameKey: "tools.upcoming.seo.name",
+    descriptionKey: "tools.upcoming.seo.description",
+  },
+  {
+    icon: "🎵",
+    nameKey: "tools.upcoming.audio.name",
+    descriptionKey: "tools.upcoming.audio.description",
+  },
 ];
 
 export default function ToolsPage() {
   const router = useRouter();
+  const { t } = useI18n();
+  const { toolName, toolDescription, categoryLabel } = useToolText();
   const { tools, fetchTools } = useToolsStore();
   const { favoriteIds, fetchFavorites, toggleFavorite } = useFavoritesStore();
   const [activeCategory, setActiveCategory] = useState("all");
@@ -47,16 +90,14 @@ export default function ToolsPage() {
     <>
       <TopBar
         breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Tools" },
+          { label: t("nav.dashboard"), href: "/dashboard" },
+          { label: t("nav.tools") },
         ]}
       />
       <div className="p-6 space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold text-text">Tools</h1>
-          <p className="mt-1 text-text-muted">
-            AI-powered tools for content creators
-          </p>
+          <h1 className="text-2xl font-bold text-text">{t("tools.title")}</h1>
+          <p className="mt-1 text-text-muted">{t("tools.subtitle")}</p>
         </div>
 
         {/* Category Filter */}
@@ -71,7 +112,7 @@ export default function ToolsPage() {
                   : "bg-surface-elevated text-text-muted hover:text-text border border-border hover:border-border/80"
               }`}
             >
-              {cat.label}
+              {t(cat.labelKey)}
             </button>
           ))}
         </div>
@@ -81,12 +122,12 @@ export default function ToolsPage() {
           {filtered.map((tool) => (
             <ToolCard
               key={tool.id}
-              name={tool.name}
-              description={tool.description}
+              name={toolName(tool)}
+              description={toolDescription(tool)}
               icon={tool.icon}
               credits={tool.creditsPerUse}
               status={tool.status}
-              category={tool.category}
+              category={categoryLabel(tool.category)}
               isFavorite={favoriteIds?.includes(tool.id) ?? false}
               onToggleFavorite={() => toggleFavorite(tool.id)}
               onClick={() => router.push(`/tools/${tool.id}`)}
@@ -97,36 +138,20 @@ export default function ToolsPage() {
         {filtered.length === 0 && (
           <EmptyState
             icon="🛠️"
-            title="No tools in this category"
-            description="Check back soon for new tools."
+            title={t("tools.emptyTitle")}
+            description={t("tools.emptyDescription")}
           />
         )}
 
         {/* Coming Soon */}
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
-            Coming Soon
+            {t("tools.comingSoon")}
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                icon: "🧠",
-                name: "Content Repurposer",
-                description: "Turn one piece of content into 10 formats",
-              },
-              {
-                icon: "📈",
-                name: "SEO Optimizer",
-                description: "Optimize your content for search engines",
-              },
-              {
-                icon: "🎵",
-                name: "Audio Generator",
-                description: "Generate music and sound effects",
-              },
-            ].map((item) => (
+            {upcomingTools.map((item) => (
               <div
-                key={item.name}
+                key={item.nameKey}
                 className="rounded-xl border border-border bg-surface p-5 opacity-60 cursor-not-allowed"
               >
                 <div className="flex items-start justify-between">
@@ -135,16 +160,18 @@ export default function ToolsPage() {
                       {item.icon}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-text">{item.name}</h3>
+                      <h3 className="font-semibold text-text">
+                        {t(item.nameKey)}
+                      </h3>
                       <p className="text-sm text-text-muted">
-                        {item.description}
+                        {t(item.descriptionKey)}
                       </p>
                     </div>
                   </div>
                 </div>
                 <div className="mt-4">
                   <Badge variant="outline" size="sm">
-                    Coming Soon
+                    {t("tools.comingSoon")}
                   </Badge>
                 </div>
               </div>

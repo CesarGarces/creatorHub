@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { localizeError } from "@/i18n/errors";
 import api from "@/lib/api";
 
 // ─── Types (mirror the API payloads) ─────────────────────────
@@ -150,7 +151,7 @@ export const useCommunityBotStore = create<CommunityBotState>()((set, get) => ({
       set({ config: res.data });
     } catch (err) {
       set({
-        error: err instanceof Error ? err.message : "Failed to load config",
+        error: localizeError(err, "communityBot.errors.loadConfig"),
       });
     } finally {
       set({ isLoadingConfig: false });
@@ -168,7 +169,7 @@ export const useCommunityBotStore = create<CommunityBotState>()((set, get) => ({
       return res.data;
     } catch (err) {
       set({
-        error: err instanceof Error ? err.message : "Failed to save config",
+        error: localizeError(err, "communityBot.errors.saveConfig"),
       });
       return null;
     } finally {
@@ -185,7 +186,7 @@ export const useCommunityBotStore = create<CommunityBotState>()((set, get) => ({
       set({ channels: res.data });
     } catch (err) {
       set({
-        error: err instanceof Error ? err.message : "Failed to load channels",
+        error: localizeError(err, "communityBot.errors.loadChannels"),
       });
     } finally {
       set({ isLoadingChannels: false });
@@ -205,8 +206,7 @@ export const useCommunityBotStore = create<CommunityBotState>()((set, get) => ({
       return true;
     } catch (err) {
       set({
-        error:
-          err instanceof Error ? err.message : "Failed to connect Telegram",
+        error: localizeError(err, "communityBot.errors.connectTelegram"),
       });
       return false;
     } finally {
@@ -225,8 +225,7 @@ export const useCommunityBotStore = create<CommunityBotState>()((set, get) => ({
       return true;
     } catch (err) {
       set({
-        error:
-          err instanceof Error ? err.message : "Failed to connect WhatsApp",
+        error: localizeError(err, "communityBot.errors.connectWhatsApp"),
       });
       return false;
     } finally {
@@ -243,7 +242,7 @@ export const useCommunityBotStore = create<CommunityBotState>()((set, get) => ({
       await get().fetchChannels();
     } catch (err) {
       set({
-        error: err instanceof Error ? err.message : "Failed to disconnect",
+        error: localizeError(err, "communityBot.errors.disconnect"),
       });
     }
   },
@@ -258,8 +257,7 @@ export const useCommunityBotStore = create<CommunityBotState>()((set, get) => ({
       set({ conversations: res.data, conversationsTotal: res.meta.total });
     } catch (err) {
       set({
-        error:
-          err instanceof Error ? err.message : "Failed to load conversations",
+        error: localizeError(err, "communityBot.errors.loadConversations"),
       });
     } finally {
       set({ isLoadingConversations: false });
@@ -280,7 +278,7 @@ export const useCommunityBotStore = create<CommunityBotState>()((set, get) => ({
       set({ activeMessages: res.data });
     } catch (err) {
       set({
-        error: err instanceof Error ? err.message : "Failed to load messages",
+        error: localizeError(err, "communityBot.errors.loadMessages"),
       });
     } finally {
       set({ isLoadingMessages: false });
@@ -305,7 +303,7 @@ export const useCommunityBotStore = create<CommunityBotState>()((set, get) => ({
       });
     } catch (err) {
       set({
-        error: err instanceof Error ? err.message : "Playground failed",
+        error: localizeError(err, "communityBot.errors.playground"),
       });
     } finally {
       set({ isPlaygroundLoading: false });

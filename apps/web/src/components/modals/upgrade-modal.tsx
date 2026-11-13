@@ -14,6 +14,8 @@ import {
   DialogDescription,
 } from "@creator-hub/ui";
 import useCheckout from "@/hooks/useCheckout";
+import { useI18n } from "@/i18n/i18n-provider";
+import { usePlanText } from "@/i18n/use-plan-text";
 import {
   Dialog as PayDialog,
   DialogContent as PayDialogContent,
@@ -28,6 +30,10 @@ interface UpgradeModalProps {
 
 export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
   const router = useRouter();
+  const { t, formatNumber } = useI18n();
+  const { planName } = usePlanText();
+  const formatUsd = (value: number) =>
+    formatNumber(value, { style: "currency", currency: "USD" });
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<{
@@ -50,8 +56,8 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
 
   const handleBuy = async (plan: any) => {
     setSelectedPlan({
-      name: plan.name,
-      price: `$${plan.usdAmount.toFixed(2)}`,
+      name: planName(plan),
+      price: formatUsd(plan.usdAmount),
     });
     setCheckoutOpen(true);
     setActivePreferenceId(null);
@@ -82,11 +88,8 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
         >
           <DialogHeader className="text-center">
             <div className="text-4xl mx-auto">⚡</div>
-            <DialogTitle>No credits remaining</DialogTitle>
-            <DialogDescription>
-              You&apos;ve used all your free credits. Upgrade to continue
-              creating amazing thumbnails.
-            </DialogDescription>
+            <DialogTitle>{t("upgrade.title")}</DialogTitle>
+            <DialogDescription>{t("upgrade.description")}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">
@@ -107,22 +110,26 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                     size="sm"
                     className="absolute -top-2 right-3"
                   >
-                    BEST VALUE
+                    {t("upgrade.bestValue")}
                   </Badge>
                 )}
                 <div className="text-left">
-                  <p className="font-medium text-text">{plan.name}</p>
+                  <p className="font-medium text-text">{planName(plan)}</p>
                   <p className="text-sm text-text-muted">
-                    {plan.creditsGiven.toLocaleString()} credits
+                    {t("upgrade.credits", { count: plan.creditsGiven })}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold text-primary">
-                    ${plan.usdAmount.toFixed(2)}
+                    {formatUsd(plan.usdAmount)}
                   </p>
                   <p className="text-xs text-text-dim">
-                    {((plan.usdAmount / plan.creditsGiven) * 100).toFixed(1)}
-                    ¢/credit
+                    {t("upgrade.perCredit", {
+                      amount: formatNumber(
+                        (plan.usdAmount / plan.creditsGiven) * 100,
+                        { minimumFractionDigits: 1, maximumFractionDigits: 1 },
+                      ),
+                    })}
                   </p>
                 </div>
               </button>
@@ -143,7 +150,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 }
               }}
             >
-              Recharge Now
+              {t("upgrade.rechargeNow")}
             </Button>
 
             <Button
@@ -154,7 +161,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 router.push("/pricing");
               }}
             >
-              Or Subscribe for Unlimited
+              {t("upgrade.subscribe")}
             </Button>
 
             <button
@@ -162,7 +169,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
               onClick={onClose}
               className="w-full text-sm text-text-muted hover:text-text transition-colors"
             >
-              Maybe later
+              {t("upgrade.maybeLater")}
             </button>
           </div>
         </DialogContent>
@@ -171,17 +178,20 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
       <PayDialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
         <PayDialogContent className="sm:max-w-md">
           <PayDialogHeader>
-            <PayDialogTitle>Complete your purchase</PayDialogTitle>
+            <PayDialogTitle>{t("upgrade.completeTitle")}</PayDialogTitle>
           </PayDialogHeader>
           <div className="p-6">
             <p className="text-sm text-text-muted">
-              Purchasing {selectedPlan.name} plan for {selectedPlan.price}
+              {t("upgrade.purchasing", {
+                plan: selectedPlan.name,
+                price: selectedPlan.price,
+              })}
             </p>
             {activePreferenceId && (
               <div className="mt-4">
                 {/* MercadoPago checkout would render here */}
                 <p className="text-xs text-text-dim">
-                  Redirecting to payment...
+                  {t("upgrade.redirecting")}
                 </p>
               </div>
             )}

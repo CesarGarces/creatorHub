@@ -1,0 +1,81 @@
+import type { Messages } from "../../translate";
+
+export const auth: Messages["auth"] = {
+  fields: {
+    name: "Nombre",
+    namePlaceholder: "Juan Pérez",
+    email: "Correo electrónico",
+    emailPlaceholder: "tu@ejemplo.com",
+    password: "Contraseña",
+    confirmPassword: "Confirmar contraseña",
+    newPassword: "Nueva contraseña",
+    showPassword: "Mostrar contraseña",
+    hidePassword: "Ocultar contraseña",
+  },
+  legal: {
+    privacy: "Política de privacidad",
+    terms: "Términos del servicio",
+    cookies: "Política de cookies",
+  },
+  login: {
+    title: "Bienvenido a Creator Hub",
+    subtitle: "Inicia sesión en tu cuenta",
+    forgotPassword: "¿Olvidaste tu contraseña?",
+    submit: "Iniciar sesión",
+    noAccount: "¿No tienes una cuenta?",
+    register: "Regístrate",
+    invalidCredentials: "Credenciales incorrectas",
+  },
+  register: {
+    title: "Crea tu cuenta",
+    subtitle: "Empieza a crear con IA",
+    acceptTerms:
+      "Acepto los <terms>Términos del servicio</terms> y la <privacy>Política de privacidad</privacy>.",
+    mustAcceptTerms:
+      "Debes aceptar los Términos del servicio y la Política de privacidad",
+    submit: "Crear cuenta",
+    haveAccount: "¿Ya tienes una cuenta?",
+    signIn: "Inicia sesión",
+    failed: "No se pudo completar el registro",
+  },
+  forgot: {
+    title: "¿Olvidaste tu contraseña?",
+    subtitle: "Ingresa tu correo y te enviaremos un enlace para restablecerla",
+    checkEmail: "Revisa tu correo",
+    sentTo:
+      "Enviamos un enlace para restablecer la contraseña a <email>{email}</email>",
+    backToSignIn: "Volver a iniciar sesión",
+    submit: "Enviar enlace",
+    remember: "¿Recuerdas tu contraseña?",
+    signIn: "Inicia sesión",
+    failed: "No se pudo enviar el correo. Inténtalo de nuevo.",
+  },
+  reset: {
+    validating: "Validando enlace...",
+    invalidTitle: "Enlace no válido",
+    invalidDescription:
+      "Este enlace para restablecer la contraseña no es válido o ha expirado.",
+    requestNew: "Solicitar un nuevo enlace",
+    title: "Nueva contraseña",
+    subtitle: "Ingresa tu nueva contraseña",
+    success: "Contraseña restablecida correctamente",
+    redirecting: "Redirigiendo al inicio de sesión...",
+    submit: "Restablecer contraseña",
+    failed: "No se pudo restablecer la contraseña. Inténtalo de nuevo.",
+  },
+  verify: {
+    noEmail: "No se encontró ningún correo.",
+    signUp: "Regístrate",
+    title: "Verifica tu correo",
+    sentCode: "Enviamos un código de 6 dígitos a <email>{email}</email>",
+    success: "Correo verificado correctamente",
+    redirecting: "Redirigiendo...",
+    digit: "Dígito {number}",
+    verifying: "Verificando...",
+    resendIn: "Reenviar código en <timer>{seconds}s</timer>",
+    resend: "Reenviar código",
+    resending: "Enviando...",
+    invalidCode: "Código no válido. Inténtalo de nuevo.",
+    resendFailed: "No se pudo reenviar el código.",
+  },
+};

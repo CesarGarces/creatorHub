@@ -15,6 +15,8 @@ import { useAuthStore } from "@/store/auth.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { useNotificationStore } from "@/store/notification.store";
 import { useSocketEvents } from "@/hooks/use-socket-events";
+import { useI18n } from "@/i18n/i18n-provider";
+import { LanguageSelector } from "@/components/i18n/language-selector";
 
 interface TopBarProps {
   title?: string;
@@ -30,6 +32,7 @@ export function TopBar({
   className,
 }: TopBarProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const { user } = useAuthStore();
   const {
     balance,
@@ -83,10 +86,10 @@ export function TopBar({
       type: "CREDIT_LOW",
       message:
         balance === 0
-          ? "You have no credits left. Buy more to keep generating."
-          : `You have ${balance} credits remaining. Buy more to keep generating.`,
+          ? t("topBar.noCreditsLeft")
+          : t("topBar.creditsRemaining", { count: balance }),
       action: "/credits",
-      actionLabel: "Buy Credits",
+      actionLabel: t("topBar.buyCredits"),
       readAt: null,
       createdAt: new Date().toISOString(),
     });
@@ -148,11 +151,13 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-4">
+        <LanguageSelector compact />
         <CreditDisplay balance={balance} size="sm" />
         <Popover>
           <PopoverTrigger asChild>
             <button
               type="button"
+              aria-label={t("topBar.openNotifications")}
               className="relative text-text-muted hover:text-text transition-colors"
             >
               <Bell className="h-[18px] w-[18px]" />
@@ -165,7 +170,9 @@ export function TopBar({
           </PopoverTrigger>
           <PopoverContent className="w-80 p-0" align="end">
             <div className="p-3 border-b border-border flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-text">Notifications</h3>
+              <h3 className="text-sm font-semibold text-text">
+                {t("topBar.notifications")}
+              </h3>
               {unreadCount > 0 && (
                 <button
                   type="button"
@@ -173,13 +180,13 @@ export function TopBar({
                   className="text-xs text-text-muted hover:text-text transition-colors flex items-center gap-1"
                 >
                   <Check className="h-3 w-3" />
-                  Mark all read
+                  {t("topBar.markAllRead")}
                 </button>
               )}
             </div>
             {allNotifications.length === 0 ? (
               <div className="p-4 text-center text-sm text-text-muted">
-                No notifications
+                {t("topBar.noNotifications")}
               </div>
             ) : (
               <div className="max-h-64 overflow-y-auto">
@@ -199,7 +206,8 @@ export function TopBar({
                             type="button"
                             onClick={() => handleMarkAsRead(n.id)}
                             className="text-text-muted hover:text-text transition-colors"
-                            title="Mark as read"
+                            title={t("topBar.markAsRead")}
+                            aria-label={t("topBar.markAsRead")}
                           >
                             <Check className="h-3.5 w-3.5" />
                           </button>
@@ -209,7 +217,8 @@ export function TopBar({
                             type="button"
                             onClick={() => handleDeleteNotification(n.id)}
                             className="text-text-muted hover:text-error transition-colors"
-                            title="Delete"
+                            title={t("topBar.delete")}
+                            aria-label={t("topBar.delete")}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

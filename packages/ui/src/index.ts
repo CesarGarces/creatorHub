@@ -1,5 +1,9 @@
 export { cn } from "./lib/utils";
 
+// Localizable built-in labels
+export { UiLabelsProvider, useUiLabels, DEFAULT_UI_LABELS } from "./lib/labels";
+export type { UiLabels } from "./lib/labels";
+
 // Primitives
 export { Button, buttonVariants } from "./components/button";
 export type { ButtonProps } from "./components/button";

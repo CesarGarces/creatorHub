@@ -3,9 +3,11 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
+import { useI18n } from "@/i18n/i18n-provider";
 
 export default function Home() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user, isHydrated, hydrate } = useAuthStore();
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function Home() {
       <div className="flex flex-col items-center gap-4">
         <img
           src="/isologo_white.png"
-          alt="Creator Hub"
+          alt={t("common.appName")}
           className="h-14 w-auto animate-pulse-glow"
         />
         <div className="h-2 w-24 rounded-full shimmer" />

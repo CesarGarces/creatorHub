@@ -14,25 +14,26 @@ import { LiquidEtherBackground } from "@/components/animations";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
 import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 import { ProviderSelect } from "@/components/provider-select";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
+import type { TranslationKey } from "@/i18n/translate";
 
-const stylePresets = [
-  { id: "bold", label: "Bold & Colorful", emoji: "🎨" },
-  { id: "minimal", label: "Minimalist", emoji: "✨" },
-  { id: "gaming", label: "Gaming", emoji: "🎮" },
-  { id: "cinematic", label: "Cinematic", emoji: "🎬" },
-  { id: "tutorial", label: "Tutorial", emoji: "📚" },
-  { id: "reaction", label: "Reaction Face", emoji: "😲" },
-];
+const stylePresets: { id: string; labelKey: TranslationKey; emoji: string }[] =
+  [
+    { id: "bold", labelKey: "thumbnail.styles.bold", emoji: "🎨" },
+    { id: "minimal", labelKey: "thumbnail.styles.minimal", emoji: "✨" },
+    { id: "gaming", labelKey: "thumbnail.styles.gaming", emoji: "🎮" },
+    { id: "cinematic", labelKey: "thumbnail.styles.cinematic", emoji: "🎬" },
+    { id: "tutorial", labelKey: "thumbnail.styles.tutorial", emoji: "📚" },
+    { id: "reaction", labelKey: "thumbnail.styles.reaction", emoji: "😲" },
+  ];
 
-const planLabels: Record<
-  string,
-  { label: string; variant: "free" | "primary" | "premium" }
-> = {
-  FREE: { label: "FREE PLAN", variant: "free" },
-  PAY_AS_YOU_GO: { label: "PAY AS YOU GO", variant: "primary" },
-  PREMIUM: { label: "PREMIUM", variant: "premium" },
-  STARTER: { label: "STARTER", variant: "primary" },
-  PRO: { label: "PRO", variant: "premium" },
+const planVariants: Record<string, "free" | "primary" | "premium"> = {
+  FREE: "free",
+  PAY_AS_YOU_GO: "primary",
+  PREMIUM: "premium",
+  STARTER: "primary",
+  PRO: "premium",
 };
 
 const aspectRatios = [
@@ -46,6 +47,7 @@ const aspectRatios = [
 export default function ThumbnailGeneratorPage() {
   const params = useParams();
   const router = useRouter();
+  const { t, tOptional } = useI18n();
   const { tools, fetchTools } = useToolsStore();
   const {
     balance,
@@ -157,15 +159,14 @@ export default function ThumbnailGeneratorPage() {
     onSuccess: (response) => {
       const jobId = response?.data?.jobId;
       if (!jobId) {
-        toast.error("Generation failed: no job ID returned");
+        toast.error(t("toolShared.noJobId"));
         return;
       }
       lastCompletedRef.current = null;
       startGeneration("thumbnail-generator", jobId);
     },
     onError: (error: any) => {
-      const message =
-        error?.message || "Failed to generate thumbnail. Please try again.";
+      const message = localizeError(error, "thumbnail.failed");
       setFailed(message);
       toast.error(message);
     },
@@ -198,8 +199,8 @@ export default function ThumbnailGeneratorPage() {
     <>
       <TopBar
         breadcrumbs={[
-          { label: "Tools", href: "/tools" },
-          { label: "Thumbnail Generator" },
+          { label: t("nav.tools"), href: "/tools" },
+          { label: t("toolCatalog.thumbnail-generator.name") },
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -225,7 +226,7 @@ export default function ThumbnailGeneratorPage() {
                   <rect x="3" y="14" width="7" height="7" rx="1" />
                   <rect x="14" y="14" width="7" height="7" rx="1" />
                 </svg>
-                Variations
+                {t("toolShared.variations")}
                 <span className="ml-1 rounded-full bg-primary/20 px-1.5 text-xs">
                   {variations.length}
                 </span>
@@ -233,12 +234,12 @@ export default function ThumbnailGeneratorPage() {
             )}
             {selectedModelCost > 0 && (
               <Badge variant="primary" size="sm">
-                ⚡ {selectedModelCost} credits
+                {t("common.credits.cost", { count: selectedModelCost })}
               </Badge>
             )}
-            {plan && planLabels[plan] && (
-              <Badge variant={planLabels[plan].variant} size="sm">
-                {planLabels[plan].label}
+            {plan && planVariants[plan] && (
+              <Badge variant={planVariants[plan]} size="sm">
+                {tOptional(`common.plans.${plan}`, plan)}
               </Badge>
             )}
           </div>
@@ -249,12 +250,12 @@ export default function ThumbnailGeneratorPage() {
         <div className="w-80 border-r border-border bg-surface p-5 space-y-6 overflow-y-auto flex-shrink-0">
           <div>
             <label className="block text-sm font-medium text-text-muted mb-2">
-              Prompt
+              {t("toolShared.prompt")}
             </label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe the thumbnail you want to create..."
+              placeholder={t("thumbnail.promptPlaceholder")}
               disabled={isProcessing}
               className="w-full h-32 rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
@@ -262,12 +263,12 @@ export default function ThumbnailGeneratorPage() {
 
           <div>
             <label className="block text-sm font-medium text-text-muted mb-2">
-              Negative Prompt
+              {t("thumbnail.negativePrompt")}
             </label>
             <input
               value={negativePrompt}
               onChange={(e) => setNegativePrompt(e.target.value)}
-              placeholder="Exclude: text, watermark, blurry..."
+              placeholder={t("thumbnail.negativePlaceholder")}
               disabled={isProcessing}
               className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
@@ -275,12 +276,12 @@ export default function ThumbnailGeneratorPage() {
 
           <div>
             <label className="block text-sm font-medium text-text-muted mb-3">
-              Aspect Ratio
+              {t("toolShared.aspectRatio")}
             </label>
             <div
               className="flex gap-1.5"
               role="radiogroup"
-              aria-label="Aspect ratio selection"
+              aria-label={t("toolShared.aspectRatioGroup")}
             >
               {aspectRatios.map((ar) => {
                 const isSelected = width === ar.width && height === ar.height;
@@ -289,7 +290,9 @@ export default function ThumbnailGeneratorPage() {
                     key={ar.id}
                     role="radio"
                     aria-checked={isSelected}
-                    aria-label={`${ar.label} aspect ratio`}
+                    aria-label={t("toolShared.aspectRatioOption", {
+                      ratio: ar.label,
+                    })}
                     onClick={() =>
                       !isProcessing && setDimensions(ar.width, ar.height)
                     }
@@ -330,7 +333,7 @@ export default function ThumbnailGeneratorPage() {
 
           <div>
             <label className="block text-sm font-medium text-text-muted mb-3">
-              Style
+              {t("toolShared.style")}
             </label>
             <div className="grid grid-cols-2 gap-2">
               {stylePresets.map((s) => (
@@ -345,7 +348,7 @@ export default function ThumbnailGeneratorPage() {
                   }`}
                 >
                   <span>{s.emoji}</span>
-                  <span>{s.label}</span>
+                  <span>{t(s.labelKey)}</span>
                 </button>
               ))}
             </div>
@@ -360,24 +363,25 @@ export default function ThumbnailGeneratorPage() {
               setSelectedModelCost(model.creditCost);
             }}
             disabled={isProcessing}
-            label="AI Provider"
+            label={t("toolShared.aiProvider")}
           />
 
           {providerSlug === "siliconflow" && (
             <div>
               <label className="block text-sm font-medium text-text-muted mb-3">
-                Reference Image (optional)
+                {t("toolShared.referenceImage")}
               </label>
               {sourceImageUrl ? (
                 <div className="relative group">
                   <img
                     src={sourceImageUrl}
-                    alt="Reference"
+                    alt={t("toolShared.referenceAlt")}
                     className="w-full h-40 object-cover rounded-lg border border-border"
                   />
                   <button
                     onClick={() => setSourceImageUrl(null)}
                     disabled={isProcessing}
+                    aria-label={t("toolShared.removeImage")}
                     className="absolute top-2 right-2 p-1.5 rounded-full bg-error/80 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
                   >
                     <svg
@@ -427,10 +431,10 @@ export default function ThumbnailGeneratorPage() {
                     <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
                   </svg>
                   <span className="text-xs text-text-dim">
-                    Drop an image or click to upload
+                    {t("toolShared.dropImage")}
                   </span>
                   <span className="text-[10px] text-text-dim/60">
-                    For image-to-image generation
+                    {t("toolShared.imageToImageHint")}
                   </span>
                 </div>
               )}
@@ -466,16 +470,18 @@ export default function ThumbnailGeneratorPage() {
               }
               onClick={handleGenerate}
             >
-              {isProcessing ? "Generating..." : "Generate Thumbnail"}
+              {isProcessing
+                ? t("common.actions.generating")
+                : t("thumbnail.generate")}
             </Button>
             {creditsHydrated && balance < (selectedModelCost || 1) && (
               <p className="mt-2 text-xs text-error text-center">
-                Insufficient credits.{" "}
+                {t("toolShared.insufficientCredits")}{" "}
                 <button
                   onClick={() => router.push("/credits")}
                   className="underline cursor-pointer"
                 >
-                  Buy more
+                  {t("toolShared.buyMore")}
                 </button>
               </p>
             )}
@@ -489,11 +495,11 @@ export default function ThumbnailGeneratorPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-warning">⚠️</span>
                   <span className="text-sm font-medium text-warning">
-                    No credits left
+                    {t("toolShared.noCreditsTitle")}
                   </span>
                 </div>
                 <p className="text-xs text-text-muted">
-                  Upgrade to Pro or buy credit packs to continue generating.
+                  {t("toolShared.noCreditsDescription")}
                 </p>
                 <Button
                   variant="primary"
@@ -501,7 +507,7 @@ export default function ThumbnailGeneratorPage() {
                   className="w-full"
                   onClick={() => setShowUpgradeModal(true)}
                 >
-                  Recharge (Min. $10)
+                  {t("toolShared.recharge")}
                 </Button>
               </div>
             )}
@@ -525,8 +531,8 @@ export default function ThumbnailGeneratorPage() {
               <div className="absolute inset-0 flex items-center justify-center">
                 <EmptyState
                   icon="🎨"
-                  title="Create your thumbnail"
-                  description="Enter a prompt and click generate to create stunning thumbnails with AI."
+                  title={t("thumbnail.emptyTitle")}
+                  description={t("thumbnail.emptyDescription")}
                 />
               </div>
             )}
@@ -535,7 +541,7 @@ export default function ThumbnailGeneratorPage() {
             {(status === "GENERATING" || status === "REVEALING") && (
               <div className="absolute inset-0 flex items-center justify-center z-10 animate-fade-in">
                 <LoadingSpinner
-                  text="Generating thumbnail..."
+                  text={t("thumbnail.generatingLabel")}
                   colors={["#c084fc", "#f472b6", "#38bdf8"]}
                 />
               </div>
@@ -569,9 +575,9 @@ export default function ThumbnailGeneratorPage() {
                           a.download = "thumbnail.png";
                           a.click();
                           URL.revokeObjectURL(url);
-                          toast.success("Download started");
+                          toast.success(t("common.toasts.downloadStarted"));
                         } catch {
-                          toast.error("Download failed");
+                          toast.error(t("common.toasts.downloadFailed"));
                         }
                       }}
                     >
@@ -587,14 +593,14 @@ export default function ThumbnailGeneratorPage() {
                         <polyline points="7 10 12 15 17 10" />
                         <line x1="12" x2="12" y1="15" y2="3" />
                       </svg>
-                      Download
+                      {t("common.actions.download")}
                     </Button>
                     <Button
                       variant="secondary"
                       size="sm"
                       onClick={() => {
                         navigator.clipboard.writeText(imageUrl);
-                        toast.success("URL copied to clipboard");
+                        toast.success(t("common.toasts.urlCopied"));
                       }}
                     >
                       <svg
@@ -608,7 +614,7 @@ export default function ThumbnailGeneratorPage() {
                         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                       </svg>
-                      Copy URL
+                      {t("common.actions.copyUrl")}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={resetAll}>
                       <svg
@@ -622,7 +628,7 @@ export default function ThumbnailGeneratorPage() {
                         <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
                         <path d="M21 3v5h-5" />
                       </svg>
-                      Generate New
+                      {t("common.actions.generateNew")}
                     </Button>
                   </div>
                 )}
@@ -633,9 +639,13 @@ export default function ThumbnailGeneratorPage() {
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center space-y-4 animate-fade-in">
                   <div className="rounded-xl border border-error/30 bg-error/5 p-8">
-                    <p className="text-error font-medium">Generation failed</p>
+                    <p className="text-error font-medium">
+                      {t("toolShared.generationFailed")}
+                    </p>
                     <p className="text-sm text-text-muted mt-1">
-                      {generationError || "Unknown error"}
+                      {generationError
+                        ? localizeError(generationError)
+                        : t("common.status.unknownError")}
                     </p>
                     {!generationError?.includes("content filter") && (
                       <Button
@@ -644,7 +654,7 @@ export default function ThumbnailGeneratorPage() {
                         className="mt-4"
                         onClick={handleGenerate}
                       >
-                        Try Again
+                        {t("common.actions.tryAgain")}
                       </Button>
                     )}
                   </div>
@@ -669,9 +679,12 @@ export default function ThumbnailGeneratorPage() {
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between flex-shrink-0 px-6 pt-6 pb-4 border-b border-border">
-            <h2 className="text-lg font-semibold text-text">Variations</h2>
+            <h2 className="text-lg font-semibold text-text">
+              {t("toolShared.variations")}
+            </h2>
             <button
               onClick={() => setShowVariations(false)}
+              aria-label={t("common.actions.close")}
               className="rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <svg
@@ -711,14 +724,14 @@ export default function ThumbnailGeneratorPage() {
                 >
                   <img
                     src={v.url}
-                    alt={`Variation ${i + 1}`}
+                    alt={t("toolShared.variationAlt", { number: i + 1 })}
                     className="w-full h-full object-contain"
                   />
                 </div>
               ))
             ) : (
               <div className="text-center py-8 text-xs text-text-dim">
-                Generated variations will appear here
+                {t("toolShared.variationsEmpty")}
               </div>
             )}
           </div>

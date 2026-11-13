@@ -1,0 +1,40 @@
+export const dashboard = {
+  greeting: {
+    morning: "Good morning, {name} 👋",
+    afternoon: "Good afternoon, {name} 👋",
+    evening: "Good evening, {name} 👋",
+  },
+  subtitle: "What will you create today?",
+  search: "Search...",
+  quickPrompt: {
+    placeholder: "Describe what you want to create...",
+    ariaLabel: "Describe what you want to create",
+    generate: "Generate",
+    making: "Making...",
+    try: "Try:",
+    examples: {
+      gamingThumbnail: "Gaming thumbnail",
+      youtubeIntro: "YouTube intro script",
+      viralTitle: "Viral video title",
+    },
+  },
+  favoriteTools: "Favorite Tools — drag to reorder",
+  quickAccess: "Quick Access",
+  dragToReorder: "Drag to reorder {name}",
+  noToolsTitle: "No tools available",
+  noToolsDescription: "Tools will appear here once they are activated.",
+  recentActivity: "Recent Activity",
+  noActivity: "No activity yet",
+  activityMeta_one: "{time} · {count} credit",
+  activityMeta_other: "{time} · {count} credits",
+  txType: {
+    tool: "Tool",
+    purchase: "Purchase",
+    bonus: "Bonus",
+  },
+  recommendedAgents: "Recommended Agents",
+  proTip: {
+    title: "Pro Tip",
+    body: 'Use negative prompts to exclude unwanted elements from your generated images. For example: "no text, no watermark, no blurry" for cleaner results.',
+  },
+};

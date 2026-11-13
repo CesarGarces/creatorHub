@@ -11,6 +11,8 @@ import { TweetActionCard } from "@/components/chat/tweet-action-card";
 import { ProviderSelect } from "@/components/provider-select";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { VoiceButton, useVoiceButton } from "@/components/voice-button";
+import { useI18n } from "@/i18n/i18n-provider";
+import type { TranslationKey } from "@/i18n/translate";
 
 interface ParsedMessage {
   textBefore: string;
@@ -99,6 +101,7 @@ function parseToolAction(content: string): ParsedMessage {
 
 export function ChatWidget() {
   const router = useRouter();
+  const { t } = useI18n();
   const [showSettings, setShowSettings] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipDismissed, setTooltipDismissed] = useState(false);
@@ -210,7 +213,7 @@ export function ChatWidget() {
       <div
         ref={panelRef}
         role="dialog"
-        aria-label="Chat"
+        aria-label={t("chat.dialogLabel")}
         className={cn(
           "fixed right-0 top-0 z-[95] h-full w-full max-w-[420px]",
           "border-l border-border/50 bg-surface/95 backdrop-blur-xl shadow-2xl shadow-black/10",
@@ -225,19 +228,19 @@ export function ChatWidget() {
               <SparkleIcon className="h-3.5 w-3.5 text-primary" />
             </div>
             <span className="text-sm font-semibold text-text">
-              Creator Hub AI
+              {t("chat.assistantName")}
             </span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-[10px] text-text-muted tabular-nums mr-1">
-              {balance} cr
+              {t("chat.creditsShort", { count: balance })}
             </span>
             <button
               type="button"
               onClick={handleNewChat}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-text-dim hover:text-text hover:bg-surface-elevated transition-colors"
-              title="New chat"
-              aria-label="New chat"
+              title={t("chat.newChat")}
+              aria-label={t("chat.newChat")}
             >
               <PlusIcon className="h-4 w-4" />
             </button>
@@ -250,8 +253,8 @@ export function ChatWidget() {
                   ? "bg-primary/10 text-primary"
                   : "text-text-dim hover:text-text hover:bg-surface-elevated",
               )}
-              title="Settings"
-              aria-label="Chat settings"
+              title={t("chat.settings")}
+              aria-label={t("chat.chatSettings")}
             >
               <SettingsIcon className="h-4 w-4" />
             </button>
@@ -259,8 +262,8 @@ export function ChatWidget() {
               type="button"
               onClick={() => setIsOpen(false)}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-text-dim hover:text-text hover:bg-surface-elevated transition-colors"
-              title="Close"
-              aria-label="Close chat"
+              title={t("chat.close")}
+              aria-label={t("chat.closeChat")}
             >
               <XIcon className="h-4 w-4" />
             </button>
@@ -301,7 +304,7 @@ export function ChatWidget() {
                         : "text-text-dim hover:text-text",
                     )}
                   >
-                    {session.title || "Chat"}
+                    {session.title || t("chat.sessionFallback")}
                   </button>
                   <button
                     type="button"
@@ -310,8 +313,12 @@ export function ChatWidget() {
                       deleteSession(session.id);
                     }}
                     className="mr-1 flex h-4 w-4 items-center justify-center rounded-full text-text-dim opacity-0 group-hover:opacity-100 hover:text-error hover:bg-error/10 transition-all"
-                    title="Delete chat"
-                    aria-label={`Delete ${session.title || "chat"}`}
+                    title={t("chat.deleteChat")}
+                    aria-label={
+                      session.title
+                        ? t("chat.deleteNamed", { name: session.title })
+                        : t("chat.deleteChat")
+                    }
                   >
                     <XIcon className="h-2.5 w-2.5" />
                   </button>
@@ -333,27 +340,30 @@ export function ChatWidget() {
                   <SparkleIcon className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="text-sm font-semibold text-text">
-                  How can I help?
+                  {t("chat.emptyTitle")}
                 </h3>
                 <p className="mt-1 text-xs text-text-dim leading-relaxed">
-                  Ask me about thumbnails, videos, translations, or anything
-                  else.
+                  {t("chat.emptyDescription")}
                 </p>
                 <div className="mt-4 space-y-2">
-                  {[
-                    "Create a gaming thumbnail",
-                    "Translate my script",
-                    "Generate video ideas",
-                  ].map((suggestion) => (
-                    <button
-                      type="button"
-                      key={suggestion}
-                      onClick={() => sendMessage(suggestion)}
-                      className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-xs text-text-dim hover:text-text hover:border-primary/30 transition-colors"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
+                  {(
+                    [
+                      "chat.suggestions.thumbnail",
+                      "chat.suggestions.translate",
+                      "chat.suggestions.videoIdeas",
+                    ] as TranslationKey[]
+                  )
+                    .map((key) => t(key))
+                    .map((suggestion) => (
+                      <button
+                        type="button"
+                        key={suggestion}
+                        onClick={() => sendMessage(suggestion)}
+                        className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-xs text-text-dim hover:text-text hover:border-primary/30 transition-colors"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
                 </div>
               </div>
             </div>
@@ -366,7 +376,7 @@ export function ChatWidget() {
                 <div className="flex justify-start">
                   <div className="max-w-[85%] rounded-2xl px-3.5 py-2.5 bg-surface-elevated text-text rounded-bl-md">
                     <p className="text-[13px] text-text-muted">
-                      Failed to render message. Please try again.
+                      {t("chat.renderFailed")}
                     </p>
                   </div>
                 </div>
@@ -401,7 +411,7 @@ export function ChatWidget() {
             )}
             role="tooltip"
           >
-            <span className="font-medium">Do you need help? Let's talk</span>
+            <span className="font-medium">{t("chat.tooltip")}</span>
             <div className="absolute -bottom-1.5 right-6 h-2.5 w-2.5 rotate-45 border-r border-b border-border bg-surface" />
           </div>
         )}
@@ -427,7 +437,7 @@ export function ChatWidget() {
               isWidgetOpen &&
                 "bg-surface-elevated text-text shadow-none hover:bg-surface",
             )}
-            aria-label={isWidgetOpen ? "Close chat" : "Open chat"}
+            aria-label={isWidgetOpen ? t("chat.closeChat") : t("chat.openChat")}
             aria-expanded={isWidgetOpen}
           >
             {/* Chat icon (when closed) */}
@@ -455,6 +465,7 @@ export function ChatWidget() {
 
 /* ─── Chat Input (self-contained) ─── */
 function ChatInput() {
+  const { t } = useI18n();
   const [input, setInput] = useState("");
   const { sendMessage, isStreaming } = useChatStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -508,8 +519,8 @@ function ChatInput() {
             committedTextRef.current = e.target.value;
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Ask me anything..."
-          aria-label="Chat message"
+          placeholder={t("chat.inputPlaceholder")}
+          aria-label={t("chat.inputLabel")}
           rows={1}
           className="flex-1 resize-none rounded-xl border border-border bg-surface-elevated px-3.5 py-2.5 text-[13px] text-text placeholder:text-text-dim outline-none focus:border-primary/40 transition-colors"
           disabled={isStreaming}
@@ -537,7 +548,7 @@ function ChatInput() {
             "disabled:opacity-40 disabled:cursor-not-allowed",
             "active:scale-95",
           )}
-          aria-label="Send message"
+          aria-label={t("chat.send")}
         >
           {isStreaming ? (
             <LoaderIcon className="h-4 w-4 animate-spin" />
@@ -547,7 +558,7 @@ function ChatInput() {
         </button>
       </div>
       <p className="mt-1.5 text-center text-[10px] text-text-dim">
-        Enter to send · Shift+Enter for new line
+        {t("chat.inputHint")}
       </p>
     </div>
   );
@@ -578,17 +589,18 @@ function SettingsPanel({
   ) => void;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="border-b border-border bg-surface-elevated/50 px-4 py-3 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-text-dim">
-          Settings
+          {t("chat.settings")}
         </span>
         <button
           type="button"
           onClick={onClose}
           className="flex h-5 w-5 items-center justify-center rounded text-text-dim hover:text-text transition-colors"
-          aria-label="Close settings"
+          aria-label={t("chat.closeSettings")}
         >
           <XIcon className="h-3 w-3" />
         </button>
@@ -597,7 +609,7 @@ function SettingsPanel({
       {/* Model */}
       <div className="relative">
         <label className="block text-[11px] font-medium text-text-dim mb-1.5">
-          Model
+          {t("chat.model")}
         </label>
         <ProviderSelect
           toolModes={["chat", "text"]}
@@ -613,7 +625,7 @@ function SettingsPanel({
       <div>
         <div className="mb-1 flex items-center justify-between">
           <label className="text-[11px] font-medium text-text-dim">
-            Temperature
+            {t("chat.temperature")}
           </label>
           <span className="text-[11px] font-mono text-text">
             {settings.temperature.toFixed(1)}
@@ -628,12 +640,12 @@ function SettingsPanel({
           onChange={(e) =>
             onUpdate({ temperature: parseFloat(e.target.value) })
           }
-          aria-label="Temperature"
+          aria-label={t("chat.temperature")}
           className="w-full accent-primary h-1"
         />
         <div className="mt-0.5 flex justify-between text-[9px] text-text-dim">
-          <span>Precise</span>
-          <span>Creative</span>
+          <span>{t("chat.precise")}</span>
+          <span>{t("chat.creative")}</span>
         </div>
       </div>
 
@@ -641,7 +653,7 @@ function SettingsPanel({
       <div>
         <div className="mb-1 flex items-center justify-between">
           <label className="text-[11px] font-medium text-text-dim">
-            Max Tokens
+            {t("chat.maxTokens")}
           </label>
           <span className="text-[11px] font-mono text-text">
             {settings.maxTokens.toLocaleString()}
@@ -654,7 +666,7 @@ function SettingsPanel({
           step="256"
           value={settings.maxTokens}
           onChange={(e) => onUpdate({ maxTokens: parseInt(e.target.value) })}
-          aria-label="Max Tokens"
+          aria-label={t("chat.maxTokens")}
           className="w-full accent-primary h-1"
         />
       </div>
@@ -663,7 +675,7 @@ function SettingsPanel({
       <div>
         <div className="mb-1 flex items-center justify-between">
           <label className="text-[11px] font-medium text-text-dim">
-            Reasoning
+            {t("chat.reasoning")}
           </label>
           <span className="text-[11px] font-mono text-text">
             {settings.reasoning.toFixed(1)}
@@ -676,12 +688,12 @@ function SettingsPanel({
           step="0.1"
           value={settings.reasoning}
           onChange={(e) => onUpdate({ reasoning: parseFloat(e.target.value) })}
-          aria-label="Reasoning"
+          aria-label={t("chat.reasoning")}
           className="w-full accent-primary h-1"
         />
         <div className="mt-0.5 flex justify-between text-[9px] text-text-dim">
-          <span>Fast</span>
-          <span>Deep</span>
+          <span>{t("chat.fast")}</span>
+          <span>{t("chat.deep")}</span>
         </div>
       </div>
     </div>
@@ -703,6 +715,7 @@ function MessageBubble({
   router: any;
   closeWidget: () => void;
 }) {
+  const { t } = useI18n();
   const parsed =
     message.role === "assistant" && message.content
       ? parseToolAction(message.content)
@@ -727,7 +740,7 @@ function MessageBubble({
           <div className="mb-1 flex items-center gap-1">
             <SparkleIcon className="h-2.5 w-2.5 text-primary" />
             <span className="text-[9px] font-medium uppercase tracking-wider text-text-dim">
-              AI
+              {t("chat.aiBadge")}
             </span>
           </div>
         )}
@@ -769,7 +782,7 @@ function MessageBubble({
               message.id.startsWith("assistant-") ? (
                 <span className="inline-flex items-center gap-1 text-text-dim">
                   <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-primary" />
-                  Making...
+                  {t("chat.making")}
                 </span>
               ) : null)}
             {isStreaming &&
@@ -787,28 +800,41 @@ function MessageBubble({
 
 /* ─── Tool Action Card ─── */
 
-const TOOL_ROUTES: Record<string, { path: string; label: string }> = {
-  "thumbnail-generator": {
-    path: "/tools/thumbnail-generator",
-    label: "Thumbnail",
-  },
-  thumbnail: { path: "/tools/thumbnail-generator", label: "Thumbnail" },
-  "video-generator": { path: "/tools/video-generator", label: "Video" },
-  video: { path: "/tools/video-generator", label: "Video" },
-  "content-translator": {
-    path: "/tools/content-translator",
-    label: "Translate",
-  },
-  translator: { path: "/tools/content-translator", label: "Translate" },
-  "x-search-trends": {
-    path: "/tools/x-search-trends",
-    label: "X Trends",
-  },
-  "x-post-tweet": {
-    path: "/tools/x-post-tweet",
-    label: "Post Tweet",
-  },
-};
+const TOOL_ROUTES: Record<string, { path: string; labelKey: TranslationKey }> =
+  {
+    "thumbnail-generator": {
+      path: "/tools/thumbnail-generator",
+      labelKey: "chat.toolLabels.thumbnail",
+    },
+    thumbnail: {
+      path: "/tools/thumbnail-generator",
+      labelKey: "chat.toolLabels.thumbnail",
+    },
+    "video-generator": {
+      path: "/tools/video-generator",
+      labelKey: "chat.toolLabels.video",
+    },
+    video: {
+      path: "/tools/video-generator",
+      labelKey: "chat.toolLabels.video",
+    },
+    "content-translator": {
+      path: "/tools/content-translator",
+      labelKey: "chat.toolLabels.translate",
+    },
+    translator: {
+      path: "/tools/content-translator",
+      labelKey: "chat.toolLabels.translate",
+    },
+    "x-search-trends": {
+      path: "/tools/x-search-trends",
+      labelKey: "chat.toolLabels.xTrends",
+    },
+    "x-post-tweet": {
+      path: "/tools/x-post-tweet",
+      labelKey: "chat.toolLabels.postTweet",
+    },
+  };
 
 function ToolActionCard({
   toolId,
@@ -819,10 +845,11 @@ function ToolActionCard({
   params?: Record<string, string>;
   onNavigate: (path: string) => void;
 }) {
-  const tool = TOOL_ROUTES[toolId] || {
-    path: `/tools/${toolId}`,
-    label: toolId,
-  };
+  const { t } = useI18n();
+  const route = TOOL_ROUTES[toolId];
+  const tool = route
+    ? { path: route.path, label: t(route.labelKey) }
+    : { path: `/tools/${toolId}`, label: toolId };
   return (
     <div className="mt-2 overflow-hidden rounded-xl border border-primary/20 bg-primary/5">
       <div className="px-3.5 py-3">
@@ -832,7 +859,7 @@ function ToolActionCard({
           </div>
           <div>
             <p className="text-[12px] font-semibold text-text">
-              Go to {tool.label}
+              {t("chat.goTo", { tool: tool.label })}
             </p>
           </div>
         </div>
@@ -852,7 +879,7 @@ function ToolActionCard({
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
           )}
         >
-          Open tool
+          {t("chat.openTool")}
           <ArrowIcon className="h-3.5 w-3.5" />
         </button>
       </div>

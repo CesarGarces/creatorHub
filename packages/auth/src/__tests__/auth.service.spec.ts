@@ -67,7 +67,6 @@ describe("AuthService", () => {
         id: "user-1",
         email: "test@example.com",
         role: "USER",
-        name: null,
       });
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: {
@@ -144,7 +143,6 @@ describe("AuthService", () => {
         id: "user-1",
         email: "test@example.com",
         role: "USER",
-        name: null,
       });
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: "user-1" },
@@ -257,6 +255,58 @@ describe("AuthService", () => {
           providerAccountId: "goog-789",
         },
       });
+    });
+  });
+
+  describe("interface language preference", () => {
+    it("returns the saved language with the login response", async () => {
+      const bcrypt = require("bcryptjs");
+      bcrypt.compare.mockResolvedValue(true);
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        id: "user-1",
+        email: "test@example.com",
+        role: "USER",
+        passwordHash: "$2a$12$hashedpassword",
+        preferredLanguage: "es",
+      });
+      (prisma.user.update as jest.Mock).mockResolvedValue({});
+
+      const result = await service.login("test@example.com", "password123");
+
+      expect(result.user.preferredLanguage).toBe("es");
+    });
+
+    it("returns null when the user never chose a language", async () => {
+      const bcrypt = require("bcryptjs");
+      bcrypt.compare.mockResolvedValue(true);
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        id: "user-1",
+        email: "test@example.com",
+        role: "USER",
+        passwordHash: "$2a$12$hashedpassword",
+      });
+      (prisma.user.update as jest.Mock).mockResolvedValue({});
+
+      const result = await service.login("test@example.com", "password123");
+
+      expect(result.user.preferredLanguage).toBeNull();
+    });
+
+    it("persists the chosen language on the user", async () => {
+      (prisma.user.update as jest.Mock).mockResolvedValue({
+        preferredLanguage: "pt",
+      });
+
+      const result = await service.updatePreferences("user-1", {
+        preferredLanguage: "pt",
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: "user-1" },
+        data: { preferredLanguage: "pt" },
+        select: { preferredLanguage: true },
+      });
+      expect(result).toEqual({ preferredLanguage: "pt" });
     });
   });
 });

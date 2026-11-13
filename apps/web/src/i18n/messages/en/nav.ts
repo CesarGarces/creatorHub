@@ -1,0 +1,21 @@
+export const nav = {
+  dashboard: "Dashboard",
+  agents: "Agents",
+  tools: "Tools",
+  assets: "Assets",
+  history: "History",
+  communityBot: "Community Bot",
+  credits: "Credits",
+  settings: "Settings",
+  sections: {
+    dashboard: "Dashboard",
+    workspace: "Workspace",
+    community: "Community",
+    account: "Account",
+  },
+  logout: "Logout",
+  expandSidebar: "Expand sidebar",
+  collapseSidebar: "Collapse sidebar",
+  userFallback: "User",
+  logoAlt: "Creator Hub",
+};

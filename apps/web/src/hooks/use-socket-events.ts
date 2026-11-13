@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { t } from "@/i18n/runtime";
+import { localizeError } from "@/i18n/errors";
 import { useGenerationStore } from "@/store/generation.store";
 import { useTranslatorStore } from "@/store/translator.store";
 import { useVideoStore } from "@/store/video.store";
@@ -53,14 +55,14 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
             videoAddVariation(payload.url, payload.videoId || "");
             videoSetReady();
             fetchBalance();
-            toast.success("Video ready!");
+            toast.success(t("jobs.videoReady"));
           } else if (payload.url) {
             const genStore = useGenerationStore.getState();
             if (genStore.toolId === data.toolId) {
               setRevealing(payload.url, payload.imageId || "");
               setReady();
               fetchBalance();
-              toast.success("Generation ready!");
+              toast.success(t("jobs.generationReady"));
             }
           } else if (payload.content) {
             const transStore = useTranslatorStore.getState();
@@ -71,7 +73,7 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
               );
               translatorSetReady();
               fetchBalance();
-              toast.success("Translation ready!");
+              toast.success(t("jobs.translationReady"));
             }
           }
         } else if (data.status === "failed") {
@@ -80,20 +82,29 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
           if (data.toolId === "video-generator") {
             const vidStore = useVideoStore.getState();
             if (vidStore.status === "GENERATING") {
-              videoSetFailed(payload.error || "Video generation failed");
-              toast.error(payload.error || "Video generation failed");
+              const reason = localizeError(payload.error, "jobs.videoFailed");
+              videoSetFailed(reason);
+              toast.error(reason);
             }
           } else if (data.toolId === "content-translator") {
             const transStore = useTranslatorStore.getState();
             if (transStore.status === "GENERATING") {
-              translatorSetFailed(payload.error || "Translation failed");
-              toast.error(payload.error || "Translation failed");
+              const reason = localizeError(
+                payload.error,
+                "jobs.translationFailed",
+              );
+              translatorSetFailed(reason);
+              toast.error(reason);
             }
           } else {
             const genStore = useGenerationStore.getState();
             if (genStore.toolId === data.toolId) {
-              setFailed(payload.error || "Generation failed");
-              toast.error(payload.error || "Generation failed");
+              const reason = localizeError(
+                payload.error,
+                "jobs.generationFailed",
+              );
+              setFailed(reason);
+              toast.error(reason);
             }
           }
         }
@@ -105,7 +116,7 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
 
       socket.on("stt:error", (data: { code: string; message: string }) => {
         if (data.code === "INSUFFICIENT_CREDITS") {
-          toast.error(data.message);
+          toast.error(localizeError(data.message));
           useTranslatorStore.getState().setListening(false);
         }
       });

@@ -1,6 +1,7 @@
 "use client";
 
 import { BorderGlow } from "./border-glow";
+import { useUiLabels } from "../lib/labels";
 
 interface LoadingSpinnerProps {
   size?: "sm" | "md" | "lg";
@@ -36,12 +37,15 @@ const SIZE_MAP = {
 
 export function LoadingSpinner({
   size = "md",
-  text = "Generating...",
+  text,
   colors = ["#c084fc", "#f472b6", "#38bdf8"],
   speed = 1.5,
   className = "",
 }: LoadingSpinnerProps) {
+  const labels = useUiLabels();
   const dims = SIZE_MAP[size];
+  // `text=""` hides the label; omitting it shows the localized default.
+  const label = text ?? labels.generating;
 
   return (
     <div className={`flex flex-col items-center gap-4 ${className}`}>
@@ -60,11 +64,11 @@ export function LoadingSpinner({
           className="flex items-center justify-center"
           style={{ width: dims.width, height: dims.height }}
         >
-          {text && (
+          {label && (
             <p
               className={`${dims.fontSize} font-medium text-text-muted text-center ${dims.padding}`}
             >
-              {text}
+              {label}
             </p>
           )}
         </div>

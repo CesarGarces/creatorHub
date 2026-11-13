@@ -18,21 +18,21 @@ import { ChannelsTab } from "@/components/community-bot/channels-tab";
 import { BehaviorTab } from "@/components/community-bot/behavior-tab";
 import { ConversationsTab } from "@/components/community-bot/conversations-tab";
 import { PlaygroundTab } from "@/components/community-bot/playground-tab";
+import { useI18n } from "@/i18n/i18n-provider";
+import { t as translateNow } from "@/i18n/runtime";
+import { localizeError } from "@/i18n/errors";
 
 type TabId = "channels" | "behavior" | "conversations" | "playground";
 
-const TABS: Array<{ id: TabId; label: string; icon: React.ReactNode }> = [
-  { id: "channels", label: "Channels", icon: <Plug size={16} /> },
-  { id: "behavior", label: "Behavior", icon: <Settings2 size={16} /> },
-  {
-    id: "conversations",
-    label: "Conversations",
-    icon: <MessagesSquare size={16} />,
-  },
-  { id: "playground", label: "Playground", icon: <FlaskConical size={16} /> },
+const TABS: Array<{ id: TabId; icon: React.ReactNode }> = [
+  { id: "channels", icon: <Plug size={16} /> },
+  { id: "behavior", icon: <Settings2 size={16} /> },
+  { id: "conversations", icon: <MessagesSquare size={16} /> },
+  { id: "playground", icon: <FlaskConical size={16} /> },
 ];
 
 export default function CommunityBotPage() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<TabId>("channels");
 
   const fetchConfig = useCommunityBotStore((s) => s.fetchConfig);
@@ -77,24 +77,27 @@ export default function CommunityBotPage() {
             useCommunityBotStore.getState().qrDataUrl?.slice(0, 50),
           );
           if (event.status === "ACTIVE") {
+            // Socket handlers outlive renders: read the *current* locale.
             toast.success(
-              `Channel connected${event.externalIdentity ? ` as ${event.externalIdentity}` : ""}`,
+              event.externalIdentity
+                ? translateNow("communityBot.socket.channelConnectedAs", {
+                    identity: event.externalIdentity,
+                  })
+                : translateNow("communityBot.socket.channelConnected"),
             );
           } else if (event.status === "ERROR") {
-            toast.error(event.error || "Channel connection failed");
+            toast.error(
+              localizeError(event.error, "communityBot.socket.channelFailed"),
+            );
           }
         },
       );
 
       s.on("community:reply_skipped", (event: { reason: string }) => {
         if (event.reason === "insufficient_credits") {
-          toast.error(
-            "Community bot paused: you ran out of credits. Top up to keep replying.",
-          );
+          toast.error(translateNow("communityBot.socket.outOfCredits"));
         } else if (event.reason === "daily_limit") {
-          toast.warning(
-            "Community bot hit the daily reply limit you configured.",
-          );
+          toast.warning(translateNow("communityBot.socket.dailyLimit"));
         }
       });
 
@@ -126,7 +129,7 @@ export default function CommunityBotPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <TopBar title="Community Bot" />
+      <TopBar title={t("communityBot.title")} />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Header */}
@@ -135,11 +138,11 @@ export default function CommunityBotPage() {
             <Bot size={20} />
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-text">Community Bot</h2>
+            <h2 className="text-xl font-semibold text-text">
+              {t("communityBot.title")}
+            </h2>
             <p className="text-sm text-text-muted max-w-2xl">
-              Connect your community channels and let the bot reply to your fans
-              in your own voice, powered by your style profile and the AI model
-              of your choice. Each reply costs credits like any generation.
+              {t("communityBot.description")}
             </p>
           </div>
         </div>
@@ -159,7 +162,7 @@ export default function CommunityBotPage() {
               )}
             >
               {tab.icon}
-              {tab.label}
+              {t(`communityBot.tabs.${tab.id}`)}
             </button>
           ))}
         </div>

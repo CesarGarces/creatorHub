@@ -8,11 +8,26 @@ import {
   DialogTitle,
 } from "@creator-hub/ui";
 import { initMercadoPago, Wallet } from "@mercadopago/sdk-react";
+import { useI18n } from "@/i18n/i18n-provider";
+import type { Locale } from "@/i18n/config";
 
 const MP_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || "";
 
-if (typeof window !== "undefined" && MP_KEY) {
-  initMercadoPago(MP_KEY, { locale: "es-CO" });
+/** Language of the MercadoPago wallet button for each interface language. */
+const MP_LOCALES: Record<Locale, "en-US" | "es-CO" | "pt-BR"> = {
+  en: "en-US",
+  es: "es-CO",
+  pt: "pt-BR",
+};
+
+/**
+ * (Re)initializes the SDK in the interface language. The SDK only rebuilds
+ * its instance when the options actually change, so repeated calls are cheap.
+ */
+function ensureMercadoPago(locale: Locale) {
+  if (typeof window !== "undefined" && MP_KEY) {
+    initMercadoPago(MP_KEY, { locale: MP_LOCALES[locale] });
+  }
 }
 
 interface CheckoutModalProps {
@@ -30,8 +45,12 @@ export function CheckoutModal({
   preferenceId,
   planName,
   price,
-  title = "Complete Payment",
+  title,
 }: CheckoutModalProps) {
+  const { t, locale } = useI18n();
+  // Must run before <Wallet> mounts (child effects run before parent ones).
+  ensureMercadoPago(locale);
+
   useEffect(() => {
     if (!isOpen) return;
     const handleEscape = (e: KeyboardEvent) => {
@@ -48,11 +67,15 @@ export function CheckoutModal({
         onClose={onClose}
       >
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>
+            {title ?? t("credits.checkout.defaultTitle")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col items-center my-6 mx-6 p-5 rounded-lg bg-surface-elevated/50 border border-border">
-          <span className="text-sm text-text-muted">Selected Plan</span>
+          <span className="text-sm text-text-muted">
+            {t("credits.checkout.selectedPlan")}
+          </span>
           <span className="text-lg font-semibold text-primary">{planName}</span>
           <span className="text-2xl font-bold mt-2 text-text">{price}</span>
         </div>
@@ -73,8 +96,8 @@ export function CheckoutModal({
           ) : (
             <div className="text-center py-4 text-text-dim text-sm animate-pulse">
               {!MP_KEY
-                ? "Payment configuration missing. Please contact support."
-                : "Preparing secure payment environment..."}
+                ? t("credits.checkout.missingConfig")
+                : t("credits.checkout.preparing")}
             </div>
           )}
         </div>

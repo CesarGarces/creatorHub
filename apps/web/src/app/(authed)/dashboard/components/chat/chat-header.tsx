@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useChatStore } from "@/store/chat.store";
 import { ChatSettings } from "./chat-settings";
+import { useI18n } from "@/i18n/i18n-provider";
 
 export function ChatHeader() {
+  const { t } = useI18n();
   const {
     sessions,
     activeSessionId,
@@ -36,16 +38,16 @@ export function ChatHeader() {
             >
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
-            {activeSession?.title || "New Chat"}
+            {activeSession?.title || t("chat.newChat")}
           </button>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setShowSettings(!showSettings)}
-            aria-label="Chat Settings"
+            aria-label={t("chat.chatSettings")}
             className="rounded-lg p-1.5 text-text-dim hover:text-text hover:bg-surface-elevated transition-colors"
-            title="Chat Settings"
+            title={t("chat.chatSettings")}
           >
             <svg
               width="16"
@@ -66,7 +68,7 @@ export function ChatHeader() {
         <div className="absolute left-0 top-full z-50 mt-1 w-72 rounded-lg border border-border bg-surface-elevated shadow-xl">
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-text-dim">
-              Sessions
+              {t("chat.sessions.title")}
             </span>
             <button
               type="button"
@@ -76,7 +78,7 @@ export function ChatHeader() {
               }}
               className="text-xs text-primary hover:text-primary-hover"
             >
-              + New
+              {t("chat.sessions.new")}
             </button>
           </div>
           <div className="max-h-64 overflow-y-auto">
@@ -93,10 +95,12 @@ export function ChatHeader() {
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-text">
-                    {session.title || "Untitled Chat"}
+                    {session.title || t("chat.sessions.untitled")}
                   </p>
                   <p className="text-xs text-text-dim">
-                    {session._count?.messages || 0} messages
+                    {t("chat.sessions.messages", {
+                      count: session._count?.messages || 0,
+                    })}
                   </p>
                 </div>
                 <button
@@ -105,7 +109,7 @@ export function ChatHeader() {
                     e.stopPropagation();
                     deleteSession(session.id);
                   }}
-                  aria-label="Delete session"
+                  aria-label={t("chat.sessions.deleteSession")}
                   className="ml-2 rounded p-1 text-text-dim hover:text-error hover:bg-error/10 transition-colors"
                 >
                   <svg
@@ -123,7 +127,7 @@ export function ChatHeader() {
             ))}
             {sessions.length === 0 && (
               <div className="px-3 py-4 text-center text-sm text-text-dim">
-                No sessions yet
+                {t("chat.sessions.empty")}
               </div>
             )}
           </div>

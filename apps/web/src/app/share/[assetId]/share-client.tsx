@@ -6,6 +6,8 @@ import { Heart, Share2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { AssetLikeButton } from "@/components/asset-like-button";
 import { ShareModal } from "@/components/share-modal";
+import { useI18n } from "@/i18n/i18n-provider";
+import { LanguageSelector } from "@/components/i18n/language-selector";
 
 export interface PublicAsset {
   id: string;
@@ -34,6 +36,7 @@ interface ShareClientProps {
 
 export function ShareClient({ asset, assetId }: ShareClientProps) {
   const router = useRouter();
+  const { t, rich, formatDate } = useI18n();
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -41,7 +44,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
     const url = window.location.href;
     await navigator.clipboard.writeText(url);
     setCopied(true);
-    toast.success("Link copied to clipboard!");
+    toast.success(t("share.linkCopied"));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -61,24 +64,25 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
           <a href="/" className="flex items-center gap-2">
             <img
               src="/isologo_white.png"
-              alt="Creator Hub"
+              alt={t("common.appName")}
               className="h-8 w-auto"
             />
           </a>
           <div className="flex items-center gap-3">
+            <LanguageSelector compact />
             <button
               type="button"
               onClick={handleLogin}
               className="px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
             >
-              Sign In
+              {t("share.page.signIn")}
             </button>
             <button
               type="button"
               onClick={handleRegister}
               className="px-4 py-2 text-sm bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
             >
-              Get Started Free
+              {t("share.page.getStarted")}
             </button>
           </div>
         </div>
@@ -117,7 +121,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
               {asset.creator.avatarUrl ? (
                 <img
                   src={asset.creator.avatarUrl}
-                  alt={asset.creator.name || "Creator"}
+                  alt={asset.creator.name || t("share.page.creatorFallback")}
                   className="w-10 h-10 rounded-full object-cover"
                 />
               ) : (
@@ -129,14 +133,11 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
               )}
               <div>
                 <p className="text-text font-medium">
-                  {asset.creator.name || "Anonymous Creator"}
+                  {asset.creator.name || t("share.page.anonymousCreator")}
                 </p>
                 <p className="text-text-muted text-sm">
-                  Created{" "}
-                  {new Date(asset.createdAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
+                  {t("share.page.createdOn", {
+                    date: formatDate(asset.createdAt, { dateStyle: "long" }),
                   })}
                 </p>
               </div>
@@ -158,7 +159,9 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
                     : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                 }`}
               >
-                {asset.type === "VIDEO" ? "Video" : "Image"}
+                {asset.type === "VIDEO"
+                  ? t("share.page.video")
+                  : t("share.page.image")}
               </span>
               <span className="rounded-full px-3 py-1 text-xs font-medium bg-surface-elevated text-text-muted">
                 {asset.width}x{asset.height}
@@ -182,7 +185,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
                 className="flex items-center gap-2 px-4 py-2 bg-surface-elevated text-text rounded-xl hover:bg-surface-elevated/80 transition-colors"
               >
                 <Share2 size={18} />
-                <span>Share</span>
+                <span>{t("share.page.share")}</span>
               </button>
 
               <button
@@ -191,7 +194,9 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
                 className="flex items-center gap-2 px-4 py-2 bg-surface-elevated text-text rounded-xl hover:bg-surface-elevated/80 transition-colors"
               >
                 {copied ? <Check size={18} /> : <Copy size={18} />}
-                <span>{copied ? "Copied!" : "Copy Link"}</span>
+                <span>
+                  {copied ? t("share.page.copied") : t("share.page.copyLink")}
+                </span>
               </button>
             </div>
 
@@ -199,7 +204,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
             <div className="flex items-center gap-6 mt-6 pt-6 border-t border-border text-sm text-text-muted">
               <div className="flex items-center gap-1">
                 <Heart size={14} />
-                <span>{asset.likeCount} likes</span>
+                <span>{t("share.page.likes", { count: asset.likeCount })}</span>
               </div>
               <div className="flex items-center gap-1">
                 <svg
@@ -213,7 +218,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                   <circle cx="12" cy="12" r="3" />
                 </svg>
-                <span>{asset.viewCount} views</span>
+                <span>{t("share.page.views", { count: asset.viewCount })}</span>
               </div>
             </div>
           </div>
@@ -238,15 +243,22 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-text mb-3">
-              Create Something Amazing
+              {t("share.page.ctaTitle")}
             </h2>
             <p className="text-text-muted mb-6 text-lg">
-              This stunning {asset.type === "VIDEO" ? "video" : "image"} was
-              created by{" "}
-              <span className="text-text font-medium">
-                {asset.creator.name || "a Creator Hub user"}
-              </span>{" "}
-              using our AI-powered tools. What will you create?
+              {rich(
+                asset.type === "VIDEO"
+                  ? "share.page.ctaVideo"
+                  : "share.page.ctaImage",
+                {
+                  creator: (chunks) => (
+                    <span className="text-text font-medium">{chunks}</span>
+                  ),
+                },
+                {
+                  creator: asset.creator.name || t("share.page.creatorHubUser"),
+                },
+              )}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
@@ -254,14 +266,14 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
                 onClick={handleRegister}
                 className="px-8 py-4 bg-primary text-white rounded-xl font-semibold text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
               >
-                Start Creating Free
+                {t("share.page.startCreating")}
               </button>
               <button
                 type="button"
                 onClick={handleLogin}
                 className="px-8 py-4 bg-transparent border border-border text-text-muted rounded-xl font-semibold text-lg hover:bg-surface transition-colors"
               >
-                Sign In
+                {t("share.page.signIn")}
               </button>
             </div>
             <div className="flex items-center justify-center gap-2 text-text-muted mt-4">
@@ -276,7 +288,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
-              <span>100 free credits included</span>
+              <span>{t("share.page.freeCredits")}</span>
             </div>
           </div>
         </div>
@@ -286,9 +298,11 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
       <footer className="border-t border-border mt-16 py-8">
         <div className="max-w-6xl mx-auto px-4 text-center text-text-muted text-sm">
           <p>
-            Powered by{" "}
-            <span className="text-primary font-medium">Creator Hub</span> —
-            AI-powered tools for content creators
+            {rich("share.page.poweredBy", {
+              brand: (chunks) => (
+                <span className="text-primary font-medium">{chunks}</span>
+              ),
+            })}
           </p>
         </div>
       </footer>

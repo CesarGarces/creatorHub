@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@creator-hub/ui";
 import { ArrowLeft, Home } from "lucide-react";
+import { useI18n } from "@/i18n/i18n-provider";
 
 export default function NotFound() {
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg relative overflow-hidden">
@@ -22,10 +24,11 @@ export default function NotFound() {
           </span>
         </div>
 
-        <h1 className="text-2xl font-bold text-text mb-3">Page Not Found</h1>
+        <h1 className="text-2xl font-bold text-text mb-3">
+          {t("notFound.title")}
+        </h1>
         <p className="text-text-muted max-w-md mx-auto mb-10">
-          The page you are looking for does not exist or has been moved.
-          Let&apos;s get you back on track.
+          {t("notFound.description")}
         </p>
 
         <div className="flex items-center justify-center gap-4">
@@ -35,7 +38,7 @@ export default function NotFound() {
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Go Back
+            {t("notFound.goBack")}
           </Button>
           <Button
             variant="glow"
@@ -43,7 +46,7 @@ export default function NotFound() {
             className="gap-2"
           >
             <Home className="h-4 w-4" />
-            Back to Dashboard
+            {t("notFound.backToDashboard")}
           </Button>
         </div>
       </div>

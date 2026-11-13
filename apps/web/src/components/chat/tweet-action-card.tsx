@@ -4,6 +4,8 @@ import { useState } from "react";
 import { cn } from "@creator-hub/ui";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
 
 interface TweetActionCardProps {
   draftId: string;
@@ -18,6 +20,7 @@ export function TweetActionCard({
   topic,
   onNavigate,
 }: TweetActionCardProps) {
+  const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
   const [isSaving, setIsSaving] = useState(false);
@@ -27,7 +30,7 @@ export function TweetActionCard({
 
   const handleSave = async () => {
     if (isOverLimit) {
-      toast.error("Tweet exceeds 280 characters");
+      toast.error(t("chat.tweet.tooLong"));
       return;
     }
 
@@ -37,9 +40,9 @@ export function TweetActionCard({
         content: editedContent,
       });
       setIsEditing(false);
-      toast.success("Tweet updated");
+      toast.success(t("chat.tweet.updated"));
     } catch (error) {
-      toast.error("Failed to update tweet");
+      toast.error(localizeError(error, "chat.tweet.updateFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -58,15 +61,19 @@ export function TweetActionCard({
             <TwitterIcon className="h-3.5 w-3.5 text-primary" />
           </div>
           <div>
-            <p className="text-[12px] font-semibold text-text">Tweet Draft</p>
-            <p className="text-[10px] text-text-muted">Topic: {topic}</p>
+            <p className="text-[12px] font-semibold text-text">
+              {t("chat.tweet.draft")}
+            </p>
+            <p className="text-[10px] text-text-muted">
+              {t("chat.tweet.topic", { topic })}
+            </p>
           </div>
         </div>
 
         {isEditing ? (
           <div className="space-y-2">
             <textarea
-              aria-label="Edit tweet content"
+              aria-label={t("chat.tweet.editLabel")}
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
               className={cn(
@@ -93,7 +100,7 @@ export function TweetActionCard({
                   className="rounded-lg px-3 py-1.5 text-[11px] font-medium text-text-muted hover:bg-surface-elevated"
                   disabled={isSaving}
                 >
-                  Cancel
+                  {t("chat.tweet.cancel")}
                 </button>
                 <button
                   type="button"
@@ -101,7 +108,7 @@ export function TweetActionCard({
                   className="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-semibold text-white hover:brightness-110 disabled:opacity-50"
                   disabled={isSaving || isOverLimit}
                 >
-                  {isSaving ? "Saving..." : "Save"}
+                  {isSaving ? t("chat.tweet.saving") : t("chat.tweet.save")}
                 </button>
               </div>
             </div>
@@ -115,14 +122,14 @@ export function TweetActionCard({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[10px] text-text-muted">
-                {charCount}/280 characters
+                {t("chat.tweet.characters", { count: charCount })}
               </span>
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
                 className="text-[11px] font-medium text-primary hover:underline"
               >
-                Edit
+                {t("chat.tweet.edit")}
               </button>
             </div>
           </>

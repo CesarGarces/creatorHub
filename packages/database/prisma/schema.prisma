@@ -71,6 +71,8 @@ model User {
   verificationExpires  DateTime?
   passwordResetToken   String?
   passwordResetExpires DateTime?
+  /// Interface language chosen by the user ("en" | "es" | "pt"). Null = not chosen yet.
+  preferredLanguage    String?
   accounts             Account[]
   apiKeys              ApiKey[]
   assetLikes           AssetLike[]

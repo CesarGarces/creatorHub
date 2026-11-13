@@ -19,6 +19,7 @@ import {
   History,
   Settings,
 } from "lucide-react";
+import { useI18n } from "@/i18n/i18n-provider";
 
 interface CommandItem {
   id: string;
@@ -36,91 +37,103 @@ interface CommandPaletteProps {
   items?: CommandItem[];
 }
 
-const defaultItems: CommandItem[] = [
+type DefaultItemId =
+  | "thumbnail"
+  | "xPostAgent"
+  | "xResearchAgent"
+  | "dashboard"
+  | "tools"
+  | "agents"
+  | "credits"
+  | "history"
+  | "settings";
+
+type GroupId = "tools" | "agents" | "navigation" | "account";
+
+const defaultItemDefs: {
+  id: DefaultItemId;
+  icon: React.ReactNode;
+  href: string;
+  group: GroupId;
+}[] = [
   {
     id: "thumbnail",
-    label: "Thumbnail Generator",
-    description: "Create stunning thumbnails",
     icon: <Palette className="h-4 w-4 text-text-dim" />,
     href: "/tools/thumbnail-generator",
-    category: "Tools",
+    group: "tools",
   },
   {
-    id: "x-post-agent",
-    label: "X Post Agent",
-    description: "Publish tweets to X",
+    id: "xPostAgent",
     icon: <Bot className="h-4 w-4 text-text-dim" />,
     href: "/tools/x-post-tweet",
-    category: "Agents",
+    group: "agents",
   },
   {
-    id: "x-research-agent",
-    label: "X Research Agent",
-    description: "Search X trends",
+    id: "xResearchAgent",
     icon: <Bot className="h-4 w-4 text-text-dim" />,
     href: "/tools/x-search-trends",
-    category: "Agents",
+    group: "agents",
   },
   {
     id: "dashboard",
-    label: "Dashboard",
-    description: "Go to dashboard",
     icon: <LayoutDashboard className="h-4 w-4 text-text-dim" />,
     href: "/dashboard",
-    category: "Navigation",
+    group: "navigation",
   },
   {
     id: "tools",
-    label: "All Tools",
-    description: "Browse all tools",
     icon: <Wrench className="h-4 w-4 text-text-dim" />,
     href: "/tools",
-    category: "Navigation",
+    group: "navigation",
   },
   {
     id: "agents",
-    label: "All Agents",
-    description: "Browse all agents",
     icon: <Bot className="h-4 w-4 text-text-dim" />,
     href: "/agents",
-    category: "Navigation",
+    group: "navigation",
   },
   {
     id: "credits",
-    label: "Credits",
-    description: "Manage your credits",
     icon: <CreditCard className="h-4 w-4 text-text-dim" />,
     href: "/credits",
-    category: "Account",
+    group: "account",
   },
   {
     id: "history",
-    label: "History",
-    description: "View generation history",
     icon: <History className="h-4 w-4 text-text-dim" />,
     href: "/history",
-    category: "Navigation",
+    group: "navigation",
   },
   {
     id: "settings",
-    label: "Settings",
-    description: "App settings",
     icon: <Settings className="h-4 w-4 text-text-dim" />,
     href: "/settings",
-    category: "Account",
+    group: "account",
   },
 ];
 
 export function CommandPalette({
   isOpen,
   onClose,
-  items = defaultItems,
+  items,
 }: CommandPaletteProps) {
   const router = useRouter();
+  const { t } = useI18n();
 
-  const grouped = items.reduce(
+  const resolvedItems: CommandItem[] =
+    items ??
+    defaultItemDefs.map((def) => ({
+      id: def.id,
+      label: t(`commandPalette.items.${def.id}.label`),
+      description: t(`commandPalette.items.${def.id}.description`),
+      icon: def.icon,
+      href: def.href,
+      category: t(`commandPalette.groups.${def.group}`),
+    }));
+
+  const grouped = resolvedItems.reduce(
     (acc, item) => {
-      const cat = item.category || "Other";
+      const cat = item.category || t("commandPalette.groups.other");
       if (!acc[cat]) acc[cat] = [];
       acc[cat].push(item);
       return acc;
@@ -136,9 +149,9 @@ export function CommandPalette({
 
   return (
     <CommandDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <CommandInput placeholder="Search tools, agents, pages..." />
+      <CommandInput placeholder={t("commandPalette.placeholder")} />
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandEmpty>{t("commandPalette.empty")}</CommandEmpty>
         {Object.entries(grouped).map(([category, items]) => (
           <CommandGroup key={category} heading={category}>
             {items.map((item) => (

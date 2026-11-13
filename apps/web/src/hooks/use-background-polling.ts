@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { t } from "@/i18n/runtime";
+import { localizeError } from "@/i18n/errors";
 import { useGenerationStore } from "@/store/generation.store";
 import { useTranslatorStore } from "@/store/translator.store";
 import { useVideoStore } from "@/store/video.store";
@@ -120,20 +122,14 @@ export function useBackgroundPolling() {
         vidCurrent === "REVEALING"
       ) {
         if (toolId === "content-translator") {
-          translatorSetFailed(
-            "Translation timed out. The AI provider may be unavailable.",
-          );
-          toast.error("Translation timed out. Please try again.");
+          translatorSetFailed(t("jobs.translationTimeoutDetail"));
+          toast.error(t("jobs.translationTimeout"));
         } else if (toolId === "video-generator") {
-          videoSetFailed(
-            "Video generation timed out. The AI provider may be unavailable.",
-          );
-          toast.error("Video generation timed out. Please try again.");
+          videoSetFailed(t("jobs.videoTimeoutDetail"));
+          toast.error(t("jobs.videoTimeout"));
         } else {
-          setFailed(
-            "Generation timed out. The AI provider may be unavailable.",
-          );
-          toast.error("Generation timed out. Please try again.");
+          setFailed(t("jobs.generationTimeoutDetail"));
+          toast.error(t("jobs.generationTimeout"));
         }
         activeJobIdRef.current = null;
       }
@@ -173,7 +169,7 @@ export function useBackgroundPolling() {
               translatorSetRevealing(latest.response.translatedText, latest.id);
               translatorSetReady();
               fetchBalance();
-              toast.success("Translation ready!");
+              toast.success(t("jobs.translationReady"));
             }
           } else if (toolId === "video-generator") {
             const videosRes = await api.get<{ data: any[] }>(
@@ -185,7 +181,7 @@ export function useBackgroundPolling() {
               videoAddVariation(latest.url, latest.id);
               videoSetReady();
               fetchBalance();
-              toast.success("Video ready!");
+              toast.success(t("jobs.videoReady"));
             }
           } else {
             const imagesRes = await api.get<{ data: any[] }>(
@@ -196,7 +192,7 @@ export function useBackgroundPolling() {
               setRevealing(latest.url, latest.id);
               setReady();
               fetchBalance();
-              toast.success("Generation ready!");
+              toast.success(t("jobs.generationReady"));
             }
           }
           activeJobIdRef.current = null;
@@ -204,14 +200,26 @@ export function useBackgroundPolling() {
         } else if (statusRes.status === "failed") {
           stopPolling();
           if (toolId === "content-translator") {
-            translatorSetFailed(statusRes.failedReason || "Translation failed");
-            toast.error(statusRes.failedReason || "Translation failed");
+            const reason = localizeError(
+              statusRes.failedReason,
+              "jobs.translationFailed",
+            );
+            translatorSetFailed(reason);
+            toast.error(reason);
           } else if (toolId === "video-generator") {
-            videoSetFailed(statusRes.failedReason || "Video generation failed");
-            toast.error(statusRes.failedReason || "Video generation failed");
+            const reason = localizeError(
+              statusRes.failedReason,
+              "jobs.videoFailed",
+            );
+            videoSetFailed(reason);
+            toast.error(reason);
           } else {
-            setFailed(statusRes.failedReason || "Generation failed");
-            toast.error(statusRes.failedReason || "Generation failed");
+            const reason = localizeError(
+              statusRes.failedReason,
+              "jobs.generationFailed",
+            );
+            setFailed(reason);
+            toast.error(reason);
           }
           activeJobIdRef.current = null;
           activeToolIdRef.current = null;

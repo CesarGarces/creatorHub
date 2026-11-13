@@ -22,6 +22,8 @@ import { UpgradeModal } from "@/components/modals/upgrade-modal";
 import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 import { ProviderSelect } from "@/components/provider-select";
 import { Volume2, VolumeX } from "lucide-react";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
 
 const videoAspectRatios = [
   { id: "16:9", label: "16:9", width: 1280, height: 720, iconClass: "w-8 h-5" },
@@ -43,19 +45,17 @@ const QUALITY_OPTIONS = {
   ],
 } as const;
 
-const planLabels: Record<
-  string,
-  { label: string; variant: "free" | "primary" | "premium" }
-> = {
-  FREE: { label: "FREE PLAN", variant: "free" },
-  PAY_AS_YOU_GO: { label: "PAY AS YOU GO", variant: "primary" },
-  PREMIUM: { label: "PREMIUM", variant: "premium" },
-  STARTER: { label: "STARTER", variant: "primary" },
-  PRO: { label: "PRO", variant: "premium" },
+const planVariants: Record<string, "free" | "primary" | "premium"> = {
+  FREE: "free",
+  PAY_AS_YOU_GO: "primary",
+  PREMIUM: "premium",
+  STARTER: "primary",
+  PRO: "premium",
 };
 
 export default function VideoGeneratorPage() {
   const router = useRouter();
+  const { t, tOptional } = useI18n();
   const { tools, fetchTools } = useToolsStore();
   const {
     balance,
@@ -179,11 +179,11 @@ export default function VideoGeneratorPage() {
 
   const handleFileSelect = (file: File) => {
     if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
+      toast.error(t("video.selectImageFile"));
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("Image must be under 10MB");
+      toast.error(t("video.imageTooLarge"));
       return;
     }
     const reader = new FileReader();
@@ -226,15 +226,14 @@ export default function VideoGeneratorPage() {
     onSuccess: (response) => {
       const jobId = response?.data?.jobId;
       if (!jobId) {
-        toast.error("Generation failed: no job ID returned");
+        toast.error(t("toolShared.noJobId"));
         return;
       }
       lastCompletedRef.current = null;
       startGeneration("video-generator", jobId);
     },
     onError: (error: any) => {
-      const message =
-        error?.message || "Failed to generate video. Please try again.";
+      const message = localizeError(error, "video.failed");
       setFailed(message);
       toast.error(message);
     },
@@ -243,7 +242,7 @@ export default function VideoGeneratorPage() {
   const handleGenerate = () => {
     if (!prompt.trim()) return;
     if (isI2V && !imageUrl) {
-      toast.error("Please upload a source image for Image-to-Video");
+      toast.error(t("video.sourceImageRequired"));
       return;
     }
     const payload = {
@@ -266,15 +265,14 @@ export default function VideoGeneratorPage() {
       .then((response) => {
         const jobId = response?.data?.jobId;
         if (!jobId) {
-          toast.error("Generation failed: no job ID returned");
+          toast.error(t("toolShared.noJobId"));
           return;
         }
         lastCompletedRef.current = null;
         startGeneration("video-generator", jobId);
       })
       .catch((error: any) => {
-        const message =
-          error?.message || "Failed to generate video. Please try again.";
+        const message = localizeError(error, "video.failed");
         setFailed(message);
         toast.error(message);
       });
@@ -284,8 +282,8 @@ export default function VideoGeneratorPage() {
     <>
       <TopBar
         breadcrumbs={[
-          { label: "Tools", href: "/tools" },
-          { label: "Video Generator" },
+          { label: t("nav.tools"), href: "/tools" },
+          { label: t("toolCatalog.video-generator.name") },
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -311,23 +309,26 @@ export default function VideoGeneratorPage() {
                   <rect x="3" y="14" width="7" height="7" rx="1" />
                   <rect x="14" y="14" width="7" height="7" rx="1" />
                 </svg>
-                Variations
+                {t("toolShared.variations")}
                 <span className="ml-1 rounded-full bg-primary/20 px-1.5 text-xs">
                   {variations.length}
                 </span>
               </button>
             )}
             <Badge variant="primary" size="sm">
-              ⚡ {estimatedCredits} credits
+              {t("common.credits.cost", { count: estimatedCredits })}
               {supportsAdvancedSettings && (
                 <span className="text-[10px] ml-1 opacity-70">
-                  ({selectedModelCreditCost}/sec × {duration}s)
+                  {t("video.costBreakdown", {
+                    cost: selectedModelCreditCost,
+                    duration,
+                  })}
                 </span>
               )}
             </Badge>
-            {plan && planLabels[plan] && (
-              <Badge variant={planLabels[plan].variant} size="sm">
-                {planLabels[plan].label}
+            {plan && planVariants[plan] && (
+              <Badge variant={planVariants[plan]} size="sm">
+                {tOptional(`common.plans.${plan}`, plan)}
               </Badge>
             )}
           </div>
@@ -338,12 +339,12 @@ export default function VideoGeneratorPage() {
         <div className="w-80 border-r border-border bg-surface p-5 space-y-6 overflow-y-auto flex-shrink-0">
           <div>
             <label className="block text-sm font-medium text-text-muted mb-2">
-              Prompt
+              {t("toolShared.prompt")}
             </label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe the video you want to create..."
+              placeholder={t("video.promptPlaceholder")}
               disabled={isProcessing}
               className="w-full h-32 rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
@@ -353,20 +354,20 @@ export default function VideoGeneratorPage() {
           {isI2V && (
             <div>
               <label className="block text-sm font-medium text-text-muted mb-2">
-                Source Image
+                {t("video.sourceImage")}
               </label>
               {imageUrl ? (
                 <div className="relative rounded-lg border border-border bg-surface-elevated overflow-hidden">
                   <img
                     src={imageUrl}
-                    alt="Source image"
+                    alt={t("video.sourceImageAlt")}
                     className="w-full h-40 object-contain bg-black/20"
                   />
                   <button
                     onClick={() => setImageUrl(null)}
                     disabled={isProcessing}
                     className="absolute top-2 right-2 p-1.5 rounded-md bg-black/60 text-text-muted hover:text-text hover:bg-black/80 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="Remove image"
+                    aria-label={t("toolShared.removeImage")}
                   >
                     <svg
                       width="14"
@@ -384,7 +385,7 @@ export default function VideoGeneratorPage() {
                   </button>
                   <div className="px-3 py-2 border-t border-border">
                     <p className="text-[11px] text-text-dim truncate">
-                      Image loaded
+                      {t("video.imageLoaded")}
                     </p>
                   </div>
                 </div>
@@ -423,10 +424,12 @@ export default function VideoGeneratorPage() {
                   </div>
                   <div className="text-center">
                     <p className="text-xs font-medium text-text-muted">
-                      {isDragOver ? "Drop image here" : "Drag & drop or click"}
+                      {isDragOver
+                        ? t("video.dropHere")
+                        : t("video.dragOrClick")}
                     </p>
                     <p className="text-[11px] text-text-dim mt-0.5">
-                      PNG, JPG, WEBP up to 10MB
+                      {t("video.fileHint")}
                     </p>
                   </div>
                   <input
@@ -447,12 +450,12 @@ export default function VideoGeneratorPage() {
 
           <div>
             <label className="block text-sm font-medium text-text-muted mb-3">
-              Aspect Ratio
+              {t("toolShared.aspectRatio")}
             </label>
             <div
               className="flex gap-1.5"
               role="radiogroup"
-              aria-label="Aspect ratio selection"
+              aria-label={t("toolShared.aspectRatioGroup")}
             >
               {videoAspectRatios.map((ar) => {
                 const isSelected = aspectRatio === ar.id;
@@ -461,7 +464,9 @@ export default function VideoGeneratorPage() {
                     key={ar.id}
                     role="radio"
                     aria-checked={isSelected}
-                    aria-label={`${ar.label} aspect ratio`}
+                    aria-label={t("toolShared.aspectRatioOption", {
+                      ratio: ar.label,
+                    })}
                     onClick={() => !isProcessing && setAspectRatio(ar.id)}
                     disabled={isProcessing}
                     className={`flex flex-col items-center justify-center gap-1 rounded-lg border transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[48px] h-16 ${
@@ -497,14 +502,14 @@ export default function VideoGeneratorPage() {
               setSelectedModelCreditCost(m.creditCost);
             }}
             disabled={isProcessing}
-            label="Video Model"
+            label={t("video.videoModel")}
           />
 
           {/* Advanced Settings - Only for Seedance models */}
           {supportsAdvancedSettings && (
             <div className="space-y-4 pt-4 border-t border-border">
               <div className="text-xs font-medium text-text-muted uppercase tracking-wider">
-                Advanced Settings
+                {t("video.advancedSettings")}
               </div>
 
               {/* Duration Slider */}
@@ -514,7 +519,7 @@ export default function VideoGeneratorPage() {
                     htmlFor="duration-slider"
                     className="text-xs font-medium text-text-dim"
                   >
-                    Duration
+                    {t("video.duration")}
                   </label>
                   <span className="text-xs font-mono text-text tabular-nums">
                     {duration}s
@@ -548,7 +553,7 @@ export default function VideoGeneratorPage() {
                   ) : (
                     <VolumeX size={16} className="text-text-dim" />
                   )}
-                  Audio
+                  {t("video.audio")}
                 </label>
                 <Switch
                   id="audio-switch"
@@ -561,12 +566,12 @@ export default function VideoGeneratorPage() {
               {/* Quality Selector */}
               <div>
                 <label className="text-xs font-medium text-text-dim mb-2 block">
-                  Quality
+                  {t("video.quality")}
                 </label>
                 <div
                   className="flex gap-1.5"
                   role="radiogroup"
-                  aria-label="Quality selection"
+                  aria-label={t("video.qualityGroup")}
                 >
                   {qualityOptions.map((q) => {
                     const isSelected = quality === q.id;
@@ -575,7 +580,9 @@ export default function VideoGeneratorPage() {
                         key={q.id}
                         role="radio"
                         aria-checked={isSelected}
-                        aria-label={`${q.label} quality`}
+                        aria-label={t("video.qualityOption", {
+                          quality: q.label,
+                        })}
                         onClick={() => !isProcessing && setQuality(q.id)}
                         disabled={isProcessing}
                         className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
@@ -608,16 +615,20 @@ export default function VideoGeneratorPage() {
               }
               onClick={handleGenerate}
             >
-              {isProcessing ? "Generating..." : "Generate Video"}
+              {isProcessing
+                ? t("common.actions.generating")
+                : t("video.generate")}
             </Button>
             {creditsHydrated && balance < estimatedCredits && (
               <p className="mt-2 text-xs text-error text-center">
-                Insufficient credits. Need {estimatedCredits} credits.{" "}
+                {t("video.insufficientCreditsNeed", {
+                  count: estimatedCredits,
+                })}{" "}
                 <button
                   onClick={() => router.push("/credits")}
                   className="underline cursor-pointer"
                 >
-                  Buy more
+                  {t("toolShared.buyMore")}
                 </button>
               </p>
             )}
@@ -631,11 +642,11 @@ export default function VideoGeneratorPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-warning">⚠️</span>
                   <span className="text-sm font-medium text-warning">
-                    No credits left
+                    {t("toolShared.noCreditsTitle")}
                   </span>
                 </div>
                 <p className="text-xs text-text-muted">
-                  Upgrade to Pro or buy credit packs to continue generating.
+                  {t("toolShared.noCreditsDescription")}
                 </p>
                 <Button
                   variant="primary"
@@ -643,7 +654,7 @@ export default function VideoGeneratorPage() {
                   className="w-full"
                   onClick={() => setShowUpgradeModal(true)}
                 >
-                  Recharge (Min. $10)
+                  {t("toolShared.recharge")}
                 </Button>
               </div>
             )}
@@ -673,8 +684,8 @@ export default function VideoGeneratorPage() {
               <div className="absolute inset-0 flex items-center justify-center">
                 <EmptyState
                   icon="🎬"
-                  title="Create your video"
-                  description="Enter a prompt and click generate to create stunning videos with AI."
+                  title={t("video.emptyTitle")}
+                  description={t("video.emptyDescription")}
                 />
               </div>
             )}
@@ -682,7 +693,7 @@ export default function VideoGeneratorPage() {
             {(status === "GENERATING" || status === "REVEALING") && (
               <div className="absolute inset-0 flex items-center justify-center z-10 animate-fade-in">
                 <LoadingSpinner
-                  text="Generating video... This may take a few minutes."
+                  text={t("video.generatingLabel")}
                   colors={["#c084fc", "#f472b6", "#38bdf8"]}
                 />
               </div>
@@ -718,9 +729,9 @@ export default function VideoGeneratorPage() {
                           a.download = "video.mp4";
                           a.click();
                           URL.revokeObjectURL(url);
-                          toast.success("Download started");
+                          toast.success(t("common.toasts.downloadStarted"));
                         } catch {
-                          toast.error("Download failed");
+                          toast.error(t("common.toasts.downloadFailed"));
                         }
                       }}
                     >
@@ -736,14 +747,14 @@ export default function VideoGeneratorPage() {
                         <polyline points="7 10 12 15 17 10" />
                         <line x1="12" x2="12" y1="15" y2="3" />
                       </svg>
-                      Download
+                      {t("common.actions.download")}
                     </Button>
                     <Button
                       variant="secondary"
                       size="sm"
                       onClick={() => {
                         navigator.clipboard.writeText(videoUrl);
-                        toast.success("URL copied to clipboard");
+                        toast.success(t("common.toasts.urlCopied"));
                       }}
                     >
                       <svg
@@ -757,7 +768,7 @@ export default function VideoGeneratorPage() {
                         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                       </svg>
-                      Copy URL
+                      {t("common.actions.copyUrl")}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={resetAll}>
                       <svg
@@ -771,7 +782,7 @@ export default function VideoGeneratorPage() {
                         <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
                         <path d="M21 3v5h-5" />
                       </svg>
-                      Generate New
+                      {t("common.actions.generateNew")}
                     </Button>
                   </div>
                 )}
@@ -782,9 +793,13 @@ export default function VideoGeneratorPage() {
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center space-y-4 animate-fade-in">
                   <div className="rounded-xl border border-error/30 bg-error/5 p-8">
-                    <p className="text-error font-medium">Generation failed</p>
+                    <p className="text-error font-medium">
+                      {t("toolShared.generationFailed")}
+                    </p>
                     <p className="text-sm text-text-muted mt-1">
-                      {generationError || "Unknown error"}
+                      {generationError
+                        ? localizeError(generationError)
+                        : t("common.status.unknownError")}
                     </p>
                     {!generationError?.includes("content filter") && (
                       <Button
@@ -793,7 +808,7 @@ export default function VideoGeneratorPage() {
                         className="mt-4"
                         onClick={handleGenerate}
                       >
-                        Try Again
+                        {t("common.actions.tryAgain")}
                       </Button>
                     )}
                   </div>
@@ -818,9 +833,12 @@ export default function VideoGeneratorPage() {
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between flex-shrink-0 px-6 pt-6 pb-4 border-b border-border">
-            <h2 className="text-lg font-semibold text-text">Variations</h2>
+            <h2 className="text-lg font-semibold text-text">
+              {t("toolShared.variations")}
+            </h2>
             <button
               onClick={() => setShowVariations(false)}
+              aria-label={t("common.actions.close")}
               className="rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <svg
@@ -867,7 +885,7 @@ export default function VideoGeneratorPage() {
               ))
             ) : (
               <div className="text-center py-8 text-xs text-text-dim">
-                Generated variations will appear here
+                {t("toolShared.variationsEmpty")}
               </div>
             )}
           </div>

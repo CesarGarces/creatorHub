@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ReactNode } from "react";
+import { useI18n } from "@/i18n/i18n-provider";
 
 interface Props {
   children: ReactNode;
@@ -10,6 +11,15 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+}
+
+function DefaultErrorFallback() {
+  const { t } = useI18n();
+  return (
+    <div className="flex items-center justify-center p-4 text-sm text-text-muted">
+      <p>{t("ui.errorBoundary")}</p>
+    </div>
+  );
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -28,13 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      return (
-        this.props.fallback || (
-          <div className="flex items-center justify-center p-4 text-sm text-text-muted">
-            <p>Something went wrong. Please try again.</p>
-          </div>
-        )
-      );
+      return this.props.fallback || <DefaultErrorFallback />;
     }
 
     return this.props.children;

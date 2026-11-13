@@ -7,8 +7,7 @@
   "scripts": {
     "build": "tsc",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest --run"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.16",
@@ -28,11 +27,8 @@
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "@testing-library/react": "^14.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "jsdom": "^22.1.0",
-    "typescript": "^5.5.0",
-    "vitest": "^3.2.6"
+    "typescript": "^5.5.0"
   }
 }

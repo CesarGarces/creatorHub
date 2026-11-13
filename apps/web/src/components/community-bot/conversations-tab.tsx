@@ -12,8 +12,10 @@ import {
   cn,
 } from "@creator-hub/ui";
 import { useCommunityBotStore } from "@/store/community-bot.store";
+import { useI18n } from "@/i18n/i18n-provider";
 
 export function ConversationsTab() {
+  const { t } = useI18n();
   const conversations = useCommunityBotStore((s) => s.conversations);
   const isLoading = useCommunityBotStore((s) => s.isLoadingConversations);
   const activeConversationId = useCommunityBotStore(
@@ -33,8 +35,8 @@ export function ConversationsTab() {
     return (
       <EmptyState
         icon="💬"
-        title="No conversations yet"
-        description="Once your bot is connected and fans start writing, every exchange will appear here."
+        title={t("communityBot.conversations.emptyTitle")}
+        description={t("communityBot.conversations.emptyDescription")}
       />
     );
   }
@@ -65,7 +67,7 @@ export function ConversationsTab() {
             <MessageThread />
           ) : (
             <div className="hidden lg:flex h-[520px] items-center justify-center text-sm text-text-muted">
-              Select a conversation to read the thread
+              {t("communityBot.conversations.selectThread")}
             </div>
           )}
         </CardContent>
@@ -77,6 +79,7 @@ export function ConversationsTab() {
 // ─── List ────────────────────────────────────────────────────
 
 function ConversationList() {
+  const { t, formatDate } = useI18n();
   const conversations = useCommunityBotStore((s) => s.conversations);
   const activeConversationId = useCommunityBotStore(
     (s) => s.activeConversationId,
@@ -115,14 +118,21 @@ function ConversationList() {
             </div>
             {last && (
               <p className="mt-1 text-xs text-text-muted truncate">
-                {last.direction === "OUTBOUND" ? "Bot: " : ""}
+                {last.direction === "OUTBOUND"
+                  ? t("communityBot.conversations.botPrefix")
+                  : ""}
                 {last.content}
               </p>
             )}
             <p className="mt-0.5 text-[10px] text-text-dim">
-              {conversation.messageCount} messages
+              {t("communityBot.conversations.messages", {
+                count: conversation.messageCount,
+              })}
               {conversation.lastMessageAt &&
-                ` · ${new Date(conversation.lastMessageAt).toLocaleString()}`}
+                ` · ${formatDate(conversation.lastMessageAt, {
+                  dateStyle: "short",
+                  timeStyle: "short",
+                })}`}
             </p>
           </button>
         );
@@ -134,6 +144,7 @@ function ConversationList() {
 // ─── Thread ──────────────────────────────────────────────────
 
 function MessageThread() {
+  const { t, formatDate } = useI18n();
   const activeMessages = useCommunityBotStore((s) => s.activeMessages);
   const isLoading = useCommunityBotStore((s) => s.isLoadingMessages);
   const closeConversation = useCommunityBotStore((s) => s.closeConversation);
@@ -149,7 +160,7 @@ function MessageThread() {
         onClick={closeConversation}
         className="mb-3 flex items-center gap-1 text-sm text-text-muted hover:text-text lg:hidden"
       >
-        <ArrowLeft size={14} /> Back to conversations
+        <ArrowLeft size={14} /> {t("communityBot.conversations.back")}
       </button>
 
       <ScrollArea className="flex-1 pr-2">
@@ -168,18 +179,31 @@ function MessageThread() {
                 {message.content}
               </p>
               <p className="mt-1 text-[10px] text-text-dim flex items-center gap-2">
-                <span>{new Date(message.createdAt).toLocaleString()}</span>
+                <span>
+                  {formatDate(message.createdAt, {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </span>
                 {message.direction === "OUTBOUND" &&
                   message.creditsUsed !== null && (
-                    <span>· {message.creditsUsed} cr</span>
+                    <span>
+                      {t("communityBot.conversations.creditsShort", {
+                        count: message.creditsUsed,
+                      })}
+                    </span>
                   )}
                 {message.status === "SKIPPED" && (
                   <span className="text-warning">
-                    · skipped ({message.skipReason})
+                    {t("communityBot.conversations.skipped", {
+                      reason: message.skipReason ?? "",
+                    })}
                   </span>
                 )}
                 {message.status === "FAILED" && (
-                  <span className="text-error">· delivery failed</span>
+                  <span className="text-error">
+                    {t("communityBot.conversations.deliveryFailed")}
+                  </span>
                 )}
               </p>
             </div>

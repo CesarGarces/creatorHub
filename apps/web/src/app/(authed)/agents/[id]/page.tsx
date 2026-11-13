@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useI18n } from "@/i18n/i18n-provider";
 
 // Agent to tool mapping
 const agentToToolMap: Record<string, string> = {
@@ -12,6 +13,7 @@ const agentToToolMap: Record<string, string> = {
 export default function AgentChatPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useI18n();
   const agentId = params.id as string;
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export default function AgentChatPage() {
     <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
       <div className="text-center space-y-4">
         <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" />
-        <p className="text-sm text-text-muted">Redirecting to tool...</p>
+        <p className="text-sm text-text-muted">{t("agents.redirecting")}</p>
       </div>
     </div>
   );

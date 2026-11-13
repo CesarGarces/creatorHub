@@ -2,6 +2,11 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 import { useAuthStore } from "@/store/auth.store";
 import * as cookie from "@/lib/cookie";
 import api from "@/lib/api";
+import {
+  __resetClientLocaleForTests,
+  getClientLocale,
+  initClientLocale,
+} from "@/i18n/runtime";
 
 vi.mock("@/lib/api");
 
@@ -27,5 +32,25 @@ describe("auth.store", () => {
     await useAuthStore.getState().login("a@b.com", "p");
 
     expect(setRefreshSpy).toHaveBeenCalledWith("refresh-abc");
+  });
+
+  it("restores the interface language saved on the account after login", async () => {
+    __resetClientLocaleForTests();
+    initClientLocale("en");
+    (api.post as any).mockResolvedValueOnce({
+      accessToken: "access-123",
+      refreshToken: "refresh-abc",
+      user: {
+        id: "u1",
+        email: "a@b.com",
+        role: "user",
+        preferredLanguage: "pt",
+      },
+    });
+
+    await useAuthStore.getState().login("a@b.com", "p");
+
+    expect(getClientLocale()).toBe("pt");
+    expect(document.cookie).toContain("ch_locale=pt");
   });
 });

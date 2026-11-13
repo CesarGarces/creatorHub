@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ShareClient } from "./share-client";
+import { getRequestLocale } from "@/i18n/server";
+import { translate } from "@/i18n/translate";
 
 // Force dynamic rendering — asset can toggle public/private at any time
 // Social media crawlers will still get the OG tags from server-rendered HTML
@@ -56,24 +58,39 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { assetId } = await params;
-  const asset = await getAsset(assetId);
+  const [asset, locale] = await Promise.all([
+    getAsset(assetId),
+    getRequestLocale(),
+  ]);
 
   if (!asset) {
     return {
-      title: "Asset Not Found | Creator Hub",
-      description: "This asset could not be found or is not public.",
+      title: translate(locale, "share.meta.notFoundTitle"),
+      description: translate(locale, "share.meta.notFoundDescription"),
     };
   }
 
-  const title =
-    asset.type === "VIDEO"
-      ? `Video: "${asset.prompt.slice(0, 60)}${asset.prompt.length > 60 ? "..." : ""}" | Creator Hub`
-      : `"${asset.prompt.slice(0, 60)}${asset.prompt.length > 60 ? "..." : ""}" | Creator Hub`;
+  const shortPrompt = `${asset.prompt.slice(0, 60)}${asset.prompt.length > 60 ? "..." : ""}`;
+  const title = translate(
+    locale,
+    asset.type === "VIDEO" ? "share.meta.videoTitle" : "share.meta.imageTitle",
+    { prompt: shortPrompt },
+  );
 
-  const description =
-    `Created with ${asset.model} — ${asset.width}x${asset.height} ` +
-    `${asset.type.toLowerCase()} by ${asset.creator.name || "a Creator Hub user"}. ` +
-    `Join free and create your own.`;
+  const description = translate(
+    locale,
+    asset.type === "VIDEO"
+      ? "share.meta.descriptionVideo"
+      : "share.meta.descriptionImage",
+    {
+      model: asset.model,
+      // Strings, so dimensions are not digit-grouped ("1,280").
+      width: String(asset.width),
+      height: String(asset.height),
+      creator:
+        asset.creator.name || translate(locale, "share.page.creatorHubUser"),
+    },
+  );
 
   // Use thumbnail for videos (social media crawlers can't process video files)
   // For images, use the asset URL directly

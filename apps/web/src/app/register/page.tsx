@@ -15,9 +15,13 @@ import { Eye, EyeOff } from "lucide-react";
 import { PrivacyModal } from "@/app/privacy/page";
 import { TermsModal } from "@/app/terms/page";
 import { CookiesModal } from "@/app/cookies/page";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
+import { AuthLanguageSwitcher } from "@/components/i18n/auth-language-switcher";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t, rich } = useI18n();
   const { register, isLoading } = useAuthStore();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -44,17 +48,17 @@ export default function RegisterPage() {
     setError("");
 
     if (!acceptedTerms) {
-      setError("You must accept the Terms of Service and Privacy Policy");
+      setError(t("auth.register.mustAcceptTerms"));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("errors.passwordsDoNotMatch"));
       return;
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("errors.passwordTooShort"));
       return;
     }
 
@@ -66,13 +70,14 @@ export default function RegisterPage() {
         idempotencyKeyRef.current ?? undefined,
       );
       router.push("/auth/verify");
-    } catch {
-      setError("Registration failed");
+    } catch (err) {
+      setError(localizeError(err, "auth.register.failed"));
     }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg relative overflow-hidden">
+      <AuthLanguageSwitcher />
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
       <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
       <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-accent/5 blur-3xl" />
@@ -81,11 +86,15 @@ export default function RegisterPage() {
         <CardHeader className="text-center">
           <img
             src="/isologo_white.png"
-            alt="Creator Hub"
+            alt={t("common.appName")}
             className="mx-auto mb-4 h-14 w-auto"
           />
-          <h1 className="text-2xl font-bold text-text">Create your account</h1>
-          <p className="text-sm text-text-muted">Start creating with AI</p>
+          <h1 className="text-2xl font-bold text-text">
+            {t("auth.register.title")}
+          </h1>
+          <p className="text-sm text-text-muted">
+            {t("auth.register.subtitle")}
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -95,25 +104,25 @@ export default function RegisterPage() {
               </div>
             )}
             <Input
-              label="Name"
+              label={t("auth.fields.name")}
               type="text"
               name="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
+              placeholder={t("auth.fields.namePlaceholder")}
             />
             <Input
-              label="Email"
+              label={t("auth.fields.email")}
               type="email"
               name="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("auth.fields.emailPlaceholder")}
               required
             />
             <div className="relative">
               <Input
-                label="Password"
+                label={t("auth.fields.password")}
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={password}
@@ -126,6 +135,11 @@ export default function RegisterPage() {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-[38px] text-text-muted hover:text-text transition-colors"
                 tabIndex={-1}
+                aria-label={
+                  showPassword
+                    ? t("auth.fields.hidePassword")
+                    : t("auth.fields.showPassword")
+                }
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -136,7 +150,7 @@ export default function RegisterPage() {
             </div>
             <div className="relative">
               <Input
-                label="Confirm Password"
+                label={t("auth.fields.confirmPassword")}
                 type={showConfirmPassword ? "text" : "password"}
                 name="confirmPassword"
                 value={confirmPassword}
@@ -149,6 +163,11 @@ export default function RegisterPage() {
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute right-3 top-[38px] text-text-muted hover:text-text transition-colors"
                 tabIndex={-1}
+                aria-label={
+                  showConfirmPassword
+                    ? t("auth.fields.hidePassword")
+                    : t("auth.fields.showPassword")
+                }
               >
                 {showConfirmPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -158,7 +177,9 @@ export default function RegisterPage() {
               </button>
             </div>
             {password && confirmPassword && password !== confirmPassword && (
-              <p className="text-xs text-error">Passwords do not match</p>
+              <p className="text-xs text-error">
+                {t("errors.passwordsDoNotMatch")}
+              </p>
             )}
             <div className="flex items-start space-x-2">
               <Checkbox
@@ -173,23 +194,26 @@ export default function RegisterPage() {
                 htmlFor="acceptedTerms"
                 className="text-sm text-text-muted leading-relaxed"
               >
-                I agree to the{" "}
-                <button
-                  type="button"
-                  onClick={() => setShowTerms(true)}
-                  className="text-primary hover:underline font-medium"
-                >
-                  Terms of Service
-                </button>{" "}
-                and{" "}
-                <button
-                  type="button"
-                  onClick={() => setShowPrivacy(true)}
-                  className="text-primary hover:underline font-medium"
-                >
-                  Privacy Policy
-                </button>
-                {"."}
+                {rich("auth.register.acceptTerms", {
+                  terms: (chunks) => (
+                    <button
+                      type="button"
+                      onClick={() => setShowTerms(true)}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      {chunks}
+                    </button>
+                  ),
+                  privacy: (chunks) => (
+                    <button
+                      type="button"
+                      onClick={() => setShowPrivacy(true)}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      {chunks}
+                    </button>
+                  ),
+                })}
               </label>
             </div>
             <Button
@@ -200,39 +224,39 @@ export default function RegisterPage() {
               size="lg"
               disabled={!acceptedTerms}
             >
-              Create account
+              {t("auth.register.submit")}
             </Button>
           </form>
           <p className="mt-6 text-center text-sm text-text-muted">
-            Already have an account?{" "}
+            {t("auth.register.haveAccount")}{" "}
             <a
               href="/login"
               className="text-primary hover:text-primary-hover font-medium transition-colors"
             >
-              Sign in
+              {t("auth.register.signIn")}
             </a>
           </p>
-          <div className="mt-4 flex justify-center space-x-6 text-xs text-text-muted">
+          <div className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-2 whitespace-nowrap text-xs text-text-muted">
             <button
               type="button"
               onClick={() => setShowPrivacy(true)}
               className="hover:underline text-primary hover:text-primary-hover transition-colors"
             >
-              Privacy Policy
+              {t("auth.legal.privacy")}
             </button>
             <button
               type="button"
               onClick={() => setShowTerms(true)}
               className="hover:underline text-primary hover:text-primary-hover transition-colors"
             >
-              Terms of Service
+              {t("auth.legal.terms")}
             </button>
             <button
               type="button"
               onClick={() => setShowCookies(true)}
               className="hover:underline text-primary hover:text-primary-hover transition-colors"
             >
-              Cookie Policy
+              {t("auth.legal.cookies")}
             </button>
           </div>
 

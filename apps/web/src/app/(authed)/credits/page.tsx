@@ -20,6 +20,8 @@ import { TopBar } from "@/components/layout/top-bar";
 import { useCreditsStore } from "@/store/credits.store";
 import useCheckout from "@/hooks/useCheckout";
 import { CheckoutModal } from "@/components/billing/CheckoutModal";
+import { useI18n } from "@/i18n/i18n-provider";
+import { usePlanText } from "@/i18n/use-plan-text";
 
 function PaymentStatusModal({
   status,
@@ -28,31 +30,30 @@ function PaymentStatusModal({
   status: "success" | "failed" | "pending" | null;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   if (!status) return null;
 
   const config = {
     success: {
       icon: "✅",
-      title: "Payment Successful",
-      message:
-        "Your credits have been added to your account. You are ready to create!",
+      title: t("credits.paymentStatus.success.title"),
+      message: t("credits.paymentStatus.success.message"),
       bgColor: "bg-success/10",
       borderColor: "border-success/30",
       textColor: "text-success",
     },
     failed: {
       icon: "❌",
-      title: "Payment Failed",
-      message:
-        "We could not process your payment. Please try again or use a different method.",
+      title: t("credits.paymentStatus.failed.title"),
+      message: t("credits.paymentStatus.failed.message"),
       bgColor: "bg-error/10",
       borderColor: "border-error/30",
       textColor: "text-error",
     },
     pending: {
       icon: "⏳",
-      title: "Processing Payment",
-      message: "We are verifying your payment. Credits will be added shortly.",
+      title: t("credits.paymentStatus.pending.title"),
+      message: t("credits.paymentStatus.pending.message"),
       bgColor: "bg-warning/10",
       borderColor: "border-warning/30",
       textColor: "text-warning",
@@ -75,7 +76,9 @@ function PaymentStatusModal({
             {c.message}
           </p>
           <Button variant="primary" className="mt-4" onClick={onClose}>
-            {status === "success" ? "Start Creating" : "Try Again"}
+            {status === "success"
+              ? t("credits.paymentStatus.startCreating")
+              : t("credits.paymentStatus.tryAgain")}
           </Button>
         </div>
       </DialogContent>
@@ -85,6 +88,10 @@ function PaymentStatusModal({
 
 export default function CreditsPage() {
   const searchParams = useSearchParams();
+  const { t, formatNumber, formatDate } = useI18n();
+  const { planName, planDescription } = usePlanText();
+  const formatUsd = (value: number) =>
+    formatNumber(value, { style: "currency", currency: "USD" });
   const { balance, fetchBalance } = useCreditsStore();
   const { checkout, loadingPlanId } = useCheckout();
 
@@ -217,13 +224,14 @@ export default function CreditsPage() {
 
   const handleSubscribe = async (plan: {
     id: string;
+    slug?: string;
     name: string;
     usdAmount: number;
     creditsGiven: number;
   }) => {
     setSelectedPlan({
-      name: plan.name,
-      price: `$${plan.usdAmount.toFixed(2)}`,
+      name: planName(plan),
+      price: formatUsd(plan.usdAmount),
     });
     setModalOpen(true);
     setActivePreferenceId(null);
@@ -259,8 +267,10 @@ export default function CreditsPage() {
 
       if (res.preferenceId) {
         setSelectedPlan({
-          name: "Pay as you go",
-          price: `$${amount.toFixed(2)}`,
+          name: paygPlan
+            ? planName(paygPlan)
+            : t("credits.planCatalog.PAY_AS_YOU_GO.name"),
+          price: formatUsd(amount),
         });
         setActivePreferenceId(res.preferenceId);
         setBuyModalOpen(false);
@@ -281,7 +291,7 @@ export default function CreditsPage() {
           variant="outline"
           className="bg-warning/10 text-warning border-warning/30 text-[10px]"
         >
-          Pending
+          {t("credits.pending")}
         </Badge>
       );
     }
@@ -290,7 +300,7 @@ export default function CreditsPage() {
         variant="outline"
         className="bg-success/10 text-success border-success/30 text-[10px]"
       >
-        Completed
+        {t("credits.completed")}
       </Badge>
     );
   }
@@ -299,8 +309,8 @@ export default function CreditsPage() {
     <>
       <TopBar
         breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Credits" },
+          { label: t("nav.dashboard"), href: "/dashboard" },
+          { label: t("nav.credits") },
         ]}
       />
       <div className="p-6 space-y-8 max-w-6xl mx-auto animate-fade-in">
@@ -309,13 +319,13 @@ export default function CreditsPage() {
           {/* Balance Card */}
           <div className="rounded-xl border border-border bg-surface p-8 flex flex-col items-center justify-center text-center">
             <p className="text-sm font-medium text-text-muted uppercase tracking-wider">
-              Current Balance
+              {t("credits.currentBalance")}
             </p>
             <p className="mt-3 text-5xl font-bold text-text">
-              ⚡ {balance.toLocaleString()}
+              ⚡ {formatNumber(balance)}
             </p>
             <p className="mt-1 text-sm text-text-dim">
-              Lifetime: {lifetimeEarned.toLocaleString()} credits earned
+              {t("credits.lifetimeEarned", { count: lifetimeEarned })}
             </p>
             <Button
               variant="glow"
@@ -326,7 +336,7 @@ export default function CreditsPage() {
                 setBuyModalOpen(true);
               }}
             >
-              Buy More Credits
+              {t("credits.buyMore")}
             </Button>
           </div>
 
@@ -334,7 +344,7 @@ export default function CreditsPage() {
           <div className="rounded-xl border border-border bg-surface flex flex-col">
             <div className="px-5 py-4 border-b border-border">
               <h2 className="text-sm font-semibold text-text uppercase tracking-wider">
-                Transaction History
+                {t("credits.transactionHistory")}
               </h2>
             </div>
             <div className="flex-1 divide-y divide-border overflow-y-auto max-h-80">
@@ -363,7 +373,7 @@ export default function CreditsPage() {
                         {getPaymentStatusBadge(tx)}
                       </div>
                       <p className="text-xs text-text-dim">
-                        {new Date(tx.createdAt).toLocaleDateString()}
+                        {formatDate(tx.createdAt, { dateStyle: "short" })}
                       </p>
                     </div>
                   </div>
@@ -372,14 +382,16 @@ export default function CreditsPage() {
                       tx.amount < 0 ? "text-error" : "text-secondary"
                     }`}
                   >
-                    {tx.amount > 0 ? "+" : ""}
-                    {tx.amount} credits
+                    {t("credits.amount", {
+                      sign: tx.amount > 0 ? "+" : tx.amount < 0 ? "-" : "",
+                      count: Math.abs(tx.amount),
+                    })}
                   </span>
                 </div>
               ))}
               {!transactions && (
                 <div className="px-5 py-8 text-center text-sm text-text-dim">
-                  No transactions yet
+                  {t("credits.noTransactions")}
                 </div>
               )}
             </div>
@@ -388,7 +400,9 @@ export default function CreditsPage() {
 
         {/* Plans */}
         <div>
-          <h2 className="text-lg font-semibold text-text mb-4">Credit Plans</h2>
+          <h2 className="text-lg font-semibold text-text mb-4">
+            {t("credits.creditPlans")}
+          </h2>
           <div className="grid gap-6 md:grid-cols-3">
             {plans?.map((plan: any) => (
               <Card
@@ -401,26 +415,32 @@ export default function CreditsPage() {
                       variant="primary"
                       className="rounded-none rounded-bl-lg"
                     >
-                      Popular
+                      {t("credits.popular")}
                     </Badge>
                   </div>
                 )}
                 <CardHeader>
                   <h3 className="text-lg font-semibold text-text">
-                    {plan.name}
+                    {planName(plan)}
                   </h3>
                   <p className="text-3xl font-bold text-text">
-                    ${plan.usdAmount.toFixed(2)}
+                    {formatUsd(plan.usdAmount)}
                   </p>
                   <p className="text-sm text-text-muted">
-                    {plan.creditsGiven.toLocaleString()} credits
+                    {t("credits.planCredits", { count: plan.creditsGiven })}
                   </p>
                 </CardHeader>
                 <CardContent className="flex-1">
-                  <p className="text-sm text-text-muted">{plan.description}</p>
+                  <p className="text-sm text-text-muted">
+                    {planDescription(plan)}
+                  </p>
                   <p className="mt-3 text-xs text-text-dim">
-                    ${((plan.usdAmount / plan.creditsGiven) * 100).toFixed(1)}¢
-                    per credit
+                    {t("credits.perCredit", {
+                      amount: formatNumber(
+                        (plan.usdAmount / plan.creditsGiven) * 100,
+                        { minimumFractionDigits: 1, maximumFractionDigits: 1 },
+                      ),
+                    })}
                   </p>
                 </CardContent>
                 <div className="p-6 pt-0">
@@ -431,8 +451,8 @@ export default function CreditsPage() {
                     onClick={() => handleSubscribe(plan)}
                   >
                     {loadingPlanId === plan.id
-                      ? "Procesando..."
-                      : "Buy Credits"}
+                      ? t("credits.processing")
+                      : t("credits.buyCredits")}
                   </Button>
                 </div>
               </Card>
@@ -447,7 +467,7 @@ export default function CreditsPage() {
         preferenceId={activePreferenceId}
         planName={selectedPlan.name}
         price={selectedPlan.price}
-        title="Get started now"
+        title={t("credits.checkoutTitle")}
       />
 
       {/* Buy Credits Modal */}
@@ -457,12 +477,11 @@ export default function CreditsPage() {
           onClose={() => setBuyModalOpen(false)}
         >
           <DialogHeader>
-            <DialogTitle>Buy Credits</DialogTitle>
+            <DialogTitle>{t("credits.buyModal.title")}</DialogTitle>
           </DialogHeader>
           <div className="px-6 pb-6 space-y-4">
             <p className="text-sm text-text-muted">
-              Enter the amount in dollars (minimum $10). Credits are calculated
-              based on the Pay as you go plan rate.
+              {t("credits.buyModal.description")}
             </p>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium">
@@ -474,12 +493,14 @@ export default function CreditsPage() {
                 step="1"
                 value={buyAmount}
                 onChange={(e) => setBuyAmount(e.target.value)}
+                aria-label={t("credits.buyModal.amountLabel")}
                 className="pl-7"
               />
             </div>
             <p className="text-xs text-text-dim">
-              You will receive approximately{" "}
-              {calculatedCredits.toLocaleString()} credits
+              {t("credits.buyModal.approximately", {
+                count: calculatedCredits,
+              })}
             </p>
             <div className="flex justify-end gap-3">
               <Button
@@ -487,7 +508,7 @@ export default function CreditsPage() {
                 onClick={() => setBuyModalOpen(false)}
                 disabled={buyLoading}
               >
-                Cancel
+                {t("common.actions.cancel")}
               </Button>
               <Button
                 variant="primary"
@@ -495,7 +516,9 @@ export default function CreditsPage() {
                 isLoading={buyLoading}
                 disabled={parseFloat(buyAmount) < 10 || buyLoading}
               >
-                Pay ${(parseFloat(buyAmount) || 0).toFixed(2)}
+                {t("credits.buyModal.pay", {
+                  amount: formatUsd(parseFloat(buyAmount) || 0),
+                })}
               </Button>
             </div>
           </div>

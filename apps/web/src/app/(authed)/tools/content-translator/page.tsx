@@ -19,41 +19,47 @@ import { LiquidEtherBackground } from "@/components/animations";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
 import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 import { ProviderSelect } from "@/components/provider-select";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
 
-const planLabels: Record<
-  string,
-  { label: string; variant: "free" | "primary" | "premium" }
-> = {
-  FREE: { label: "FREE PLAN", variant: "free" },
-  PAY_AS_YOU_GO: { label: "PAY AS YOU GO", variant: "primary" },
-  PREMIUM: { label: "PREMIUM", variant: "premium" },
-  STARTER: { label: "STARTER", variant: "primary" },
-  PRO: { label: "PRO", variant: "premium" },
+const planVariants: Record<string, "free" | "primary" | "premium"> = {
+  FREE: "free",
+  PAY_AS_YOU_GO: "primary",
+  PREMIUM: "premium",
+  STARTER: "primary",
+  PRO: "premium",
 };
 
-const LANGUAGES = [
-  { code: "es", label: "Spanish" },
-  { code: "en", label: "English" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "zh", label: "Chinese" },
-  { code: "ja", label: "Japanese" },
-  { code: "ko", label: "Korean" },
-  { code: "pt", label: "Portuguese" },
-  { code: "it", label: "Italian" },
-  { code: "ru", label: "Russian" },
-  { code: "ar", label: "Arabic" },
-  { code: "nl", label: "Dutch" },
-  { code: "pl", label: "Polish" },
-  { code: "tr", label: "Turkish" },
-  { code: "hi", label: "Hindi" },
-  { code: "vi", label: "Vietnamese" },
-  { code: "th", label: "Thai" },
-  { code: "sv", label: "Swedish" },
+// Target languages for translation. Names are rendered in the interface
+// language via Intl.DisplayNames (e.g. "fr" → "French" / "Francés").
+const LANGUAGE_CODES = [
+  "es",
+  "en",
+  "fr",
+  "de",
+  "zh",
+  "ja",
+  "ko",
+  "pt",
+  "it",
+  "ru",
+  "ar",
+  "nl",
+  "pl",
+  "tr",
+  "hi",
+  "vi",
+  "th",
+  "sv",
 ];
 
 export default function ContentTranslatorPage() {
   const router = useRouter();
+  const { t, tOptional, formatLanguageName } = useI18n();
+  const LANGUAGES = LANGUAGE_CODES.map((code) => ({
+    code,
+    label: formatLanguageName(code),
+  }));
   const {
     balance,
     plan,
@@ -221,14 +227,13 @@ export default function ContentTranslatorPage() {
     onSuccess: (response) => {
       const jobId = response?.data?.jobId;
       if (!jobId) {
-        toast.error("Translation failed: no job ID returned");
+        toast.error(t("translator.noJobId"));
         return;
       }
       startTranslation("content-translator", jobId);
     },
     onError: (error: any) => {
-      const message =
-        error?.message || "Failed to translate. Please try again.";
+      const message = localizeError(error, "translator.failed");
       setFailed(message);
       toast.error(message);
     },
@@ -244,31 +249,31 @@ export default function ContentTranslatorPage() {
   const handleCopy = () => {
     if (outputText) {
       navigator.clipboard.writeText(outputText);
-      toast.success("Translation copied to clipboard");
+      toast.success(t("translator.copied"));
     }
   };
 
   const selectedLangLabel = selectedLanguage
-    ? `Translate to: ${selectedLanguage.label}`
-    : "Select language";
+    ? t("translator.translateTo", { language: selectedLanguage.label })
+    : t("translator.selectLanguage");
 
   return (
     <>
       <TopBar
         breadcrumbs={[
-          { label: "Tools", href: "/tools" },
-          { label: "Content Translator" },
+          { label: t("nav.tools"), href: "/tools" },
+          { label: t("toolCatalog.content-translator.name") },
         ]}
         actions={
           <div className="flex items-center gap-2">
             {selectedModelCost > 0 && (
               <Badge variant="primary" size="sm">
-                {selectedModelCost} credits
+                {t("common.credits.count", { count: selectedModelCost })}
               </Badge>
             )}
-            {plan && planLabels[plan] && (
-              <Badge variant={planLabels[plan].variant} size="sm">
-                {planLabels[plan].label}
+            {plan && planVariants[plan] && (
+              <Badge variant={planVariants[plan]} size="sm">
+                {tOptional(`common.plans.${plan}`, plan)}
               </Badge>
             )}
           </div>
@@ -336,7 +341,7 @@ export default function ContentTranslatorPage() {
               <div
                 className="absolute z-30 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border border-border bg-surface-elevated shadow-xl animate-fade-in"
                 role="listbox"
-                aria-label="Target language"
+                aria-label={t("translator.targetLanguage")}
               >
                 {LANGUAGES.map((lang) => {
                   const isSelected = targetLanguage === lang.code;
@@ -392,7 +397,9 @@ export default function ContentTranslatorPage() {
               onClick={handleTranslate}
               isLoading={isProcessing}
             >
-              {isProcessing ? "Translating..." : "Translate"}
+              {isProcessing
+                ? t("translator.translating")
+                : t("translator.translate")}
             </Button>
           </div>
         </div>
@@ -403,7 +410,7 @@ export default function ContentTranslatorPage() {
             <div className="absolute inset-0 flex items-center justify-center z-20 bg-bg/60 backdrop-blur-sm animate-fade-in">
               <LoadingSpinner
                 size="lg"
-                text="Translating content..."
+                text={t("translator.translatingContent")}
                 colors={["#c084fc", "#f472b6", "#38bdf8"]}
               />
             </div>
@@ -413,7 +420,7 @@ export default function ContentTranslatorPage() {
           <div className="flex-1 flex flex-col border-r border-border">
             <div className="px-4 py-2 border-b border-border flex items-center gap-2 flex-shrink-0">
               <span className="text-xs font-medium text-text-muted uppercase tracking-wider">
-                Source Text
+                {t("translator.sourceText")}
               </span>
             </div>
             <div className="flex-1 relative">
@@ -426,8 +433,8 @@ export default function ContentTranslatorPage() {
                 }}
                 placeholder={
                   isListening
-                    ? "Speak now..."
-                    : "Paste or type the text you want to translate..."
+                    ? t("translator.speakNow")
+                    : t("translator.inputPlaceholder")
                 }
                 disabled={isProcessing}
                 className="absolute inset-0 w-full h-full resize-none bg-transparent px-5 py-4 text-sm text-text placeholder:text-text-dim outline-none disabled:opacity-50 disabled:cursor-not-allowed"
@@ -439,7 +446,7 @@ export default function ContentTranslatorPage() {
           <div className="flex-1 flex flex-col">
             <div className="px-4 py-2 border-b border-border flex items-center gap-2 flex-shrink-0">
               <span className="text-xs font-medium text-text-muted uppercase tracking-wider">
-                Translation
+                {t("translator.translation")}
               </span>
               {selectedLanguage && (
                 <span className="text-xs text-text-dim">
@@ -462,7 +469,7 @@ export default function ContentTranslatorPage() {
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                   </svg>
-                  Copy
+                  {t("common.actions.copy")}
                 </button>
               )}
             </div>
@@ -470,7 +477,7 @@ export default function ContentTranslatorPage() {
               {status === "IDLE" && !outputText && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <p className="text-sm text-text-dim">
-                    Translation will appear here
+                    {t("translator.outputPlaceholder")}
                   </p>
                 </div>
               )}
@@ -480,10 +487,12 @@ export default function ContentTranslatorPage() {
                   <div className="text-center space-y-4 animate-fade-in">
                     <div className="rounded-xl border border-error/30 bg-error/5 p-6 max-w-sm">
                       <p className="text-error font-medium">
-                        Translation failed
+                        {t("translator.failedTitle")}
                       </p>
                       <p className="text-sm text-text-muted mt-1">
-                        {translationError || "Unknown error"}
+                        {translationError
+                          ? localizeError(translationError)
+                          : t("common.status.unknownError")}
                       </p>
                       <Button
                         variant="secondary"
@@ -491,7 +500,7 @@ export default function ContentTranslatorPage() {
                         className="mt-4"
                         onClick={handleTranslate}
                       >
-                        Try Again
+                        {t("common.actions.tryAgain")}
                       </Button>
                     </div>
                   </div>
@@ -512,12 +521,12 @@ export default function ContentTranslatorPage() {
           status === "IDLE" && (
             <div className="relative z-10 px-6 py-2">
               <p className="text-xs text-error text-center">
-                Insufficient credits.{" "}
+                {t("toolShared.insufficientCredits")}{" "}
                 <button
                   onClick={() => router.push("/credits")}
                   className="underline cursor-pointer"
                 >
-                  Buy more
+                  {t("toolShared.buyMore")}
                 </button>
               </p>
             </div>
@@ -528,10 +537,10 @@ export default function ContentTranslatorPage() {
         isOpen={showNewDictationConfirm}
         onClose={() => setShowNewDictationConfirm(false)}
         onConfirm={handleNewDictationConfirm}
-        title="New Dictation"
-        description="There's an existing dictation that will be replaced. Do you want to start a new one?"
-        confirmLabel="Yes, start new"
-        cancelLabel="No, keep current"
+        title={t("translator.newDictation.title")}
+        description={t("translator.newDictation.description")}
+        confirmLabel={t("translator.newDictation.confirm")}
+        cancelLabel={t("translator.newDictation.cancel")}
         confirmVariant="primary"
         icon={
           <svg

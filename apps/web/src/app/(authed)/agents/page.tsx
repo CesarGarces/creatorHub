@@ -3,56 +3,78 @@
 import { useRouter } from "next/navigation";
 import { Badge } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
+import { useI18n } from "@/i18n/i18n-provider";
+import type { TranslationKey } from "@/i18n/translate";
 
 const agents = [
   {
     id: "x-post-tweet",
-    name: "X Post Agent",
-    description:
-      "Publish tweets and threads to your connected X (Twitter) account",
+    nameKey: "agents.items.xPost.name" as TranslationKey,
+    descriptionKey: "agents.items.xPost.description" as TranslationKey,
     icon: "💬",
     color: "bg-blue-500/10",
     hoverColor: "hover:border-blue-500/30 hover:shadow-blue-500/5",
     badge: "primary" as const,
-    badgeText: "Social",
+    badgeKey: "agents.badges.social" as TranslationKey,
     toolId: "x-post-tweet",
   },
   {
     id: "x-search-trends",
-    name: "X Research Agent",
-    description: "Search and analyze trending topics on X (Twitter)",
+    nameKey: "agents.items.xResearch.name" as TranslationKey,
+    descriptionKey: "agents.items.xResearch.description" as TranslationKey,
     icon: "📡",
     color: "bg-cyan-500/10",
     hoverColor: "hover:border-cyan-500/30 hover:shadow-cyan-500/5",
     badge: "accent" as const,
-    badgeText: "Research",
+    badgeKey: "agents.badges.research" as TranslationKey,
     toolId: "x-search-trends",
+  },
+];
+
+const upcomingAgents: {
+  icon: string;
+  nameKey: TranslationKey;
+  descriptionKey: TranslationKey;
+}[] = [
+  {
+    icon: "🎬",
+    nameKey: "agents.items.youtube.name",
+    descriptionKey: "agents.items.youtube.description",
+  },
+  {
+    icon: "📸",
+    nameKey: "agents.items.instagram.name",
+    descriptionKey: "agents.items.instagram.description",
+  },
+  {
+    icon: "🎮",
+    nameKey: "agents.items.twitch.name",
+    descriptionKey: "agents.items.twitch.description",
   },
 ];
 
 export default function AgentsPage() {
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <>
       <TopBar
         breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Agents" },
+          { label: t("nav.dashboard"), href: "/dashboard" },
+          { label: t("nav.agents") },
         ]}
       />
       <div className="p-6 space-y-8 animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold text-text">Agents</h1>
-          <p className="mt-1 text-text-muted">
-            AI assistants that help you create content
-          </p>
+          <h1 className="text-2xl font-bold text-text">{t("agents.title")}</h1>
+          <p className="mt-1 text-text-muted">{t("agents.subtitle")}</p>
         </div>
 
         {/* Active Agents */}
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
-            Your Agents
+            {t("agents.yourAgents")}
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {agents.map((agent) => (
@@ -68,13 +90,15 @@ export default function AgentsPage() {
                     {agent.icon}
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-text">{agent.name}</h3>
+                    <h3 className="font-semibold text-text">
+                      {t(agent.nameKey)}
+                    </h3>
                     <p className="mt-1 text-sm text-text-muted line-clamp-2">
-                      {agent.description}
+                      {t(agent.descriptionKey)}
                     </p>
                     <div className="mt-3 flex items-center gap-2">
                       <Badge variant={agent.badge} size="sm">
-                        {agent.badgeText}
+                        {t(agent.badgeKey)}
                       </Badge>
                     </div>
                   </div>
@@ -87,29 +111,12 @@ export default function AgentsPage() {
         {/* Coming Soon */}
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
-            Coming Soon
+            {t("agents.comingSoon")}
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                icon: "🎬",
-                name: "YouTube Agent",
-                description:
-                  "Plan, script, and optimize your video content with AI",
-              },
-              {
-                icon: "📸",
-                name: "Instagram Agent",
-                description: "Create engaging posts and stories for Instagram",
-              },
-              {
-                icon: "🎮",
-                name: "Twitch Agent",
-                description: "Manage your live content and audience engagement",
-              },
-            ].map((agent) => (
+            {upcomingAgents.map((agent) => (
               <div
-                key={agent.name}
+                key={agent.nameKey}
                 className="rounded-xl border border-border bg-surface p-6 opacity-60"
               >
                 <div className="flex items-start gap-4">
@@ -117,12 +124,14 @@ export default function AgentsPage() {
                     {agent.icon}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-text">{agent.name}</h3>
+                    <h3 className="font-semibold text-text">
+                      {t(agent.nameKey)}
+                    </h3>
                     <p className="mt-1 text-sm text-text-muted">
-                      {agent.description}
+                      {t(agent.descriptionKey)}
                     </p>
                     <Badge variant="outline" size="sm" className="mt-3">
-                      Coming Soon
+                      {t("agents.comingSoon")}
                     </Badge>
                   </div>
                 </div>

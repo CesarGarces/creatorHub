@@ -1,6 +1,7 @@
 "use client";
 
 import { MicrophoneIcon, StopIcon } from "./voice-button-icons";
+import { useI18n } from "@/i18n/i18n-provider";
 import { cn } from "@creator-hub/ui";
 
 const CREDITS_PER_MINUTE = 1;
@@ -32,15 +33,21 @@ export function VoiceButton({
   isSupported = true,
   onToggle,
   disabled = false,
-  label = "Voice",
-  listeningLabel = "Listening...",
+  label,
+  listeningLabel,
   showCredits = true,
   className,
 }: VoiceButtonProps) {
+  const { t } = useI18n();
   if (!isSupported) return null;
 
   const Icon = isListening ? StopIcon : MicrophoneIcon;
-  const displayLabel = isListening ? listeningLabel : label;
+  const displayLabel = isListening
+    ? (listeningLabel ?? t("voice.listening"))
+    : (label ?? t("voice.label"));
+  const actionLabel = isListening
+    ? t("voice.stopRecording")
+    : t("voice.startRecording");
 
   return (
     <button
@@ -58,7 +65,8 @@ export function VoiceButton({
           : "px-3 py-2.5 text-sm font-medium",
         className,
       )}
-      title={isListening ? "Stop recording" : "Start voice input"}
+      title={actionLabel}
+      aria-label={actionLabel}
     >
       <Icon size={16} />
 
@@ -71,7 +79,7 @@ export function VoiceButton({
           <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
           {showCredits && variant === "icon-text" && (
             <span className="text-[10px] text-red-400/80 ml-0.5">
-              +{CREDITS_PER_MINUTE} cr/min
+              {t("voice.creditsPerMinute", { count: CREDITS_PER_MINUTE })}
             </span>
           )}
         </>

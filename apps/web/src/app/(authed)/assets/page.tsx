@@ -10,6 +10,8 @@ import { Button, EmptyState, ActionConfirmDialog } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { AssetLikeButton } from "@/components/asset-like-button";
 import { ShareModal } from "@/components/share-modal";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
 
 interface GeneratedAsset {
   id: string;
@@ -33,6 +35,7 @@ const FRONTEND_URL =
 
 export default function AssetsPage() {
   const router = useRouter();
+  const { t, formatDate } = useI18n();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [assetFilter, setAssetFilter] = useState<AssetFilter>("all");
@@ -66,11 +69,11 @@ export default function AssetsPage() {
     mutationFn: (id: string) => api.delete(`/images/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["images"] });
-      toast.success("Asset deleted");
+      toast.success(t("assets.toasts.deleted"));
       setSelectedAsset(null);
     },
-    onError: (error: any) => {
-      toast.error(error?.message || "Failed to delete asset");
+    onError: (error: unknown) => {
+      toast.error(localizeError(error, "assets.toasts.deleteFailed"));
     },
   });
 
@@ -87,12 +90,12 @@ export default function AssetsPage() {
       }
       toast.success(
         data.isPublic
-          ? "Asset is now public. Share it!"
-          : "Asset is now private",
+          ? t("assets.toasts.nowPublic")
+          : t("assets.toasts.nowPrivate"),
       );
     },
-    onError: (error: any) => {
-      toast.error(error?.message || "Failed to update visibility");
+    onError: (error: unknown) => {
+      toast.error(localizeError(error, "assets.toasts.visibilityFailed"));
     },
   });
 
@@ -113,7 +116,7 @@ export default function AssetsPage() {
   const handleCopyShareLink = async (asset: GeneratedAsset) => {
     const url = `${FRONTEND_URL}/share/${asset.id}`;
     await navigator.clipboard.writeText(url);
-    toast.success("Share link copied!");
+    toast.success(t("assets.toasts.linkCopied"));
   };
 
   const handleTogglePublic = (assetId: string) => {
@@ -124,24 +127,22 @@ export default function AssetsPage() {
     <>
       <TopBar
         breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Assets" },
+          { label: t("nav.dashboard"), href: "/dashboard" },
+          { label: t("nav.assets") },
         ]}
       />
       <div className="p-6 animate-fade-in">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-text">Assets</h1>
-          <p className="mt-1 text-text-muted">
-            Your generated images and videos
-          </p>
+          <h1 className="text-2xl font-bold text-text">{t("assets.title")}</h1>
+          <p className="mt-1 text-text-muted">{t("assets.subtitle")}</p>
         </div>
 
         {/* Filter Tabs */}
         <div className="flex items-center gap-2 mb-6">
           {[
-            { id: "all" as AssetFilter, label: "All" },
-            { id: "IMAGE" as AssetFilter, label: "Images" },
-            { id: "VIDEO" as AssetFilter, label: "Videos" },
+            { id: "all" as AssetFilter, label: t("assets.filters.all") },
+            { id: "IMAGE" as AssetFilter, label: t("assets.filters.images") },
+            { id: "VIDEO" as AssetFilter, label: t("assets.filters.videos") },
           ].map((tab) => (
             <button
               type="button"
@@ -170,18 +171,18 @@ export default function AssetsPage() {
         ) : assets.length === 0 ? (
           <EmptyState
             icon="📁"
-            title="No assets yet"
+            title={t("assets.emptyTitle")}
             description={
               assetFilter === "all"
-                ? "Generated images and videos will appear here."
+                ? t("assets.emptyAll")
                 : assetFilter === "IMAGE"
-                  ? "No images generated yet."
-                  : "No videos generated yet."
+                  ? t("assets.emptyImages")
+                  : t("assets.emptyVideos")
             }
             actionLabel={
               assetFilter === "VIDEO"
-                ? "Generate your first video"
-                : "Generate your first thumbnail"
+                ? t("assets.firstVideo")
+                : t("assets.firstThumbnail")
             }
             onAction={() =>
               router.push(
@@ -207,7 +208,9 @@ export default function AssetsPage() {
                           src={asset.url}
                           className="w-full h-full object-cover"
                           muted
-                          aria-label={`Video preview: ${asset.prompt || "Untitled"}`}
+                          aria-label={t("assets.videoPreview", {
+                            title: asset.prompt || t("assets.untitled"),
+                          })}
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                           <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
@@ -233,7 +236,7 @@ export default function AssetsPage() {
                     {asset.isPublic && (
                       <div className="absolute top-2 right-2 px-2 py-1 bg-green-500/90 text-white text-[10px] font-medium rounded-full flex items-center gap-1">
                         <Globe size={10} />
-                        Public
+                        {t("assets.public")}
                       </div>
                     )}
                   </div>
@@ -246,7 +249,9 @@ export default function AssetsPage() {
                             : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                         }`}
                       >
-                        {asset.type === "VIDEO" ? "Video" : "Image"}
+                        {asset.type === "VIDEO"
+                          ? t("assets.type.video")
+                          : t("assets.type.image")}
                       </span>
                       <p className="text-xs text-text-muted line-clamp-1 flex-1">
                         {asset.prompt}
@@ -254,7 +259,7 @@ export default function AssetsPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-text-dim">
-                        {new Date(asset.createdAt).toLocaleDateString()}
+                        {formatDate(asset.createdAt, { dateStyle: "short" })}
                       </span>
                       <div
                         className="flex gap-1"
@@ -263,8 +268,8 @@ export default function AssetsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          aria-label="Use prompt"
-                          title="Use prompt"
+                          aria-label={t("assets.usePrompt")}
+                          title={t("assets.usePrompt")}
                           onClick={() => {
                             router.push(
                               `/tools/${asset.type === "VIDEO" ? "video-generator" : "thumbnail-generator"}?prompt=${encodeURIComponent(asset.prompt)}`,
@@ -286,8 +291,8 @@ export default function AssetsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          aria-label="Download"
-                          title="Download"
+                          aria-label={t("assets.download")}
+                          title={t("assets.download")}
                           onClick={async () => {
                             try {
                               const res = await fetch(asset.url);
@@ -299,7 +304,7 @@ export default function AssetsPage() {
                               a.click();
                               URL.revokeObjectURL(url);
                             } catch {
-                              toast.error("Download failed");
+                              toast.error(t("common.toasts.downloadFailed"));
                             }
                           }}
                         >
@@ -319,8 +324,8 @@ export default function AssetsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          aria-label="Share"
-                          title="Share"
+                          aria-label={t("assets.share")}
+                          title={t("assets.share")}
                           onClick={() => setShareModalAsset(asset)}
                         >
                           <Share2 size={14} />
@@ -328,8 +333,8 @@ export default function AssetsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          aria-label="Delete asset"
-                          title="Delete asset"
+                          aria-label={t("assets.deleteAsset")}
+                          title={t("assets.deleteAsset")}
                           onClick={() =>
                             setDeleteDialog({
                               isOpen: true,
@@ -366,7 +371,7 @@ export default function AssetsPage() {
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
                 >
-                  Previous
+                  {t("assets.previous")}
                 </Button>
                 <span className="flex items-center px-3 text-sm text-text-muted">
                   {page} / {meta.totalPages}
@@ -377,7 +382,7 @@ export default function AssetsPage() {
                   disabled={page >= meta.totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  Next
+                  {t("assets.next")}
                 </Button>
               </div>
             )}
@@ -403,7 +408,9 @@ export default function AssetsPage() {
                         : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                     }`}
                   >
-                    {selectedAsset.type === "VIDEO" ? "Video" : "Image"}
+                    {selectedAsset.type === "VIDEO"
+                      ? t("assets.type.video")
+                      : t("assets.type.image")}
                   </span>
                   <p className="text-sm text-text-muted line-clamp-1">
                     {selectedAsset.prompt}
@@ -412,13 +419,13 @@ export default function AssetsPage() {
                 <p className="text-xs text-text-dim mt-1">
                   {selectedAsset.width}×{selectedAsset.height} ·{" "}
                   {selectedAsset.model} ·{" "}
-                  {new Date(selectedAsset.createdAt).toLocaleDateString()}
+                  {formatDate(selectedAsset.createdAt, { dateStyle: "short" })}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedAsset(null)}
-                aria-label="Close preview"
+                aria-label={t("assets.closePreview")}
                 className="ml-4 rounded-lg p-2 text-text-muted hover:text-text hover:bg-surface-elevated transition-colors cursor-pointer"
               >
                 <svg
@@ -439,7 +446,9 @@ export default function AssetsPage() {
                   src={selectedAsset.url}
                   controls
                   className="max-w-full max-h-[70vh] rounded-lg"
-                  aria-label={`Video player: ${selectedAsset.prompt || "Untitled"}`}
+                  aria-label={t("assets.videoPlayer", {
+                    title: selectedAsset.prompt || t("assets.untitled"),
+                  })}
                 />
               ) : (
                 <img
@@ -471,7 +480,7 @@ export default function AssetsPage() {
                     <path d="M12 20h9" />
                     <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
                   </svg>
-                  Use Prompt
+                  {t("assets.usePromptButton")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -487,7 +496,7 @@ export default function AssetsPage() {
                       a.click();
                       URL.revokeObjectURL(url);
                     } catch {
-                      toast.error("Download failed");
+                      toast.error(t("common.toasts.downloadFailed"));
                     }
                   }}
                 >
@@ -503,7 +512,7 @@ export default function AssetsPage() {
                     <polyline points="7 10 12 15 17 10" />
                     <line x1="12" x2="12" y1="15" y2="3" />
                   </svg>
-                  Download
+                  {t("assets.download")}
                 </Button>
                 <AssetLikeButton
                   assetId={selectedAsset.id}
@@ -517,7 +526,7 @@ export default function AssetsPage() {
                   onClick={() => setShareModalAsset(selectedAsset)}
                 >
                   <Share2 size={14} />
-                  Share
+                  {t("assets.share")}
                 </Button>
               </div>
 
@@ -538,7 +547,9 @@ export default function AssetsPage() {
                   ) : (
                     <Lock size={14} />
                   )}
-                  {selectedAsset.isPublic ? "Public" : "Private"}
+                  {selectedAsset.isPublic
+                    ? t("assets.public")
+                    : t("assets.private")}
                 </button>
 
                 <Button
@@ -564,7 +575,7 @@ export default function AssetsPage() {
                     <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                     <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                   </svg>
-                  Delete
+                  {t("assets.delete")}
                 </Button>
               </div>
             </div>
@@ -576,10 +587,10 @@ export default function AssetsPage() {
         isOpen={deleteDialog.isOpen}
         onClose={() => setDeleteDialog({ isOpen: false, assetId: null })}
         onConfirm={handleDelete}
-        title="Delete Asset"
-        description="This asset will be permanently removed from your gallery. This action cannot be undone."
-        confirmLabel="Yes, delete"
-        cancelLabel="No, keep it"
+        title={t("assets.deleteDialog.title")}
+        description={t("assets.deleteDialog.description")}
+        confirmLabel={t("assets.deleteDialog.confirm")}
+        cancelLabel={t("assets.deleteDialog.cancel")}
         confirmVariant="danger"
         icon={<Trash2 className="h-5 w-5" />}
         isLoading={deleteMutation.isPending}

@@ -2,6 +2,7 @@
 
 import { Star } from "lucide-react";
 import { cn } from "../lib/utils";
+import { useUiLabels } from "../lib/labels";
 
 interface ToolCardProps {
   name: string;
@@ -27,6 +28,7 @@ export function ToolCard({
   onToggleFavorite,
   onClick,
 }: ToolCardProps) {
+  const labels = useUiLabels();
   const isInactive = status === "inactive";
 
   return (
@@ -91,7 +93,9 @@ export function ToolCard({
                     : "text-text-dim hover:text-warning/70",
                 )}
                 aria-label={
-                  isFavorite ? "Remove from favorites" : "Add to favorites"
+                  isFavorite
+                    ? labels.removeFromFavorites
+                    : labels.addToFavorites
                 }
               >
                 {isFavorite ? (
@@ -117,12 +121,12 @@ export function ToolCard({
         <div className="mt-4 flex items-center gap-2">
           {isPremium && (
             <span className="inline-flex items-center rounded-md bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">
-              Premium
+              {labels.premium}
             </span>
           )}
           {status && status !== "active" && (
             <span className="inline-flex items-center rounded-md bg-surface-elevated px-2 py-0.5 text-[11px] font-medium text-text-muted capitalize">
-              {status}
+              {labels.formatToolStatus(status)}
             </span>
           )}
         </div>

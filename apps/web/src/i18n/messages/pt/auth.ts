@@ -1,0 +1,81 @@
+import type { Messages } from "../../translate";
+
+export const auth: Messages["auth"] = {
+  fields: {
+    name: "Nome",
+    namePlaceholder: "João Silva",
+    email: "E-mail",
+    emailPlaceholder: "voce@exemplo.com",
+    password: "Senha",
+    confirmPassword: "Confirmar senha",
+    newPassword: "Nova senha",
+    showPassword: "Mostrar senha",
+    hidePassword: "Ocultar senha",
+  },
+  legal: {
+    privacy: "Política de Privacidade",
+    terms: "Termos de Serviço",
+    cookies: "Política de Cookies",
+  },
+  login: {
+    title: "Bem-vindo ao Creator Hub",
+    subtitle: "Entre na sua conta",
+    forgotPassword: "Esqueceu a senha?",
+    submit: "Entrar",
+    noAccount: "Não tem uma conta?",
+    register: "Cadastre-se",
+    invalidCredentials: "Credenciais inválidas",
+  },
+  register: {
+    title: "Crie sua conta",
+    subtitle: "Comece a criar com IA",
+    acceptTerms:
+      "Eu concordo com os <terms>Termos de Serviço</terms> e a <privacy>Política de Privacidade</privacy>.",
+    mustAcceptTerms:
+      "Você precisa aceitar os Termos de Serviço e a Política de Privacidade",
+    submit: "Criar conta",
+    haveAccount: "Já tem uma conta?",
+    signIn: "Entrar",
+    failed: "Não foi possível concluir o cadastro",
+  },
+  forgot: {
+    title: "Esqueceu a senha?",
+    subtitle: "Informe seu e-mail e enviaremos um link de redefinição",
+    checkEmail: "Verifique seu e-mail",
+    sentTo:
+      "Enviamos um link de redefinição de senha para <email>{email}</email>",
+    backToSignIn: "Voltar para o login",
+    submit: "Enviar link",
+    remember: "Lembrou a senha?",
+    signIn: "Entrar",
+    failed: "Não foi possível enviar o e-mail. Tente novamente.",
+  },
+  reset: {
+    validating: "Validando link...",
+    invalidTitle: "Link inválido",
+    invalidDescription:
+      "Este link de redefinição de senha é inválido ou expirou.",
+    requestNew: "Solicitar um novo link",
+    title: "Definir nova senha",
+    subtitle: "Digite sua nova senha abaixo",
+    success: "Senha redefinida com sucesso",
+    redirecting: "Redirecionando para o login...",
+    submit: "Redefinir senha",
+    failed: "Não foi possível redefinir a senha. Tente novamente.",
+  },
+  verify: {
+    noEmail: "Nenhum e-mail encontrado.",
+    signUp: "Cadastre-se",
+    title: "Verifique seu e-mail",
+    sentCode: "Enviamos um código de 6 dígitos para <email>{email}</email>",
+    success: "E-mail verificado com sucesso",
+    redirecting: "Redirecionando...",
+    digit: "Dígito {number}",
+    verifying: "Verificando...",
+    resendIn: "Reenviar código em <timer>{seconds}s</timer>",
+    resend: "Reenviar código",
+    resending: "Enviando...",
+    invalidCode: "Código inválido. Tente novamente.",
+    resendFailed: "Não foi possível reenviar o código.",
+  },
+};

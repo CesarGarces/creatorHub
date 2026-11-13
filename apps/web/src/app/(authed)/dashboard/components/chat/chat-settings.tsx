@@ -1,6 +1,7 @@
 "use client";
 
 import { useChatStore } from "@/store/chat.store";
+import { useI18n } from "@/i18n/i18n-provider";
 
 interface ChatSettingsProps {
   onClose: () => void;
@@ -28,6 +29,7 @@ const MODELS = [
 ];
 
 export function ChatSettings({ onClose }: ChatSettingsProps) {
+  const { t, tOptional } = useI18n();
   const { settings, updateSettings } = useChatStore();
 
   const handleModelChange = (modelId: string) => {
@@ -49,11 +51,13 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
   return (
     <div className="absolute right-0 top-full z-50 mt-1 w-80 rounded-lg border border-border bg-surface-elevated shadow-xl">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <span className="text-sm font-semibold text-text">Chat Settings</span>
+        <span className="text-sm font-semibold text-text">
+          {t("chat.chatSettings")}
+        </span>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close settings"
+          aria-label={t("chat.closeSettings")}
           className="rounded p-1 text-text-dim hover:text-text hover:bg-surface transition-colors"
         >
           <svg
@@ -73,7 +77,7 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
         {/* Model Selection */}
         <div>
           <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-text-dim">
-            Model
+            {t("chat.model")}
           </label>
           <select
             value={settings.defaultModel}
@@ -82,7 +86,8 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
           >
             {MODELS.map((model) => (
               <option key={model.id} value={model.id}>
-                {model.name} ({model.tier})
+                {model.name} (
+                {tOptional(`chat.tiers.${model.tier}`, model.tier)})
               </option>
             ))}
           </select>
@@ -92,7 +97,7 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <label className="text-xs font-medium uppercase tracking-wider text-text-dim">
-              Temperature
+              {t("chat.temperature")}
             </label>
             <span className="text-xs font-mono text-text">
               {settings.temperature.toFixed(1)}
@@ -107,12 +112,12 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
             onChange={(e) =>
               handleTemperatureChange(parseFloat(e.target.value))
             }
-            aria-label="Temperature"
+            aria-label={t("chat.temperature")}
             className="w-full accent-primary"
           />
           <div className="mt-0.5 flex justify-between text-[10px] text-text-dim">
-            <span>Precise</span>
-            <span>Creative</span>
+            <span>{t("chat.precise")}</span>
+            <span>{t("chat.creative")}</span>
           </div>
         </div>
 
@@ -120,7 +125,7 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <label className="text-xs font-medium uppercase tracking-wider text-text-dim">
-              Max Tokens
+              {t("chat.maxTokens")}
             </label>
             <span className="text-xs font-mono text-text">
               {settings.maxTokens.toLocaleString()}
@@ -133,7 +138,7 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
             step="256"
             value={settings.maxTokens}
             onChange={(e) => handleMaxTokensChange(parseInt(e.target.value))}
-            aria-label="Max Tokens"
+            aria-label={t("chat.maxTokens")}
             className="w-full accent-primary"
           />
           <div className="mt-0.5 flex justify-between text-[10px] text-text-dim">
@@ -146,7 +151,7 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <label className="text-xs font-medium uppercase tracking-wider text-text-dim">
-              Reasoning
+              {t("chat.reasoning")}
             </label>
             <span className="text-xs font-mono text-text">
               {settings.reasoning.toFixed(1)}
@@ -159,12 +164,12 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
             step="0.1"
             value={settings.reasoning}
             onChange={(e) => handleReasoningChange(parseFloat(e.target.value))}
-            aria-label="Reasoning"
+            aria-label={t("chat.reasoning")}
             className="w-full accent-primary"
           />
           <div className="mt-0.5 flex justify-between text-[10px] text-text-dim">
-            <span>Fast</span>
-            <span>Deep</span>
+            <span>{t("chat.fast")}</span>
+            <span>{t("chat.deep")}</span>
           </div>
         </div>
       </div>

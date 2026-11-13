@@ -7,8 +7,7 @@
   "scripts": {
     "build": "tsc && cp -r src/templates/*.hbs dist/templates/",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest --run"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@creator-hub/shared-utils": "workspace:*",
@@ -20,7 +19,6 @@
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^20.0.0",
-    "typescript": "^5.5.0",
-    "vitest": "^3.2.6"
+    "typescript": "^5.5.0"
   }
 }

@@ -4,6 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../lib/utils";
 import { buttonVariants } from "./button";
+import { useUiLabels } from "../lib/labels";
 
 export interface ActionConfirmDialogProps {
   isOpen: boolean;
@@ -31,12 +32,13 @@ export function ActionConfirmDialog({
   onConfirm,
   confirmLabel,
   cancelLabel,
-  title = "Confirm Action",
+  title,
   description,
   confirmVariant = "danger",
   isLoading = false,
   icon,
 }: ActionConfirmDialogProps) {
+  const labels = useUiLabels();
   const mounted = React.useSyncExternalStore(
     () => () => {},
     () => true,
@@ -116,7 +118,7 @@ export function ActionConfirmDialog({
                 margin: 0,
               }}
             >
-              {title}
+              {title ?? labels.confirmAction}
             </h3>
             {description && (
               <p

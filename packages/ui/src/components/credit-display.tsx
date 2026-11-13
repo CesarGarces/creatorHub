@@ -1,4 +1,7 @@
+"use client";
+
 import { cn } from "../lib/utils";
+import { useUiLabels } from "../lib/labels";
 
 interface CreditDisplayProps {
   balance: number;
@@ -11,6 +14,7 @@ export function CreditDisplay({
   className,
   size = "md",
 }: CreditDisplayProps) {
+  const labels = useUiLabels();
   const isLow = balance < 100;
 
   return (
@@ -32,7 +36,7 @@ export function CreditDisplay({
           size === "sm" ? "h-1.5 w-1.5" : "h-2 w-2",
         )}
       />
-      <span>{balance.toLocaleString()} credits</span>
+      <span>{labels.formatCredits(balance)}</span>
     </div>
   );
 }

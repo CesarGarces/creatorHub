@@ -18,11 +18,20 @@ import {
   type TweetDraftSession,
 } from "@/store/tweet-drafts.store";
 import { VoiceButton, useVoiceButton } from "@/components/voice-button";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
+import type { TranslationKey, TranslationParams } from "@/i18n/translate";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  /**
+   * For app-generated assistant messages: rendered with t() at display time
+   * so they follow interface-language changes.
+   */
+  contentKey?: TranslationKey;
+  contentParams?: TranslationParams;
   draft?: {
     id: string;
     content: string;
@@ -31,15 +40,22 @@ interface Message {
   isStreaming?: boolean;
 }
 
-const suggestions = [
-  "Write a tweet about the latest AI trends",
-  "Draft a tweet celebrating our product launch",
-  "Create a tweet thread about Web3 opportunities",
-  "Write a motivational tweet for developers",
+const SUGGESTION_KEYS: TranslationKey[] = [
+  "xPost.suggestions.aiTrends",
+  "xPost.suggestions.launch",
+  "xPost.suggestions.web3",
+  "xPost.suggestions.motivation",
 ];
 
 export default function XPostTweetPage() {
   const router = useRouter();
+  const {
+    t,
+    tOptional,
+    formatRelativeTime,
+    formatDate: formatLocaleDate,
+  } = useI18n();
+  const suggestions = SUGGESTION_KEYS.map((key) => t(key));
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -109,7 +125,8 @@ export default function XPostTweetPage() {
         {
           id: `assistant-${activeSession.id}`,
           role: "assistant",
-          content: `Here's a draft tweet for you:`,
+          content: "",
+          contentKey: "xPost.draftIntro",
           draft: {
             id: activeSession.id,
             content: activeSession.content,
@@ -127,8 +144,8 @@ export default function XPostTweetPage() {
       <>
         <TopBar
           breadcrumbs={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Post to X" },
+            { label: t("nav.dashboard"), href: "/dashboard" },
+            { label: t("xPost.title") },
           ]}
         />
         <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)] p-6">
@@ -147,20 +164,19 @@ export default function XPostTweetPage() {
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-text mb-2">
-              Post to X
+              {t("xPost.title")}
               <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-500">
-                PRO
+                {t("xPost.pro")}
               </span>
             </h2>
             <p className="text-text-muted mb-6">
-              This tool requires a STARTER plan or higher. Upgrade to draft and
-              publish tweets with AI.
+              {t("xPost.upgradeDescription")}
             </p>
             <button
               onClick={() => router.push("/credits")}
               className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white hover:bg-primary-hover transition-colors"
             >
-              Upgrade Plan
+              {t("xPost.upgradePlan")}
             </button>
           </div>
         </div>
@@ -201,7 +217,8 @@ export default function XPostTweetPage() {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `Here's a draft tweet for you:`,
+        content: "",
+        contentKey: "xPost.draftIntro",
         draft: {
           id: draft.id,
           content: draft.content,
@@ -223,11 +240,15 @@ export default function XPostTweetPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `Error: ${error.message || "Failed to generate tweet. Please try again."}`,
+        content: "",
+        contentKey: "xPost.generateError",
+        contentParams: {
+          error: localizeError(error, "xPost.generateFailed"),
+        },
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -249,20 +270,25 @@ export default function XPostTweetPage() {
             ? {
                 ...msg,
                 draft: { ...msg.draft, status: "PUBLISHED" },
-                content: "Tweet published successfully!",
+                content: "",
+                contentKey: "xPost.published" as TranslationKey,
               }
             : msg,
         ),
       );
 
       updateSessionStatus(draftId, "PUBLISHED", response.data.tweetId);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
           role: "assistant",
-          content: `Failed to publish: ${error.message || "Please check your X account connection in Settings."}`,
+          content: "",
+          contentKey: "xPost.publishFailed",
+          contentParams: {
+            error: localizeError(error, "xPost.publishFailedHint"),
+          },
         },
       ]);
       updateSessionStatus(draftId, "FAILED");
@@ -284,39 +310,34 @@ export default function XPostTweetPage() {
             : msg,
         ),
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
           role: "assistant",
-          content: `Failed to edit: ${error.message}`,
+          content: "",
+          contentKey: "xPost.editFailed",
+          contentParams: { error: localizeError(error) },
         },
       ]);
     }
   };
 
+  // Relative time for the last week, then a locale-formatted date.
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+    const diffDays = (Date.now() - new Date(dateStr).getTime()) / 86_400_000;
+    return diffDays < 7
+      ? formatRelativeTime(dateStr)
+      : formatLocaleDate(dateStr, { dateStyle: "short" });
   };
 
   return (
     <>
       <TopBar
         breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Post to X" },
+          { label: t("nav.dashboard"), href: "/dashboard" },
+          { label: t("xPost.title") },
         ]}
         actions={
           <div className="flex items-center gap-3">
@@ -324,7 +345,7 @@ export default function XPostTweetPage() {
               onClick={() => setShowSidebar((v) => !v)}
               className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm text-text-muted hover:text-text transition-colors"
             >
-              {showSidebar ? "Hide History" : "Show History"}
+              {showSidebar ? t("xPost.hideHistory") : t("xPost.showHistory")}
             </button>
             <button
               onClick={() => {
@@ -334,7 +355,7 @@ export default function XPostTweetPage() {
               }}
               className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm text-text-muted hover:text-text transition-colors"
             >
-              New Tweet
+              {t("xPost.newTweet")}
             </button>
           </div>
         }
@@ -344,7 +365,9 @@ export default function XPostTweetPage() {
         {showSidebar && (
           <div className="w-72 border-r border-border bg-surface flex flex-col">
             <div className="p-3 border-b border-border">
-              <h3 className="text-sm font-medium text-text">Tweet History</h3>
+              <h3 className="text-sm font-medium text-text">
+                {t("xPost.tweetHistory")}
+              </h3>
             </div>
             <div className="flex-1 overflow-y-auto">
               {isLoadingSessions ? (
@@ -358,7 +381,7 @@ export default function XPostTweetPage() {
                 </div>
               ) : sessions.length === 0 ? (
                 <div className="p-4 text-center text-text-muted text-sm">
-                  No tweets yet
+                  {t("xPost.noTweets")}
                 </div>
               ) : (
                 sessions.map((session) => (
@@ -372,10 +395,10 @@ export default function XPostTweetPage() {
                   >
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-text truncate">
-                        {session.topic || "Untitled"}
+                        {session.topic || t("xPost.untitled")}
                       </div>
                       <div className="text-xs text-text-muted mt-0.5 truncate">
-                        {session.content?.slice(0, 50) || "Draft"}...
+                        {session.content?.slice(0, 50) || t("xPost.draft")}...
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <span
@@ -388,7 +411,10 @@ export default function XPostTweetPage() {
                                 : "bg-blue-500/10 text-blue-500",
                           )}
                         >
-                          {session.status}
+                          {tOptional(
+                            `xPost.status.${session.status}`,
+                            session.status,
+                          )}
                         </span>
                         <span className="text-[10px] text-text-dim">
                           {formatDate(session.createdAt)}
@@ -400,6 +426,8 @@ export default function XPostTweetPage() {
                         e.stopPropagation();
                         deleteSession(session.id);
                       }}
+                      aria-label={t("xPost.deleteDraft")}
+                      title={t("xPost.deleteDraft")}
                       className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-500 transition-all p-1"
                     >
                       <svg
@@ -449,13 +477,13 @@ export default function XPostTweetPage() {
                   </svg>
                 </div>
                 <h2 className="text-xl font-semibold text-text mb-2">
-                  Post to X (Twitter)
+                  {t("xPost.titleLong")}
                   <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-500">
-                    PRO
+                    {t("xPost.pro")}
                   </span>
                 </h2>
                 <p className="text-text-muted mb-8">
-                  Generate tweets in your unique style and publish them directly
+                  {t("xPost.emptyDescription")}
                 </p>
               </div>
             )}
@@ -489,7 +517,11 @@ export default function XPostTweetPage() {
                   <div
                     className="whitespace-pre-wrap"
                     dangerouslySetInnerHTML={{
-                      __html: markdownToSafeHtml(msg.content),
+                      __html: markdownToSafeHtml(
+                        msg.contentKey
+                          ? t(msg.contentKey, msg.contentParams)
+                          : msg.content,
+                      ),
                     }}
                   />
 
@@ -527,7 +559,7 @@ export default function XPostTweetPage() {
                       />
                     </div>
                     <span className="text-sm text-text-muted">
-                      Generating tweet...
+                      {t("xPost.generating")}
                     </span>
                   </div>
                 </div>
@@ -566,7 +598,8 @@ export default function XPostTweetPage() {
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-surface-elevated text-text-muted hover:text-text hover:border-primary/30",
                 )}
-                title="Model settings"
+                title={t("xPost.modelSettings")}
+                aria-label={t("xPost.modelSettings")}
               >
                 <svg
                   width="18"
@@ -598,13 +631,14 @@ export default function XPostTweetPage() {
                 onKeyDown={(e) =>
                   e.key === "Enter" && !e.shiftKey && handleSend()
                 }
-                placeholder="What do you want to tweet about?"
+                placeholder={t("xPost.inputPlaceholder")}
                 disabled={isStreaming}
                 className="flex-1 rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary transition-colors disabled:opacity-50"
               />
               <button
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isStreaming}
+                aria-label={t("xPost.send")}
                 className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg
@@ -638,6 +672,7 @@ function TweetDraftCard({
   onPublish: () => void;
   onEdit: (content: string) => void;
 }) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(draft.content);
 
@@ -675,14 +710,14 @@ function TweetDraftCard({
               }}
               className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-muted hover:text-text transition-colors"
             >
-              Cancel
+              {t("xPost.cancel")}
             </button>
             <button
               onClick={handleSave}
               disabled={isOverLimit}
               className="rounded-lg bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-hover disabled:opacity-50 transition-colors"
             >
-              Save
+              {t("xPost.save")}
             </button>
           </div>
         </div>
@@ -694,13 +729,15 @@ function TweetDraftCard({
     <div className="mt-3 rounded-xl border border-border bg-surface-elevated p-4">
       <p className="text-sm text-text whitespace-pre-wrap">{draft.content}</p>
       <div className="flex items-center justify-between mt-3">
-        <span className="text-xs text-text-muted">{charCount}/280 chars</span>
+        <span className="text-xs text-text-muted">
+          {t("xPost.chars", { count: charCount })}
+        </span>
         <div className="flex gap-2">
           <button
             onClick={() => setEditing(true)}
             className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-muted hover:text-text transition-colors"
           >
-            Edit
+            {t("xPost.edit")}
           </button>
           <button
             onClick={onPublish}
@@ -713,10 +750,10 @@ function TweetDraftCard({
             )}
           >
             {draft.status === "PUBLISHED"
-              ? "Published"
+              ? t("xPost.publishedButton")
               : isPublishing
-                ? "Publishing..."
-                : "Publish"}
+                ? t("xPost.publishing")
+                : t("xPost.publish")}
           </button>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, Button } from "@creator-hub/ui";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { useI18n } from "@/i18n/i18n-provider";
 
 interface SocialAccount {
   id: string;
@@ -19,6 +20,7 @@ interface SocialAccount {
 }
 
 export function XAccountCard() {
+  const { t, tOptional } = useI18n();
   const [account, setAccount] = useState<SocialAccount | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
@@ -52,7 +54,7 @@ export function XAccountCard() {
       const { authorizationUrl } = response.data;
       window.location.href = authorizationUrl;
     } catch (error) {
-      toast.error("Failed to initiate X connection");
+      toast.error(t("settings.integrations.toasts.connectFailed"));
       setConnecting(false);
     }
   };
@@ -63,9 +65,9 @@ export function XAccountCard() {
     try {
       await api.delete(`/social/accounts/${account.id}`);
       setAccount(null);
-      toast.success("X account disconnected");
+      toast.success(t("settings.integrations.toasts.disconnected"));
     } catch (error) {
-      toast.error("Failed to disconnect account");
+      toast.error(t("settings.integrations.toasts.disconnectFailed"));
     } finally {
       setDisconnecting(false);
     }
@@ -76,9 +78,9 @@ export function XAccountCard() {
     try {
       await api.post(`/social/accounts/${account.id}/refresh`);
       await fetchAccount();
-      toast.success("Tokens refreshed successfully");
+      toast.success(t("settings.integrations.toasts.refreshed"));
     } catch (error) {
-      toast.error("Failed to refresh tokens");
+      toast.error(t("settings.integrations.toasts.refreshFailed"));
     }
   };
 
@@ -95,8 +97,12 @@ export function XAccountCard() {
   return (
     <Card>
       <CardHeader>
-        <h2 className="text-lg font-semibold text-text">Integrations</h2>
-        <p className="text-sm text-text-muted">Connect your social accounts</p>
+        <h2 className="text-lg font-semibold text-text">
+          {t("settings.integrations.title")}
+        </h2>
+        <p className="text-sm text-text-muted">
+          {t("settings.integrations.description")}
+        </p>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between rounded-lg border border-border bg-surface-elevated p-4">
@@ -114,7 +120,9 @@ export function XAccountCard() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-text">X (Twitter)</p>
+                <p className="text-sm font-medium text-text">
+                  {t("settings.integrations.xName")}
+                </p>
                 {account && (
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -130,7 +138,10 @@ export function XAccountCard() {
                     ) : (
                       <AlertCircle className="h-3 w-3" />
                     )}
-                    {account.status}
+                    {tOptional(
+                      `settings.integrations.status.${account.status}`,
+                      account.status,
+                    )}
                   </span>
                 )}
               </div>
@@ -139,7 +150,9 @@ export function XAccountCard() {
                   @{account.providerUsername} • {account.displayName}
                 </p>
               ) : (
-                <p className="text-xs text-text-muted">Not connected</p>
+                <p className="text-xs text-text-muted">
+                  {t("settings.integrations.notConnected")}
+                </p>
               )}
             </div>
           </div>
@@ -148,7 +161,7 @@ export function XAccountCard() {
               <>
                 {account.status === "EXPIRED" && (
                   <Button variant="secondary" size="sm" onClick={handleRefresh}>
-                    Reconnect
+                    {t("settings.integrations.reconnect")}
                   </Button>
                 )}
                 <Button
@@ -157,7 +170,9 @@ export function XAccountCard() {
                   onClick={handleDisconnect}
                   disabled={disconnecting}
                 >
-                  {disconnecting ? "Disconnecting..." : "Disconnect"}
+                  {disconnecting
+                    ? t("settings.integrations.disconnecting")
+                    : t("settings.integrations.disconnect")}
                 </Button>
               </>
             ) : (
@@ -167,7 +182,9 @@ export function XAccountCard() {
                 onClick={handleConnect}
                 disabled={connecting}
               >
-                {connecting ? "Connecting..." : "Connect"}
+                {connecting
+                  ? t("settings.integrations.connecting")
+                  : t("settings.integrations.connect")}
               </Button>
             )}
           </div>

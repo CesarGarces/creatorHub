@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
 import { useAssetLikesStore } from "@/store/asset-likes.store";
+import { useI18n } from "@/i18n/i18n-provider";
 
 interface AssetLikeButtonProps {
   assetId: string;
@@ -22,6 +23,7 @@ export function AssetLikeButton({
   showCount = true,
   className = "",
 }: AssetLikeButtonProps) {
+  const { t } = useI18n();
   const { likesMap, fetchLikeStatus, toggleLike } = useAssetLikesStore();
 
   const likeState = likesMap[assetId];
@@ -36,7 +38,7 @@ export function AssetLikeButton({
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isPublic) {
-      toast.error("Make the asset public first to like it");
+      toast.error(t("share.makePublicToLike"));
       return;
     }
     await toggleLike(assetId);
@@ -68,7 +70,7 @@ export function AssetLikeButton({
         ${sizeClasses[size]}
         ${className}
       `}
-      aria-label={isLiked ? "Unlike this asset" : "Like this asset"}
+      aria-label={isLiked ? t("share.unlike") : t("share.like")}
     >
       <Heart
         size={iconSizes[size]}

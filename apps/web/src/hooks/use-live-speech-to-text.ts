@@ -3,6 +3,8 @@
 import { useCallback, useRef, useState } from "react";
 import { getSocket } from "@/lib/socket";
 import type { Socket } from "socket.io-client";
+import { t } from "@/i18n/runtime";
+import { localizeError } from "@/i18n/errors";
 
 interface UseLiveSpeechToTextOptions {
   language?: string;
@@ -160,7 +162,7 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
 
       socket.on("stt:error", (data: { code: string; message: string }) => {
         pendingResultRef.current = false;
-        options.onError(data.message);
+        options.onError(localizeError(data.message));
         cleanup();
       });
 
@@ -174,7 +176,7 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
 
     if (typeof AudioContext === "undefined") {
       setIsSupported(false);
-      options.onError("AudioContext is not supported in this browser");
+      options.onError(t("voice.errors.notSupported"));
       return;
     }
 
@@ -184,7 +186,7 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
       socket = await waitForConnection(rawSocket);
     } catch (err) {
       console.error("[STT] Connection failed:", err);
-      options.onError("Could not connect to server");
+      options.onError(t("voice.errors.connectionFailed"));
       return;
     }
 
@@ -247,11 +249,11 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
       const message =
         error instanceof DOMException
           ? error.name === "NotAllowedError"
-            ? "Microphone permission denied"
+            ? t("voice.errors.permissionDenied")
             : error.name === "NotFoundError"
-              ? "No microphone found"
+              ? t("voice.errors.noMicrophone")
               : error.message
-          : "Failed to access microphone";
+          : t("voice.errors.micFailed");
       options.onError(message);
       cleanup();
     }

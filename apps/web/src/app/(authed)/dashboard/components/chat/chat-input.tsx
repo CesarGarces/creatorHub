@@ -2,8 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useChatStore } from "@/store/chat.store";
+import { useI18n } from "@/i18n/i18n-provider";
 
 export function ChatInput() {
+  const { t } = useI18n();
   const [input, setInput] = useState("");
   const { sendMessage, isStreaming } = useChatStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -36,8 +38,8 @@ export function ChatInput() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask me anything..."
-          aria-label="Chat message input"
+          placeholder={t("chat.inputPlaceholder")}
+          aria-label={t("chat.inputLabel")}
           rows={1}
           className="flex-1 resize-none rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary/50 transition-colors"
           disabled={isStreaming}
@@ -46,6 +48,7 @@ export function ChatInput() {
           type="button"
           onClick={handleSubmit}
           disabled={!input.trim() || isStreaming}
+          aria-label={t("chat.send")}
           className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isStreaming ? (
@@ -75,9 +78,9 @@ export function ChatInput() {
         </button>
       </div>
       <div className="mt-1.5 flex items-center gap-2 text-[10px] text-text-dim">
-        <span>Enter to send</span>
+        <span>{t("common.enterToSend")}</span>
         <span>·</span>
-        <span>Shift+Enter for new line</span>
+        <span>{t("common.shiftEnterNewLine")}</span>
       </div>
     </div>
   );

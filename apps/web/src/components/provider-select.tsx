@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { ChevronDown, Check, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { useCreditsStore } from "@/store/credits.store";
+import { useI18n } from "@/i18n/i18n-provider";
 
 // ─── Mode → TaskType mapping ───────────────────────────────────────────────
 // A model appears in the dropdown only if its taskType matches one of the
@@ -52,7 +53,7 @@ export interface ProviderSelectProps {
   onChange: (modelId: string, model: ModelOption) => void;
   /** Disable all interactions */
   disabled?: boolean;
-  /** Custom label (default: "AI Model") */
+  /** Custom label (default: localized "AI Model") */
   label?: string;
   /** Optional class on the root wrapper */
   className?: string;
@@ -65,10 +66,13 @@ export function ProviderSelect({
   value,
   onChange,
   disabled = false,
-  label = "AI Model",
+  label,
   className,
 }: ProviderSelectProps) {
   const [models, setModels] = useState<ModelOption[]>([]);
+  const { t, tOptional } = useI18n();
+  // Accessible name of the model list ("" falls back to the default too).
+  const listLabel = label || t("providerSelect.defaultLabel");
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -134,23 +138,20 @@ export function ProviderSelect({
 
   const selectedModel = models.find((m) => m.modelId === value);
 
-  const taskTypeLabel: Record<string, string> = {
-    "image-generation": "Image",
-    "text-generation": "Text",
-    "video-generation": "Video",
-  };
+  const taskTypeLabel = (taskType: string) =>
+    tOptional(`providerSelect.taskTypes.${taskType}`, taskType);
 
   return (
     <div className={`relative ${className ?? ""}`} ref={dropdownRef}>
       {loading ? (
         <div className="flex h-12 items-center gap-2 rounded-lg bg-surface-elevated px-3 animate-pulse">
           <Loader2 className="h-4 w-4 animate-spin text-text-dim" />
-          <span className="text-sm text-text-dim">Loading models...</span>
+          <span className="text-sm text-text-dim">
+            {t("providerSelect.loading")}
+          </span>
         </div>
       ) : models.length === 0 ? (
-        <p className="text-xs text-text-dim">
-          No models available for this tool.
-        </p>
+        <p className="text-xs text-text-dim">{t("providerSelect.empty")}</p>
       ) : (
         <>
           {/* Trigger */}
@@ -168,24 +169,25 @@ export function ProviderSelect({
           >
             <div className="flex items-center gap-2 min-w-0">
               <span className="font-medium truncate">
-                {selectedModel?.displayName || "Select model"}
+                {selectedModel?.displayName || t("providerSelect.selectModel")}
               </span>
               {selectedModel?.tier === "pro" && (
                 <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600">
-                  PRO
+                  {t("providerSelect.pro")}
                 </span>
               )}
               {selectedModel && (
                 <span className="rounded bg-surface-elevated px-1.5 py-0.5 text-[9px] font-medium text-text-dim">
-                  {taskTypeLabel[selectedModel.taskType] ??
-                    selectedModel.taskType}
+                  {taskTypeLabel(selectedModel.taskType)}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 ml-2">
               {selectedModel && (
                 <span className="text-xs text-text-muted tabular-nums">
-                  {selectedModel.creditCost} cr
+                  {t("providerSelect.creditsShort", {
+                    count: selectedModel.creditCost,
+                  })}
                 </span>
               )}
               <ChevronDown
@@ -200,7 +202,7 @@ export function ProviderSelect({
             <div
               className="absolute z-20 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border border-border bg-surface-elevated shadow-xl animate-fade-in"
               role="listbox"
-              aria-label={label}
+              aria-label={listLabel}
             >
               {models.map((model) => {
                 const isSelected = value === model.modelId;
@@ -231,21 +233,23 @@ export function ProviderSelect({
                       </span>
                       {model.tier === "pro" && (
                         <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600">
-                          PRO
+                          {t("providerSelect.pro")}
                         </span>
                       )}
                       {isProDisabled && (
                         <span className="text-[10px] text-text-dim whitespace-nowrap">
-                          (upgrade)
+                          {t("providerSelect.upgrade")}
                         </span>
                       )}
                       <span className="rounded bg-surface-elevated px-1.5 py-0.5 text-[9px] font-medium text-text-dim">
-                        {taskTypeLabel[model.taskType] ?? model.taskType}
+                        {taskTypeLabel(model.taskType)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                       <span className="text-xs text-text-muted tabular-nums">
-                        {model.creditCost} cr
+                        {t("providerSelect.creditsShort", {
+                          count: model.creditCost,
+                        })}
                       </span>
                       {isSelected && (
                         <Check size={16} className="text-primary" />

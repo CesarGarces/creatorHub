@@ -14,34 +14,31 @@ import {
   useScriptWriterStore,
   type ScriptMessage,
 } from "@/store/script-writer.store";
+import { useI18n } from "@/i18n/i18n-provider";
+import type { TranslationKey } from "@/i18n/translate";
 
-const PLATFORMS = [
-  { value: "youtube-long", label: "YouTube Long (8-15 min)" },
-  { value: "youtube-short", label: "YouTube Shorts" },
-  { value: "tiktok", label: "TikTok" },
-  { value: "reels", label: "Instagram Reels" },
-] as const;
+const PLATFORMS = ["youtube-long", "youtube-short", "tiktok", "reels"] as const;
 
 const TONES = [
-  { value: "emotional", label: "Emotional" },
-  { value: "controversial", label: "Controversial" },
-  { value: "analytical", label: "Analytical" },
-  { value: "comedic", label: "Comedic" },
-  { value: "direct", label: "Direct & Fast" },
+  "emotional",
+  "controversial",
+  "analytical",
+  "comedic",
+  "direct",
 ] as const;
 
 const HOOK_TYPES = [
-  { value: "mystery", label: "Mystery / Uncertainty" },
-  { value: "shocking-data", label: "Shocking Data" },
-  { value: "rhetorical-question", label: "Rhetorical Question" },
-  { value: "contradiction", label: "Contradiction" },
+  "mystery",
+  "shocking-data",
+  "rhetorical-question",
+  "contradiction",
 ] as const;
 
-const SUGGESTIONS = [
-  "Write a script about why AI will change everything",
-  "TikTok script about an anime character with a dark secret",
-  "Script about 5 habits that make you more productive",
-  "Controversial script about why remote work is better than office",
+const SUGGESTION_KEYS: TranslationKey[] = [
+  "scriptWriter.suggestions.ai",
+  "scriptWriter.suggestions.anime",
+  "scriptWriter.suggestions.habits",
+  "scriptWriter.suggestions.remote",
 ];
 
 const PLATFORM_ICONS: Record<string, string> = {
@@ -59,22 +56,17 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
-}
-
 export default function ScriptWriterPage() {
+  const { t, formatRelativeTime, formatDate: formatLocaleDate } = useI18n();
+
+  // Relative time for the last week, then a locale-formatted date.
+  const formatDate = (dateStr: string): string => {
+    const diffDays = (Date.now() - new Date(dateStr).getTime()) / 86_400_000;
+    return diffDays < 7
+      ? formatRelativeTime(dateStr)
+      : formatLocaleDate(dateStr, { dateStyle: "short" });
+  };
+
   const {
     messages,
     scripts,
@@ -149,8 +141,8 @@ export default function ScriptWriterPage() {
     <>
       <TopBar
         breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Script Writer" },
+          { label: t("nav.dashboard"), href: "/dashboard" },
+          { label: t("toolCatalog.script-writer.name") },
         ]}
         actions={
           <div className="flex items-center gap-3">
@@ -158,7 +150,9 @@ export default function ScriptWriterPage() {
               onClick={toggleSidebar}
               className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm text-text-muted hover:text-text transition-colors"
             >
-              {showSidebar ? "Hide History" : "Show History"}
+              {showSidebar
+                ? t("scriptWriter.hideHistory")
+                : t("scriptWriter.showHistory")}
             </button>
             <button
               onClick={() => {
@@ -167,7 +161,7 @@ export default function ScriptWriterPage() {
               }}
               className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm text-text-muted hover:text-text transition-colors"
             >
-              New Script
+              {t("scriptWriter.newScript")}
             </button>
           </div>
         }
@@ -177,12 +171,14 @@ export default function ScriptWriterPage() {
         {showSidebar && (
           <div className="w-72 border-r border-border bg-surface flex flex-col">
             <div className="p-3 border-b border-border">
-              <h3 className="text-sm font-medium text-text">Script History</h3>
+              <h3 className="text-sm font-medium text-text">
+                {t("scriptWriter.scriptHistory")}
+              </h3>
             </div>
             <div className="flex-1 overflow-y-auto">
               {scripts.length === 0 ? (
                 <div className="p-4 text-center text-text-muted text-sm">
-                  No scripts yet
+                  {t("scriptWriter.noScripts")}
                 </div>
               ) : (
                 scripts.map((script) => (
@@ -216,6 +212,8 @@ export default function ScriptWriterPage() {
                         e.stopPropagation();
                         deleteScript(script.id);
                       }}
+                      aria-label={t("scriptWriter.deleteScript")}
+                      title={t("scriptWriter.deleteScript")}
                       className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-500 transition-all p-1"
                     >
                       <svg
@@ -271,14 +269,14 @@ export default function ScriptWriterPage() {
                       <line x1="10" x2="8" y1="9" y2="9" />
                     </svg>
                     <span className="text-xs font-semibold uppercase tracking-wider text-text-dim">
-                      Script Configuration
+                      {t("scriptWriter.scriptConfiguration")}
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowScriptConfig(false)}
                     className="flex h-7 w-7 items-center justify-center rounded-md text-text-dim hover:text-text hover:bg-surface transition-all cursor-pointer"
-                    aria-label="Close script config"
+                    aria-label={t("scriptWriter.closeConfig")}
                   >
                     <svg
                       width="14"
@@ -296,7 +294,7 @@ export default function ScriptWriterPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-text-dim mb-1.5">
-                      Platform
+                      {t("scriptWriter.platform")}
                     </label>
                     <select
                       value={config.platform}
@@ -304,31 +302,31 @@ export default function ScriptWriterPage() {
                       className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text outline-none focus:border-primary transition-colors"
                     >
                       {PLATFORMS.map((p) => (
-                        <option key={p.value} value={p.value}>
-                          {p.label}
+                        <option key={p} value={p}>
+                          {t(`scriptWriter.platforms.${p}`)}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-text-dim mb-1.5">
-                      Tone
+                      {t("scriptWriter.tone")}
                     </label>
                     <select
                       value={config.tone}
                       onChange={(e) => setConfig({ tone: e.target.value })}
                       className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text outline-none focus:border-primary transition-colors"
                     >
-                      {TONES.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
+                      {TONES.map((tone) => (
+                        <option key={tone} value={tone}>
+                          {t(`scriptWriter.tones.${tone}`)}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-text-dim mb-1.5">
-                      Hook
+                      {t("scriptWriter.hook")}
                     </label>
                     <select
                       value={config.hookType}
@@ -336,15 +334,15 @@ export default function ScriptWriterPage() {
                       className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text outline-none focus:border-primary transition-colors"
                     >
                       {HOOK_TYPES.map((h) => (
-                        <option key={h.value} value={h.value}>
-                          {h.label}
+                        <option key={h} value={h}>
+                          {t(`scriptWriter.hooks.${h}`)}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-text-dim mb-1.5">
-                      Duration (sec)
+                      {t("scriptWriter.durationSec")}
                     </label>
                     <input
                       type="number"
@@ -383,11 +381,10 @@ export default function ScriptWriterPage() {
                   </svg>
                 </div>
                 <h2 className="text-xl font-semibold text-text mb-2">
-                  Script Writer
+                  {t("scriptWriter.emptyTitle")}
                 </h2>
                 <p className="text-text-muted mb-8">
-                  Generate structured scripts with hook, development, climax and
-                  CTA
+                  {t("scriptWriter.emptyDescription")}
                 </p>
               </div>
             )}
@@ -430,7 +427,7 @@ export default function ScriptWriterPage() {
                         />
                       </div>
                       <span className="text-sm text-text-muted">
-                        Generating script...
+                        {t("scriptWriter.generatingScript")}
                       </span>
                     </div>
                   </div>
@@ -444,7 +441,7 @@ export default function ScriptWriterPage() {
           {messages.length === 0 && (
             <div className="px-6 pb-4">
               <div className="max-w-3xl mx-auto flex flex-wrap gap-2">
-                {SUGGESTIONS.map((s) => (
+                {SUGGESTION_KEYS.map((key) => t(key)).map((s) => (
                   <button
                     key={s}
                     onClick={() => handleSend(s)}
@@ -470,7 +467,8 @@ export default function ScriptWriterPage() {
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-surface-elevated text-text-muted hover:text-text hover:border-primary/30",
                 )}
-                title="Model settings"
+                title={t("scriptWriter.modelSettings")}
+                aria-label={t("scriptWriter.modelSettings")}
               >
                 <svg
                   width="18"
@@ -505,7 +503,8 @@ export default function ScriptWriterPage() {
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-surface-elevated text-text-muted hover:text-text hover:border-primary/30",
                 )}
-                title="Script configuration"
+                title={t("scriptWriter.scriptConfigToggle")}
+                aria-label={t("scriptWriter.scriptConfigToggle")}
               >
                 <svg
                   width="18"
@@ -529,7 +528,7 @@ export default function ScriptWriterPage() {
                   committedTextRef.current = e.target.value;
                 }}
                 onKeyDown={handleKeyDown}
-                placeholder="Describe your script topic..."
+                placeholder={t("scriptWriter.inputPlaceholder")}
                 disabled={isGenerating}
                 className="flex-1 rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary transition-colors disabled:opacity-50"
               />
@@ -538,6 +537,7 @@ export default function ScriptWriterPage() {
               <button
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isGenerating}
+                aria-label={t("scriptWriter.send")}
                 className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg
@@ -646,6 +646,7 @@ function ScriptContent({
   copied: boolean;
   onCopy: () => void;
 }) {
+  const { t } = useI18n();
   if (message.isStreaming && !message.content) {
     return (
       <div className="flex items-center gap-2 py-2">
@@ -663,7 +664,9 @@ function ScriptContent({
             style={{ animationDelay: "300ms" }}
           />
         </div>
-        <span className="text-sm text-text-muted">Generating script...</span>
+        <span className="text-sm text-text-muted">
+          {t("scriptWriter.generatingScript")}
+        </span>
       </div>
     );
   }
@@ -675,80 +678,18 @@ function ScriptContent({
       {message.isStreaming && (
         <div className="flex items-center gap-2 mt-2 py-1">
           <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-          <span className="text-xs text-text-muted">Generating...</span>
+          <span className="text-xs text-text-muted">
+            {t("scriptWriter.generating")}
+          </span>
         </div>
       )}
 
-      {!message.isStreaming &&
-        message.content &&
-        !message.content.startsWith("Error:") && (
-          <div className="mt-3 pt-3 border-t border-border/50">
-            {/* Metadata */}
-            <div className="flex flex-wrap items-center gap-3 mb-3">
-              {message.duration && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-text-muted">
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  ~{formatDuration(message.duration)}
-                </span>
-              )}
-              {message.wordCount && (
-                <span className="text-[11px] text-text-muted">
-                  {message.wordCount} words
-                </span>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={onCopy}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-[11px] text-text-muted hover:text-text hover:border-primary/30 transition-colors"
-              >
-                {copied ? (
-                  <>
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                    </svg>
-                    Copy
-                  </>
-                )}
-              </button>
-              <button
-                onClick={onCopy}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-[11px] text-text-muted hover:text-text hover:border-primary/30 transition-colors"
-              >
+      {!message.isStreaming && message.content && !message.isError && (
+        <div className="mt-3 pt-3 border-t border-border/50">
+          {/* Metadata */}
+          <div className="flex flex-wrap items-center gap-3 mb-3">
+            {message.duration && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-text-muted">
                 <svg
                   width="12"
                   height="12"
@@ -757,27 +698,89 @@ function ScriptContent({
                   stroke="currentColor"
                   strokeWidth="2"
                 >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" x2="12" y1="15" y2="3" />
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
                 </svg>
-                Export
-              </button>
-            </div>
-
-            {/* Thumbnail Prompt */}
-            {message.thumbnailPrompt && (
-              <div className="mt-3 p-2.5 rounded-lg bg-surface-elevated border border-border/50">
-                <div className="text-[10px] font-medium text-text-muted mb-1 uppercase tracking-wide">
-                  Thumbnail Prompt
-                </div>
-                <p className="text-xs text-text leading-relaxed">
-                  {message.thumbnailPrompt}
-                </p>
-              </div>
+                ~{formatDuration(message.duration)}
+              </span>
+            )}
+            {message.wordCount && (
+              <span className="text-[11px] text-text-muted">
+                {t("scriptWriter.words", { count: message.wordCount })}
+              </span>
             )}
           </div>
-        )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onCopy}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-[11px] text-text-muted hover:text-text hover:border-primary/30 transition-colors"
+            >
+              {copied ? (
+                <>
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  {t("scriptWriter.copied")}
+                </>
+              ) : (
+                <>
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
+                  {t("scriptWriter.copy")}
+                </>
+              )}
+            </button>
+            <button
+              onClick={onCopy}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-[11px] text-text-muted hover:text-text hover:border-primary/30 transition-colors"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" x2="12" y1="15" y2="3" />
+              </svg>
+              {t("scriptWriter.export")}
+            </button>
+          </div>
+
+          {/* Thumbnail Prompt */}
+          {message.thumbnailPrompt && (
+            <div className="mt-3 p-2.5 rounded-lg bg-surface-elevated border border-border/50">
+              <div className="text-[10px] font-medium text-text-muted mb-1 uppercase tracking-wide">
+                {t("scriptWriter.thumbnailPrompt")}
+              </div>
+              <p className="text-xs text-text leading-relaxed">
+                {message.thumbnailPrompt}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

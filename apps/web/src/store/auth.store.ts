@@ -10,6 +10,7 @@ import {
   setRefreshToken,
 } from "@/lib/cookie";
 import { connectSocket } from "@/lib/socket";
+import { applyAccountLocale } from "@/i18n/account-sync";
 
 interface User {
   id: string;
@@ -17,6 +18,8 @@ interface User {
   role: string;
   name?: string;
   emailVerified?: string | null;
+  /** Interface language saved on the account ("en" | "es" | "pt"). */
+  preferredLanguage?: string | null;
 }
 
 interface AuthState {
@@ -78,6 +81,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       setStoredUser(userWithVerification);
       set({ user: userWithVerification, token: res.accessToken });
 
+      // Restore the interface language saved on the account.
+      applyAccountLocale(res.user.preferredLanguage);
+
       // Initialize WebSocket with saved tokens (handshake reads cookies)
       try {
         connectSocket();
@@ -125,6 +131,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       };
       setStoredUser(userWithVerification);
       set({ user: userWithVerification, token: res.accessToken });
+
+      // New accounts keep the language the user signed up in.
+      applyAccountLocale(res.user.preferredLanguage);
 
       // Initialize WebSocket with saved tokens (handshake reads cookies)
       try {

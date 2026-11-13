@@ -18,6 +18,7 @@ import { EmailService } from "@creator-hub/email";
 import { prisma } from "@creator-hub/database";
 import { IdempotencyInterceptor } from "../../common/idempotency/idempotency.interceptor";
 import { IsEmail, IsString, MinLength, Length } from "class-validator";
+import { UpdatePreferencesDto } from "./dto/update-preferences.dto";
 
 class RegisterDto {
   @IsEmail()
@@ -221,6 +222,17 @@ export class AuthController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.authService.updateProfile(userId, dto.name);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch("preferences")
+  async updatePreferences(
+    @CurrentUser("id") userId: string,
+    @Body() dto: UpdatePreferencesDto,
+  ) {
+    return this.authService.updatePreferences(userId, {
+      preferredLanguage: dto.preferredLanguage,
+    });
   }
 
   @UseGuards(JwtAuthGuard)

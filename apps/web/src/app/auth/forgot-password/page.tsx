@@ -4,9 +4,13 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Input, Card, CardContent, CardHeader } from "@creator-hub/ui";
 import api from "@/lib/api";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
+import { AuthLanguageSwitcher } from "@/components/i18n/auth-language-switcher";
 
 function ForgotPasswordForm() {
   const searchParams = useSearchParams();
+  const { t, rich } = useI18n();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -28,11 +32,7 @@ function ForgotPasswordForm() {
       await api.post("/auth/forgot-password", { email });
       setSuccess(true);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Failed to send reset email. Please try again.";
-      setError(message);
+      setError(localizeError(err, "auth.forgot.failed"));
     } finally {
       setIsLoading(false);
     }
@@ -40,6 +40,7 @@ function ForgotPasswordForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg relative overflow-hidden">
+      <AuthLanguageSwitcher />
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
       <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
       <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-accent/5 blur-3xl" />
@@ -48,13 +49,13 @@ function ForgotPasswordForm() {
         <CardHeader className="text-center">
           <img
             src="/isologo_white.png"
-            alt="Creator Hub"
+            alt={t("common.appName")}
             className="mx-auto mb-4 h-14 w-auto"
           />
-          <h1 className="text-2xl font-bold text-text">Forgot password?</h1>
-          <p className="text-sm text-text-muted">
-            Enter your email and we&apos;ll send you a reset link
-          </p>
+          <h1 className="text-2xl font-bold text-text">
+            {t("auth.forgot.title")}
+          </h1>
+          <p className="text-sm text-text-muted">{t("auth.forgot.subtitle")}</p>
         </CardHeader>
         <CardContent>
           {success ? (
@@ -73,17 +74,24 @@ function ForgotPasswordForm() {
                 </svg>
               </div>
               <p className="text-sm font-medium text-success">
-                Check your email
+                {t("auth.forgot.checkEmail")}
               </p>
               <p className="mt-1 text-xs text-text-muted">
-                We sent a password reset link to{" "}
-                <span className="font-medium text-text">{email}</span>
+                {rich(
+                  "auth.forgot.sentTo",
+                  {
+                    email: (chunks) => (
+                      <span className="font-medium text-text">{chunks}</span>
+                    ),
+                  },
+                  { email },
+                )}
               </p>
               <a
                 href="/login"
                 className="mt-4 inline-block text-sm font-medium text-primary hover:text-primary-hover transition-colors"
               >
-                Back to sign in
+                {t("auth.forgot.backToSignIn")}
               </a>
             </div>
           ) : (
@@ -94,12 +102,12 @@ function ForgotPasswordForm() {
                 </div>
               )}
               <Input
-                label="Email"
+                label={t("auth.fields.email")}
                 type="email"
                 name="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder={t("auth.fields.emailPlaceholder")}
                 required
               />
               <Button
@@ -109,17 +117,17 @@ function ForgotPasswordForm() {
                 className="w-full"
                 size="lg"
               >
-                Send reset link
+                {t("auth.forgot.submit")}
               </Button>
             </form>
           )}
           <p className="mt-6 text-center text-sm text-text-muted">
-            Remember your password?{" "}
+            {t("auth.forgot.remember")}{" "}
             <a
               href="/login"
               className="text-primary hover:text-primary-hover font-medium transition-colors"
             >
-              Sign in
+              {t("auth.forgot.signIn")}
             </a>
           </p>
         </CardContent>
@@ -128,15 +136,18 @@ function ForgotPasswordForm() {
   );
 }
 
+function LoadingFallback() {
+  const { t } = useI18n();
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-bg">
+      <div className="text-text-muted">{t("common.status.loading")}</div>
+    </div>
+  );
+}
+
 export default function ForgotPasswordPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-bg">
-          <div className="text-text-muted">Loading...</div>
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingFallback />}>
       <ForgotPasswordForm />
     </Suspense>
   );

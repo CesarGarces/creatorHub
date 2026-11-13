@@ -1,0 +1,78 @@
+import type { Messages } from "../../translate";
+
+export const settings: Messages["settings"] = {
+  title: "Configuración",
+  subtitle: "Administra las preferencias de tu cuenta",
+  profile: {
+    title: "Perfil",
+    description: "Actualiza tu información personal",
+    editAvatar: "Editar perfil",
+    credits_one: "{count} crédito",
+    credits_other: "{count} créditos",
+  },
+  password: {
+    title: "Cambiar contraseña",
+    description: "Actualiza tu contraseña para mantener tu cuenta segura",
+    current: "Contraseña actual",
+    new: "Nueva contraseña",
+    confirm: "Confirmar nueva contraseña",
+    submit: "Cambiar contraseña",
+    showPassword: "Mostrar contraseña",
+    hidePassword: "Ocultar contraseña",
+    confirmTitle: "Confirmar cambio de contraseña",
+    confirmDescription:
+      "¿Seguro que quieres cambiar tu contraseña? Tendrás que usar la nueva contraseña en tus próximos inicios de sesión.",
+    confirmButton: "Sí, cambiar contraseña",
+  },
+  danger: {
+    title: "Zona de peligro",
+    description: "Acciones irreversibles",
+    deleteTitle: "Eliminar cuenta",
+    deleteDescription: "Elimina permanentemente tu cuenta y todos tus datos",
+    deleteButton: "Eliminar cuenta",
+    modalDescription:
+      "Esta acción es irreversible. Todos tus datos se eliminarán permanentemente, incluidas tus imágenes y la información de tu cuenta.",
+    typeToConfirm: "Escribe <word>{word}</word> para confirmar.",
+    confirmationLabel: "Confirmación",
+    confirmWord: "ELIMINAR",
+  },
+  editProfile: {
+    title: "Editar perfil",
+    name: "Nombre",
+  },
+  toasts: {
+    nameUpdated: "Nombre actualizado correctamente",
+    nameUpdateFailed: "No se pudo actualizar el nombre",
+    passwordsDoNotMatch: "Las contraseñas nuevas no coinciden",
+    passwordTooShort: "La nueva contraseña debe tener al menos 8 caracteres",
+    passwordUpdated: "Contraseña actualizada correctamente",
+    passwordUpdateFailed: "No se pudo cambiar la contraseña",
+    typeToConfirm: 'Escribe "{word}" para confirmar',
+    accountDeleted: "Cuenta eliminada correctamente",
+    accountDeleteFailed: "No se pudo eliminar la cuenta",
+  },
+  integrations: {
+    title: "Integraciones",
+    description: "Conecta tus cuentas sociales",
+    xName: "X (Twitter)",
+    notConnected: "No conectada",
+    reconnect: "Reconectar",
+    connect: "Conectar",
+    connecting: "Conectando...",
+    disconnect: "Desconectar",
+    disconnecting: "Desconectando...",
+    status: {
+      ACTIVE: "Activa",
+      EXPIRED: "Expirada",
+      REVOKED: "Revocada",
+      ERROR: "Error",
+    },
+    toasts: {
+      connectFailed: "No se pudo iniciar la conexión con X",
+      disconnected: "Cuenta de X desconectada",
+      disconnectFailed: "No se pudo desconectar la cuenta",
+      refreshed: "Tokens actualizados correctamente",
+      refreshFailed: "No se pudieron actualizar los tokens",
+    },
+  },
+};

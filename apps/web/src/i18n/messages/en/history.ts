@@ -1,0 +1,20 @@
+export const history = {
+  title: "History",
+  subtitle: "Your tool usage",
+  filters: {
+    day: "Today",
+    week: "7 Days",
+    total: "All",
+  },
+  totalTransactions: "Total Transactions",
+  creditsSpent: "Credits Spent",
+  creditsEarned: "Credits Earned",
+  activity: "Activity",
+  pending: "Pending",
+  completed: "Completed",
+  tool: "Tool",
+  purchase: "Purchase",
+  bonus: "Bonus",
+  creditsShort: "{count} cr",
+  empty: "No activity in this period",
+};

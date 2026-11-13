@@ -1,4 +1,5 @@
 import { io, Socket } from "socket.io-client";
+import { t } from "@/i18n/runtime";
 import {
   getAccessToken,
   getRefreshToken,
@@ -59,7 +60,7 @@ export function getSocket(): Socket {
       "[Socket] Authentication error from server:",
       err?.message || err,
     );
-    toast.error("Tu sesión ha expirado. Redirigiendo al login...");
+    toast.error(t("jobs.sessionExpiredRedirect"));
     // Cleanup local credentials
     try {
       removeAccessToken();

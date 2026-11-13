@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { TopBar } from "@/components/layout/top-bar";
+import { useI18n } from "@/i18n/i18n-provider";
+import type { TranslationKey } from "@/i18n/translate";
 
 const DAY = 86_400_000;
 const now = Date.now();
@@ -24,20 +26,21 @@ interface Transaction {
   createdAt: string;
 }
 
-function formatDate(iso: string) {
-  const ts = new Date(iso).getTime();
-  const diff = now - ts;
-  if (diff < 60_000) return "Just now";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
-  if (diff < 2 * 86_400_000) return "Yesterday";
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
+const FILTER_LABELS: Record<TimeFilter, TranslationKey> = {
+  day: "history.filters.day",
+  week: "history.filters.week",
+  total: "history.filters.total",
+};
 
 export default function HistoryPage() {
+  const { t, formatRelativeTime, formatDate: formatLocaleDate } = useI18n();
+
+  // "5m ago" / "yesterday" for recent items, then "Mar 4" in the UI language.
+  const formatDate = (iso: string) =>
+    now - new Date(iso).getTime() < 2 * DAY
+      ? formatRelativeTime(iso)
+      : formatLocaleDate(iso, { month: "short", day: "numeric" });
+
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("day");
 
   const { data: transactions } = useQuery({
@@ -80,13 +83,13 @@ export default function HistoryPage() {
     if (isPending) {
       return (
         <span className="inline-flex items-center rounded-full border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning">
-          Pending
+          {t("history.pending")}
         </span>
       );
     }
     return (
       <span className="inline-flex items-center rounded-full border border-success/30 bg-success/10 px-1.5 py-0.5 text-[10px] font-medium text-success">
-        Completed
+        {t("history.completed")}
       </span>
     );
   }
@@ -95,16 +98,18 @@ export default function HistoryPage() {
     <>
       <TopBar
         breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "History" },
+          { label: t("nav.dashboard"), href: "/dashboard" },
+          { label: t("nav.history") },
         ]}
       />
       <div className="p-6 max-w-6xl mx-auto animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-text">History</h1>
-            <p className="mt-1 text-text-muted">Your tool usage</p>
+            <h1 className="text-2xl font-bold text-text">
+              {t("history.title")}
+            </h1>
+            <p className="mt-1 text-text-muted">{t("history.subtitle")}</p>
           </div>
           <div className="flex rounded-lg border border-border overflow-hidden">
             {(["day", "week", "total"] as TimeFilter[]).map((f) => (
@@ -118,7 +123,7 @@ export default function HistoryPage() {
                     : "bg-surface-elevated text-text-muted hover:bg-surface-elevated/80"
                 }`}
               >
-                {f === "day" ? "Today" : f === "week" ? "7 Days" : "All"}
+                {t(FILTER_LABELS[f])}
               </button>
             ))}
           </div>
@@ -128,7 +133,7 @@ export default function HistoryPage() {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="rounded-xl border border-border bg-surface p-4 text-center">
             <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
-              Total Transactions
+              {t("history.totalTransactions")}
             </p>
             <p className="mt-1 text-2xl font-bold text-text">
               {filtered.length}
@@ -136,7 +141,7 @@ export default function HistoryPage() {
           </div>
           <div className="rounded-xl border border-border bg-surface p-4 text-center">
             <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
-              Credits Spent
+              {t("history.creditsSpent")}
             </p>
             <p className="mt-1 text-2xl font-bold text-error">
               {filtered
@@ -146,7 +151,7 @@ export default function HistoryPage() {
           </div>
           <div className="rounded-xl border border-border bg-surface p-4 text-center">
             <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
-              Credits Earned
+              {t("history.creditsEarned")}
             </p>
             <p className="mt-1 text-2xl font-bold text-success">
               {filtered
@@ -160,7 +165,7 @@ export default function HistoryPage() {
         <div className="rounded-xl border border-border bg-surface flex flex-col">
           <div className="px-5 py-4 border-b border-border">
             <h2 className="text-sm font-semibold text-text uppercase tracking-wider">
-              Activity
+              {t("history.activity")}
             </h2>
           </div>
           <div className="divide-y divide-border overflow-y-auto max-h-[28rem]">
@@ -183,10 +188,10 @@ export default function HistoryPage() {
                   </div>
                   <p className="text-xs text-text-dim">
                     {item.type === "USAGE"
-                      ? item.toolName || "Tool"
+                      ? item.toolName || t("history.tool")
                       : item.type === "PURCHASE"
-                        ? "Purchase"
-                        : "Bonus"}
+                        ? t("history.purchase")
+                        : t("history.bonus")}
                     {item.model && (
                       <span className="ml-1.5 text-text-dim/60">
                         · {item.model}
@@ -203,13 +208,13 @@ export default function HistoryPage() {
                   }`}
                 >
                   {item.amount > 0 ? "+" : ""}
-                  {Math.abs(item.amount)} cr
+                  {t("history.creditsShort", { count: Math.abs(item.amount) })}
                 </span>
               </div>
             ))}
             {filtered.length === 0 && (
               <div className="px-5 py-12 text-center text-sm text-text-dim">
-                No activity in this period
+                {t("history.empty")}
               </div>
             )}
           </div>

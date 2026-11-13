@@ -1,0 +1,45 @@
+export const common = {
+  appName: "Creator Hub",
+  appDescription: "AI-powered tools for content creators",
+  actions: {
+    cancel: "Cancel",
+    saveChanges: "Save Changes",
+    close: "Close",
+    tryAgain: "Try Again",
+    copy: "Copy",
+    copyUrl: "Copy URL",
+    download: "Download",
+    viewAll: "View all →",
+    generating: "Generating...",
+    generateNew: "Generate New",
+  },
+  status: {
+    loading: "Loading...",
+    pending: "Pending",
+    completed: "Completed",
+    unknownError: "Unknown error",
+  },
+  time: {
+    justNow: "Just now",
+  },
+  credits: {
+    count_one: "{count} credit",
+    count_other: "{count} credits",
+    cost_one: "⚡ {count} credit",
+    cost_other: "⚡ {count} credits",
+  },
+  toasts: {
+    urlCopied: "URL copied to clipboard",
+    downloadStarted: "Download started",
+    downloadFailed: "Download failed",
+  },
+  plans: {
+    FREE: "FREE PLAN",
+    PAY_AS_YOU_GO: "PAY AS YOU GO",
+    PREMIUM: "PREMIUM",
+    STARTER: "STARTER",
+    PRO: "PRO",
+  },
+  enterToSend: "Enter to send",
+  shiftEnterNewLine: "Shift+Enter for new line",
+};
