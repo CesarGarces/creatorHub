@@ -26,6 +26,8 @@ describe("SiliconFlowGateway", () => {
 
   describe("listModels", () => {
     it("should return known models", async () => {
+      // Simulate an unreachable API so the test never calls the real service.
+      global.fetch = jest.fn().mockRejectedValue(new Error("offline"));
       const models = await gateway.listModels();
       expect(models.length).toBeGreaterThan(0);
       expect(models.some((m) => m.id === "black-forest-labs/FLUX.2-pro")).toBe(

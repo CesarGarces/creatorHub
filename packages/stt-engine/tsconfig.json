@@ -19,5 +19,6 @@
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["**/__tests__"]
 }

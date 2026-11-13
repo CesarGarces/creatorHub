@@ -90,22 +90,28 @@ describe("CreditPurchaseForm E2E", () => {
     await new Promise((r) => server.close(() => r(null)));
   });
 
-  it("loads plans from real API and opens buy modal", async () => {
-    // Must import after env is set and cache is cleared
-    vi.resetModules();
-    const { default: CreditsPage } =
-      await import("@/components/credit-purchase/CreditPurchaseForm");
+  // Cold import after vi.resetModules() re-transforms the whole page graph;
+  // under parallel test load this takes longer than vitest's 5s default.
+  it(
+    "loads plans from real API and opens buy modal",
+    { timeout: 30_000 },
+    async () => {
+      // Must import after env is set and cache is cleared
+      vi.resetModules();
+      const { default: CreditsPage } =
+        await import("@/components/credit-purchase/CreditPurchaseForm");
 
-    renderWithProviders(<CreditsPage />);
+      renderWithProviders(<CreditsPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Basic")).toBeTruthy();
-    });
+      await waitFor(() => {
+        expect(screen.getByText("Basic")).toBeTruthy();
+      });
 
-    fireEvent.click(screen.getByText("Buy More Credits"));
+      fireEvent.click(screen.getByText("Buy More Credits"));
 
-    await waitFor(() => {
-      expect(screen.getByText("Buy Credits")).toBeTruthy();
-    });
-  });
+      await waitFor(() => {
+        expect(screen.getByText("Buy Credits")).toBeTruthy();
+      });
+    },
+  );
 });
