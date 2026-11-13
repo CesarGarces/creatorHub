@@ -48,8 +48,23 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    // A pending QR pairing only exists in the memory of the process that
+    // created it. After a restart it cannot be resumed, so reset those
+    // channels instead of opening a socket that waits for a scan nobody
+    // can perform. The user must start a fresh pairing explicitly.
+    await prisma.communityChannel
+      .updateMany({
+        where: { status: "AWAITING_QR" },
+        data: { status: "DISCONNECTED", lastError: null },
+      })
+      .catch((error: unknown) => {
+        this.logger.warn(
+          `Could not reset channels pending QR pairing: ${(error as Error).message}`,
+        );
+      });
+
     const activeChannels = await prisma.communityChannel.findMany({
-      where: { status: { in: ["ACTIVE", "CONNECTING", "AWAITING_QR"] } },
+      where: { status: { in: ["ACTIVE", "CONNECTING"] } },
       select: { id: true, type: true },
     });
 
@@ -63,8 +78,8 @@ export class ChannelManagerService implements OnModuleInit, OnModuleDestroy {
     // rate-limited by the external platform, bursts risk bans.
     for (const channel of activeChannels) {
       if (channel.type === "WHATSAPP") {
-        // WhatsApp may sit in AWAITING_QR for a long time; don't block
-        // the restore loop (or the BullMQ job) waiting for a scan.
+        // WhatsApp reconnect uses saved credentials, but a stale session
+        // can still take a while to settle — don't block the restore loop.
         this.connectChannel(channel.id).catch((error) => {
           this.logger.error(
             `Failed to restore channel ${channel.id}: ${(error as Error).message}`,
