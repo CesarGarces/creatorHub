@@ -11,21 +11,27 @@ import {
   Wrench,
   Database,
   BrainCircuit,
-  Mail,
 } from "lucide-react";
+import { useI18n } from "@/i18n/i18n-provider";
+import type { TranslationKey } from "@/i18n/translate";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/models", label: "AI Models", icon: BrainCircuit },
-  { href: "/tools", label: "Tools", icon: Wrench },
-  { href: "/modes", label: "Modes", icon: Layers },
-  { href: "/users", label: "Users", icon: Users },
-  { href: "/credit-plans", label: "Credit Plans", icon: CreditCard },
-  { href: "/credit-emails", label: "Credit Emails", icon: Mail },
-  { href: "/database-backups", label: "Backups", icon: Database },
+const navItems: {
+  href: string;
+  labelKey: TranslationKey;
+  icon: typeof LayoutDashboard;
+}[] = [
+  { href: "/", labelKey: "nav.dashboard", icon: LayoutDashboard },
+  { href: "/models", labelKey: "nav.models", icon: BrainCircuit },
+  { href: "/tools", labelKey: "nav.tools", icon: Wrench },
+  { href: "/modes", labelKey: "nav.modes", icon: Layers },
+  { href: "/users", labelKey: "nav.users", icon: Users },
+  { href: "/credit-plans", labelKey: "nav.creditPlans", icon: CreditCard },
+  { href: "/database-backups", labelKey: "nav.backups", icon: Database },
 ];
 
 export function Sidebar() {
+  const { t } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -38,7 +44,9 @@ export function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-border bg-surface">
       <div className="flex h-16 items-center border-b border-border px-6">
-        <span className="text-lg font-bold text-text">Creator Hub Admin</span>
+        <span className="text-lg font-bold text-text">
+          {t("common.appName")}
+        </span>
       </div>
 
       <nav className="flex-1 space-y-1 p-4">
@@ -58,20 +66,21 @@ export function Sidebar() {
               }`}
             >
               <Icon size={18} />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
       </nav>
 
-      <div className="border-t border-border p-4">
+      <div className="space-y-2 border-t border-border p-4">
+        <LanguageSwitcher align="start" className="w-full justify-start" />
         <button
           type="button"
           onClick={handleLogout}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-text-muted transition-colors hover:bg-surface-elevated hover:text-error"
         >
           <LogOut size={18} />
-          Logout
+          {t("nav.logout")}
         </button>
       </div>
     </aside>

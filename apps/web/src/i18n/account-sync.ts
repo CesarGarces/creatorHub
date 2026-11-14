@@ -6,6 +6,8 @@
  * browser; the account copy is a best-effort backup, so failures here never
  * block or revert the language change the user just made.
  */
+import { languageChangedMessage } from "@creator-hub/i18n";
+import { toast } from "sonner";
 import api from "@/lib/api";
 import { getAccessToken } from "@/lib/cookie";
 import { isLocale, type Locale } from "./config";
@@ -27,7 +29,13 @@ export async function syncLocaleToAccount(locale: Locale): Promise<void> {
  */
 export function applyAccountLocale(preferred: unknown): void {
   if (isLocale(preferred)) {
-    setClientLocale(preferred);
+    if (setClientLocale(preferred)) {
+      // Explain the switch (and replace any earlier language toast).
+      toast.success(languageChangedMessage(preferred), {
+        id: "language-changed",
+        position: "top-center",
+      });
+    }
     return;
   }
   void syncLocaleToAccount(getClientLocale());

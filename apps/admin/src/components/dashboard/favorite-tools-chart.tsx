@@ -10,23 +10,27 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { FavoriteStats } from "@/types";
+import { useI18n } from "@/i18n/i18n-provider";
 
 interface FavoriteToolsChartProps {
   data: FavoriteStats[];
 }
 
 export function FavoriteToolsChart({ data }: FavoriteToolsChartProps) {
+  const { t } = useI18n();
   return (
     <div className="rounded-xl border border-border bg-surface p-6">
-      <h3 className="text-lg font-semibold text-text">Most Favorited Tools</h3>
+      <h3 className="text-lg font-semibold text-text">
+        {t("dashboard.favorites.title")}
+      </h3>
       <p className="text-sm text-text-muted">
-        Tools marked as favorites by users
+        {t("dashboard.favorites.subtitle")}
       </p>
 
       <div className="mt-6 h-64">
         {data.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-text-dim">
-            No favorites data yet
+            {t("dashboard.favorites.empty")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
@@ -52,6 +56,7 @@ export function FavoriteToolsChart({ data }: FavoriteToolsChartProps) {
               />
               <Bar
                 dataKey="favoriteCount"
+                name={t("dashboard.favorites.series")}
                 fill="#fbbf24"
                 radius={[4, 4, 0, 0]}
               />

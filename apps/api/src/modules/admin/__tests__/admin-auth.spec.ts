@@ -142,7 +142,12 @@ describe("AdminAuthController.adminLogin", () => {
     expect(result).toEqual({
       data: {
         accessToken: "signed.jwt.token",
-        user: { id: "a1", email: "admin@x.com", role: "ADMIN" },
+        user: {
+          id: "a1",
+          email: "admin@x.com",
+          role: "ADMIN",
+          preferredLanguage: null,
+        },
       },
     });
     expect(JSON.stringify(result)).not.toContain(passwordHash);

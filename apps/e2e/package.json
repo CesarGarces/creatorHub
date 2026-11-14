@@ -1,0 +1,18 @@
+{
+  "name": "@creator-hub/e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "End-to-end tests (Playwright) for the web app, landing page and admin panel.",
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:report": "playwright show-report",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0"
+  }
+}

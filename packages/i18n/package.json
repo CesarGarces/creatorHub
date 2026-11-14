@@ -1,0 +1,27 @@
+{
+  "name": "@creator-hub/i18n",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interface-language engine shared by the Creator Hub web apps: locales, translation, persistence and the language selector.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint .",
+    "test": "vitest --run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@creator-hub/shared-types": "workspace:*",
+    "@creator-hub/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "typescript": "^5.5.0"
+  }
+}

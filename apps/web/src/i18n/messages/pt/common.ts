@@ -21,9 +21,6 @@ export const common: Messages["common"] = {
     completed: "Concluído",
     unknownError: "Erro desconhecido",
   },
-  time: {
-    justNow: "Agora mesmo",
-  },
   credits: {
     count_one: "{count} crédito",
     count_other: "{count} créditos",

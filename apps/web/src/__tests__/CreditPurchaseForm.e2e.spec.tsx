@@ -107,5 +107,8 @@ describe("CreditPurchaseForm E2E", () => {
     await waitFor(() => {
       expect(screen.getByText("Buy Credits")).toBeTruthy();
     });
-  });
+    // The test body itself cold-imports the whole component graph (after
+    // vi.resetModules) and hits a real HTTP server, so the 5s default is too
+    // tight on loaded CI machines.
+  }, 30_000);
 });

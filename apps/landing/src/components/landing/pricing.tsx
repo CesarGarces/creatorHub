@@ -3,110 +3,70 @@
 import { m } from "framer-motion";
 import { Check } from "lucide-react";
 import { config } from "@/lib/config";
+import { useI18n } from "@/i18n/i18n-provider";
+import type { TranslationKey } from "@/i18n/translate";
 
+// Texts: pricing.plans.<id>.name / .description / .cta / .features.<key>
 const plans = [
   {
-    name: "Free",
-    price: "$0",
-    credits: "100 credits",
-    perCredit: "Free 100 credits",
-    description: "Start creating with 100 free credits",
-    features: [
-      "Access to free tools",
-      "Basic providers included",
-      "Community support",
-    ],
-    cta: "Get Started Free",
+    id: "free",
+    usd: 0,
+    credits: 100,
+    centsPerCredit: null,
+    features: ["a", "b", "c"],
     ctaStyle: "border border-border hover:border-border-subtle text-text",
     popular: false,
     href: `${config.appUrl}/register`,
   },
   {
-    name: "Pay as you go",
-    price: "$10",
-    credits: "1,000 credits",
-    perCredit: "$1.0¢ per credit",
-    description: "Buy credits anytime, no commitment",
-    features: [
-      "Access to all tools",
-      "Basic providers included",
-      "Community support",
-      "30-day history",
-    ],
-    cta: "Buy Credits",
+    id: "payg",
+    usd: 10,
+    credits: 1000,
+    centsPerCredit: 1.0,
+    features: ["a", "b", "c", "d"],
     ctaStyle: "border border-border hover:border-border-subtle text-text",
     popular: false,
     href: `${config.appUrl}/register`,
   },
   {
-    name: "Starter",
-    price: "$25",
-    credits: "2,700 credits",
-    perCredit: "$0.9¢ per credit",
-    description: "Best value for getting started",
-    features: [
-      "All AI Standard providers",
-      "Premium providers included",
-      "Priority support",
-      "Unlimited history",
-      "API access",
-      "Batch generation",
-    ],
-    cta: "Get Starter",
+    id: "starter",
+    usd: 25,
+    credits: 2700,
+    centsPerCredit: 0.9,
+    features: ["a", "b", "c", "d", "e", "f"],
     ctaStyle: "bg-primary hover:bg-primary-hover text-white glow-primary",
     popular: true,
     href: `${config.appUrl}/register`,
   },
   {
-    name: "Pro",
-    price: "$50",
-    credits: "6,000 credits",
-    perCredit: "$0.8¢ per credit",
-    description: "Maximum credits for power users",
-    features: [
-      "All AI Standard + Premium providers",
-      "Everything in Starter",
-      "Lowest cost per credit",
-      "Dedicated support",
-      "Custom integrations",
-      "Analytics dashboard",
-    ],
-    cta: "Get Pro",
+    id: "pro",
+    usd: 50,
+    credits: 6000,
+    centsPerCredit: 0.8,
+    features: ["a", "b", "c", "d", "e", "f"],
     ctaStyle: "border border-border hover:border-border-subtle text-text",
     popular: false,
     href: `${config.appUrl}/register`,
   },
-];
+] as const;
 
+// Texts: pricing.costs.<id>.tool / .description
 const toolCosts = [
-  {
-    tool: "X Trend Research",
-    cost: "~25 credits",
-    description: "AI-powered trend analysis with sentiment insights",
-  },
-  {
-    tool: "X Post Tweet",
-    cost: "~15 credits",
-    description: "Generate and publish tweets with RAG style",
-  },
-  {
-    tool: "Thumbnail Generator",
-    cost: "~10 credits",
-    description: "Per generation",
-  },
-  {
-    tool: "Video Generator",
-    cost: "~50 credits",
-    description: "Per video generated",
-  },
-  {
-    tool: "Content Translator",
-    cost: "~5 credits",
-    description: "Per translation",
-  },
-];
+  { id: "xTrends", credits: 25 },
+  { id: "xPost", credits: 15 },
+  { id: "thumbnail", credits: 10 },
+  { id: "video", credits: 50 },
+  { id: "translator", credits: 5 },
+] as const;
 
 export function Pricing() {
+  const { t, formatNumber } = useI18n();
+  const formatUsd = (value: number) =>
+    formatNumber(value, {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    });
   return (
     <section id="pricing" className="py-24 border-t border-border-subtle">
       <div className="mx-auto max-w-7xl px-6">
@@ -116,20 +76,21 @@ export function Pricing() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <p className="text-sm font-medium text-primary mb-3">Pricing</p>
+          <p className="text-sm font-medium text-primary mb-3">
+            {t("pricing.eyebrow")}
+          </p>
           <h2 className="text-3xl md:text-4xl font-bold text-text text-balance">
-            Flexible credit system
+            {t("pricing.title")}
           </h2>
           <p className="mt-4 text-text-muted max-w-xl mx-auto">
-            Start with 100 free credits. Buy more anytime, no subscriptions.
-            Prices are dynamically managed from the admin panel.
+            {t("pricing.subtitle")}
           </p>
         </m.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto mb-16">
           {plans.map((plan, i) => (
             <m.div
-              key={plan.name}
+              key={plan.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -142,23 +103,34 @@ export function Pricing() {
             >
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 text-[10px] font-semibold text-white bg-primary rounded-full">
-                  Most Popular
+                  {t("pricing.mostPopular")}
                 </div>
               )}
 
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-text mb-1">
-                  {plan.name}
+                  {t(`pricing.plans.${plan.id}.name`)}
                 </h3>
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-bold text-text">
-                    {plan.price}
+                    {formatUsd(plan.usd)}
                   </span>
                 </div>
-                <p className="text-sm text-text-muted mt-1">{plan.credits}</p>
-                <p className="text-xs text-text-dim mt-0.5">{plan.perCredit}</p>
+                <p className="text-sm text-text-muted mt-1">
+                  {t("common.credits", { count: plan.credits })}
+                </p>
+                <p className="text-xs text-text-dim mt-0.5">
+                  {plan.centsPerCredit === null
+                    ? t("pricing.plans.free.perCredit")
+                    : t("pricing.perCredit", {
+                        amount: formatNumber(plan.centsPerCredit, {
+                          minimumFractionDigits: 1,
+                          maximumFractionDigits: 1,
+                        }),
+                      })}
+                </p>
                 <p className="text-sm text-text-muted mt-2">
-                  {plan.description}
+                  {t(`pricing.plans.${plan.id}.description`)}
                 </p>
               </div>
 
@@ -166,7 +138,11 @@ export function Pricing() {
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
                     <Check size={16} className="text-success mt-0.5 shrink-0" />
-                    <span className="text-sm text-text-muted">{feature}</span>
+                    <span className="text-sm text-text-muted">
+                      {t(
+                        `pricing.plans.${plan.id}.features.${feature}` as TranslationKey,
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -175,7 +151,7 @@ export function Pricing() {
                 href={plan.href}
                 className={`w-full py-2.5 text-sm font-medium rounded-lg transition-all text-center block ${plan.ctaStyle}`}
               >
-                {plan.cta}
+                {t(`pricing.plans.${plan.id}.cta`)}
               </a>
             </m.div>
           ))}
@@ -188,12 +164,12 @@ export function Pricing() {
           className="max-w-3xl mx-auto"
         >
           <h3 className="text-xl font-semibold text-text text-center mb-6">
-            Cost per tool
+            {t("pricing.costTitle")}
           </h3>
           <div className="rounded-xl border border-border bg-surface overflow-hidden">
             {toolCosts.map((item, i) => (
               <div
-                key={item.tool}
+                key={item.id}
                 className={`flex items-center justify-between p-4 ${
                   i !== toolCosts.length - 1
                     ? "border-b border-border-subtle"
@@ -202,20 +178,20 @@ export function Pricing() {
               >
                 <div>
                   <div className="text-sm font-medium text-text">
-                    {item.tool}
+                    {t(`pricing.costs.${item.id}.tool`)}
                   </div>
                   <div className="text-xs text-text-muted">
-                    {item.description}
+                    {t(`pricing.costs.${item.id}.description`)}
                   </div>
                 </div>
                 <div className="text-sm font-semibold text-primary">
-                  {item.cost}
+                  {t("common.approxCredits", { count: item.credits })}
                 </div>
               </div>
             ))}
           </div>
           <p className="text-xs text-text-dim text-center mt-4">
-            Costs may vary depending on the AI provider selected
+            {t("pricing.costNote")}
           </p>
         </m.div>
       </div>

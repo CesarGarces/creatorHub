@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Shared components (language selector + dropdown primitives) */
+@source "../../../../packages/ui/src/**/*.tsx";
+@source "../../../../packages/i18n/src/**/*.tsx";
 
 @theme {
   --color-bg: #0b0f19;

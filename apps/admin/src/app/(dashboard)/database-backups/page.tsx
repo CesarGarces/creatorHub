@@ -16,6 +16,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { ActionConfirmDialog } from "@creator-hub/ui";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
 
 interface Backup {
   id: string;
@@ -29,26 +31,34 @@ interface Backup {
   error?: string;
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
+const BYTE_UNITS = ["B", "KB", "MB", "GB"];
 
 export default function DatabaseBackupsPage() {
+  const {
+    t,
+    tOptional,
+    formatNumber,
+    formatDate: formatLocaleDate,
+  } = useI18n();
+
+  // Units are universal; the number uses the locale's decimal separator.
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${formatNumber(bytes / Math.pow(k, i), { maximumFractionDigits: 1 })} ${BYTE_UNITS[i]}`;
+  };
+
+  const formatDate = (dateStr: string): string =>
+    formatLocaleDate(dateStr, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
   const queryClient = useQueryClient();
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -68,10 +78,10 @@ export default function DatabaseBackupsPage() {
     mutationFn: () => api.post("/admin/backups"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-backups"] });
-      toast.success("Backup created successfully");
+      toast.success(t("backups.toasts.created"));
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to create backup");
+    onError: (error: unknown) => {
+      toast.error(localizeError(error, "backups.toasts.createFailed"));
     },
   });
 
@@ -79,10 +89,10 @@ export default function DatabaseBackupsPage() {
     mutationFn: (id: string) => api.delete(`/admin/backups/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-backups"] });
-      toast.success("Backup deleted successfully");
+      toast.success(t("backups.toasts.deleted"));
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to delete backup");
+    onError: (error: unknown) => {
+      toast.error(localizeError(error, "backups.toasts.deleteFailed"));
     },
   });
 
@@ -93,7 +103,7 @@ export default function DatabaseBackupsPage() {
       );
       window.open(res.data.url, "_blank");
     } catch {
-      toast.error("Failed to get download link");
+      toast.error(t("backups.toasts.downloadFailed"));
     }
   };
 
@@ -105,9 +115,9 @@ export default function DatabaseBackupsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text">Database Backups</h1>
+          <h1 className="text-2xl font-bold text-text">{t("backups.title")}</h1>
           <p className="text-sm text-text-muted mt-1">
-            Create and manage PostgreSQL backups stored in R2
+            {t("backups.subtitle")}
           </p>
         </div>
         <button
@@ -121,7 +131,7 @@ export default function DatabaseBackupsPage() {
           ) : (
             <Plus size={18} />
           )}
-          Create Backup
+          {t("backups.create")}
         </button>
       </div>
 
@@ -133,7 +143,9 @@ export default function DatabaseBackupsPage() {
               <Database size={18} className="text-primary" />
             </div>
             <div>
-              <p className="text-sm text-text-muted">Total Backups</p>
+              <p className="text-sm text-text-muted">
+                {t("backups.stats.total")}
+              </p>
               <p className="text-xl font-bold text-text">
                 {completedBackups.length}
               </p>
@@ -146,7 +158,9 @@ export default function DatabaseBackupsPage() {
               <HardDrive size={18} className="text-primary" />
             </div>
             <div>
-              <p className="text-sm text-text-muted">Total Size</p>
+              <p className="text-sm text-text-muted">
+                {t("backups.stats.size")}
+              </p>
               <p className="text-xl font-bold text-text">
                 {formatBytes(totalSize)}
               </p>
@@ -159,11 +173,13 @@ export default function DatabaseBackupsPage() {
               <Clock size={18} className="text-primary" />
             </div>
             <div>
-              <p className="text-sm text-text-muted">Last Backup</p>
+              <p className="text-sm text-text-muted">
+                {t("backups.stats.last")}
+              </p>
               <p className="text-xl font-bold text-text">
                 {completedBackups[0]
                   ? formatDate(completedBackups[0].createdAt)
-                  : "Never"}
+                  : t("backups.stats.never")}
               </p>
             </div>
           </div>
@@ -186,25 +202,25 @@ export default function DatabaseBackupsPage() {
             <thead>
               <tr className="border-b border-border">
                 <th className="px-4 py-3 text-left text-sm font-medium text-text-muted">
-                  Filename
+                  {t("backups.table.filename")}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-text-muted">
-                  Size
+                  {t("backups.table.size")}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-text-muted">
-                  Created
+                  {t("backups.table.created")}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-text-muted">
-                  Database
+                  {t("backups.table.database")}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-text-muted">
-                  Environment
+                  {t("backups.table.environment")}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-text-muted">
-                  Status
+                  {t("backups.table.status")}
                 </th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-text-muted">
-                  Actions
+                  {t("backups.table.actions")}
                 </th>
               </tr>
             </thead>
@@ -239,7 +255,10 @@ export default function DatabaseBackupsPage() {
                           : "bg-blue-500/10 text-blue-500"
                       }`}
                     >
-                      {backup.environment}
+                      {tOptional(
+                        `backups.environments.${backup.environment}`,
+                        backup.environment,
+                      )}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -259,7 +278,10 @@ export default function DatabaseBackupsPage() {
                       {backup.status === "in-progress" && (
                         <Loader2 size={12} className="animate-spin" />
                       )}
-                      {backup.status}
+                      {tOptional(
+                        `backups.statuses.${backup.status}`,
+                        backup.status,
+                      )}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -271,7 +293,7 @@ export default function DatabaseBackupsPage() {
                           className="flex items-center justify-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-elevated transition-colors"
                         >
                           <Download size={12} />
-                          Download
+                          {t("backups.download")}
                         </button>
                       )}
                       <button
@@ -279,6 +301,12 @@ export default function DatabaseBackupsPage() {
                         onClick={() =>
                           setDeleteDialog({ isOpen: true, backup })
                         }
+                        aria-label={t("backups.deleteAria", {
+                          name: backup.filename,
+                        })}
+                        title={t("backups.deleteAria", {
+                          name: backup.filename,
+                        })}
                         className="flex items-center justify-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors"
                       >
                         <Trash2 size={12} />
@@ -293,9 +321,11 @@ export default function DatabaseBackupsPage() {
       ) : (
         <div className="rounded-xl border border-border bg-surface p-12 text-center">
           <Database size={48} className="mx-auto text-text-dim mb-4" />
-          <h3 className="text-lg font-medium text-text">No backups yet</h3>
+          <h3 className="text-lg font-medium text-text">
+            {t("backups.emptyTitle")}
+          </h3>
           <p className="text-sm text-text-muted mt-1">
-            Create your first backup to protect your data
+            {t("backups.emptyDescription")}
           </p>
         </div>
       )}
@@ -308,10 +338,10 @@ export default function DatabaseBackupsPage() {
           createMutation.mutate();
           setCreateDialog(false);
         }}
-        title="Create Backup"
-        description="This will create a full PostgreSQL backup and store it in R2. The process may take a few minutes depending on database size."
-        confirmLabel="Create backup"
-        cancelLabel="Cancel"
+        title={t("backups.createDialog.title")}
+        description={t("backups.createDialog.description")}
+        confirmLabel={t("backups.createDialog.confirm")}
+        cancelLabel={t("common.cancel")}
         confirmVariant="primary"
         icon={<Database className="h-5 w-5" />}
       />
@@ -326,10 +356,12 @@ export default function DatabaseBackupsPage() {
           }
           setDeleteDialog({ isOpen: false, backup: null });
         }}
-        title="Delete Backup"
-        description={`Are you sure you want to delete "${deleteDialog.backup?.filename}"? This action cannot be undone.`}
-        confirmLabel="Delete backup"
-        cancelLabel="Keep backup"
+        title={t("backups.deleteDialog.title")}
+        description={t("backups.deleteDialog.description", {
+          name: deleteDialog.backup?.filename ?? "",
+        })}
+        confirmLabel={t("backups.deleteDialog.confirm")}
+        cancelLabel={t("backups.deleteDialog.cancel")}
         confirmVariant="danger"
         icon={<Trash2 className="h-5 w-5" />}
       />

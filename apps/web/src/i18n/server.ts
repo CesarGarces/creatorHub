@@ -1,22 +1,18 @@
 import { cookies, headers } from "next/headers";
 import {
-  isLocale,
   LOCALE_COOKIE,
-  matchAcceptLanguage,
+  resolveRequestLocale,
   type Locale,
-} from "./config";
+} from "@creator-hub/i18n";
 
 /**
- * Locale for the current request:
- * 1. the language the user explicitly chose (cookie), otherwise
- * 2. the best match for the browser's Accept-Language, otherwise
- * 3. the default locale.
+ * Locale for the current request: the saved choice (cookie), otherwise the
+ * browser's Accept-Language, otherwise English.
  */
 export async function getRequestLocale(): Promise<Locale> {
-  const cookieStore = await cookies();
-  const saved = cookieStore.get(LOCALE_COOKIE)?.value;
-  if (isLocale(saved)) return saved;
-
-  const headerStore = await headers();
-  return matchAcceptLanguage(headerStore.get("accept-language"));
+  const [cookieStore, headerStore] = await Promise.all([cookies(), headers()]);
+  return resolveRequestLocale(
+    cookieStore.get(LOCALE_COOKIE)?.value,
+    headerStore.get("accept-language"),
+  );
 }

@@ -16,6 +16,7 @@ import {
   Switch,
 } from "@creator-hub/ui";
 import type { ModelMetadata } from "@/types";
+import { useI18n } from "@/i18n/i18n-provider";
 
 interface ModelDetailModalProps {
   open: boolean;
@@ -25,10 +26,10 @@ interface ModelDetailModalProps {
 }
 
 const TASK_TYPES = [
-  { value: "image-generation", label: "Image Generation" },
-  { value: "text-generation", label: "Text Generation" },
-  { value: "video-generation", label: "Video Generation" },
-];
+  "image-generation",
+  "text-generation",
+  "video-generation",
+] as const;
 
 const taskTypeColor: Record<string, string> = {
   "image-generation": "bg-purple-100 text-purple-700",
@@ -42,6 +43,14 @@ export function ModelDetailModal({
   modelId,
   onSaved,
 }: ModelDetailModalProps) {
+  const { t, tOptional, formatNumber } = useI18n();
+  const formatUsd = (value: number, digits: number) =>
+    formatNumber(value, {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
   const [model, setModel] = useState<ModelMetadata | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -69,7 +78,7 @@ export function ModelDetailModal({
         setTaskType(res.data.taskType);
       })
       .catch(() => {
-        toast.error("Failed to load model details");
+        toast.error(t("models.detail.loadFailed"));
         onClose();
       })
       .finally(() => setLoading(false));
@@ -86,11 +95,11 @@ export function ModelDetailModal({
         tier,
         taskType,
       });
-      toast.success("Model configuration updated");
+      toast.success(t("models.detail.updated"));
       onSaved();
       onClose();
     } catch {
-      toast.error("Failed to update model");
+      toast.error(t("models.detail.updateFailed"));
     } finally {
       setSaving(false);
     }
@@ -102,7 +111,7 @@ export function ModelDetailModal({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg" onClose={onClose}>
         <DialogHeader>
-          <DialogTitle>Model Configuration</DialogTitle>
+          <DialogTitle>{t("models.detail.title")}</DialogTitle>
         </DialogHeader>
 
         {loading ? (
@@ -123,14 +132,17 @@ export function ModelDetailModal({
               </div>
               <div className="flex gap-1.5">
                 <Badge variant={tierVariant} size="sm">
-                  {model.tier}
+                  {tOptional(`models.tiers.${model.tier}`, model.tier)}
                 </Badge>
                 <Badge
                   variant="outline"
                   size="sm"
                   className={taskTypeColor[model.taskType] ?? ""}
                 >
-                  {model.taskType}
+                  {tOptional(
+                    `models.detail.taskTypes.${model.taskType}`,
+                    model.taskType,
+                  )}
                 </Badge>
               </div>
             </div>
@@ -153,34 +165,44 @@ export function ModelDetailModal({
             {/* Config */}
             <div className="space-y-4 rounded-lg border border-border bg-surface-elevated/30 p-4">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-text">Active</label>
-                <Switch checked={isActive} onCheckedChange={setIsActive} />
+                <label className="text-sm font-medium text-text">
+                  {t("models.detail.active")}
+                </label>
+                <Switch
+                  checked={isActive}
+                  onCheckedChange={setIsActive}
+                  aria-label={t("models.detail.active")}
+                />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-text">Tier</label>
+                <label className="text-sm font-medium text-text">
+                  {t("models.detail.tier")}
+                </label>
                 <select
                   value={tier}
+                  aria-label={t("models.detail.tier")}
                   onChange={(e) => setTier(e.target.value as "FREE" | "PRO")}
                   className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="FREE">Free</option>
-                  <option value="PRO">Pro</option>
+                  <option value="FREE">{t("models.tiers.FREE")}</option>
+                  <option value="PRO">{t("models.tiers.PRO")}</option>
                 </select>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-text">
-                  Task Type
+                  {t("models.detail.taskType")}
                 </label>
                 <select
                   value={taskType}
+                  aria-label={t("models.detail.taskType")}
                   onChange={(e) => setTaskType(e.target.value)}
                   className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-primary"
                 >
-                  {TASK_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
+                  {TASK_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {t(`models.detail.taskTypes.${type}`)}
                     </option>
                   ))}
                 </select>
@@ -188,9 +210,10 @@ export function ModelDetailModal({
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-text">
-                  Credit Cost
+                  {t("models.detail.creditCost")}
                 </label>
                 <Input
+                  aria-label={t("models.detail.creditCost")}
                   type="number"
                   min={1}
                   value={creditCost}
@@ -201,9 +224,10 @@ export function ModelDetailModal({
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-text">
-                  Profit Margin (×)
+                  {t("models.detail.profitMargin")}
                 </label>
                 <Input
+                  aria-label={t("models.detail.profitMargin")}
                   type="number"
                   min={1}
                   step={0.1}
@@ -217,38 +241,54 @@ export function ModelDetailModal({
             {/* Pricing */}
             <div className="rounded-lg border border-border p-4">
               <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-dim">
-                Pricing
+                {t("models.detail.pricing")}
               </h4>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {model.promptPricePer1k != null && (
                   <div>
-                    <span className="text-text-dim">Prompt:</span>{" "}
+                    <span className="text-text-dim">
+                      {t("models.detail.prompt")}
+                    </span>{" "}
                     <span className="font-mono text-text">
-                      ${model.promptPricePer1k.toFixed(5)}/1k
+                      {t("models.detail.perThousand", {
+                        price: formatUsd(model.promptPricePer1k, 5),
+                      })}
                     </span>
                   </div>
                 )}
                 {model.completionPricePer1k != null && (
                   <div>
-                    <span className="text-text-dim">Completion:</span>{" "}
+                    <span className="text-text-dim">
+                      {t("models.detail.completion")}
+                    </span>{" "}
                     <span className="font-mono text-text">
-                      ${model.completionPricePer1k.toFixed(5)}/1k
+                      {t("models.detail.perThousand", {
+                        price: formatUsd(model.completionPricePer1k, 5),
+                      })}
                     </span>
                   </div>
                 )}
                 {model.imagePricePerGen != null && (
                   <div>
-                    <span className="text-text-dim">Image gen:</span>{" "}
+                    <span className="text-text-dim">
+                      {t("models.detail.imageGen")}
+                    </span>{" "}
                     <span className="font-mono text-text">
-                      ${model.imagePricePerGen.toFixed(4)}/gen
+                      {t("models.detail.perGeneration", {
+                        price: formatUsd(model.imagePricePerGen, 4),
+                      })}
                     </span>
                   </div>
                 )}
                 {model.contextLength != null && (
                   <div>
-                    <span className="text-text-dim">Context:</span>{" "}
+                    <span className="text-text-dim">
+                      {t("models.detail.context")}
+                    </span>{" "}
                     <span className="font-mono text-text">
-                      {model.contextLength.toLocaleString()} tokens
+                      {t("models.detail.tokens", {
+                        count: model.contextLength,
+                      })}
                     </span>
                   </div>
                 )}
@@ -261,13 +301,17 @@ export function ModelDetailModal({
                 <span
                   className={`h-2 w-2 rounded-full ${model.supportsStreaming ? "bg-emerald-500" : "bg-gray-300"}`}
                 />
-                <span className="text-text-muted">Streaming</span>
+                <span className="text-text-muted">
+                  {t("models.detail.streaming")}
+                </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span
                   className={`h-2 w-2 rounded-full ${model.supportsVision ? "bg-emerald-500" : "bg-gray-300"}`}
                 />
-                <span className="text-text-muted">Vision</span>
+                <span className="text-text-muted">
+                  {t("models.detail.vision")}
+                </span>
               </div>
             </div>
           </div>
@@ -275,7 +319,7 @@ export function ModelDetailModal({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={saving || loading}>
             {saving ? (
@@ -283,7 +327,7 @@ export function ModelDetailModal({
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            Save Changes
+            {t("common.saveChanges")}
           </Button>
         </DialogFooter>
       </DialogContent>

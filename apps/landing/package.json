@@ -7,15 +7,20 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest --run"
   },
   "dependencies": {
+    "@creator-hub/i18n": "workspace:*",
+    "@creator-hub/shared-types": "workspace:*",
+    "@creator-hub/ui": "workspace:*",
     "framer-motion": "^12.40.0",
     "geist": "^1.3.0",
     "lucide-react": "^0.400.0",
     "next": "^16.2.10",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "sonner": "^2.0.7"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

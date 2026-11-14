@@ -35,7 +35,13 @@ export class AdminAuthController {
     return {
       data: {
         accessToken,
-        user: { id: user.id, email: user.email, role: user.role },
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          // Lets the admin panel restore the admin's interface language.
+          preferredLanguage: user.preferredLanguage ?? null,
+        },
       },
     };
   }

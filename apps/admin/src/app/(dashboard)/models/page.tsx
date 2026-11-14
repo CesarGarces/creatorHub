@@ -23,41 +23,39 @@ import {
 import { useDebounce } from "@/hooks/use-debounce";
 import { ModelDetailModal } from "@/components/models/model-detail-modal";
 import type { ModelMetadata, ModelStats, PaginatedResponse } from "@/types";
+import { useI18n, t as translateNow } from "@/i18n/i18n-provider";
 
 const TASK_TYPES = [
-  { value: "", label: "All Types" },
-  { value: "image-generation", label: "Image" },
-  { value: "text-generation", label: "Text" },
-  { value: "video-generation", label: "Video" },
-];
+  "image-generation",
+  "text-generation",
+  "video-generation",
+] as const;
 
-const TIERS = [
-  { value: "", label: "All Tiers" },
-  { value: "FREE", label: "Free" },
-  { value: "PRO", label: "Pro" },
-];
+const TIERS = ["FREE", "PRO"] as const;
 
+// Provider names are brands and stay untranslated.
 const PROVIDERS = [
-  { value: "", label: "All Providers" },
   { value: "openrouter", label: "OpenRouter" },
   { value: "siliconflow", label: "SiliconFlow" },
 ];
 
-const SORTS = [
-  { value: "", label: "Default order" },
-  { value: "newest", label: "Newest first" },
-];
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default function ModelsPage() {
+  const {
+    t,
+    tOptional,
+    formatNumber,
+    formatDate: formatLocaleDate,
+  } = useI18n();
+
+  const formatDate = (dateStr: string): string =>
+    dateStr
+      ? formatLocaleDate(dateStr, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })
+      : "—";
+
   // Data
   const [models, setModels] = useState<ModelMetadata[]>([]);
   const [stats, setStats] = useState<ModelStats | null>(null);
@@ -118,7 +116,8 @@ export default function ModelsPage() {
         setModels(res.data.data);
         setMeta(res.data.meta);
       } catch {
-        toast.error("Failed to load models");
+        // Non-hook `t`: keeps this callback independent of the language.
+        toast.error(translateNow("models.toasts.loadFailed"));
       } finally {
         setLoading(false);
       }
@@ -176,13 +175,18 @@ export default function ModelsPage() {
         isActive,
       });
       toast.success(
-        `${selected.size} model${selected.size > 1 ? "s" : ""} ${isActive ? "activated" : "deactivated"}`,
+        t(
+          isActive
+            ? "models.toasts.bulkActivated"
+            : "models.toasts.bulkDeactivated",
+          { count: selected.size },
+        ),
       );
       setSelected(new Set());
       fetchModels(meta.page);
       fetchStats();
     } catch {
-      toast.error("Bulk update failed");
+      toast.error(t("models.toasts.bulkFailed"));
     }
   };
 
@@ -194,13 +198,13 @@ export default function ModelsPage() {
     setSyncing(true);
     try {
       await api.post("/admin/models/sync");
-      toast.success("Model sync started — refreshing...");
+      toast.success(t("models.toasts.syncStarted"));
       setTimeout(() => {
         fetchModels(1);
         fetchStats();
       }, 2000);
     } catch {
-      toast.error("Sync request failed");
+      toast.error(t("models.toasts.syncFailed"));
     } finally {
       setSyncing(false);
     }
@@ -229,11 +233,13 @@ export default function ModelsPage() {
         ),
       );
       toast.success(
-        `${model.displayName} ${newActive ? "activated" : "deactivated"}`,
+        t(newActive ? "models.toasts.activated" : "models.toasts.deactivated", {
+          name: model.displayName,
+        }),
       );
       fetchStats();
     } catch {
-      toast.error("Failed to update model");
+      toast.error(t("models.toasts.updateFailed"));
     } finally {
       setToggleDialog({ isOpen: false, model: null });
     }
@@ -244,10 +250,8 @@ export default function ModelsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text">AI Models</h1>
-          <p className="text-text-muted">
-            Manage model registry, pricing, and availability
-          </p>
+          <h1 className="text-2xl font-bold text-text">{t("models.title")}</h1>
+          <p className="text-text-muted">{t("models.subtitle")}</p>
         </div>
         <Button onClick={handleSync} disabled={syncing} variant="outline">
           {syncing ? (
@@ -255,7 +259,7 @@ export default function ModelsPage() {
           ) : (
             <RefreshCw className="mr-2 h-4 w-4" />
           )}
-          Sync Models
+          {t("models.sync")}
         </Button>
       </div>
 
@@ -263,23 +267,31 @@ export default function ModelsPage() {
       {stats && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-xs font-medium text-text-dim">Total</p>
+            <p className="text-xs font-medium text-text-dim">
+              {t("models.stats.total")}
+            </p>
             <p className="text-2xl font-bold text-text">{stats.total}</p>
           </div>
           <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-xs font-medium text-text-dim">Active</p>
+            <p className="text-xs font-medium text-text-dim">
+              {t("models.stats.active")}
+            </p>
             <p className="text-2xl font-bold text-emerald-600">
               {stats.active}
             </p>
           </div>
           <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-xs font-medium text-text-dim">Image</p>
+            <p className="text-xs font-medium text-text-dim">
+              {t("models.stats.image")}
+            </p>
             <p className="text-2xl font-bold text-purple-600">
               {stats.byTaskType["image-generation"] ?? 0}
             </p>
           </div>
           <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-xs font-medium text-text-dim">Text</p>
+            <p className="text-xs font-medium text-text-dim">
+              {t("models.stats.text")}
+            </p>
             <p className="text-2xl font-bold text-blue-600">
               {stats.byTaskType["text-generation"] ?? 0}
             </p>
@@ -292,7 +304,8 @@ export default function ModelsPage() {
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" />
           <Input
-            placeholder="Search models..."
+            placeholder={t("models.filters.searchPlaceholder")}
+            aria-label={t("models.filters.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
@@ -303,10 +316,12 @@ export default function ModelsPage() {
           value={taskType}
           onChange={(e) => setTaskType(e.target.value)}
           className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-primary"
+          aria-label={t("models.filters.typeAria")}
         >
-          {TASK_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
+          <option value="">{t("models.filters.allTypes")}</option>
+          {TASK_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {t(`models.taskTypes.${type}`)}
             </option>
           ))}
         </select>
@@ -315,10 +330,12 @@ export default function ModelsPage() {
           value={tier}
           onChange={(e) => setTier(e.target.value)}
           className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-primary"
+          aria-label={t("models.filters.tierAria")}
         >
-          {TIERS.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
+          <option value="">{t("models.filters.allTiers")}</option>
+          {TIERS.map((value) => (
+            <option key={value} value={value}>
+              {t(`models.tiers.${value}`)}
             </option>
           ))}
         </select>
@@ -327,7 +344,9 @@ export default function ModelsPage() {
           value={providerSlug}
           onChange={(e) => setProviderSlug(e.target.value)}
           className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-primary"
+          aria-label={t("models.filters.providerAria")}
         >
+          <option value="">{t("models.filters.allProviders")}</option>
           {PROVIDERS.map((p) => (
             <option key={p.value} value={p.value}>
               {p.label}
@@ -339,32 +358,37 @@ export default function ModelsPage() {
           value={sort}
           onChange={(e) => setSort(e.target.value)}
           className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-primary"
-          aria-label="Sort models"
+          aria-label={t("models.filters.sortAria")}
         >
-          {SORTS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
+          <option value="">{t("models.filters.defaultOrder")}</option>
+          <option value="newest">{t("models.filters.newest")}</option>
         </select>
 
         <div className="flex items-center gap-2">
-          <Switch checked={showInactive} onCheckedChange={setShowInactive} />
-          <span className="text-sm text-text-muted">Show inactive</span>
+          <Switch
+            checked={showInactive}
+            onCheckedChange={setShowInactive}
+            aria-label={t("models.filters.showInactive")}
+          />
+          <span className="text-sm text-text-muted">
+            {t("models.filters.showInactive")}
+          </span>
         </div>
       </div>
 
       {/* Bulk actions */}
       {selected.size > 0 && (
         <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5">
-          <span className="text-sm text-text">{selected.size} selected</span>
+          <span className="text-sm text-text">
+            {t("models.bulk.selected", { count: selected.size })}
+          </span>
           <Button
             size="sm"
             variant="outline"
             onClick={() => handleBulkAction(true)}
           >
             <Power className="mr-1.5 h-3.5 w-3.5" />
-            Activate
+            {t("models.bulk.activate")}
           </Button>
           <Button
             size="sm"
@@ -372,7 +396,7 @@ export default function ModelsPage() {
             onClick={() => handleBulkAction(false)}
           >
             <PowerOff className="mr-1.5 h-3.5 w-3.5" />
-            Deactivate
+            {t("models.bulk.deactivate")}
           </Button>
         </div>
       )}
@@ -387,18 +411,37 @@ export default function ModelsPage() {
                   type="checkbox"
                   checked={models.length > 0 && selected.size === models.length}
                   onChange={toggleSelectAll}
+                  aria-label={t("models.table.selectAll")}
                   className="h-4 w-4 rounded border-border accent-primary"
                 />
               </th>
-              <th className="px-4 py-3 font-medium">Model</th>
-              <th className="px-4 py-3 font-medium">Provider</th>
-              <th className="px-4 py-3 font-medium">Type</th>
-              <th className="px-4 py-3 font-medium">Tier</th>
-              <th className="px-4 py-3 font-medium text-right">Credits</th>
-              <th className="px-4 py-3 font-medium text-right">Margin</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Integrated</th>
-              <th className="px-4 py-3 font-medium text-right">Actions</th>
+              <th className="px-4 py-3 font-medium">
+                {t("models.table.model")}
+              </th>
+              <th className="px-4 py-3 font-medium">
+                {t("models.table.provider")}
+              </th>
+              <th className="px-4 py-3 font-medium">
+                {t("models.table.type")}
+              </th>
+              <th className="px-4 py-3 font-medium">
+                {t("models.table.tier")}
+              </th>
+              <th className="px-4 py-3 font-medium text-right">
+                {t("models.table.credits")}
+              </th>
+              <th className="px-4 py-3 font-medium text-right">
+                {t("models.table.margin")}
+              </th>
+              <th className="px-4 py-3 font-medium">
+                {t("models.table.status")}
+              </th>
+              <th className="px-4 py-3 font-medium">
+                {t("models.table.integrated")}
+              </th>
+              <th className="px-4 py-3 font-medium text-right">
+                {t("models.table.actions")}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -417,10 +460,8 @@ export default function ModelsPage() {
                   className="px-4 py-12 text-center text-text-dim"
                 >
                   <BrainCircuit className="mx-auto mb-3 h-10 w-10 opacity-30" />
-                  <p>No models found</p>
-                  <p className="mt-1 text-xs">
-                    Try adjusting your filters or sync models from providers
-                  </p>
+                  <p>{t("models.empty")}</p>
+                  <p className="mt-1 text-xs">{t("models.emptyHint")}</p>
                 </td>
               </tr>
             ) : (
@@ -436,6 +477,9 @@ export default function ModelsPage() {
                       type="checkbox"
                       checked={selected.has(model.id)}
                       onChange={() => toggleSelect(model.id)}
+                      aria-label={t("models.table.select", {
+                        name: model.displayName,
+                      })}
                       className="h-4 w-4 rounded border-border accent-primary"
                     />
                   </td>
@@ -467,7 +511,10 @@ export default function ModelsPage() {
                       }
                       size="sm"
                     >
-                      {model.taskType.replace("-generation", "")}
+                      {tOptional(
+                        `models.taskTypes.${model.taskType}`,
+                        model.taskType.replace("-generation", ""),
+                      )}
                     </Badge>
                   </td>
 
@@ -477,7 +524,7 @@ export default function ModelsPage() {
                       variant={model.tier === "PRO" ? "premium" : "free"}
                       size="sm"
                     >
-                      {model.tier}
+                      {tOptional(`models.tiers.${model.tier}`, model.tier)}
                     </Badge>
                   </td>
 
@@ -485,19 +532,28 @@ export default function ModelsPage() {
                     {model.creditCost}
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-text">
-                    {model.profitMargin}×
+                    {formatNumber(model.profitMargin)}×
                   </td>
                   <td className="px-4 py-3">
                     <Badge
                       variant={model.isActive ? "secondary" : "outline"}
                       size="sm"
                     >
-                      {model.isActive ? "Active" : "Inactive"}
+                      {model.isActive
+                        ? t("common.active")
+                        : t("common.inactive")}
                     </Badge>
                   </td>
                   <td
                     className="whitespace-nowrap px-4 py-3 text-text-muted"
-                    title={new Date(model.integratedAt).toLocaleString()}
+                    title={
+                      model.integratedAt
+                        ? formatLocaleDate(model.integratedAt, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })
+                        : undefined
+                    }
                   >
                     {formatDate(model.integratedAt)}
                   </td>
@@ -506,6 +562,9 @@ export default function ModelsPage() {
                       <Switch
                         checked={model.isActive}
                         onCheckedChange={() => handleToggleClick(model)}
+                        aria-label={t("models.toggleAria", {
+                          name: model.displayName,
+                        })}
                       />
                       <Button
                         variant="outline"
@@ -513,7 +572,9 @@ export default function ModelsPage() {
                         onClick={() =>
                           setDetailModal({ open: true, modelId: model.id })
                         }
-                        aria-label={`Configure ${model.displayName}`}
+                        aria-label={t("models.configureAria", {
+                          name: model.displayName,
+                        })}
                       >
                         <Settings2 className="h-4 w-4" />
                       </Button>
@@ -530,7 +591,11 @@ export default function ModelsPage() {
       {meta.totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-text-muted">
-            Page {meta.page} of {meta.totalPages} ({meta.total} models)
+            {t("models.pagination", {
+              page: meta.page,
+              total: meta.totalPages,
+              count: meta.total,
+            })}
           </p>
           <div className="flex gap-2">
             <Button
@@ -539,7 +604,7 @@ export default function ModelsPage() {
               disabled={meta.page <= 1}
               onClick={() => fetchModels(meta.page - 1)}
             >
-              Previous
+              {t("common.previous")}
             </Button>
             <Button
               variant="secondary"
@@ -547,7 +612,7 @@ export default function ModelsPage() {
               disabled={meta.page >= meta.totalPages}
               onClick={() => fetchModels(meta.page + 1)}
             >
-              Next
+              {t("common.next")}
             </Button>
           </div>
         </div>
@@ -559,15 +624,22 @@ export default function ModelsPage() {
         onClose={() => setToggleDialog({ isOpen: false, model: null })}
         onConfirm={handleToggleConfirm}
         title={
-          toggleDialog.model?.isActive ? "Deactivate Model" : "Activate Model"
-        }
-        description={
           toggleDialog.model?.isActive
-            ? `Are you sure you want to deactivate "${toggleDialog.model?.displayName}"? It will no longer be available for use.`
-            : `Are you sure you want to activate "${toggleDialog.model?.displayName}"? It will become available for use.`
+            ? t("models.toggle.deactivateTitle")
+            : t("models.toggle.activateTitle")
         }
-        confirmLabel={toggleDialog.model?.isActive ? "Deactivate" : "Activate"}
-        cancelLabel="Cancel"
+        description={t(
+          toggleDialog.model?.isActive
+            ? "models.toggle.deactivateDescription"
+            : "models.toggle.activateDescription",
+          { name: toggleDialog.model?.displayName ?? "" },
+        )}
+        confirmLabel={
+          toggleDialog.model?.isActive
+            ? t("models.toggle.deactivate")
+            : t("models.toggle.activate")
+        }
+        cancelLabel={t("common.cancel")}
         confirmVariant="danger"
         icon={
           toggleDialog.model?.isActive ? (

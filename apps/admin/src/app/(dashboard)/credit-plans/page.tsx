@@ -6,6 +6,8 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { Pencil, Trash2, Plus, ArrowUpDown } from "lucide-react";
 import { ActionConfirmDialog, Switch } from "@creator-hub/ui";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
 
 interface CreditPlan {
   id: string;
@@ -21,6 +23,9 @@ interface CreditPlan {
 }
 
 export default function CreditPlansPage() {
+  const { t, formatNumber } = useI18n();
+  const formatUsd = (value: number) =>
+    formatNumber(value, { style: "currency", currency: "USD" });
   const queryClient = useQueryClient();
   const [editingPlan, setEditingPlan] = useState<CreditPlan | null>(null);
   const [isCreateMode, setIsCreateMode] = useState(false);
@@ -42,11 +47,11 @@ export default function CreditPlansPage() {
       api.put(`/admin/credit-plans/${data.id}`, data.updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["credit-plans"] });
-      toast.success("Plan updated successfully");
+      toast.success(t("creditPlans.toasts.updated"));
       setEditingPlan(null);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to update plan");
+    onError: (error: unknown) => {
+      toast.error(localizeError(error, "creditPlans.toasts.updateFailed"));
     },
   });
 
@@ -55,11 +60,11 @@ export default function CreditPlansPage() {
       api.post("/admin/credit-plans", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["credit-plans"] });
-      toast.success("Plan created successfully");
+      toast.success(t("creditPlans.toasts.created"));
       setIsCreateMode(false);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to create plan");
+    onError: (error: unknown) => {
+      toast.error(localizeError(error, "creditPlans.toasts.createFailed"));
     },
   });
 
@@ -67,10 +72,10 @@ export default function CreditPlansPage() {
     mutationFn: (id: string) => api.delete(`/admin/credit-plans/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["credit-plans"] });
-      toast.success("Plan deleted successfully");
+      toast.success(t("creditPlans.toasts.deleted"));
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to delete plan");
+    onError: (error: unknown) => {
+      toast.error(localizeError(error, "creditPlans.toasts.deleteFailed"));
     },
   });
 
@@ -86,9 +91,11 @@ export default function CreditPlansPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text">Credit Plans</h1>
+          <h1 className="text-2xl font-bold text-text">
+            {t("creditPlans.title")}
+          </h1>
           <p className="text-sm text-text-muted mt-1">
-            Manage the credit plans available to users for purchasing credits
+            {t("creditPlans.subtitle")}
           </p>
         </div>
         <button
@@ -100,7 +107,7 @@ export default function CreditPlansPage() {
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
         >
           <Plus size={18} />
-          Add Plan
+          {t("creditPlans.add")}
         </button>
       </div>
 
@@ -132,28 +139,34 @@ export default function CreditPlansPage() {
                       : "bg-red-500/10 text-red-500"
                   }`}
                 >
-                  {plan.isActive ? "Active" : "Inactive"}
+                  {plan.isActive ? t("common.active") : t("common.inactive")}
                 </span>
               </div>
 
               <h3 className="text-lg font-semibold text-text">{plan.name}</h3>
               <p className="text-3xl font-bold text-text mt-2">
-                ${plan.usdAmount.toFixed(2)}
+                {formatUsd(plan.usdAmount)}
               </p>
               <p className="text-sm text-text-muted mt-1">
-                {plan.creditsGiven.toLocaleString()} credits
+                {t("common.credits", { count: plan.creditsGiven })}
               </p>
 
               <div className="mt-4 flex-1">
                 <p className="text-sm text-text-muted">{plan.description}</p>
-                <p className="text-xs text-text-dim mt-2">Slug: {plan.slug}</p>
+                <p className="text-xs text-text-dim mt-2">
+                  {t("creditPlans.slug", { slug: plan.slug })}
+                </p>
                 <p className="text-xs text-text-dim">
-                  ${((plan.usdAmount / plan.creditsGiven) * 100).toFixed(1)}¢
-                  per credit
+                  {t("common.perCredit", {
+                    amount: formatNumber(
+                      (plan.usdAmount / plan.creditsGiven) * 100,
+                      { minimumFractionDigits: 1, maximumFractionDigits: 1 },
+                    ),
+                  })}
                 </p>
                 <p className="text-xs text-text-dim flex items-center gap-1 mt-1">
                   <ArrowUpDown size={12} />
-                  Sort order: {plan.sortOrder}
+                  {t("creditPlans.sortOrder", { order: plan.sortOrder })}
                 </p>
               </div>
 
@@ -167,11 +180,13 @@ export default function CreditPlansPage() {
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors"
                 >
                   <Pencil size={14} />
-                  Edit
+                  {t("common.edit")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDeleteDialog({ isOpen: true, plan })}
+                  aria-label={t("creditPlans.deleteAria", { name: plan.name })}
+                  title={t("creditPlans.deleteAria", { name: plan.name })}
                   className="flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2 size={14} />
@@ -187,7 +202,9 @@ export default function CreditPlansPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-surface rounded-xl border border-border w-full max-w-md mx-4 p-6">
             <h2 className="text-lg font-semibold text-text mb-4">
-              {editingPlan ? "Edit Credit Plan" : "Create Credit Plan"}
+              {editingPlan
+                ? t("creditPlans.editTitle")
+                : t("creditPlans.createTitle")}
             </h2>
             <CreditPlanForm
               plan={editingPlan}
@@ -211,10 +228,12 @@ export default function CreditPlansPage() {
           }
           setDeleteDialog({ isOpen: false, plan: null });
         }}
-        title="Delete Credit Plan"
-        description={`Are you sure you want to delete "${deleteDialog.plan?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete plan"
-        cancelLabel="Keep plan"
+        title={t("creditPlans.deleteDialog.title")}
+        description={t("creditPlans.deleteDialog.description", {
+          name: deleteDialog.plan?.name ?? "",
+        })}
+        confirmLabel={t("creditPlans.deleteDialog.confirm")}
+        cancelLabel={t("creditPlans.deleteDialog.cancel")}
         confirmVariant="danger"
         icon={<Trash2 className="h-5 w-5" />}
       />
@@ -233,6 +252,7 @@ function CreditPlanForm({
   onCancel: () => void;
   isLoading: boolean;
 }) {
+  const { t, formatNumber } = useI18n();
   const [slug, setSlug] = useState(plan?.slug || "");
   const [name, setName] = useState(plan?.name || "");
   const [description, setDescription] = useState(plan?.description || "");
@@ -265,7 +285,7 @@ function CreditPlanForm({
           htmlFor="slug"
           className="block text-sm font-medium text-text mb-1"
         >
-          Slug
+          {t("creditPlans.form.slug")}
         </label>
         <input
           id="slug"
@@ -284,14 +304,14 @@ function CreditPlanForm({
           htmlFor="name"
           className="block text-sm font-medium text-text mb-1"
         >
-          Name
+          {t("creditPlans.form.name")}
         </label>
         <input
           id="name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Pay as you go"
+          placeholder={t("creditPlans.form.namePlaceholder")}
           required
           className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text placeholder:text-text-dim focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
@@ -302,14 +322,14 @@ function CreditPlanForm({
           htmlFor="description"
           className="block text-sm font-medium text-text mb-1"
         >
-          Description
+          {t("creditPlans.form.description")}
         </label>
         <input
           id="description"
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Buy credits anytime"
+          placeholder={t("creditPlans.form.descriptionPlaceholder")}
           className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text placeholder:text-text-dim focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
       </div>
@@ -320,7 +340,7 @@ function CreditPlanForm({
             htmlFor="usdAmount"
             className="block text-sm font-medium text-text mb-1"
           >
-            Price (USD)
+            {t("creditPlans.form.price")}
           </label>
           <input
             id="usdAmount"
@@ -338,7 +358,7 @@ function CreditPlanForm({
             htmlFor="creditsGiven"
             className="block text-sm font-medium text-text mb-1"
           >
-            Credits Given
+            {t("creditPlans.form.creditsGiven")}
           </label>
           <input
             id="creditsGiven"
@@ -358,7 +378,7 @@ function CreditPlanForm({
             htmlFor="sortOrder"
             className="block text-sm font-medium text-text mb-1"
           >
-            Sort Order
+            {t("creditPlans.form.sortOrder")}
           </label>
           <input
             id="sortOrder"
@@ -370,16 +390,26 @@ function CreditPlanForm({
         </div>
         <div className="flex items-end pb-1">
           <div className="flex items-center gap-3">
-            <Switch checked={isActive} onCheckedChange={setIsActive} />
-            <span className="text-sm text-text-muted">Active</span>
+            <Switch
+              checked={isActive}
+              onCheckedChange={setIsActive}
+              aria-label={t("creditPlans.form.active")}
+            />
+            <span className="text-sm text-text-muted">
+              {t("creditPlans.form.active")}
+            </span>
           </div>
         </div>
       </div>
 
       {usdAmount && creditsGiven && (
         <p className="text-xs text-text-dim">
-          ${((parseFloat(usdAmount) / parseInt(creditsGiven)) * 100).toFixed(1)}
-          ¢ per credit
+          {t("common.perCredit", {
+            amount: formatNumber(
+              (parseFloat(usdAmount) / parseInt(creditsGiven)) * 100,
+              { minimumFractionDigits: 1, maximumFractionDigits: 1 },
+            ),
+          })}
         </p>
       )}
 
@@ -390,14 +420,18 @@ function CreditPlanForm({
           disabled={isLoading}
           className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors disabled:opacity-50"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           type="submit"
           disabled={isLoading}
           className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
-          {isLoading ? "Saving..." : plan ? "Save Changes" : "Create Plan"}
+          {isLoading
+            ? t("common.saving")
+            : plan
+              ? t("common.saveChanges")
+              : t("creditPlans.form.create")}
         </button>
       </div>
     </form>

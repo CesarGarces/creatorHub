@@ -6,9 +6,11 @@ import { UserForm } from "@/components/users/user-form";
 import api from "@/lib/api";
 import { Skeleton } from "@creator-hub/ui";
 import type { User } from "@/types";
+import { useI18n } from "@/i18n/i18n-provider";
 
 export default function EditUserPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const params = useParams();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,14 +45,16 @@ export default function EditUserPage() {
   }
 
   if (!user) {
-    return <div className="text-error">User not found</div>;
+    return <div className="text-error">{t("users.editPage.notFound")}</div>;
   }
 
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text">Edit User</h1>
-        <p className="text-text-muted">Update user details</p>
+        <h1 className="text-2xl font-bold text-text">
+          {t("users.editPage.title")}
+        </h1>
+        <p className="text-text-muted">{t("users.editPage.subtitle")}</p>
       </div>
 
       <UserForm user={user} onSubmit={handleSubmit} />

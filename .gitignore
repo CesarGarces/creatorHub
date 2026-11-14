@@ -11,3 +11,7 @@ packages/database/generated
 packages/database/backups
 .eslintcache
 docs/
+# Playwright E2E output (apps/e2e)
+playwright-report/
+test-results/
+apps/e2e/artifacts/

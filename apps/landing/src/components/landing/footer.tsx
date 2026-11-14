@@ -1,28 +1,32 @@
 "use client";
 
+import { useI18n } from "@/i18n/i18n-provider";
+
+// Texts: footer.groups.<group> and footer.links.<id>
 const footerLinks = {
-  Product: [
-    { label: "Thumbnail Generator", href: "#tools" },
-    { label: "Video Generator", href: "#tools" },
-    { label: "Content Translator", href: "#tools" },
-    { label: "AI Agents", href: "#agents" },
-    { label: "Pricing", href: "#pricing" },
+  product: [
+    { id: "thumbnail", href: "#tools" },
+    { id: "video", href: "#tools" },
+    { id: "translator", href: "#tools" },
+    { id: "agents", href: "#agents" },
+    { id: "pricing", href: "#pricing" },
   ],
-  Resources: [
-    { label: "Documentation", href: "#" },
-    { label: "Blog", href: "#" },
-    { label: "Changelog", href: "#" },
-    { label: "Status", href: "#" },
+  resources: [
+    { id: "docs", href: "#" },
+    { id: "blog", href: "#" },
+    { id: "changelog", href: "#" },
+    { id: "status", href: "#" },
   ],
-  Company: [
-    { label: "About", href: "#" },
-    { label: "Contact", href: "#" },
-    { label: "Privacy", href: "#" },
-    { label: "Terms", href: "#" },
+  company: [
+    { id: "about", href: "#" },
+    { id: "contact", href: "#" },
+    { id: "privacy", href: "#" },
+    { id: "terms", href: "#" },
   ],
-};
+} as const;
 
 export function Footer() {
+  const { t, rich } = useI18n();
   return (
     <footer className="border-t border-border-subtle">
       <div className="mx-auto max-w-7xl px-6 py-16">
@@ -31,28 +35,33 @@ export function Footer() {
             <div className="flex items-center mb-4">
               <img
                 src="/isologo_white.png"
-                alt="Creator Hub"
+                alt={t("common.logoAlt")}
                 className="h-8 w-auto object-contain"
               />
             </div>
             <p className="text-sm text-text-muted leading-relaxed max-w-xs">
-              The AI-powered operating system for content creators.
+              {t("footer.tagline")}
             </p>
           </div>
 
-          {Object.entries(footerLinks).map(([category, links]) => (
-            <div key={category}>
+          {(
+            Object.entries(footerLinks) as [
+              keyof typeof footerLinks,
+              (typeof footerLinks)[keyof typeof footerLinks],
+            ][]
+          ).map(([group, links]) => (
+            <div key={group}>
               <h4 className="text-sm font-semibold text-text mb-4">
-                {category}
+                {t(`footer.groups.${group}`)}
               </h4>
               <ul className="space-y-2.5">
                 {links.map((link) => (
-                  <li key={link.label}>
+                  <li key={link.id}>
                     <a
                       href={link.href}
                       className="text-sm text-text-muted hover:text-text transition-colors"
                     >
-                      {link.label}
+                      {t(`footer.links.${link.id}`)}
                     </a>
                   </li>
                 ))}
@@ -63,22 +72,27 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-border-subtle flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-text-dim">
-            &copy; 2026 Creator Hub. All rights reserved.
+            {/* String year: numbers would be digit-grouped ("2,026"). */}
+            {t("footer.rights", { year: "2026" })}
           </p>
           <p className="text-xs text-text-dim">
-            Platform developed by{" "}
-            <a
-              href="https://www.cesargarces.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:text-primary-hover transition-colors"
-            >
-              cesargarces.com
-            </a>
+            {rich("footer.developedBy", {
+              link: (chunks) => (
+                <a
+                  href="https://www.cesargarces.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:text-primary-hover transition-colors"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
           </p>
           <div className="flex items-center gap-4">
             <a
               href="#"
+              aria-label={t("footer.social.x")}
               className="text-text-dim hover:text-text-muted transition-colors"
             >
               <svg
@@ -92,6 +106,7 @@ export function Footer() {
             </a>
             <a
               href="#"
+              aria-label={t("footer.social.github")}
               className="text-text-dim hover:text-text-muted transition-colors"
             >
               <svg
@@ -105,6 +120,7 @@ export function Footer() {
             </a>
             <a
               href="#"
+              aria-label={t("footer.social.discord")}
               className="text-text-dim hover:text-text-muted transition-colors"
             >
               <svg

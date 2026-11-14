@@ -2,39 +2,18 @@
 
 import { m } from "framer-motion";
 import { MessageSquare, Wand2, Image, Rocket } from "lucide-react";
+import { useI18n } from "@/i18n/i18n-provider";
 
+// Texts: howItWorks.steps.<id>.title / .description
 const steps = [
-  {
-    number: "01",
-    title: "Describe What You Need",
-    description: "Tell the AI what you want to create in plain language.",
-    icon: MessageSquare,
-    color: "text-primary",
-  },
-  {
-    number: "02",
-    title: "AI Generates It",
-    description: "Our AI tools and agents build your content in seconds.",
-    icon: Wand2,
-    color: "text-accent",
-  },
-  {
-    number: "03",
-    title: "Refine & Perfect",
-    description: "Tweak, regenerate, and customize until it's exactly right.",
-    icon: Image,
-    color: "text-success",
-  },
-  {
-    number: "04",
-    title: "Ship & Publish",
-    description: "Download, publish, or send directly to your platform.",
-    icon: Rocket,
-    color: "text-warning",
-  },
-];
+  { id: "describe", number: "01", icon: MessageSquare, color: "text-primary" },
+  { id: "generate", number: "02", icon: Wand2, color: "text-accent" },
+  { id: "refine", number: "03", icon: Image, color: "text-success" },
+  { id: "publish", number: "04", icon: Rocket, color: "text-warning" },
+] as const;
 
 export function HowItWorks() {
+  const { t } = useI18n();
   return (
     <section className="py-24 border-t border-border-subtle">
       <div className="mx-auto max-w-7xl px-6">
@@ -44,9 +23,11 @@ export function HowItWorks() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <p className="text-sm font-medium text-primary mb-3">How It Works</p>
+          <p className="text-sm font-medium text-primary mb-3">
+            {t("howItWorks.eyebrow")}
+          </p>
           <h2 className="text-3xl md:text-4xl font-bold text-text text-balance">
-            From idea to content in seconds
+            {t("howItWorks.title")}
           </h2>
         </m.div>
 
@@ -71,10 +52,10 @@ export function HowItWorks() {
                 {step.number}
               </div>
               <h3 className="text-base font-semibold text-text mb-2">
-                {step.title}
+                {t(`howItWorks.steps.${step.id}.title`)}
               </h3>
               <p className="text-sm text-text-muted leading-relaxed">
-                {step.description}
+                {t(`howItWorks.steps.${step.id}.description`)}
               </p>
             </m.div>
           ))}

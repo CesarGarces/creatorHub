@@ -7,8 +7,11 @@ import { toast } from "sonner";
 import { Pencil, Trash2, Plus, Layers, Cpu, Wrench } from "lucide-react";
 import { ActionConfirmDialog, Switch } from "@creator-hub/ui";
 import type { Mode } from "@/types";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
 
 export default function ModesPage() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [editingMode, setEditingMode] = useState<Mode | null>(null);
   const [isCreateMode, setIsCreateMode] = useState(false);
@@ -30,11 +33,11 @@ export default function ModesPage() {
       api.put(`/admin/modes/${data.id}`, data.updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modes"] });
-      toast.success("Mode updated successfully");
+      toast.success(t("modes.toasts.updated"));
       setEditingMode(null);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to update mode");
+    onError: (error: unknown) => {
+      toast.error(localizeError(error, "modes.toasts.updateFailed"));
     },
   });
 
@@ -44,11 +47,11 @@ export default function ModesPage() {
     ) => api.post("/admin/modes", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modes"] });
-      toast.success("Mode created successfully");
+      toast.success(t("modes.toasts.created"));
       setIsCreateMode(false);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to create mode");
+    onError: (error: unknown) => {
+      toast.error(localizeError(error, "modes.toasts.createFailed"));
     },
   });
 
@@ -56,10 +59,10 @@ export default function ModesPage() {
     mutationFn: (id: string) => api.delete(`/admin/modes/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modes"] });
-      toast.success("Mode deleted successfully");
+      toast.success(t("modes.toasts.deleted"));
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to delete mode");
+    onError: (error: unknown) => {
+      toast.error(localizeError(error, "modes.toasts.deleteFailed"));
     },
   });
 
@@ -75,10 +78,8 @@ export default function ModesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text">Modes</h1>
-          <p className="text-sm text-text-muted mt-1">
-            Manage capability modes that can be assigned to tools and providers
-          </p>
+          <h1 className="text-2xl font-bold text-text">{t("modes.title")}</h1>
+          <p className="text-sm text-text-muted mt-1">{t("modes.subtitle")}</p>
         </div>
         <button
           type="button"
@@ -89,7 +90,7 @@ export default function ModesPage() {
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
         >
           <Plus size={18} />
-          Add Mode
+          {t("modes.add")}
         </button>
       </div>
 
@@ -121,7 +122,7 @@ export default function ModesPage() {
                       : "bg-red-500/10 text-red-500"
                   }`}
                 >
-                  {mode.isActive ? "Active" : "Inactive"}
+                  {mode.isActive ? t("common.active") : t("common.inactive")}
                 </span>
               </div>
 
@@ -153,11 +154,11 @@ export default function ModesPage() {
               <div className="flex gap-4 text-xs text-text-dim mb-4">
                 <span className="flex items-center gap-1">
                   <Wrench size={12} />
-                  {mode._count?.tools || 0} tools
+                  {t("modes.tools", { count: mode._count?.tools || 0 })}
                 </span>
                 <span className="flex items-center gap-1">
                   <Cpu size={12} />
-                  {mode._count?.providers || 0} providers
+                  {t("modes.providers", { count: mode._count?.providers || 0 })}
                 </span>
               </div>
 
@@ -183,11 +184,13 @@ export default function ModesPage() {
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors"
                 >
                   <Pencil size={14} />
-                  Edit
+                  {t("common.edit")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDeleteDialog({ isOpen: true, mode })}
+                  aria-label={t("modes.deleteAria", { name: mode.name })}
+                  title={t("modes.deleteAria", { name: mode.name })}
                   className="flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2 size={14} />
@@ -202,7 +205,7 @@ export default function ModesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-surface rounded-xl border border-border w-full max-w-md mx-4 p-6">
             <h2 className="text-lg font-semibold text-text mb-4">
-              {editingMode ? "Edit Mode" : "Create Mode"}
+              {editingMode ? t("modes.editTitle") : t("modes.createTitle")}
             </h2>
             <ModeForm
               mode={editingMode}
@@ -226,10 +229,12 @@ export default function ModesPage() {
           }
           setDeleteDialog({ isOpen: false, mode: null });
         }}
-        title="Delete Mode"
-        description={`Are you sure you want to delete "${deleteDialog.mode?.name}"? This will remove it from all tools and providers.`}
-        confirmLabel="Delete mode"
-        cancelLabel="Keep mode"
+        title={t("modes.deleteDialog.title")}
+        description={t("modes.deleteDialog.description", {
+          name: deleteDialog.mode?.name ?? "",
+        })}
+        confirmLabel={t("modes.deleteDialog.confirm")}
+        cancelLabel={t("modes.deleteDialog.cancel")}
         confirmVariant="danger"
         icon={<Trash2 className="h-5 w-5" />}
       />
@@ -248,6 +253,7 @@ function ModeForm({
   onCancel: () => void;
   isLoading: boolean;
 }) {
+  const { t } = useI18n();
   const [slug, setSlug] = useState(mode?.slug || "");
   const [name, setName] = useState(mode?.name || "");
   const [description, setDescription] = useState(mode?.description || "");
@@ -274,7 +280,7 @@ function ModeForm({
           htmlFor="mode-slug"
           className="block text-sm font-medium text-text mb-1"
         >
-          Slug
+          {t("modes.form.slug")}
         </label>
         <input
           id="mode-slug"
@@ -289,7 +295,9 @@ function ModeForm({
           className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text placeholder:text-text-dim focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
         />
         {mode && (
-          <p className="text-xs text-text-dim mt-1">Slug cannot be changed</p>
+          <p className="text-xs text-text-dim mt-1">
+            {t("modes.form.slugLocked")}
+          </p>
         )}
       </div>
 
@@ -298,14 +306,14 @@ function ModeForm({
           htmlFor="mode-name"
           className="block text-sm font-medium text-text mb-1"
         >
-          Name
+          {t("modes.form.name")}
         </label>
         <input
           id="mode-name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Image Generation"
+          placeholder={t("modes.form.namePlaceholder")}
           required
           className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text placeholder:text-text-dim focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
@@ -316,14 +324,14 @@ function ModeForm({
           htmlFor="mode-description"
           className="block text-sm font-medium text-text mb-1"
         >
-          Description
+          {t("modes.form.description")}
         </label>
         <input
           id="mode-description"
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Generate images from text prompts"
+          placeholder={t("modes.form.descriptionPlaceholder")}
           className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text placeholder:text-text-dim focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
       </div>
@@ -334,7 +342,7 @@ function ModeForm({
             htmlFor="mode-icon"
             className="block text-sm font-medium text-text mb-1"
           >
-            Icon (emoji)
+            {t("modes.form.icon")}
           </label>
           <input
             id="mode-icon"
@@ -350,7 +358,7 @@ function ModeForm({
             htmlFor="mode-color"
             className="block text-sm font-medium text-text mb-1"
           >
-            Color
+            {t("modes.form.color")}
           </label>
           <div className="flex items-center gap-3">
             <input
@@ -366,8 +374,14 @@ function ModeForm({
       </div>
 
       <div className="flex items-center gap-3">
-        <Switch checked={isActive} onCheckedChange={setIsActive} />
-        <span className="text-sm font-medium text-text">Active</span>
+        <Switch
+          checked={isActive}
+          onCheckedChange={setIsActive}
+          aria-label={t("modes.form.active")}
+        />
+        <span className="text-sm font-medium text-text">
+          {t("modes.form.active")}
+        </span>
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
@@ -377,14 +391,18 @@ function ModeForm({
           disabled={isLoading}
           className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors disabled:opacity-50"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           type="submit"
           disabled={isLoading}
           className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
-          {isLoading ? "Saving..." : mode ? "Save Changes" : "Create Mode"}
+          {isLoading
+            ? t("common.saving")
+            : mode
+              ? t("common.saveChanges")
+              : t("modes.form.create")}
         </button>
       </div>
     </form>

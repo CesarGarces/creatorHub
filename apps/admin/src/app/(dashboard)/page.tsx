@@ -13,8 +13,11 @@ import type {
   TopUser,
   FavoriteStats,
 } from "@/types";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
 
 export default function DashboardPage() {
+  const { t } = useI18n();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [usage, setUsage] = useState<UsageByProvider[]>([]);
   const [favorites, setFavorites] = useState<FavoriteStats[]>([]);
@@ -37,10 +40,8 @@ export default function DashboardPage() {
         setUsage(usageRes.data?.byProvider || []);
         setFavorites(favoritesRes.data?.byTool || []);
         setTopUsers(topUsersRes.data?.users || []);
-      } catch (err: any) {
-        setError(
-          err.response?.data?.message || "Failed to load dashboard data",
-        );
+      } catch (err: unknown) {
+        setError(localizeError(err, "dashboard.loadFailed"));
       } finally {
         setLoading(false);
       }
@@ -79,8 +80,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-text">Dashboard</h1>
-        <p className="text-text-muted">Overview of your platform</p>
+        <h1 className="text-2xl font-bold text-text">{t("dashboard.title")}</h1>
+        <p className="text-text-muted">{t("dashboard.subtitle")}</p>
       </div>
 
       {stats && <StatsCards stats={stats} />}

@@ -4,6 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Switch } from "@creator-hub/ui";
 import type { User } from "@/types";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
+
+const ROLES = ["USER", "ADMIN"] as const;
+const PLANS = ["FREE", "PAY_AS_YOU_GO", "STARTER", "PRO"] as const;
 
 interface UserFormProps {
   user?: User;
@@ -12,6 +17,7 @@ interface UserFormProps {
 
 export function UserForm({ user, onSubmit }: UserFormProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const [form, setForm] = useState({
     email: user?.email ?? "",
     name: user?.name ?? "",
@@ -51,10 +57,8 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
 
       await onSubmit(payload);
       router.push("/users");
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message || err.message || "Failed to save user",
-      );
+    } catch (err: unknown) {
+      setError(localizeError(err, "users.form.saveFailed"));
     } finally {
       setLoading(false);
     }
@@ -77,7 +81,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             htmlFor="user-email"
             className="mb-1 block text-sm font-medium text-text-muted"
           >
-            Email
+            {t("users.form.email")}
           </label>
           <Input
             id="user-email"
@@ -93,7 +97,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             htmlFor="user-name"
             className="mb-1 block text-sm font-medium text-text-muted"
           >
-            Name
+            {t("users.form.name")}
           </label>
           <Input
             id="user-name"
@@ -108,7 +112,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             htmlFor="user-password"
             className="mb-1 block text-sm font-medium text-text-muted"
           >
-            {user ? "New Password (leave blank to keep)" : "Password"}
+            {user ? t("users.form.newPassword") : t("users.form.password")}
           </label>
           <Input
             id="user-password"
@@ -117,7 +121,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             onChange={(e) => updateField("password", e.target.value)}
             required={!user}
             minLength={8}
-            placeholder={user ? "Leave blank to keep current" : undefined}
+            placeholder={user ? t("users.form.passwordPlaceholder") : undefined}
           />
         </div>
 
@@ -126,7 +130,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             htmlFor="user-role"
             className="mb-1 block text-sm font-medium text-text-muted"
           >
-            Role
+            {t("users.form.role")}
           </label>
           <select
             id="user-role"
@@ -134,8 +138,11 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             onChange={(e) => updateField("role", e.target.value)}
             className="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text"
           >
-            <option value="USER">USER</option>
-            <option value="ADMIN">ADMIN</option>
+            {ROLES.map((role) => (
+              <option key={role} value={role}>
+                {t(`common.roles.${role}`)}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -144,7 +151,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             htmlFor="user-plan"
             className="mb-1 block text-sm font-medium text-text-muted"
           >
-            Plan
+            {t("users.form.plan")}
           </label>
           <select
             id="user-plan"
@@ -152,23 +159,26 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             onChange={(e) => updateField("plan", e.target.value)}
             className="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text"
           >
-            <option value="FREE">FREE</option>
-            <option value="PAY_AS_YOU_GO">PAY_AS_YOU_GO</option>
-            <option value="STARTER">STARTER</option>
-            <option value="PRO">PRO</option>
+            {PLANS.map((plan) => (
+              <option key={plan} value={plan}>
+                {t(`common.plans.${plan}`)}
+              </option>
+            ))}
           </select>
         </div>
       </div>
 
       <div className="rounded-lg border border-border bg-surface-elevated/50 p-4 space-y-4">
-        <p className="text-sm font-medium text-text-muted">Credit Balance</p>
+        <p className="text-sm font-medium text-text-muted">
+          {t("users.form.creditBalance")}
+        </p>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label
               htmlFor="currentCredits"
               className="mb-1 block text-xs text-text-dim"
             >
-              Current Credits
+              {t("users.form.currentCredits")}
             </label>
             <Input
               id="currentCredits"
@@ -185,7 +195,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
               htmlFor="purchasedCredits"
               className="mb-1 block text-xs text-text-dim"
             >
-              Purchased Credits
+              {t("users.form.purchasedCredits")}
             </label>
             <Input
               id="purchasedCredits"
@@ -204,20 +214,23 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         <Switch
           checked={form.isActive}
           onCheckedChange={(checked) => updateField("isActive", checked)}
+          aria-label={t("users.form.active")}
         />
-        <span className="text-sm text-text-muted">Active</span>
+        <span className="text-sm text-text-muted">
+          {t("users.form.active")}
+        </span>
       </div>
 
       <div className="flex items-center gap-3 pt-4">
         <Button type="submit" isLoading={loading}>
-          {user ? "Update User" : "Create User"}
+          {user ? t("users.form.update") : t("users.form.create")}
         </Button>
         <Button
           type="button"
           variant="secondary"
           onClick={() => router.push("/users")}
         >
-          Cancel
+          {t("common.cancel")}
         </Button>
       </div>
     </form>

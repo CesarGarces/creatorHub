@@ -2,38 +2,38 @@
 
 import { m } from "framer-motion";
 import { Image, Film, Languages, ArrowRight } from "lucide-react";
+import { useI18n } from "@/i18n/i18n-provider";
 
+// Texts: tools.items.<id>.title / .description
 const tools = [
   {
+    id: "thumbnail",
     icon: Image,
-    title: "Thumbnail Generator",
-    description:
-      "Generate professional thumbnails with AI. Supports multiple styles, custom prompts, negative prompts, and adjustable dimensions. Perfect for YouTube, Twitch, and TikTok.",
     color: "text-primary",
     bgColor: "bg-primary/10",
-    credits: "~10 credits",
+    credits: 10,
+    approximate: true,
   },
   {
+    id: "video",
     icon: Film,
-    title: "Video Generator",
-    description:
-      "Create videos with AI using Wan AI models. Supports text-to-video and image-to-video, multiple aspect ratios (16:9, 9:16, 1:1). Ideal for short-form and long-form content.",
     color: "text-accent",
     bgColor: "bg-accent/10",
-    credits: "50 credits",
+    credits: 50,
+    approximate: false,
   },
   {
+    id: "translator",
     icon: Languages,
-    title: "Content Translator",
-    description:
-      "Translate your content to multiple languages with AI precision. Expand your global audience with natural, contextual translations in seconds.",
     color: "text-success",
     bgColor: "bg-success/10",
-    credits: "~5 credits",
+    credits: 5,
+    approximate: true,
   },
-];
+] as const;
 
 export function ToolsSection() {
+  const { t } = useI18n();
   return (
     <section id="tools" className="py-24 border-t border-border-subtle">
       <div className="mx-auto max-w-7xl px-6">
@@ -43,20 +43,21 @@ export function ToolsSection() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <p className="text-sm font-medium text-primary mb-3">AI Tools</p>
+          <p className="text-sm font-medium text-primary mb-3">
+            {t("tools.eyebrow")}
+          </p>
           <h2 className="text-3xl md:text-4xl font-bold text-text text-balance">
-            Real tools for real creators
+            {t("tools.title")}
           </h2>
           <p className="mt-4 text-text-muted max-w-2xl mx-auto">
-            Each tool is designed to solve specific content creation problems,
-            powered by state-of-the-art AI models.
+            {t("tools.subtitle")}
           </p>
         </m.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tools.map((tool, i) => (
             <m.div
-              key={tool.title}
+              key={tool.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -70,17 +71,24 @@ export function ToolsSection() {
                   <tool.icon size={22} className={tool.color} />
                 </div>
                 <span className="px-2.5 py-0.5 text-[10px] font-medium rounded-full bg-border-subtle text-text-muted">
-                  {tool.credits}
+                  {t(
+                    tool.approximate
+                      ? "common.approxCredits"
+                      : "common.credits",
+                    {
+                      count: tool.credits,
+                    },
+                  )}
                 </span>
               </div>
               <h3 className="text-base font-semibold text-text mb-2">
-                {tool.title}
+                {t(`tools.items.${tool.id}.title`)}
               </h3>
               <p className="text-sm text-text-muted leading-relaxed mb-4">
-                {tool.description}
+                {t(`tools.items.${tool.id}.description`)}
               </p>
               <div className="flex items-center gap-1.5 text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                <span>Explore</span>
+                <span>{t("tools.explore")}</span>
                 <ArrowRight size={14} />
               </div>
             </m.div>

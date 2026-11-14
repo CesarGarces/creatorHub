@@ -2,41 +2,45 @@
 
 import { Users, CreditCard, UserCheck, Star } from "lucide-react";
 import type { DashboardStats } from "@/types";
+import { useI18n } from "@/i18n/i18n-provider";
 
 interface StatsCardsProps {
   stats: DashboardStats;
 }
 
 export function StatsCards({ stats }: StatsCardsProps) {
+  const { t, formatNumber } = useI18n();
   const cards = [
     {
-      label: "Total Users",
+      label: t("dashboard.stats.totalUsers"),
       value: stats.totalUsers,
-      sub: `${stats.activeUsers} active`,
+      sub: t("dashboard.stats.activeCount", { count: stats.activeUsers }),
       icon: Users,
       color: "text-primary",
       bg: "bg-primary/10",
     },
     {
-      label: "Active Users",
+      label: t("dashboard.stats.activeUsers"),
       value: stats.activeUsers,
-      sub: `${stats.inactiveUsers} inactive`,
+      sub: t("dashboard.stats.inactiveCount", { count: stats.inactiveUsers }),
       icon: UserCheck,
       color: "text-secondary",
       bg: "bg-secondary/10",
     },
     {
-      label: "Credits Used",
+      label: t("dashboard.stats.creditsUsed"),
       value: stats.totalCreditsUsed,
-      sub: `${stats.totalCreditsRemaining} remaining`,
+      sub: t("dashboard.stats.remaining", {
+        count: stats.totalCreditsRemaining,
+      }),
       icon: CreditCard,
       color: "text-warning",
       bg: "bg-warning/10",
     },
     {
-      label: "Total Favorites",
+      label: t("dashboard.stats.totalFavorites"),
       value: stats.totalFavorites,
-      sub: "tools favorited",
+      sub: t("dashboard.stats.toolsFavorited"),
       icon: Star,
       color: "text-yellow-500",
       bg: "bg-yellow-500/10",
@@ -58,7 +62,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
                   {card.label}
                 </p>
                 <p className="mt-2 text-3xl font-bold text-text">
-                  {card.value}
+                  {formatNumber(card.value)}
                 </p>
                 <p className="mt-1 text-xs text-text-dim">{card.sub}</p>
               </div>

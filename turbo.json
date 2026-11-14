@@ -64,6 +64,16 @@
     "db:seed": {
       "dependsOn": ["db:generate"],
       "cache": false
+    },
+    "e2e": {
+      "dependsOn": [
+        "@creator-hub/web#build",
+        "@creator-hub/landing#build",
+        "@creator-hub/admin#build"
+      ],
+      "passThroughEnv": ["CI", "E2E_*"],
+      "outputs": ["playwright-report/**", "test-results/**", "artifacts/**"],
+      "cache": false
     }
   }
 }

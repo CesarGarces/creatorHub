@@ -19,9 +19,6 @@ export const common = {
     completed: "Completed",
     unknownError: "Unknown error",
   },
-  time: {
-    justNow: "Just now",
-  },
   credits: {
     count_one: "{count} credit",
     count_other: "{count} credits",

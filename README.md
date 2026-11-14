@@ -67,6 +67,7 @@ creator-hub/
 │   ├── database/             # Prisma ORM
 │   ├── domain-events/        # Redis Pub/Sub abstraction
 │   ├── tool-sdk/             # Tool Registry
+│   ├── i18n/                 # Interface languages: translation engine + language selector (web + landing)
 │   ├── shared-types/         # TypeScript interfaces
 │   └── shared-utils/         # Pure utilities
 ├── tools/
@@ -514,6 +515,35 @@ Run a single package tests (example):
 pnpm --filter @creator-hub/api test
 ```
 
+### End-to-end tests (Playwright)
+
+Browser tests live in `apps/e2e` (`@creator-hub/e2e`) and cover the **web app, landing page and admin panel** against their production builds. The backend is mocked at the network layer, so no API, database or Redis is needed.
+
+```sh
+# once: download the browser
+pnpm --filter @creator-hub/e2e exec playwright install chromium
+
+# builds web, landing and admin, starts them on ports 3100/3102/3103 and runs every spec
+pnpm e2e
+
+# a single project (web | landing | admin | cross-app) or a single file
+pnpm --filter @creator-hub/e2e e2e --project=admin
+pnpm --filter @creator-hub/e2e e2e tests/web.language.spec.ts
+
+# open the HTML report (screenshots of every step are attached to each test)
+pnpm --filter @creator-hub/e2e e2e:report
+```
+
+| Spec                         | What it checks                                                                                                               |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `web.language.spec.ts`       | Language selector on sign-in, top bar and Settings → Language; browser language on first visit; cookie + account persistence |
+| `landing.language.spec.ts`   | Navbar selector (desktop and mobile) translating every section, kept after reload                                            |
+| `admin.language.spec.ts`     | Selector on admin sign-in and sidebar, users table/dialog, account language restored at sign-in                              |
+| `cross-app.language.spec.ts` | Language chosen on the landing page carries over to the app and vice versa                                                   |
+| `web.checkout.spec.ts`       | Buying a credit plan redirects to the payment gateway                                                                        |
+
+Every language test also writes a side-by-side **before → after** image to `apps/e2e/artifacts/a-to-b/<project>/`. Useful variables: `E2E_CHROMIUM_PATH` (use an existing Chromium/Chrome instead of the downloaded one) and `CI` (no server reuse, retries enabled). `web.checkout.spec.ts` is a Playwright port of the older Cypress spec in `apps/web/e2e`.
+
 ## Environment Variables
 
 ```env
@@ -641,6 +671,37 @@ The UI is built with **shadcn/ui**-style components in `packages/ui/`. Each comp
 - `lucide-react` for icons (SVG, no emojis)
 
 See `structure.md` for detailed file architecture.
+
+---
+
+## Interface Languages (i18n)
+
+The web app (`apps/web`), the landing page (`apps/landing`) and the admin panel (`apps/admin`) are available in **English, Spanish and Portuguese**, powered by the shared package **`@creator-hub/i18n`**. Users switch language from the same dropdown in every app (landing navbar, app top bar, admin sidebar, sign-in screens) or in **Settings → Language**. The change applies instantly (no reload) and is confirmed with a toast written in the new language.
+
+**How the choice is remembered**
+
+| Layer                       | What               | Why                                                                                                                                                                                                                                      |
+| --------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ch_locale` cookie (1 year) | Browser, both apps | Read by the server so the first paint is already in the right language (no flash) and `<html lang>` is correct. Set `NEXT_PUBLIC_LOCALE_COOKIE_DOMAIN` (e.g. `.creatorhubplatform.com`) to share it between the landing page and the app |
+| `User.preferredLanguage`    | Account (DB)       | Restored on sign-in on any device. Saved via `PATCH /api/v1/auth/preferences`                                                                                                                                                            |
+| `Accept-Language`           | Browser            | Used only until the user picks a language                                                                                                                                                                                                |
+
+**Shared package** (`packages/i18n`)
+
+- `config.ts` — supported locales (shared with the API through `UI_LANGUAGES` in `@creator-hub/shared-types`), cookie name, `Accept-Language` negotiation
+- `core.ts` — `createTranslator()`: typed keys, `{placeholders}`, plurals (`key_one` / `key_other` + `t("key", { count })`), English fallback
+- `runtime.ts` — current locale in the browser, cookie persistence, `<html lang>`
+- `react.tsx` — `createI18n()` → `I18nProvider`, `useI18n()` (`t`, `rich`, `formatDate/Number/RelativeTime/LanguageName`), `changeLocale`
+- `language-selector.tsx` — `LanguageSelector` (dropdown) and `LanguageOptions` (cards), with their own built-in strings
+- `validate.ts` — `findDictionaryIssues()` used by each app's tests to check every language has the same keys, placeholders and tags
+
+**Per app** (`src/i18n/` in `apps/web`, `apps/landing` and `apps/admin`): the dictionaries (`messages/`), a `translate.ts` binding them with `createTranslator`, an `i18n-provider.tsx` calling `createI18n`, and `server.ts` resolving the request locale. The web app and the admin panel also have `errors.ts` (maps known backend errors to translations) and `account-sync.ts` (admins' choice is saved with the same `PATCH /auth/preferences` and restored at admin login); the web app also has the legal documents (`legal/`).
+
+**Adding text:** add the key to the English dictionary, then to Spanish and Portuguese, and use `t("namespace.key")`. In the web app, new namespace files need `node apps/web/scripts/gen-i18n-index.mjs`. Each app's `dictionaries.spec.ts` fails if a language is missing a key, placeholder or tag.
+
+**Adding a language:** add it to `UI_LANGUAGES`, `LOCALE_META` and `PACKAGE_MESSAGES` (package), then add the dictionaries (and `legal/`) in each app.
+
+> Content coming from the database (notification bodies, transaction descriptions, generated AI output) is shown as stored. Tool and plan names have translations keyed by ID/slug in `toolCatalog` and `credits.planCatalog`.
 
 ---
 

@@ -12,12 +12,14 @@ import {
 } from "recharts";
 import api from "@/lib/api";
 import type { RegistrationByDay } from "@/types";
+import { useI18n } from "@/i18n/i18n-provider";
 
 function formatDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 export function RegistrationsChart() {
+  const { t } = useI18n();
   const today = new Date();
   const weekAgo = new Date(today);
   weekAgo.setDate(weekAgo.getDate() - 7);
@@ -47,12 +49,14 @@ export function RegistrationsChart() {
 
   return (
     <div className="rounded-xl border border-border bg-surface p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-text">
-            User Registrations
+            {t("dashboard.registrations.title")}
           </h3>
-          <p className="text-sm text-text-muted">New users by date</p>
+          <p className="text-sm text-text-muted">
+            {t("dashboard.registrations.subtitle")}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -60,15 +64,19 @@ export function RegistrationsChart() {
             value={from}
             onChange={(e) => setFrom(e.target.value)}
             max={to}
+            aria-label={t("dashboard.registrations.from")}
             className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text"
           />
-          <span className="text-text-dim">to</span>
+          <span className="text-text-dim">
+            {t("dashboard.registrations.to")}
+          </span>
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
             min={from}
             max={formatDate(today)}
+            aria-label={t("dashboard.registrations.toDate")}
             className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text"
           />
         </div>
@@ -77,11 +85,11 @@ export function RegistrationsChart() {
       <div className="mt-6 h-64">
         {loading ? (
           <div className="flex h-full items-center justify-center text-sm text-text-dim">
-            Loading...
+            {t("common.loading")}
           </div>
         ) : data.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-text-dim">
-            No registration data for this period
+            {t("dashboard.registrations.empty")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
@@ -110,6 +118,7 @@ export function RegistrationsChart() {
               <Line
                 type="monotone"
                 dataKey="count"
+                name={t("dashboard.registrations.series")}
                 stroke="#22c55e"
                 strokeWidth={2}
                 dot={{ fill: "#22c55e", strokeWidth: 0 }}

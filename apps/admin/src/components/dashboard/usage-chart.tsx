@@ -10,23 +10,25 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { UsageByProvider } from "@/types";
+import { useI18n } from "@/i18n/i18n-provider";
 
 interface UsageChartProps {
   data: UsageByProvider[];
 }
 
 export function UsageChart({ data }: UsageChartProps) {
+  const { t } = useI18n();
   return (
     <div className="rounded-xl border border-border bg-surface p-6">
-      <h3 className="text-lg font-semibold text-text">Usage by Provider</h3>
-      <p className="text-sm text-text-muted">
-        Generations and credits consumed
-      </p>
+      <h3 className="text-lg font-semibold text-text">
+        {t("dashboard.usage.title")}
+      </h3>
+      <p className="text-sm text-text-muted">{t("dashboard.usage.subtitle")}</p>
 
       <div className="mt-6 h-64">
         {data.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-text-dim">
-            No usage data yet
+            {t("dashboard.usage.empty")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
@@ -50,7 +52,12 @@ export function UsageChart({ data }: UsageChartProps) {
                 labelStyle={{ color: "#f1f5f9" }}
                 itemStyle={{ color: "#f1f5f9" }}
               />
-              <Bar dataKey="usageCount" fill="#00bbd9" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="usageCount"
+                name={t("dashboard.usage.series")}
+                fill="#00bbd9"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         )}

@@ -15,8 +15,11 @@ import {
 } from "@creator-hub/ui";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { User, PaginatedResponse } from "@/types";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
 
 export default function UsersPage() {
+  const { t, tOptional, formatNumber } = useI18n();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -49,8 +52,8 @@ export default function UsersPage() {
       });
       setUsers(res.data.data);
       setMeta(res.data.meta);
-    } catch (err: any) {
-      console.error(err.response?.data?.message || "Failed to load users");
+    } catch (err: unknown) {
+      console.error("Failed to load users", err);
     } finally {
       setLoading(false);
       setIsSearching(false);
@@ -68,9 +71,22 @@ export default function UsersPage() {
     try {
       await api.post(`/admin/users/${user.id}/${action}`);
       fetchUsers(meta.page, debouncedSearch, true);
-      toast.success(`User ${action}d successfully`);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || `Failed to ${action} user`);
+      toast.success(
+        t(
+          action === "activate"
+            ? "users.toasts.activated"
+            : "users.toasts.deactivated",
+        ),
+      );
+    } catch (err: unknown) {
+      toast.error(
+        localizeError(
+          err,
+          action === "activate"
+            ? "users.toasts.activateFailed"
+            : "users.toasts.deactivateFailed",
+        ),
+      );
     } finally {
       setToggleDialog({ isOpen: false, user: null });
     }
@@ -84,13 +100,13 @@ export default function UsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text">Users</h1>
-          <p className="text-text-muted">Manage platform users</p>
+          <h1 className="text-2xl font-bold text-text">{t("users.title")}</h1>
+          <p className="text-text-muted">{t("users.subtitle")}</p>
         </div>
         <Link href="/users/new">
           <Button>
             <Plus className="mr-2 h-4 w-4" />
-            New User
+            {t("users.newUser")}
           </Button>
         </Link>
       </div>
@@ -98,7 +114,8 @@ export default function UsersPage() {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" />
         <Input
-          placeholder="Search users..."
+          placeholder={t("users.searchPlaceholder")}
+          aria-label={t("users.searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10"
@@ -112,12 +129,18 @@ export default function UsersPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-elevated/50 text-left text-text-muted">
-              <th className="px-4 py-3 font-medium">User</th>
-              <th className="px-4 py-3 font-medium">Role</th>
-              <th className="px-4 py-3 font-medium">Plan</th>
-              <th className="px-4 py-3 font-medium">Credits</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium text-right">Actions</th>
+              <th className="px-4 py-3 font-medium">{t("users.table.user")}</th>
+              <th className="px-4 py-3 font-medium">{t("users.table.role")}</th>
+              <th className="px-4 py-3 font-medium">{t("users.table.plan")}</th>
+              <th className="px-4 py-3 font-medium">
+                {t("users.table.credits")}
+              </th>
+              <th className="px-4 py-3 font-medium">
+                {t("users.table.status")}
+              </th>
+              <th className="px-4 py-3 font-medium text-right">
+                {t("users.table.actions")}
+              </th>
             </tr>
           </thead>
           <tbody
@@ -134,7 +157,7 @@ export default function UsersPage() {
             ) : users.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-text-dim">
-                  No users found
+                  {t("users.empty")}
                 </td>
               </tr>
             ) : (
@@ -143,7 +166,7 @@ export default function UsersPage() {
                   <td className="px-4 py-3">
                     <div>
                       <p className="font-medium text-text">
-                        {user.name || "Unnamed"}
+                        {user.name || t("users.unnamed")}
                       </p>
                       <p className="text-xs text-text-dim">{user.email}</p>
                     </div>
@@ -153,7 +176,7 @@ export default function UsersPage() {
                       variant={user.role === "ADMIN" ? "premium" : "default"}
                       size="sm"
                     >
-                      {user.role}
+                      {tOptional(`common.roles.${user.role}`, user.role)}
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
@@ -161,15 +184,17 @@ export default function UsersPage() {
                       variant={user.plan === "FREE" ? "free" : "premium"}
                       size="sm"
                     >
-                      {user.plan}
+                      {tOptional(`common.plans.${user.plan}`, user.plan)}
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
                     <div className="tabular-nums text-text">
-                      {user.totalCredits}
+                      {formatNumber(user.totalCredits)}
                       <span className="ml-1 text-xs text-text-dim">
-                        ({user.currentCredits} available,{" "}
-                        {user.purchasedCredits} purchased)
+                        {t("users.creditsBreakdown", {
+                          available: user.currentCredits,
+                          purchased: user.purchasedCredits,
+                        })}
                       </span>
                     </div>
                   </td>
@@ -177,6 +202,9 @@ export default function UsersPage() {
                     <Switch
                       checked={user.isActive}
                       onCheckedChange={() => openToggleDialog(user)}
+                      aria-label={t("users.statusAria", {
+                        name: user.name || user.email,
+                      })}
                     />
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -184,11 +212,15 @@ export default function UsersPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        aria-label={`Edit ${user.name || user.email}`}
+                        aria-label={t("users.editAria", {
+                          name: user.name || user.email,
+                        })}
                         className="min-w-[80px]"
                       >
                         <Pencil className="h-4 w-4" />
-                        <span className="hidden sm:inline">Edit</span>
+                        <span className="hidden sm:inline">
+                          {t("common.edit")}
+                        </span>
                       </Button>
                     </Link>
                   </td>
@@ -209,11 +241,11 @@ export default function UsersPage() {
                 disabled={meta.page <= 1}
                 onClick={() => fetchUsers(meta.page - 1)}
               >
-                Previous
+                {t("common.previous")}
               </Button>
             </div>
             <p className="flex-1 text-center text-sm text-text-muted">
-              Page {meta.page} of {meta.totalPages}
+              {t("common.pageOf", { page: meta.page, total: meta.totalPages })}
             </p>
             <div className="w-28 text-right">
               <Button
@@ -222,7 +254,7 @@ export default function UsersPage() {
                 disabled={meta.page >= meta.totalPages}
                 onClick={() => fetchUsers(meta.page + 1)}
               >
-                Next
+                {t("common.next")}
               </Button>
             </div>
           </div>
@@ -234,17 +266,22 @@ export default function UsersPage() {
         onClose={() => setToggleDialog({ isOpen: false, user: null })}
         onConfirm={handleToggleStatus}
         title={
-          toggleDialog.user?.isActive ? "Deactivate User" : "Activate User"
-        }
-        description={
           toggleDialog.user?.isActive
-            ? `Are you sure you want to deactivate "${toggleDialog.user?.name || toggleDialog.user?.email}"? They will not be able to access the platform.`
-            : `Are you sure you want to activate "${toggleDialog.user?.name || toggleDialog.user?.email}"? They will regain access to the platform.`
+            ? t("users.toggle.deactivateTitle")
+            : t("users.toggle.activateTitle")
         }
+        description={t(
+          toggleDialog.user?.isActive
+            ? "users.toggle.deactivateDescription"
+            : "users.toggle.activateDescription",
+          { name: toggleDialog.user?.name || toggleDialog.user?.email || "" },
+        )}
         confirmLabel={
-          toggleDialog.user?.isActive ? "Deactivate user" : "Activate user"
+          toggleDialog.user?.isActive
+            ? t("users.toggle.deactivateConfirm")
+            : t("users.toggle.activateConfirm")
         }
-        cancelLabel="Cancel"
+        cancelLabel={t("common.cancel")}
         confirmVariant="danger"
         icon={
           toggleDialog.user?.isActive ? (

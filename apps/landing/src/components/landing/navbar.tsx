@@ -4,15 +4,19 @@ import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { config } from "@/lib/config";
+import { useI18n } from "@/i18n/i18n-provider";
+import type { TranslationKey } from "@/i18n/translate";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
-const navLinks = [
-  { label: "Tools", href: "#tools" },
-  { label: "Agents", href: "#agents" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "FAQ", href: "#faq" },
+const navLinks: { labelKey: TranslationKey; href: string }[] = [
+  { labelKey: "nav.tools", href: "#tools" },
+  { labelKey: "nav.agents", href: "#agents" },
+  { labelKey: "nav.pricing", href: "#pricing" },
+  { labelKey: "nav.faq", href: "#faq" },
 ];
 
 export function Navbar() {
+  const { t } = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -21,7 +25,7 @@ export function Navbar() {
         <Link href="/" className="flex items-center">
           <img
             src="/isologo_white.png"
-            alt="Creator Hub"
+            alt={t("common.logoAlt")}
             className="h-8 w-auto object-contain"
           />
         </Link>
@@ -33,33 +37,39 @@ export function Navbar() {
               href={link.href}
               className="text-sm text-text-muted hover:text-text transition-colors"
             >
-              {link.label}
+              {t(link.labelKey)}
             </a>
           ))}
         </div>
 
         <div className="hidden md:flex items-center gap-3">
+          <LanguageSwitcher />
           <a
             href={`${config.appUrl}/login`}
             className="px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
           >
-            Login
+            {t("nav.login")}
           </a>
           <a
             href={`${config.appUrl}/register`}
             className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg transition-colors"
           >
-            Sign Up
+            {t("nav.signUp")}
           </a>
         </div>
 
-        <button
-          type="button"
-          className="md:hidden text-text-muted hover:text-text"
-          onClick={() => setMobileOpen(!mobileOpen)}
-        >
-          {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        <div className="flex items-center gap-3 md:hidden">
+          <LanguageSwitcher compact />
+          <button
+            type="button"
+            className="text-text-muted hover:text-text"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? t("nav.closeMenu") : t("nav.openMenu")}
+            aria-expanded={mobileOpen}
+          >
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
       </nav>
 
       {mobileOpen && (
@@ -72,7 +82,7 @@ export function Navbar() {
                 className="text-sm text-text-muted hover:text-text py-2"
                 onClick={() => setMobileOpen(false)}
               >
-                {link.label}
+                {t(link.labelKey)}
               </a>
             ))}
             <div className="flex gap-3 mt-2 pt-2 border-t border-border-subtle">
@@ -80,13 +90,13 @@ export function Navbar() {
                 href={`${config.appUrl}/login`}
                 className="flex-1 text-center px-4 py-2 text-sm text-text-muted hover:text-text"
               >
-                Login
+                {t("nav.login")}
               </a>
               <a
                 href={`${config.appUrl}/register`}
                 className="flex-1 text-center px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg"
               >
-                Sign Up
+                {t("nav.signUp")}
               </a>
             </div>
           </div>

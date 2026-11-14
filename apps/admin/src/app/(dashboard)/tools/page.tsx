@@ -6,8 +6,11 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { Check, X, Settings } from "lucide-react";
 import type { Mode, ToolWithModes } from "@/types";
+import { useI18n } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
 
 export default function ToolsPage() {
+  const { t, tOptional, rich } = useI18n();
   const queryClient = useQueryClient();
   const [selectedTool, setSelectedTool] = useState<ToolWithModes | null>(null);
   const [selectedModeIds, setSelectedModeIds] = useState<string[]>([]);
@@ -33,13 +36,11 @@ export default function ToolsPage() {
       api.put(`/admin/tools/${data.toolId}/modes`, { modeIds: data.modeIds }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tools-with-modes"] });
-      toast.success("Tool modes updated successfully");
+      toast.success(t("tools.toasts.updated"));
       setSelectedTool(null);
     },
-    onError: (error: any) => {
-      toast.error(
-        error.response?.data?.message || "Failed to update tool modes",
-      );
+    onError: (error: unknown) => {
+      toast.error(localizeError(error, "tools.toasts.updateFailed"));
     },
   });
 
@@ -70,10 +71,8 @@ export default function ToolsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text">Tools</h1>
-        <p className="text-sm text-text-muted mt-1">
-          Manage which modes are available for each tool
-        </p>
+        <h1 className="text-2xl font-bold text-text">{t("tools.title")}</h1>
+        <p className="text-sm text-text-muted mt-1">{t("tools.subtitle")}</p>
       </div>
 
       {toolsLoading || modesLoading ? (
@@ -107,9 +106,16 @@ export default function ToolsPage() {
                     </p>
                     <div className="flex items-center gap-3 mt-2 text-xs text-text-dim">
                       <span className="px-2 py-0.5 rounded bg-surface-elevated">
-                        {tool.category}
+                        {tOptional(
+                          `tools.categories.${tool.category}`,
+                          tool.category,
+                        )}
                       </span>
-                      <span>{tool.creditsPerUse} credits/use</span>
+                      <span>
+                        {t("tools.creditsPerUse", {
+                          count: tool.creditsPerUse,
+                        })}
+                      </span>
                       <span
                         className={`px-2 py-0.5 rounded ${
                           tool.status === "active"
@@ -117,7 +123,7 @@ export default function ToolsPage() {
                             : "bg-red-500/10 text-red-500"
                         }`}
                       >
-                        {tool.status}
+                        {tOptional(`tools.status.${tool.status}`, tool.status)}
                       </span>
                     </div>
                   </div>
@@ -129,7 +135,7 @@ export default function ToolsPage() {
                   className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors"
                 >
                   <Settings size={14} />
-                  Modes
+                  {t("tools.modes")}
                 </button>
               </div>
 
@@ -151,7 +157,7 @@ export default function ToolsPage() {
                 </div>
               ) : (
                 <p className="mt-4 text-sm text-text-dim italic">
-                  No modes assigned
+                  {t("tools.noModes")}
                 </p>
               )}
             </div>
@@ -163,11 +169,18 @@ export default function ToolsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-surface rounded-xl border border-border w-full max-w-lg mx-4 p-6">
             <h2 className="text-lg font-semibold text-text mb-1">
-              Configure Modes
+              {t("tools.configureTitle")}
             </h2>
             <p className="text-sm text-text-muted mb-6">
-              Select which modes are available for{" "}
-              <span className="font-medium text-text">{selectedTool.name}</span>
+              {rich(
+                "tools.configureDescription",
+                {
+                  tool: (chunks) => (
+                    <span className="font-medium text-text">{chunks}</span>
+                  ),
+                },
+                { tool: selectedTool.name },
+              )}
             </p>
 
             <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -228,8 +241,7 @@ export default function ToolsPage() {
 
             <div className="flex justify-between items-center mt-6 pt-4 border-t border-border">
               <p className="text-sm text-text-dim">
-                {selectedModeIds.length} mode
-                {selectedModeIds.length !== 1 ? "s" : ""} selected
+                {t("tools.modesSelected", { count: selectedModeIds.length })}
               </p>
               <div className="flex gap-3">
                 <button
@@ -238,7 +250,7 @@ export default function ToolsPage() {
                   disabled={setModesMutation.isPending}
                   className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors disabled:opacity-50"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="button"
@@ -246,7 +258,9 @@ export default function ToolsPage() {
                   disabled={setModesMutation.isPending}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
-                  {setModesMutation.isPending ? "Saving..." : "Save Changes"}
+                  {setModesMutation.isPending
+                    ? t("common.saving")
+                    : t("common.saveChanges")}
                 </button>
               </div>
             </div>

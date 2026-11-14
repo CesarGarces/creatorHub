@@ -10,8 +10,11 @@ describe("translate", () => {
   });
 
   it("interpolates parameters", () => {
-    expect(translate("en", "language.changed", { language: "Español" })).toBe(
-      "Language changed to Español",
+    expect(translate("en", "dashboard.greeting.morning", { name: "Ana" })).toBe(
+      "Good morning, Ana 👋",
+    );
+    expect(translate("es", "dashboard.greeting.morning", { name: "Ana" })).toBe(
+      "Buenos días, Ana 👋",
     );
   });
 

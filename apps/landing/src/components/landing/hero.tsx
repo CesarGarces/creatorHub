@@ -4,8 +4,10 @@ import { useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
 import { ArrowRight, Play, X, Image, MessageCircle } from "lucide-react";
 import { config } from "@/lib/config";
+import { useI18n } from "@/i18n/i18n-provider";
 
 export function Hero() {
+  const { t } = useI18n();
   const [showVideo, setShowVideo] = useState(false);
 
   return (
@@ -20,13 +22,12 @@ export function Hero() {
           className="flex flex-col items-center text-center"
         >
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] text-balance max-w-4xl">
-            One Workspace.{" "}
-            <span className="gradient-text">Infinite Content.</span>
+            {t("hero.titleStart")}{" "}
+            <span className="gradient-text">{t("hero.titleHighlight")}</span>
           </h1>
 
           <p className="mt-6 text-lg md:text-xl text-text-muted max-w-2xl text-balance">
-            Create thumbnails, videos, and translate content across languages
-            using AI tools and agents.
+            {t("hero.subtitle")}
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
@@ -34,7 +35,7 @@ export function Hero() {
               href={`${config.appUrl}/register`}
               className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-xl transition-all glow-primary hover:glow-primary-strong"
             >
-              Start Creating Free
+              {t("hero.startFree")}
               <ArrowRight size={16} />
             </a>
             <button
@@ -43,7 +44,7 @@ export function Hero() {
               className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-text-muted hover:text-text border border-border hover:border-border-subtle rounded-xl transition-colors"
             >
               <Play size={16} />
-              Watch Demo
+              {t("hero.watchDemo")}
             </button>
           </div>
         </m.div>
@@ -61,22 +62,22 @@ export function Hero() {
                 <div className="h-3 w-3 rounded-full bg-warning/60" />
                 <div className="h-3 w-3 rounded-full bg-success/60" />
                 <div className="ml-4 text-xs text-text-dim">
-                  Creator Hub Dashboard
+                  {t("hero.mock.dashboard")}
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <MockToolCard
-                  title="Thumbnail Generator"
-                  description="AI-powered thumbnails for YouTube, Twitch & TikTok"
+                  title={t("hero.mock.toolTitle")}
+                  description={t("hero.mock.toolDescription")}
                   color="primary"
                 />
                 <MockAgentCard
-                  title="X (Twitter) Agent"
+                  title={t("hero.mock.agentTitle")}
                   status="online"
                   capabilities={[
-                    "X Post Generation",
-                    "AI Analysis",
-                    "Trend Research",
+                    t("hero.mock.capabilities.posts"),
+                    t("hero.mock.capabilities.analysis"),
+                    t("hero.mock.capabilities.trends"),
                   ]}
                 />
                 <MockStatsCard />
@@ -106,6 +107,7 @@ export function Hero() {
               <button
                 type="button"
                 onClick={() => setShowVideo(false)}
+                aria-label={t("hero.closeVideo")}
                 className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
               >
                 <X size={24} />
@@ -122,7 +124,7 @@ export function Hero() {
                     src="https://cesargarces.com/Assets-platform/demo_creator_hub.mp4"
                     type="video/mp4"
                   />
-                  Your browser does not support the video tag.
+                  {t("hero.videoUnsupported")}
                 </video>
               </div>
             </m.div>
@@ -174,20 +176,29 @@ function MockAgentCard({
 }
 
 function MockStatsCard() {
+  const { t } = useI18n();
   return (
     <div className="rounded-lg border border-border bg-bg p-4">
-      <h3 className="text-sm font-semibold text-text mb-3">This Week</h3>
+      <h3 className="text-sm font-semibold text-text mb-3">
+        {t("hero.mock.thisWeek")}
+      </h3>
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <span className="text-xs text-text-muted">Thumbnails</span>
+          <span className="text-xs text-text-muted">
+            {t("hero.mock.thumbnails")}
+          </span>
           <span className="text-xs font-medium text-text">24</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-xs text-text-muted">Videos</span>
+          <span className="text-xs text-text-muted">
+            {t("hero.mock.videos")}
+          </span>
           <span className="text-xs font-medium text-text">8</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-xs text-text-muted">Translations</span>
+          <span className="text-xs text-text-muted">
+            {t("hero.mock.translations")}
+          </span>
           <span className="text-xs font-medium text-text">48</span>
         </div>
         <div className="mt-2 h-1.5 rounded-full bg-surface-elevated overflow-hidden">
