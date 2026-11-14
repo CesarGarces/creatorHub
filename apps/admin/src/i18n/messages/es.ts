@@ -43,6 +43,7 @@ export const es: Messages = {
     modes: "Modos",
     users: "Usuarios",
     creditPlans: "Planes de créditos",
+    creditEmails: "Emails de crédito",
     backups: "Copias de seguridad",
     logout: "Cerrar sesión",
   },

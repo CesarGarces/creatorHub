@@ -143,9 +143,9 @@ export default function CreditEmailsPage() {
         <Info size={18} className="mt-0.5 shrink-0 text-primary" />
         <div className="space-y-1">
           <p>
-            Each email is sent <span className="text-text">once</span> when a
-            user&apos;s balance reaches its level. The user gets it again only
-            after they receive more credits (purchase, bonus, subscription).
+            Each email is sent once when a user&apos;s balance reaches its
+            level. The user gets it again only after they receive more credits
+            (purchase, bonus, subscription).
           </p>
           <p>
             If one usage skips several levels (e.g. 60 → 0), only the email for

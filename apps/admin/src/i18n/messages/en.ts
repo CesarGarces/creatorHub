@@ -41,6 +41,7 @@ export const en = {
     modes: "Modes",
     users: "Users",
     creditPlans: "Credit Plans",
+    creditEmails: "Credit Emails",
     backups: "Backups",
     logout: "Logout",
   },

@@ -43,6 +43,7 @@ export const pt: Messages = {
     modes: "Modos",
     users: "Usuários",
     creditPlans: "Planos de créditos",
+    creditEmails: "E-mails de créditos",
     backups: "Backups",
     logout: "Sair",
   },

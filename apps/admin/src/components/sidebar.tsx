@@ -11,6 +11,7 @@ import {
   Wrench,
   Database,
   BrainCircuit,
+  Mail,
 } from "lucide-react";
 import { useI18n } from "@/i18n/i18n-provider";
 import type { TranslationKey } from "@/i18n/translate";
@@ -27,6 +28,7 @@ const navItems: {
   { href: "/modes", labelKey: "nav.modes", icon: Layers },
   { href: "/users", labelKey: "nav.users", icon: Users },
   { href: "/credit-plans", labelKey: "nav.creditPlans", icon: CreditCard },
+  { href: "/credit-emails", labelKey: "nav.creditEmails", icon: Mail },
   { href: "/database-backups", labelKey: "nav.backups", icon: Database },
 ];
 
