@@ -127,7 +127,12 @@ describe("CreditProcessor", () => {
 });
 
 describe("MarketingEventHandler", () => {
-  const handler = new MarketingEventHandler();
+  const eventPublisher = { publish: vi.fn() };
+  const handler = new MarketingEventHandler(eventPublisher as never);
+
+  beforeEach(() => {
+    db.marketingEvent.create.mockResolvedValue({ id: "me1" });
+  });
 
   it("records credit-threshold marketing events", async () => {
     await handler.handleCreditThreshold({

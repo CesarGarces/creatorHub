@@ -1,6 +1,7 @@
 export type EventName =
   | "marketing.credit_threshold"
   | "marketing.credit_depleted"
+  | "credit.state_reached"
   | "user.plan.upgraded"
   | "tool.used"
   | "tool.enabled"
@@ -73,11 +74,17 @@ export interface MarketingCreditThresholdEvent {
   userId: string;
   threshold: number;
   creditsRemaining: number;
+  /** Balance before the deduction that crossed the threshold. */
+  previousCredits?: number;
   timestamp: Date;
 }
 
 export interface MarketingCreditDepletedEvent {
   userId: string;
+  /** Set when the balance reached 0 through a deduction. */
+  creditsRemaining?: number;
+  /** Set when the balance reached 0 through a deduction. */
+  previousCredits?: number;
   timestamp: Date;
 }
 

@@ -11,6 +11,7 @@ import {
   Wrench,
   Database,
   BrainCircuit,
+  Mail,
 } from "lucide-react";
 
 const navItems = [
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/modes", label: "Modes", icon: Layers },
   { href: "/users", label: "Users", icon: Users },
   { href: "/credit-plans", label: "Credit Plans", icon: CreditCard },
+  { href: "/credit-emails", label: "Credit Emails", icon: Mail },
   { href: "/database-backups", label: "Backups", icon: Database },
 ];
 

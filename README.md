@@ -644,35 +644,6 @@ See `structure.md` for detailed file architecture.
 
 ---
 
-## Interface Languages (i18n)
-
-The web app (`apps/web`) is available in **English, Spanish and Portuguese**. Users switch language from the selector in the top bar, on the sign-in screens, or in **Settings → Language**. The change applies instantly (no reload) and is confirmed with a toast written in the new language.
-
-**How the choice is remembered**
-
-| Layer                       | What            | Why                                                                                                            |
-| --------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------- |
-| `ch_locale` cookie (1 year) | Current browser | Read by the server so the first paint is already in the right language (no flash) and `<html lang>` is correct |
-| `User.preferredLanguage`    | Account (DB)    | Restored on sign-in on any device. Saved via `PATCH /api/v1/auth/preferences`                                  |
-| `Accept-Language`           | Browser         | Used only until the user picks a language                                                                      |
-
-**Code layout** (`apps/web/src/i18n/`)
-
-- `config.ts` — supported locales (shared with the API through `UI_LANGUAGES` in `@creator-hub/shared-types`)
-- `messages/<locale>/<namespace>.ts` — dictionaries. English is the source of truth; other languages are typed against it, so a missing or extra key fails `tsc`
-- `i18n-provider.tsx` — `useI18n()` → `t()`, `rich()` (sentences with links/buttons), `formatDate/Number/RelativeTime/LanguageName`
-- `runtime.ts` — `t()` for non-React code (zustand stores, socket handlers, toasts)
-- `errors.ts` — `localizeError()` maps known backend error messages to translations
-- `legal/` — Privacy, Terms and Cookie policies as structured documents per language
-
-**Adding text:** add the key to `messages/en/<namespace>.ts`, then to `es/` and `pt/`, and use `t("namespace.key")`. Plurals use `key_one` / `key_other` with `t("key", { count })`. New namespace files need `node apps/web/scripts/gen-i18n-index.mjs`. The `src/i18n/__tests__/dictionaries.spec.ts` test checks that every language has the same keys, placeholders and tags.
-
-**Adding a language:** add it to `UI_LANGUAGES` and `LOCALE_META`, copy `messages/en` and `legal/en.ts`, translate, and regenerate the index.
-
-> Content coming from the database (notification bodies, transaction descriptions, generated AI output) is shown as stored. Tool and plan names have translations keyed by ID/slug in `toolCatalog` and `credits.planCatalog`.
-
----
-
 ## Email Verification
 
 ### Verification Flow

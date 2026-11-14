@@ -5,6 +5,12 @@ import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import * as Sentry from "@sentry/node";
+import {
+  CREDIT_STATE_BALANCE,
+  type MarketingCreditDepletedEvent,
+  type MarketingCreditThresholdEvent,
+} from "@creator-hub/shared-types";
+import { getCreditStateReached } from "./credit-state";
 
 @Injectable()
 export class CreditService {
@@ -153,7 +159,46 @@ export class CreditService {
       description,
     });
 
+    // Check thresholds → MarketingEvent (ARCHITECTURE.md §8 Credit Decision Flow).
+    // The debit is atomic, so newBalance + amount is exactly the balance this
+    // debit started from.
+    this.emitCreditState(userId, newBalance + amount, newBalance);
+
     return true;
+  }
+
+  /**
+   * Emits the credit state entered by a successful debit, if any. The
+   * MarketingEventHandler records it and publishes it for the email listener.
+   */
+  private emitCreditState(
+    userId: string,
+    previousCredits: number,
+    creditsRemaining: number,
+  ): void {
+    const state = getCreditStateReached(previousCredits, creditsRemaining);
+    if (!state) return;
+
+    const timestamp = new Date();
+    if (state === "CREDIT_DEPLETED") {
+      const event: MarketingCreditDepletedEvent = {
+        userId,
+        creditsRemaining,
+        previousCredits,
+        timestamp,
+      };
+      this.eventEmitter.emit("marketing.credit_depleted", event);
+      return;
+    }
+
+    const event: MarketingCreditThresholdEvent = {
+      userId,
+      threshold: CREDIT_STATE_BALANCE[state],
+      creditsRemaining,
+      previousCredits,
+      timestamp,
+    };
+    this.eventEmitter.emit("marketing.credit_threshold", event);
   }
 
   async addCredits(

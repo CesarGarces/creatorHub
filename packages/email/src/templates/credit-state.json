@@ -1,0 +1,11 @@
+{
+  "heading": "You're running low on credits",
+  "credits": 50,
+  "depleted": false,
+  "paragraphs": [
+    ["Hi Jane,"],
+    ["Your Creator Hub balance just dropped to 50 credits."]
+  ],
+  "ctaLabel": "Buy credits",
+  "ctaUrl": "https://app.creatorhubplatform.com/credits"
+}

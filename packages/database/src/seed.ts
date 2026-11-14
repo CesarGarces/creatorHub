@@ -140,6 +140,37 @@ async function main() {
     }
   }
 
+  // ──────────────────────────────────────────────
+  // CREDIT EMAILS (only create if not exists - admins edit them in the panel)
+  // ──────────────────────────────────────────────
+  const creditEmailTriggers = [
+    {
+      state: "CREDIT_THRESHOLD_50" as const,
+      subject: "You have {{credits}} credits left",
+      heading: "You're running low on credits",
+      body: "Hi {{name}},\n\nYour Creator Hub balance just dropped to {{credits}} credits. Top up now so your next creation isn't interrupted.",
+      ctaLabel: "Buy credits",
+      ctaUrl: "{{purchaseUrl}}",
+    },
+    {
+      state: "CREDIT_DEPLETED" as const,
+      subject: "You're out of credits",
+      heading: "You've used all your credits",
+      body: "Hi {{name}},\n\nYou don't have enough credits left to keep using your tools. Purchase credits to continue creating.",
+      ctaLabel: "Purchase credits",
+      ctaUrl: "{{purchaseUrl}}",
+    },
+  ];
+
+  for (const trigger of creditEmailTriggers) {
+    const exists = await prisma.creditEmailTrigger.findUnique({
+      where: { state: trigger.state },
+    });
+    if (!exists) {
+      await prisma.creditEmailTrigger.create({ data: trigger });
+    }
+  }
+
   // Seed AI providers (only create if not exists - do NOT update existing)
   const providers = [
     {

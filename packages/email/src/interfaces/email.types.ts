@@ -35,3 +35,25 @@ export interface PurchaseFailedEmailData {
   reason?: string;
   retryUrl?: string;
 }
+
+/** Admin-editable content of a credit state email (CreditEmailTrigger). */
+export interface CreditStateEmailContent {
+  subject: string;
+  heading: string;
+  body: string;
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
+}
+
+/** Values substituted for {{variables}} in {@link CreditStateEmailContent}. */
+export interface CreditStateEmailVariables {
+  name: string;
+  credits: number;
+  threshold: number;
+  purchaseUrl: string;
+}
+
+export interface RenderedEmail {
+  subject: string;
+  html: string;
+}

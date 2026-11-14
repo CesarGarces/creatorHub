@@ -109,6 +109,7 @@ creator-hub/
 │   │   │   │   ├── page.tsx           # Dashboard
 │   │   │   │   ├── providers/         # Provider CRUD
 │   │   │   │   ├── users/             # User CRUD
+│   │   │   │   ├── credit-emails/     # Emails per credit state (50, 0, ...)
 │   │   │   │   └── login/             # Admin login
 │   │   │   ├── components/
 │   │   │   ├── lib/
@@ -128,6 +129,7 @@ creator-hub/
 │       │       ├── ai/             # DB-driven provider metadata
 │       │       ├── admin/
 │       │       ├── webhooks/       # Payment gateway webhooks
+│       │       ├── credit-emails/  # Credit state email listener (credit.state_reached)
 │       │       ├── websocket/      # WebSocket gateway + payment listener
 │       │       └── community-bot/  # Community bot REST + WS bridge
 │       ├── test/
@@ -585,7 +587,7 @@ The `AIController` exposes DB-driven provider metadata:
 │ id (PK)                  │ │ provider                │
 │ userId (FK)              │ │ model                   │
 │ type (CREDIT_THRESHOLD_  │ │ url                     │
-│   75/25/10/5/DEPLETED)  │ │ width, height           │
+│  75/50/25/10/5/DEPLETED) │ │ width, height           │
 │ credits                  │ │ isProModel              │
 │ metadata (JSON)          │ │ credits                 │
 │ createdAt                │ │ createdAt               │
@@ -639,6 +641,8 @@ The `AIController` exposes DB-driven provider metadata:
 - **`UserRole` enum** — `USER`, `ADMIN`
 - **`PaymentGateway` enum** — `MERCADO_PAGO`, `PAYPAL` (used in `CreditTransaction.provider`)
 - **`MarketingEvent`** — Tracks credit threshold events for conversion analytics
+- **`CreditEmailTrigger`** — Admin-managed email per credit state (`state` is a unique `MarketingEventType`)
+- **`CreditEmailLog`** — Credit state email deliveries; unique `dedupeKey` makes each email exactly-once (see §8)
 - **`GeneratedScript`** — Stores AI-generated video scripts with platform, tone, hook type, and thumbnail prompt
 - **`CommunityBotConfig`** — Per-creator bot settings (model, temperature, limits, style toggle)
 - **`CommunityChannel`** — Connected Telegram/WhatsApp channels with encrypted credentials
@@ -717,6 +721,14 @@ PUT    /api/v1/admin/users/:id             # Update user
 POST   /api/v1/admin/users/:id/deactivate  # Soft delete user
 POST   /api/v1/admin/users/:id/activate    # Reactivate user
 
+GET    /api/v1/admin/credit-email-triggers           # Emails per credit state
+POST   /api/v1/admin/credit-email-triggers           # Create email for a state
+PUT    /api/v1/admin/credit-email-triggers/:id       # Update email / toggle isActive
+DELETE /api/v1/admin/credit-email-triggers/:id       # Delete email
+POST   /api/v1/admin/credit-email-triggers/preview   # Render unsaved email (HTML)
+POST   /api/v1/admin/credit-email-triggers/:id/test  # Send test to the admin
+GET    /api/v1/admin/credit-email-logs               # Recent credit state emails
+
 GET    /api/v1/admin/tools           # List all tools (admin)
 POST   /api/v1/admin/tools/toggle    # Enable/disable tool
 ```
@@ -763,7 +775,9 @@ POST   /api/v1/admin/tools/toggle    # Enable/disable tool
 | `tool.used`                  | All tools             | Analytics, Credits    | Track usage              |
 | `credits.deducted`           | CreditService         | Notifications         | Alert user               |
 | `credits.depleted`           | CreditService         | Notifications         | Prompt purchase          |
+| `marketing.credit_threshold` | CreditService         | MarketingEventHandler | Threshold crossed        |
 | `marketing.credit_depleted`  | CreditService         | MarketingEventHandler | Marketing events         |
+| `credit.state_reached`       | MarketingEventHandler | CreditEmailListener   | Credit state email       |
 | `community.channel.status`   | Worker (ChannelMgr)   | API (Listener) → WS   | Channel status updates   |
 | `community.message.received` | Worker (InboundProc)  | API → WS              | Fan message notification |
 | `community.reply.sent`       | Worker (OutboundProc) | API → WS              | Bot reply confirmation   |
@@ -977,11 +991,13 @@ User requests tool usage
     │      ├──► Sufficient? → Deduct (decrement currentCredits)
     │      │                  ├──► Execute tool
     │      │                  ├──► Record CreditTransaction
-    │      │                  └──► Check thresholds → MarketingEvent
+    │      │                  └──► Check thresholds (crossing) → MarketingEvent
+    │      │                         └──► credit.state_reached → Credit state email
     │      │
     │      └──► Insufficient?
     │             ├──► Return error
     │             └──► Emit "marketing.credit_depleted" → MarketingEvent
+    │                    └──► credit.state_reached → Credit state email (once per cycle)
     │
     └──► Return result
 ```
@@ -993,10 +1009,53 @@ Events emitted when credit thresholds are crossed:
 | Event Type            | Threshold  | Purpose           |
 | --------------------- | ---------- | ----------------- |
 | `CREDIT_THRESHOLD_75` | 75 credits | Early engagement  |
+| `CREDIT_THRESHOLD_50` | 50 credits | Low balance email |
 | `CREDIT_THRESHOLD_25` | 25 credits | Nudge to purchase |
 | `CREDIT_THRESHOLD_10` | 10 credits | Urgency           |
 | `CREDIT_THRESHOLD_5`  | 5 credits  | Critical          |
 | `CREDIT_DEPLETED`     | 0 credits  | Upgrade modal     |
+
+The thresholds live in `CREDIT_THRESHOLDS` (`@creator-hub/shared-types`) and map
+1:1 to `MarketingEventType`. Adding a credit state = add the number to
+`CREDIT_THRESHOLDS` + add the enum value (migration).
+
+**Detection** — `CreditService.deduct()` checks thresholds right after the
+atomic debit (SEC-07), using `getCrossedCreditStates()` (`@creator-hub/billing`).
+A state is entered when the balance **crosses** it (from above to at/below),
+so a 3-credit debit from 52 → 49 enters `CREDIT_THRESHOLD_50`. When one debit
+crosses several thresholds, only the most severe state is emitted. A rejected
+debit (insufficient credits) keeps emitting `marketing.credit_depleted`.
+
+### Credit State Emails
+
+Admins attach an email to any credit state in **Admin → Credit Emails**
+(`CreditEmailTrigger`, one per state). Defaults seeded: 50 credits (low balance)
+and `CREDIT_DEPLETED` (purchase credits).
+
+```
+CreditService.deduct()                         (API or community-worker)
+    └──► EventEmitter2 "marketing.credit_threshold" | "marketing.credit_depleted"
+            └──► MarketingEventHandler
+                    ├──► MarketingEvent row (+ Notification when depleted)
+                    └──► Redis "credit.state_reached" (DomainEventPublisher)
+                            └──► CreditEmailListenerService (apps/api)
+                                    └──► CreditEmailService
+                                            ├──► active trigger for the state?
+                                            ├──► claim CreditEmailLog (unique dedupeKey)
+                                            └──► EmailService → Resend (credit-state.hbs)
+```
+
+| Decision                                   | Rationale                                                                                                                                                                                                            |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Redis channel, not in-process event        | The community worker also deducts credits; same pattern as `payment:success`                                                                                                                                         |
+| One email per state per **credit cycle**   | `dedupeKey = {userId}:{state}:{latest credit-adding CreditTransaction id}`. Unique index → exactly-once across API replicas, Redis redelivery and repeated rejected debits. The email re-arms after a purchase/bonus |
+| Most severe state with an active email     | 60 → 20 enters `CREDIT_THRESHOLD_25`; if only the 50 email exists, it is sent                                                                                                                                        |
+| FAILED deliveries can be re-claimed        | A later event for the same cycle retries a failed send                                                                                                                                                               |
+| Admin text is never compiled by Handlebars | Only `{{name}}`, `{{credits}}`, `{{threshold}}`, `{{purchaseUrl}}` are substituted; the fixed template escapes all values. Button links must be http(s)                                                              |
+
+Known limitation: admin credit edits (`PUT /admin/users/:id`) set
+`currentCredits` directly without a `CreditTransaction`, so they do not start a
+new credit cycle.
 
 ### Credit Costs
 
@@ -1024,7 +1083,8 @@ Admins can manage providers and users via `AdminModule`:
 AdminController
   ├── AdminGuard (role === ADMIN)
   ├── Providers CRUD
-  └── Users CRUD (soft delete via isActive)
+  ├── Users CRUD (soft delete via isActive)
+  └── Credit Emails CRUD (email per credit state, preview, test send, delivery log)
 ```
 
 User credits are **editable** in admin. Soft delete prevents accidental data loss and preserves historical records.
@@ -1453,9 +1513,11 @@ packages/email/src/
 ├── providers/
 │   └── resend/
 │       └── resend.provider.ts     # Resend SDK adapter
+├── credit-state-content.ts        # {{variable}} substitution for admin-written credit emails
 └── templates/
     ├── template.helper.ts         # Handlebars renderer (with cache)
-    └── verification.hbs           # Verification email template
+    ├── verification.hbs           # Verification email template
+    └── credit-state.hbs           # Credit state email (50 credits left, out of credits, ...)
 ```
 
 ### Adding a New Email Provider
@@ -2895,6 +2957,8 @@ export class YourToolService {
 | **S3-compatible storage**        | MinIO for dev, AWS S3 for prod — same interface                                                                                                   |
 | **Admin Panel as separate app**  | `apps/admin` isolates admin UI, allows independent deploy and stricter access controls                                                            |
 | **Soft delete for users**        | Prevents data loss, preserves analytics and audit trails                                                                                          |
+| **Credit states on crossing**    | Thresholds checked in `CreditService.deduct()` (single debit path for all tools) by crossing, not exact match                                     |
+| **Credit emails once per cycle** | Deterministic `dedupeKey` + unique index (like SEC-06): one email per state until the user gets credits again                                     |
 | **Provider-agnostic email**      | `EmailProvider` abstract class — swap Resend for AWS SES by implementing one interface                                                            |
 | **Verification code on User**    | Short-lived (10min), single user, no extra joins needed vs separate VerificationToken model                                                       |
 | **JWT includes emailVerified**   | Avoids DB call in `EmailVerifiedGuard`                                                                                                            |

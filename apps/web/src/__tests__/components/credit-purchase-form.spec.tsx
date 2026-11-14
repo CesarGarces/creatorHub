@@ -96,7 +96,7 @@ describe("CreditPurchaseForm (credits page)", () => {
       renderWithProviders(<CreditsPage />);
 
       expect(await screen.findByText("Starter pack")).toBeTruthy();
-      expect(screen.getByText("+1000 credits")).toBeTruthy();
+      expect(screen.getByText("+1,000 credits")).toBeTruthy();
       expect(screen.getByText("-10 credits")).toBeTruthy();
       // A transaction without a description shows its type.
       expect(screen.getByText("USAGE")).toBeTruthy();

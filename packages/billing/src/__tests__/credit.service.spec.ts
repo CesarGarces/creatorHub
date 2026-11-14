@@ -175,6 +175,64 @@ describe("CreditService", () => {
       );
     });
 
+    describe("credit states (threshold check after the debit)", () => {
+      const debit = async (before: number, amount: number) => {
+        (prisma.user.findUnique as any)
+          .mockResolvedValueOnce({ id: "user-1", currentCredits: before })
+          .mockResolvedValueOnce({ currentCredits: before - amount });
+        (prisma.user.updateMany as any).mockResolvedValue({ count: 1 });
+        (prisma.creditTransaction.create as any).mockResolvedValue({});
+        return service.deduct("user-1", amount);
+      };
+
+      it("emits marketing.credit_threshold for 50 when the balance crosses 50", async () => {
+        expect(await debit(52, 3)).toBe(true);
+
+        expect(mockEventEmitter.emit).toHaveBeenCalledTimes(1);
+        expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+          "marketing.credit_threshold",
+          {
+            userId: "user-1",
+            threshold: 50,
+            creditsRemaining: 49,
+            previousCredits: 52,
+            timestamp: expect.any(Date),
+          },
+        );
+      });
+
+      it("emits marketing.credit_depleted when the balance reaches 0", async () => {
+        expect(await debit(10, 10)).toBe(true);
+
+        expect(mockEventEmitter.emit).toHaveBeenCalledTimes(1);
+        expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+          "marketing.credit_depleted",
+          {
+            userId: "user-1",
+            creditsRemaining: 0,
+            previousCredits: 10,
+            timestamp: expect.any(Date),
+          },
+        );
+        // Depletion through a successful debit is not a failed debit.
+        expect(mockQueue.add).not.toHaveBeenCalled();
+      });
+
+      it("emits nothing when no threshold is crossed", async () => {
+        expect(await debit(45, 5)).toBe(true);
+        expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+      });
+
+      it("emits only the most severe state when several are crossed", async () => {
+        await debit(60, 40);
+        expect(mockEventEmitter.emit).toHaveBeenCalledTimes(1);
+        expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+          "marketing.credit_threshold",
+          expect.objectContaining({ threshold: 25, creditsRemaining: 20 }),
+        );
+      });
+    });
+
     it("should return false when user does not exist", async () => {
       (prisma.user.findUnique as any).mockResolvedValue(null);
 

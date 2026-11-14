@@ -107,7 +107,7 @@ describe("XAccountCard", () => {
     await renderCard();
 
     expect(screen.getByText("@creator • The Creator")).toBeTruthy();
-    expect(screen.getByText("ACTIVE")).toBeTruthy();
+    expect(screen.getByText("Active")).toBeTruthy();
     expect(screen.queryByText("Reconnect")).toBeNull();
   });
 
@@ -144,7 +144,7 @@ describe("XAccountCard", () => {
       .mockResolvedValueOnce({ data: [xAccount("ACTIVE")] });
     post.mockResolvedValue({});
     await renderCard();
-    expect(screen.getByText("EXPIRED")).toBeTruthy();
+    expect(screen.getByText("Expired")).toBeTruthy();
 
     await act(async () => {
       fireEvent.click(screen.getByText("Reconnect"));
@@ -152,7 +152,7 @@ describe("XAccountCard", () => {
 
     expect(post).toHaveBeenCalledWith("/social/accounts/acc-1/refresh");
     expect(toast.success).toHaveBeenCalledWith("Tokens refreshed successfully");
-    expect(screen.getByText("ACTIVE")).toBeTruthy();
+    expect(screen.getByText("Active")).toBeTruthy();
   });
 
   it("reports a failed token refresh", async () => {

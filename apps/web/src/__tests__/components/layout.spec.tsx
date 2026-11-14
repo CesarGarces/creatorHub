@@ -42,8 +42,8 @@ describe("Sidebar", () => {
   it("groups navigation into sections", () => {
     render(<Sidebar />);
 
-    for (const section of ["DASHBOARD", "WORKSPACE", "COMMUNITY", "ACCOUNT"]) {
-      expect(screen.getByText(section)).toBeTruthy();
+    for (const section of ["Dashboard", "Workspace", "Community", "Account"]) {
+      expect(screen.getAllByText(section).length).toBeGreaterThan(0);
     }
     expect(
       screen.getByText("Community Bot").closest("a")!.getAttribute("href"),
@@ -54,18 +54,18 @@ describe("Sidebar", () => {
     navigationState.pathname = "/tools/thumbnail-generator";
     render(<Sidebar />);
 
-    expect(screen.getByText("Tools").closest("a")!.className).toContain(
+    expect(screen.getByRole("link", { name: "Tools" }).className).toContain(
       "text-primary",
     );
-    expect(screen.getByText("Dashboard").closest("a")!.className).not.toContain(
-      "text-primary",
-    );
+    expect(
+      screen.getByRole("link", { name: "Dashboard" }).className,
+    ).not.toContain("text-primary");
   });
 
   it("does not treat a route prefix as active", () => {
     navigationState.pathname = "/toolsettings";
     render(<Sidebar />);
-    expect(screen.getByText("Tools").closest("a")!.className).not.toContain(
+    expect(screen.getByRole("link", { name: "Tools" }).className).not.toContain(
       "text-primary",
     );
   });
@@ -131,9 +131,7 @@ describe("TopBar", () => {
 
   /** Opens the notifications popover (the bell is the first header button). */
   function openNotifications() {
-    fireEvent.click(
-      document.querySelector("header button") as HTMLButtonElement,
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Open notifications" }));
     expect(screen.getByText("Notifications")).toBeTruthy();
   }
 
@@ -360,7 +358,7 @@ describe("DashboardLayout", () => {
     );
 
     expect(screen.getByRole("main").textContent).toBe("page content");
-    expect(screen.getByText("Dashboard")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeTruthy();
     expect(screen.getByTestId("chat-widget")).toBeTruthy();
   });
 });

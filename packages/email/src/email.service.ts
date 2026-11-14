@@ -1,11 +1,15 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { EmailProvider } from "./email-provider.interface";
 import { renderTemplate } from "./templates/template.helper";
+import { buildCreditStateContent } from "./credit-state-content";
 import type {
   VerificationEmailData,
   PasswordResetEmailData,
   PurchaseSuccessEmailData,
   PurchaseFailedEmailData,
+  CreditStateEmailContent,
+  CreditStateEmailVariables,
+  RenderedEmail,
 } from "./interfaces/email.types";
 
 @Injectable()
@@ -114,5 +118,40 @@ export class EmailService {
     }
 
     return { success: result.success, error: result.error };
+  }
+
+  /** Renders a credit state email (also used by the admin preview). */
+  renderCreditStateEmail(
+    content: CreditStateEmailContent,
+    vars: CreditStateEmailVariables,
+  ): RenderedEmail {
+    const rendered = buildCreditStateContent(content, vars);
+    const html = renderTemplate("credit-state", {
+      heading: rendered.heading,
+      paragraphs: rendered.paragraphs,
+      credits: vars.credits,
+      depleted: vars.credits <= 0,
+      ctaLabel: rendered.ctaLabel,
+      ctaUrl: rendered.ctaUrl,
+    });
+    return { subject: rendered.subject, html };
+  }
+
+  async sendCreditStateEmail(
+    to: string,
+    content: CreditStateEmailContent,
+    vars: CreditStateEmailVariables,
+  ): Promise<{ success: boolean; subject: string; error?: string }> {
+    const { subject, html } = this.renderCreditStateEmail(content, vars);
+
+    const result = await this.provider.send({ to, subject, html });
+
+    if (!result.success) {
+      this.logger.error(`Credit state email failed for ${to}`, {
+        error: result.error,
+      });
+    }
+
+    return { success: result.success, subject, error: result.error };
   }
 }

@@ -44,7 +44,7 @@ describe("ShareModal", () => {
   it("shows the public share link for the asset", () => {
     renderModal();
     expect(
-      (screen.getByLabelText("Share link") as HTMLInputElement).value,
+      (screen.getByLabelText("Share Link") as HTMLInputElement).value,
     ).toBe(SHARE_URL);
   });
 

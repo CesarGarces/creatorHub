@@ -59,7 +59,7 @@ describe("CheckoutModal", () => {
     );
 
     expect(mp.initMercadoPago).toHaveBeenCalledWith("TEST-key", {
-      locale: "es-CO",
+      locale: "en-US",
     });
     expect(screen.getByText("Starter")).toBeTruthy();
     expect(screen.getByText("$9.99")).toBeTruthy();

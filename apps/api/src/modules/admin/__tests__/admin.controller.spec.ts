@@ -28,10 +28,23 @@ describe("AdminController", () => {
     getBackupDownloadUrl: vi.fn(),
   };
   const modelSyncService = { sync: vi.fn() };
+  const creditEmailTriggerService = {
+    findAll: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    findLogs: vi.fn(),
+  };
+  const creditEmailService = {
+    preview: vi.fn(),
+    sendTest: vi.fn(),
+  };
   const controller = new AdminController(
     adminService as never,
     backupService as never,
     modelSyncService as never,
+    creditEmailTriggerService as never,
+    creditEmailService as never,
   );
   const actor = { id: "admin-1", role: "ADMIN" };
 

@@ -74,7 +74,7 @@ describe("TweetActionCard", () => {
   });
 
   it("keeps the editor open when saving fails", async () => {
-    patch.mockRejectedValue(new Error("500"));
+    patch.mockRejectedValue(new Error("Request failed (500)"));
     renderCard();
     editTo("Will fail");
 

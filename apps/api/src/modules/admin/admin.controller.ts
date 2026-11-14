@@ -13,6 +13,7 @@ import {
   ParseBoolPipe,
   ParseEnumPipe,
   ValidationPipe,
+  NotFoundException,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "@creator-hub/auth";
 import { CurrentUser } from "@creator-hub/auth";
@@ -36,6 +37,13 @@ import {
   UpdateCreditPlanDto,
 } from "./dto/credit-plan.dto";
 import { CreateModeDto, UpdateModeDto } from "./dto/mode.dto";
+import {
+  CreateCreditEmailTriggerDto,
+  PreviewCreditEmailDto,
+  UpdateCreditEmailTriggerDto,
+} from "./dto/credit-email-trigger.dto";
+import { CreditEmailTriggerService } from "./credit-email-trigger.service";
+import { CreditEmailService } from "../credit-emails/credit-email.service";
 
 @Controller("admin")
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -44,6 +52,8 @@ export class AdminController {
     private readonly adminService: AdminService,
     private readonly backupService: DatabaseBackupService,
     private readonly modelSyncService: ModelSyncService,
+    private readonly creditEmailTriggerService: CreditEmailTriggerService,
+    private readonly creditEmailService: CreditEmailService,
   ) {}
 
   // ──────────────────────────────────────────────
@@ -225,6 +235,57 @@ export class AdminController {
   @Delete("credit-plans/:id")
   async deleteCreditPlan(@Param("id") id: string): Promise<any> {
     return this.adminService.deleteCreditPlan(id);
+  }
+
+  // ──────────────────────────────────────────────
+  // Credit Emails (email sent when a user enters a credit state)
+  // ──────────────────────────────────────────────
+
+  @Get("credit-email-triggers")
+  async getCreditEmailTriggers() {
+    return this.creditEmailTriggerService.findAll();
+  }
+
+  @Post("credit-email-triggers")
+  async createCreditEmailTrigger(
+    @Body(ValidationPipe) dto: CreateCreditEmailTriggerDto,
+  ) {
+    return this.creditEmailTriggerService.create(dto);
+  }
+
+  @Post("credit-email-triggers/preview")
+  previewCreditEmail(@Body(ValidationPipe) dto: PreviewCreditEmailDto) {
+    return this.creditEmailService.preview(dto, dto.state);
+  }
+
+  @Put("credit-email-triggers/:id")
+  async updateCreditEmailTrigger(
+    @Param("id") id: string,
+    @Body(ValidationPipe) dto: UpdateCreditEmailTriggerDto,
+  ) {
+    return this.creditEmailTriggerService.update(id, dto);
+  }
+
+  @Delete("credit-email-triggers/:id")
+  async deleteCreditEmailTrigger(@Param("id") id: string) {
+    return this.creditEmailTriggerService.delete(id);
+  }
+
+  @Post("credit-email-triggers/:id/test")
+  async sendTestCreditEmail(
+    @Param("id") id: string,
+    @CurrentUser("id") adminUserId: string,
+  ) {
+    const log = await this.creditEmailService.sendTest(id, adminUserId);
+    if (!log) throw new NotFoundException("Credit email not found");
+    return log;
+  }
+
+  @Get("credit-email-logs")
+  async getCreditEmailLogs(
+    @Query("limit", new DefaultValuePipe(50), ParseIntPipe) limit: number,
+  ) {
+    return this.creditEmailTriggerService.findLogs(limit);
   }
 
   // ──────────────────────────────────────────────

@@ -29,6 +29,7 @@ function mockModel(name: string) {
       const key =
         (data.id as string) ??
         (data.slug as string) ??
+        (data.state as string) ??
         JSON.stringify({
           providerSlug: data.providerSlug,
           modelId: data.modelId,

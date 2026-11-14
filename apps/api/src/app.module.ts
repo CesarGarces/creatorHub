@@ -36,6 +36,7 @@ import { ThumbnailListenerModule } from "./modules/thumbnail-listener/thumbnail-
 import { TranslationListenerModule } from "./modules/translation-listener/translation-listener.module";
 import { PaymentListenerModule } from "./modules/payment-listener/payment-listener.module";
 import { PaymentEmailListenerModule } from "./modules/payment-email-listener/payment-email-listener.module";
+import { CreditEmailsModule } from "./modules/credit-emails/credit-emails.module";
 import { VideoListenerModule } from "./modules/video-listener/video-listener.module";
 import { ChatModule } from "./modules/chat/chat.module";
 import { UserStyleModule } from "./modules/user-style/user-style.module";
@@ -114,6 +115,7 @@ const throttlerStorage = process.env.REDIS_URL
     TranslationListenerModule,
     PaymentListenerModule,
     PaymentEmailListenerModule,
+    CreditEmailsModule,
     VideoListenerModule,
 
     // Chat
