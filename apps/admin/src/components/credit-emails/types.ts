@@ -3,6 +3,7 @@ import {
   CREDIT_STATE_BALANCE,
   type CreditState,
 } from "@creator-hub/shared-types";
+import { useI18n } from "@/i18n/i18n-provider";
 
 export interface CreditEmailTrigger {
   id: string;
@@ -39,10 +40,13 @@ export interface CreditEmailInput {
   isActive: boolean;
 }
 
-export function creditStateLabel(state: CreditState): string {
-  return state === "CREDIT_DEPLETED"
-    ? "0 credits (out of credits)"
-    : `${CREDIT_STATE_BALANCE[state]} credits`;
+/** Localized label for a credit state ("50 credits", "0 credits (out of credits)"). */
+export function useCreditStateLabel() {
+  const { t } = useI18n();
+  return (state: CreditState): string =>
+    state === "CREDIT_DEPLETED"
+      ? t("creditEmails.depleted")
+      : t("common.credits", { count: CREDIT_STATE_BALANCE[state] });
 }
 
 /** Message from a NestJS error response (validation errors come as an array). */

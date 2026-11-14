@@ -6,19 +6,27 @@ import { Switch } from "@creator-hub/ui";
 import type { CreditState } from "@creator-hub/shared-types";
 import api from "@/lib/api";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useI18n } from "@/i18n/i18n-provider";
+import type { TranslationKey } from "@/i18n/translate";
 import { EmailPreview } from "./email-preview";
 import {
   apiErrorMessage,
-  creditStateLabel,
+  useCreditStateLabel,
   type CreditEmailInput,
   type CreditEmailTrigger,
 } from "./types";
 
-const VARIABLES = [
-  { key: "name", description: "User's name (or email)" },
-  { key: "credits", description: "Credits remaining" },
-  { key: "threshold", description: "Credit level of this email" },
-  { key: "purchaseUrl", description: "Credits purchase page" },
+const VARIABLES: { key: string; descriptionKey: TranslationKey }[] = [
+  { key: "name", descriptionKey: "creditEmails.editor.variables.name" },
+  { key: "credits", descriptionKey: "creditEmails.editor.variables.credits" },
+  {
+    key: "threshold",
+    descriptionKey: "creditEmails.editor.variables.threshold",
+  },
+  {
+    key: "purchaseUrl",
+    descriptionKey: "creditEmails.editor.variables.purchaseUrl",
+  },
 ];
 
 const inputClass =
@@ -61,6 +69,8 @@ export function CreditEmailEditor({
   onCancel: () => void;
   isSaving: boolean;
 }) {
+  const { t } = useI18n();
+  const stateLabel = useCreditStateLabel();
   const [form, setForm] = useState<CreditEmailInput>(() =>
     trigger
       ? {
@@ -145,11 +155,7 @@ export function CreditEmailEditor({
     <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-2">
       <div className="space-y-4">
         <p className="text-sm text-text-muted">
-          Sent once when a user&apos;s balance drops to{" "}
-          <span className="font-medium text-text">
-            {creditStateLabel(state)}
-          </span>
-          .
+          {t("creditEmails.editor.sentOnce", { state: stateLabel(state) })}
         </p>
 
         <div>
@@ -157,7 +163,7 @@ export function CreditEmailEditor({
             htmlFor="subject"
             className="mb-1 block text-sm font-medium text-text"
           >
-            Subject
+            {t("creditEmails.editor.subject")}
           </label>
           <input
             id="subject"
@@ -176,7 +182,7 @@ export function CreditEmailEditor({
             htmlFor="heading"
             className="mb-1 block text-sm font-medium text-text"
           >
-            Heading
+            {t("creditEmails.editor.heading")}
           </label>
           <input
             id="heading"
@@ -195,7 +201,7 @@ export function CreditEmailEditor({
             htmlFor="body"
             className="mb-1 block text-sm font-medium text-text"
           >
-            Message
+            {t("creditEmails.editor.message")}
           </label>
           <textarea
             id="body"
@@ -209,14 +215,14 @@ export function CreditEmailEditor({
             className={`${inputClass} resize-y`}
           />
           <p className="mt-1 text-xs text-text-dim">
-            Leave an empty line between paragraphs. Insert into the {focused}:
+            {t("creditEmails.editor.variablesHint")}
           </p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {VARIABLES.map((v) => (
               <button
                 key={v.key}
                 type="button"
-                title={v.description}
+                title={t(v.descriptionKey)}
                 onClick={() => insertVariable(v.key)}
                 className="rounded border border-dashed border-primary/40 bg-primary/10 px-1.5 py-0.5 font-mono text-xs text-primary hover:bg-primary/20"
               >
@@ -232,13 +238,13 @@ export function CreditEmailEditor({
               htmlFor="ctaLabel"
               className="mb-1 block text-sm font-medium text-text"
             >
-              Button text
+              {t("creditEmails.editor.buttonText")}
             </label>
             <input
               id="ctaLabel"
               value={form.ctaLabel}
               onChange={set("ctaLabel")}
-              placeholder="Purchase credits"
+              placeholder={t("creditEmails.editor.buttonTextPlaceholder")}
               maxLength={60}
               className={inputClass}
             />
@@ -248,7 +254,7 @@ export function CreditEmailEditor({
               htmlFor="ctaUrl"
               className="mb-1 block text-sm font-medium text-text"
             >
-              Button link
+              {t("creditEmails.editor.buttonLink")}
             </label>
             <input
               id="ctaUrl"
@@ -261,8 +267,7 @@ export function CreditEmailEditor({
           </div>
         </div>
         <p className="-mt-2 text-xs text-text-dim">
-          Leave the link empty to use the credits purchase page. Clear the
-          button text to hide the button.
+          {t("creditEmails.editor.buttonHint")}
         </p>
 
         <div className="flex items-center gap-3">
@@ -272,7 +277,9 @@ export function CreditEmailEditor({
               setForm((f) => ({ ...f, isActive: checked }))
             }
           />
-          <span className="text-sm text-text-muted">Active</span>
+          <span className="text-sm text-text-muted">
+            {t("creditEmails.editor.active")}
+          </span>
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
@@ -282,20 +289,26 @@ export function CreditEmailEditor({
             disabled={isSaving}
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-surface-elevated disabled:opacity-50"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
             disabled={isSaving}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
-            {isSaving ? "Saving..." : trigger ? "Save Changes" : "Create Email"}
+            {isSaving
+              ? t("common.saving")
+              : trigger
+                ? t("common.saveChanges")
+                : t("creditEmails.editor.create")}
           </button>
         </div>
       </div>
 
       <div>
-        <p className="mb-2 text-sm font-medium text-text">Preview</p>
+        <p className="mb-2 text-sm font-medium text-text">
+          {t("creditEmails.editor.preview")}
+        </p>
         {canPreview ? (
           <EmailPreview
             subject={preview.data?.subject}
@@ -304,18 +317,20 @@ export function CreditEmailEditor({
             isRefreshing={preview.isFetching && !preview.isLoading}
             error={
               preview.error
-                ? apiErrorMessage(preview.error, "Preview unavailable")
+                ? apiErrorMessage(
+                    preview.error,
+                    t("creditEmails.editor.previewUnavailable"),
+                  )
                 : null
             }
           />
         ) : (
           <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-dashed border-border p-6 text-center text-sm text-text-dim">
-            Fill in the subject, heading and message to see a preview
+            {t("creditEmails.editor.previewPlaceholder")}
           </div>
         )}
         <p className="mt-2 text-xs text-text-dim">
-          Sample user &quot;Jane Doe&quot;. Variables are filled with example
-          values.
+          {t("creditEmails.editor.previewSample")}
         </p>
       </div>
     </form>

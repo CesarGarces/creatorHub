@@ -7,10 +7,12 @@ import { Info, Mail, Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { ActionConfirmDialog, Badge, Skeleton, Switch } from "@creator-hub/ui";
 import { CREDIT_STATES, type CreditState } from "@creator-hub/shared-types";
 import api from "@/lib/api";
+import { useI18n } from "@/i18n/i18n-provider";
+import type { TranslationKey } from "@/i18n/translate";
 import { CreditEmailEditor } from "@/components/credit-emails/credit-email-editor";
 import {
   apiErrorMessage,
-  creditStateLabel,
+  useCreditStateLabel,
   type CreditEmailInput,
   type CreditEmailLog,
   type CreditEmailTrigger,
@@ -27,14 +29,16 @@ function toPayload(data: CreditEmailInput) {
 
 const STATUS_BADGE: Record<
   CreditEmailLog["status"],
-  { label: string; variant: "secondary" | "error" | "warning" }
+  { labelKey: TranslationKey; variant: "secondary" | "error" | "warning" }
 > = {
-  SENT: { label: "Sent", variant: "secondary" },
-  FAILED: { label: "Failed", variant: "error" },
-  PENDING: { label: "Sending", variant: "warning" },
+  SENT: { labelKey: "creditEmails.statuses.SENT", variant: "secondary" },
+  FAILED: { labelKey: "creditEmails.statuses.FAILED", variant: "error" },
+  PENDING: { labelKey: "creditEmails.statuses.PENDING", variant: "warning" },
 };
 
 export default function CreditEmailsPage() {
+  const { t } = useI18n();
+  const stateLabel = useCreditStateLabel();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<{
     state: CreditState;
@@ -65,11 +69,13 @@ export default function CreditEmailsPage() {
       api.post("/admin/credit-email-triggers", toPayload(data)),
     onSuccess: () => {
       invalidate();
-      toast.success("Email created");
+      toast.success(t("creditEmails.toasts.created"));
       setEditing(null);
     },
     onError: (error) =>
-      toast.error(apiErrorMessage(error, "Failed to create email")),
+      toast.error(
+        apiErrorMessage(error, t("creditEmails.toasts.createFailed")),
+      ),
   });
 
   const updateMutation = useMutation({
@@ -82,11 +88,13 @@ export default function CreditEmailsPage() {
     }) => api.put(`/admin/credit-email-triggers/${id}`, data),
     onSuccess: () => {
       invalidate();
-      toast.success("Email updated");
+      toast.success(t("creditEmails.toasts.updated"));
       setEditing(null);
     },
     onError: (error) =>
-      toast.error(apiErrorMessage(error, "Failed to update email")),
+      toast.error(
+        apiErrorMessage(error, t("creditEmails.toasts.updateFailed")),
+      ),
   });
 
   const deleteMutation = useMutation({
@@ -94,10 +102,12 @@ export default function CreditEmailsPage() {
       api.delete(`/admin/credit-email-triggers/${id}`),
     onSuccess: () => {
       invalidate();
-      toast.success("Email deleted");
+      toast.success(t("creditEmails.toasts.deleted"));
     },
     onError: (error) =>
-      toast.error(apiErrorMessage(error, "Failed to delete email")),
+      toast.error(
+        apiErrorMessage(error, t("creditEmails.toasts.deleteFailed")),
+      ),
   });
 
   const testMutation = useMutation({
@@ -110,11 +120,18 @@ export default function CreditEmailsPage() {
     onSuccess: (log) => {
       queryClient.invalidateQueries({ queryKey: ["credit-email-logs"] });
       if (log.status === "SENT")
-        toast.success(`Test email sent to ${log.email}`);
-      else toast.error(`Test email failed: ${log.error ?? "unknown error"}`);
+        toast.success(t("creditEmails.toasts.testSent", { email: log.email }));
+      else
+        toast.error(
+          t("creditEmails.toasts.testFailed", {
+            error: log.error ?? t("creditEmails.toasts.testFailedGeneric"),
+          }),
+        );
     },
     onError: (error) =>
-      toast.error(apiErrorMessage(error, "Failed to send test email")),
+      toast.error(
+        apiErrorMessage(error, t("creditEmails.toasts.testFailedGeneric")),
+      ),
   });
 
   const triggerFor = (state: CreditState) =>
@@ -132,25 +149,19 @@ export default function CreditEmailsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text">Credit Emails</h1>
+        <h1 className="text-2xl font-bold text-text">
+          {t("creditEmails.title")}
+        </h1>
         <p className="mt-1 text-sm text-text-muted">
-          Emails sent automatically when a user&apos;s credit balance drops to a
-          credit level
+          {t("creditEmails.subtitle")}
         </p>
       </div>
 
       <div className="flex gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-text-muted">
         <Info size={18} className="mt-0.5 shrink-0 text-primary" />
         <div className="space-y-1">
-          <p>
-            Each email is sent once when a user&apos;s balance reaches its
-            level. The user gets it again only after they receive more credits
-            (purchase, bonus, subscription).
-          </p>
-          <p>
-            If one usage skips several levels (e.g. 60 → 0), only the email for
-            the lowest level reached is sent.
-          </p>
+          <p>{t("creditEmails.infoOnce")}</p>
+          <p>{t("creditEmails.infoSkip")}</p>
         </div>
       </div>
 
@@ -158,10 +169,18 @@ export default function CreditEmailsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-elevated/50 text-left text-text-muted">
-              <th className="px-4 py-3 font-medium">When credits reach</th>
-              <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Active</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-4 py-3 font-medium">
+                {t("creditEmails.columns.whenCreditsReach")}
+              </th>
+              <th className="px-4 py-3 font-medium">
+                {t("creditEmails.columns.email")}
+              </th>
+              <th className="px-4 py-3 font-medium">
+                {t("creditEmails.columns.active")}
+              </th>
+              <th className="px-4 py-3 text-right font-medium">
+                {t("creditEmails.columns.actions")}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -179,7 +198,7 @@ export default function CreditEmailsPage() {
                     <tr key={state} className="hover:bg-surface-elevated/30">
                       <td className="px-4 py-3">
                         <span className="font-semibold tabular-nums text-text">
-                          {creditStateLabel(state)}
+                          {stateLabel(state)}
                         </span>
                         <p className="font-mono text-xs text-text-dim">
                           {state}
@@ -189,14 +208,18 @@ export default function CreditEmailsPage() {
                         {trigger ? (
                           <span className="text-text">{trigger.subject}</span>
                         ) : (
-                          <span className="text-text-dim">No email</span>
+                          <span className="text-text-dim">
+                            {t("creditEmails.noEmail")}
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         {trigger && (
                           <Switch
                             checked={trigger.isActive}
-                            aria-label={`Toggle email for ${creditStateLabel(state)}`}
+                            aria-label={t("creditEmails.toggleAria", {
+                              state: stateLabel(state),
+                            })}
                             onCheckedChange={(checked: boolean) =>
                               updateMutation.mutate({
                                 id: trigger.id,
@@ -214,11 +237,11 @@ export default function CreditEmailsPage() {
                                 type="button"
                                 onClick={() => testMutation.mutate(trigger.id)}
                                 disabled={testMutation.isPending}
-                                title="Send a test to your admin email"
+                                title={t("creditEmails.testTitle")}
                                 className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:bg-surface-elevated disabled:opacity-50"
                               >
                                 <Send size={14} />
-                                Test
+                                {t("creditEmails.test")}
                               </button>
                               <button
                                 type="button"
@@ -226,12 +249,14 @@ export default function CreditEmailsPage() {
                                 className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:bg-surface-elevated"
                               >
                                 <Pencil size={14} />
-                                Edit
+                                {t("common.edit")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setDeleting(trigger)}
-                                aria-label={`Delete email for ${creditStateLabel(state)}`}
+                                aria-label={t("creditEmails.deleteAria", {
+                                  state: stateLabel(state),
+                                })}
                                 className="flex items-center rounded-lg border border-border px-2.5 py-1.5 text-red-500 transition-colors hover:bg-red-500/10"
                               >
                                 <Trash2 size={14} />
@@ -246,7 +271,7 @@ export default function CreditEmailsPage() {
                               className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90"
                             >
                               <Plus size={14} />
-                              Create email
+                              {t("creditEmails.createEmail")}
                             </button>
                           )}
                         </div>
@@ -259,16 +284,28 @@ export default function CreditEmailsPage() {
       </div>
 
       <div>
-        <h2 className="mb-3 text-lg font-semibold text-text">Recent emails</h2>
+        <h2 className="mb-3 text-lg font-semibold text-text">
+          {t("creditEmails.recent.title")}
+        </h2>
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-elevated/50 text-left text-text-muted">
-                <th className="px-4 py-3 font-medium">Date</th>
-                <th className="px-4 py-3 font-medium">User</th>
-                <th className="px-4 py-3 font-medium">Credit level</th>
-                <th className="px-4 py-3 font-medium">Subject</th>
-                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">
+                  {t("creditEmails.recent.date")}
+                </th>
+                <th className="px-4 py-3 font-medium">
+                  {t("creditEmails.recent.user")}
+                </th>
+                <th className="px-4 py-3 font-medium">
+                  {t("creditEmails.recent.creditLevel")}
+                </th>
+                <th className="px-4 py-3 font-medium">
+                  {t("creditEmails.recent.subject")}
+                </th>
+                <th className="px-4 py-3 font-medium">
+                  {t("creditEmails.recent.status")}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -285,7 +322,7 @@ export default function CreditEmailsPage() {
                     className="px-4 py-8 text-center text-text-dim"
                   >
                     <Mail className="mx-auto mb-2 h-5 w-5" />
-                    No credit emails sent yet
+                    {t("creditEmails.recent.empty")}
                   </td>
                 </tr>
               ) : (
@@ -296,9 +333,11 @@ export default function CreditEmailsPage() {
                     </td>
                     <td className="px-4 py-3 text-text">{log.email}</td>
                     <td className="px-4 py-3 text-text-muted">
-                      {creditStateLabel(log.state)}
+                      {stateLabel(log.state)}
                       <span className="ml-1 text-xs text-text-dim">
-                        ({log.credits} left)
+                        {t("creditEmails.recent.creditsLeft", {
+                          credits: log.credits,
+                        })}
                       </span>
                     </td>
                     <td className="max-w-xs truncate px-4 py-3 text-text-muted">
@@ -313,11 +352,11 @@ export default function CreditEmailsPage() {
                           variant={STATUS_BADGE[log.status].variant}
                           size="sm"
                         >
-                          {STATUS_BADGE[log.status].label}
+                          {t(STATUS_BADGE[log.status].labelKey)}
                         </Badge>
                         {log.isTest && (
                           <Badge variant="outline" size="sm">
-                            Test
+                            {t("creditEmails.recent.test")}
                           </Badge>
                         )}
                       </div>
@@ -334,8 +373,12 @@ export default function CreditEmailsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-xl border border-border bg-surface p-6">
             <h2 className="mb-4 text-lg font-semibold text-text">
-              {editing.trigger ? "Edit" : "Create"} email —{" "}
-              {creditStateLabel(editing.state)}
+              {t(
+                editing.trigger
+                  ? "creditEmails.modal.editTitle"
+                  : "creditEmails.modal.createTitle",
+                { state: stateLabel(editing.state) },
+              )}
             </h2>
             <CreditEmailEditor
               state={editing.state}
@@ -355,14 +398,16 @@ export default function CreditEmailsPage() {
           if (deleting) deleteMutation.mutate(deleting.id);
           setDeleting(null);
         }}
-        title="Delete Credit Email"
+        title={t("creditEmails.deleteDialog.title")}
         description={
           deleting
-            ? `Users will no longer receive an email at ${creditStateLabel(deleting.state)}. This action cannot be undone.`
+            ? t("creditEmails.deleteDialog.description", {
+                state: stateLabel(deleting.state),
+              })
             : undefined
         }
-        confirmLabel="Delete email"
-        cancelLabel="Keep email"
+        confirmLabel={t("creditEmails.deleteDialog.confirm")}
+        cancelLabel={t("creditEmails.deleteDialog.cancel")}
         confirmVariant="danger"
         icon={<Trash2 className="h-5 w-5" />}
       />

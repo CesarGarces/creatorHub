@@ -2,8 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { Loader2, Mail } from "lucide-react";
-
-const SAMPLE_RECIPIENT = "Jane Doe <jane@example.com>";
+import { useI18n } from "@/i18n/i18n-provider";
 
 /**
  * Shows a rendered email like a mail client would: a From/To/Subject header
@@ -23,6 +22,7 @@ export function EmailPreview({
   isRefreshing: boolean;
   error?: string | null;
 }) {
+  const { t } = useI18n();
   const [height, setHeight] = useState(480);
 
   // No `allow-scripts`: the email cannot run code. `allow-same-origin` only
@@ -41,19 +41,26 @@ export function EmailPreview({
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 font-medium text-text">
             <Mail size={14} className="text-primary" />
-            Creator Hub
+            {t("creditEmails.preview.from")}
           </span>
           {isRefreshing && (
             <Loader2 className="h-3.5 w-3.5 animate-spin text-text-dim" />
           )}
         </div>
         <p className="text-text-muted">
-          To: <span className="text-text">{SAMPLE_RECIPIENT}</span>
+          {t("creditEmails.preview.to")}{" "}
+          <span className="text-text">
+            {t("creditEmails.preview.sampleRecipient")}
+          </span>
         </p>
         <p className="text-text-muted">
-          Subject:{" "}
+          {t("creditEmails.preview.subject")}{" "}
           <span className="font-medium text-text">
-            {subject || <span className="text-text-dim">(empty)</span>}
+            {subject || (
+              <span className="text-text-dim">
+                {t("creditEmails.preview.empty")}
+              </span>
+            )}
           </span>
         </p>
       </div>
@@ -68,11 +75,11 @@ export function EmailPreview({
           className="flex min-h-[240px] flex-col items-center justify-center gap-2 text-sm text-text-muted"
         >
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          Rendering preview…
+          {t("creditEmails.preview.rendering")}
         </div>
       ) : (
         <iframe
-          title="Email preview"
+          title={t("creditEmails.preview.title")}
           sandbox="allow-same-origin"
           srcDoc={html}
           onLoad={measure}

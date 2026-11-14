@@ -273,6 +273,103 @@ export const pt: Messages = {
       deleteFailed: "Não foi possível excluir o plano",
     },
   },
+  creditEmails: {
+    title: "E-mails de créditos",
+    subtitle:
+      "E-mails enviados automaticamente quando o saldo de créditos de um usuário cai para um nível",
+    infoOnce:
+      "Cada e-mail é enviado uma única vez quando o saldo do usuário atinge seu nível. O usuário o recebe novamente apenas depois de obter mais créditos (compra, bônus, assinatura).",
+    infoSkip:
+      "Se um uso pular vários níveis (ex.: 60 → 0), apenas o e-mail do nível mais baixo alcançado é enviado.",
+    depleted: "0 créditos (sem créditos)",
+    columns: {
+      whenCreditsReach: "Quando os créditos chegam a",
+      email: "E-mail",
+      active: "Ativo",
+      actions: "Ações",
+    },
+    noEmail: "Sem e-mail",
+    createEmail: "Criar e-mail",
+    test: "Testar",
+    testTitle: "Enviar um teste para seu e-mail de administrador",
+    toggleAria: "Ativar ou desativar o e-mail para {state}",
+    deleteAria: "Excluir o e-mail para {state}",
+    recent: {
+      title: "E-mails recentes",
+      date: "Data",
+      user: "Usuário",
+      creditLevel: "Nível de créditos",
+      subject: "Assunto",
+      status: "Status",
+      creditsLeft: "({credits} restantes)",
+      empty: "Nenhum e-mail de crédito enviado ainda",
+      test: "Teste",
+    },
+    statuses: {
+      SENT: "Enviado",
+      FAILED: "Falhou",
+      PENDING: "Enviando",
+    },
+    toasts: {
+      created: "E-mail criado",
+      createFailed: "Não foi possível criar o e-mail",
+      updated: "E-mail atualizado",
+      updateFailed: "Não foi possível atualizar o e-mail",
+      deleted: "E-mail excluído",
+      deleteFailed: "Não foi possível excluir o e-mail",
+      testSent: "E-mail de teste enviado para {email}",
+      testFailed: "O e-mail de teste falhou: {error}",
+      testFailedGeneric: "Não foi possível enviar o e-mail de teste",
+    },
+    editor: {
+      sentOnce:
+        "Enviado uma única vez quando o saldo do usuário cai para {state}.",
+      subject: "Assunto",
+      heading: "Cabeçalho",
+      message: "Mensagem",
+      variablesHint:
+        "Deixe uma linha em branco entre parágrafos. As variáveis são inseridas no último campo em que você focou.",
+      buttonText: "Texto do botão",
+      buttonTextPlaceholder: "Comprar créditos",
+      buttonLink: "Link do botão",
+      buttonHint:
+        "Deixe o link vazio para usar a página de compra de créditos. Apague o texto do botão para ocultá-lo.",
+      active: "Ativo",
+      create: "Criar e-mail",
+      preview: "Pré-visualização",
+      previewPlaceholder:
+        "Preencha o assunto, o cabeçalho e a mensagem para ver uma pré-visualização",
+      previewSample:
+        'Usuário de exemplo "Jane Doe". As variáveis são preenchidas com valores de exemplo.',
+      previewUnavailable: "Pré-visualização indisponível",
+      variables: {
+        name: "Nome do usuário (ou e-mail)",
+        credits: "Créditos restantes",
+        threshold: "Nível de créditos deste e-mail",
+        purchaseUrl: "Página de compra de créditos",
+      },
+    },
+    preview: {
+      title: "Pré-visualização do e-mail",
+      from: "Creator Hub",
+      to: "Para:",
+      subject: "Assunto:",
+      empty: "(vazio)",
+      rendering: "Gerando pré-visualização…",
+      sampleRecipient: "Jane Doe <jane@example.com>",
+    },
+    deleteDialog: {
+      title: "Excluir e-mail de crédito",
+      description:
+        "Os usuários não receberão mais um e-mail em {state}. Esta ação não pode ser desfeita.",
+      confirm: "Excluir e-mail",
+      cancel: "Manter e-mail",
+    },
+    modal: {
+      editTitle: "Editar e-mail — {state}",
+      createTitle: "Criar e-mail — {state}",
+    },
+  },
   backups: {
     title: "Backups do banco de dados",
     subtitle: "Crie e gerencie backups do PostgreSQL armazenados no R2",

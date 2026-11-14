@@ -273,6 +273,103 @@ export const es: Messages = {
       deleteFailed: "No se pudo eliminar el plan",
     },
   },
+  creditEmails: {
+    title: "Emails de crédito",
+    subtitle:
+      "Emails enviados automáticamente cuando el saldo de créditos de un usuario baja a un nivel",
+    infoOnce:
+      "Cada email se envía una sola vez cuando el saldo del usuario llega a su nivel. El usuario lo recibe de nuevo solo después de obtener más créditos (compra, bonificación, suscripción).",
+    infoSkip:
+      "Si un uso salta varios niveles (p. ej. 60 → 0), solo se envía el email del nivel más bajo alcanzado.",
+    depleted: "0 créditos (sin créditos)",
+    columns: {
+      whenCreditsReach: "Cuando los créditos llegan a",
+      email: "Email",
+      active: "Activo",
+      actions: "Acciones",
+    },
+    noEmail: "Sin email",
+    createEmail: "Crear email",
+    test: "Probar",
+    testTitle: "Enviar una prueba a tu email de administrador",
+    toggleAria: "Activar o desactivar el email para {state}",
+    deleteAria: "Eliminar el email para {state}",
+    recent: {
+      title: "Emails recientes",
+      date: "Fecha",
+      user: "Usuario",
+      creditLevel: "Nivel de créditos",
+      subject: "Asunto",
+      status: "Estado",
+      creditsLeft: "({credits} restantes)",
+      empty: "Todavía no se enviaron emails de crédito",
+      test: "Prueba",
+    },
+    statuses: {
+      SENT: "Enviado",
+      FAILED: "Fallido",
+      PENDING: "Enviando",
+    },
+    toasts: {
+      created: "Email creado",
+      createFailed: "No se pudo crear el email",
+      updated: "Email actualizado",
+      updateFailed: "No se pudo actualizar el email",
+      deleted: "Email eliminado",
+      deleteFailed: "No se pudo eliminar el email",
+      testSent: "Email de prueba enviado a {email}",
+      testFailed: "El email de prueba falló: {error}",
+      testFailedGeneric: "No se pudo enviar el email de prueba",
+    },
+    editor: {
+      sentOnce:
+        "Se envía una sola vez cuando el saldo del usuario baja a {state}.",
+      subject: "Asunto",
+      heading: "Encabezado",
+      message: "Mensaje",
+      variablesHint:
+        "Deja una línea en blanco entre párrafos. Las variables se insertan en el último campo en el que hiciste foco.",
+      buttonText: "Texto del botón",
+      buttonTextPlaceholder: "Comprar créditos",
+      buttonLink: "Enlace del botón",
+      buttonHint:
+        "Deja el enlace vacío para usar la página de compra de créditos. Borra el texto del botón para ocultarlo.",
+      active: "Activo",
+      create: "Crear email",
+      preview: "Vista previa",
+      previewPlaceholder:
+        "Completa el asunto, el encabezado y el mensaje para ver una vista previa",
+      previewSample:
+        'Usuario de ejemplo "Jane Doe". Las variables se reemplazan con valores de ejemplo.',
+      previewUnavailable: "Vista previa no disponible",
+      variables: {
+        name: "Nombre del usuario (o email)",
+        credits: "Créditos restantes",
+        threshold: "Nivel de créditos de este email",
+        purchaseUrl: "Página de compra de créditos",
+      },
+    },
+    preview: {
+      title: "Vista previa del email",
+      from: "Creator Hub",
+      to: "Para:",
+      subject: "Asunto:",
+      empty: "(vacío)",
+      rendering: "Generando vista previa…",
+      sampleRecipient: "Jane Doe <jane@example.com>",
+    },
+    deleteDialog: {
+      title: "Eliminar email de crédito",
+      description:
+        "Los usuarios dejarán de recibir un email en {state}. Esta acción no se puede deshacer.",
+      confirm: "Eliminar email",
+      cancel: "Conservar email",
+    },
+    modal: {
+      editTitle: "Editar email — {state}",
+      createTitle: "Crear email — {state}",
+    },
+  },
   backups: {
     title: "Copias de seguridad de la base de datos",
     subtitle:

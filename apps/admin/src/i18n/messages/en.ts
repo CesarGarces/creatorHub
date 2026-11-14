@@ -271,6 +271,102 @@ export const en = {
       deleteFailed: "Failed to delete plan",
     },
   },
+  creditEmails: {
+    title: "Credit Emails",
+    subtitle:
+      "Emails sent automatically when a user's credit balance drops to a credit level",
+    infoOnce:
+      "Each email is sent once when a user's balance reaches its level. The user gets it again only after they receive more credits (purchase, bonus, subscription).",
+    infoSkip:
+      "If one usage skips several levels (e.g. 60 → 0), only the email for the lowest level reached is sent.",
+    depleted: "0 credits (out of credits)",
+    columns: {
+      whenCreditsReach: "When credits reach",
+      email: "Email",
+      active: "Active",
+      actions: "Actions",
+    },
+    noEmail: "No email",
+    createEmail: "Create email",
+    test: "Test",
+    testTitle: "Send a test to your admin email",
+    toggleAria: "Toggle email for {state}",
+    deleteAria: "Delete email for {state}",
+    recent: {
+      title: "Recent emails",
+      date: "Date",
+      user: "User",
+      creditLevel: "Credit level",
+      subject: "Subject",
+      status: "Status",
+      creditsLeft: "({credits} left)",
+      empty: "No credit emails sent yet",
+      test: "Test",
+    },
+    statuses: {
+      SENT: "Sent",
+      FAILED: "Failed",
+      PENDING: "Sending",
+    },
+    toasts: {
+      created: "Email created",
+      createFailed: "Failed to create email",
+      updated: "Email updated",
+      updateFailed: "Failed to update email",
+      deleted: "Email deleted",
+      deleteFailed: "Failed to delete email",
+      testSent: "Test email sent to {email}",
+      testFailed: "Test email failed: {error}",
+      testFailedGeneric: "Failed to send test email",
+    },
+    editor: {
+      sentOnce: "Sent once when a user's balance drops to {state}.",
+      subject: "Subject",
+      heading: "Heading",
+      message: "Message",
+      variablesHint:
+        "Leave an empty line between paragraphs. Variables are inserted into the last field you focused.",
+      buttonText: "Button text",
+      buttonTextPlaceholder: "Purchase credits",
+      buttonLink: "Button link",
+      buttonHint:
+        "Leave the link empty to use the credits purchase page. Clear the button text to hide the button.",
+      active: "Active",
+      create: "Create Email",
+      preview: "Preview",
+      previewPlaceholder:
+        "Fill in the subject, heading and message to see a preview",
+      previewSample:
+        'Sample user "Jane Doe". Variables are filled with example values.',
+      previewUnavailable: "Preview unavailable",
+      variables: {
+        name: "User's name (or email)",
+        credits: "Credits remaining",
+        threshold: "Credit level of this email",
+        purchaseUrl: "Credits purchase page",
+      },
+    },
+    preview: {
+      title: "Email preview",
+      from: "Creator Hub",
+      to: "To:",
+      subject: "Subject:",
+      empty: "(empty)",
+      rendering: "Rendering preview…",
+      sampleRecipient: "Jane Doe <jane@example.com>",
+    },
+    deleteDialog: {
+      title: "Delete Credit Email",
+      description:
+        "Users will no longer receive an email at {state}. This action cannot be undone.",
+      confirm: "Delete email",
+      cancel: "Keep email",
+    },
+    modal: {
+      editTitle: "Edit email — {state}",
+      createTitle: "Create email — {state}",
+    },
+  },
   backups: {
     title: "Database Backups",
     subtitle: "Create and manage PostgreSQL backups stored in R2",
