@@ -47,7 +47,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.6
-        version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
+        version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.48.0)
 
   apps/admin:
     dependencies:
@@ -65,7 +65,7 @@ importers:
         version: 5.101.2(react@19.2.7)
       axios:
         specifier: ^1.18.1
-        version: 1.18.1(supports-color@8.1.1)
+        version: 1.18.1
       lucide-react:
         specifier: ^0.400.0
         version: 0.400.0(react@19.2.7)
@@ -114,7 +114,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.6
-        version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
+        version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.48.0)
 
   apps/api:
     dependencies:
@@ -325,7 +325,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.6
-        version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
+        version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.48.0)
 
   apps/community-worker:
     dependencies:
@@ -395,7 +395,7 @@ importers:
         version: 12.40.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       geist:
         specifier: ^1.3.0
-        version: 1.7.2(next@16.2.10(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))
+        version: 1.7.2(next@16.2.10(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))
       lucide-react:
         specifier: ^0.400.0
         version: 0.400.0(react@19.2.7)
@@ -523,7 +523,7 @@ importers:
         version: 4.22.2
       jsdom:
         specifier: ^22.1.0
-        version: 22.1.0(supports-color@8.1.1)
+        version: 22.1.0
       postcss:
         specifier: ^8.5.16
         version: 8.5.16
@@ -535,7 +535,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.6
-        version: 3.2.6(@types/node@20.19.42)(jsdom@22.1.0(supports-color@8.1.1))(lightningcss@1.32.0)(terser@5.48.0)
+        version: 3.2.6(@types/node@20.19.42)(jsdom@22.1.0)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/ai-engine:
     dependencies:
@@ -719,7 +719,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.6
-        version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
+        version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/community-bot:
     dependencies:
@@ -1019,15 +1019,27 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@testing-library/react':
+        specifier: ^14.0.0
+        version: 14.3.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.42
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.17
       '@types/react-dom':
         specifier: ^19.0.0
         version: 19.2.3(@types/react@19.2.17)
+      jsdom:
+        specifier: ^22.1.0
+        version: 22.1.0
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.6
+        version: 3.2.6(@types/node@20.19.42)(jsdom@22.1.0)(lightningcss@1.32.0)(terser@5.48.0)
 
   tools/content-translator:
     dependencies:
@@ -10994,7 +11006,7 @@ snapshots:
 
   '@sentry/cli@2.58.6':
     dependencies:
-      https-proxy-agent: 5.0.1(supports-color@8.1.1)
+      https-proxy-agent: 5.0.1
       node-fetch: 2.7.0
       progress: 2.0.3
       proxy-from-env: 1.1.0
@@ -11854,7 +11866,7 @@ snapshots:
 
   acorn@8.16.0: {}
 
-  agent-base@6.0.2(supports-color@8.1.1):
+  agent-base@6.0.2:
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
@@ -12003,11 +12015,11 @@ snapshots:
 
   aws4@1.13.2: {}
 
-  axios@1.18.1(supports-color@8.1.1):
+  axios@1.18.1:
     dependencies:
       follow-redirects: 1.16.0
       form-data: 4.0.5
-      https-proxy-agent: 5.0.1(supports-color@8.1.1)
+      https-proxy-agent: 5.0.1
       proxy-from-env: 2.1.0
     transitivePeerDependencies:
       - debug
@@ -13175,7 +13187,7 @@ snapshots:
     dependencies:
       '@derhuerst/http-basic': 8.2.4
       env-paths: 2.2.1
-      https-proxy-agent: 5.0.1(supports-color@8.1.1)
+      https-proxy-agent: 5.0.1
       progress: 2.0.3
     transitivePeerDependencies:
       - supports-color
@@ -13345,7 +13357,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  geist@1.7.2(next@16.2.10(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)):
+  geist@1.7.2(next@16.2.10(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)):
     dependencies:
       next: 16.2.10(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
 
@@ -13514,10 +13526,10 @@ snapshots:
       statuses: 2.0.2
       toidentifier: 1.0.1
 
-  http-proxy-agent@5.0.0(supports-color@8.1.1):
+  http-proxy-agent@5.0.0:
     dependencies:
       '@tootallnate/once': 2.0.1
-      agent-base: 6.0.2(supports-color@8.1.1)
+      agent-base: 6.0.2
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
@@ -13540,9 +13552,9 @@ snapshots:
       jsprim: 2.0.2
       sshpk: 1.18.0
 
-  https-proxy-agent@5.0.1(supports-color@8.1.1):
+  https-proxy-agent@5.0.1:
     dependencies:
-      agent-base: 6.0.2(supports-color@8.1.1)
+      agent-base: 6.0.2
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
@@ -14124,7 +14136,7 @@ snapshots:
 
   jsbn@0.1.1: {}
 
-  jsdom@22.1.0(supports-color@8.1.1):
+  jsdom@22.1.0:
     dependencies:
       abab: 2.0.6
       cssstyle: 3.0.0
@@ -14133,8 +14145,8 @@ snapshots:
       domexception: 4.0.0
       form-data: 4.0.5
       html-encoding-sniffer: 3.0.0
-      http-proxy-agent: 5.0.0(supports-color@8.1.1)
-      https-proxy-agent: 5.0.1(supports-color@8.1.1)
+      http-proxy-agent: 5.0.0
+      https-proxy-agent: 5.0.1
       is-potential-custom-element-name: 1.0.1
       nwsapi: 2.2.24
       parse5: 7.3.0
@@ -16019,7 +16031,7 @@ snapshots:
       d3-time: 3.1.0
       d3-timer: 3.0.1
 
-  vite-node@3.2.4(@types/node@20.19.42)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0):
+  vite-node@3.2.4(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0):
     dependencies:
       cac: 6.7.14
       debug: 4.4.3(supports-color@8.1.1)
@@ -16048,7 +16060,7 @@ snapshots:
       lightningcss: 1.32.0
       terser: 5.48.0
 
-  vitest@3.2.6(@types/node@20.19.42)(jsdom@22.1.0(supports-color@8.1.1))(lightningcss@1.32.0)(terser@5.48.0):
+  vitest@3.2.6(@types/node@20.19.42)(jsdom@22.1.0)(lightningcss@1.32.0)(terser@5.48.0):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.6
@@ -16071,11 +16083,11 @@ snapshots:
       tinypool: 1.1.1
       tinyrainbow: 2.0.0
       vite: 5.4.21(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
-      vite-node: 3.2.4(@types/node@20.19.42)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
+      vite-node: 3.2.4(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.42
-      jsdom: 22.1.0(supports-color@8.1.1)
+      jsdom: 22.1.0
     transitivePeerDependencies:
       - less
       - lightningcss
@@ -16087,7 +16099,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0):
+  vitest@3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.48.0):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.6
@@ -16110,7 +16122,7 @@ snapshots:
       tinypool: 1.1.1
       tinyrainbow: 2.0.0
       vite: 5.4.21(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
-      vite-node: 3.2.4(@types/node@20.19.42)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
+      vite-node: 3.2.4(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.42
