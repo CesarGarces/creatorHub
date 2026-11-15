@@ -50,6 +50,24 @@ export async function mockApi(
     (route) => route.abort(),
   );
 
+  // The apps open a Socket.IO connection to the real API. If a developer has
+  // it running locally it would reject the fake token (`auth_error`), clear
+  // the session cookies and redirect to the login page mid-test. Mock the
+  // Socket.IO handshake so the session stays intact.
+  await context.routeWebSocket(
+    (url) => url.host !== appHost && url.pathname.startsWith("/socket.io"),
+    (ws) => {
+      ws.send(
+        '0{"sid":"mock","upgrades":[],"pingInterval":25000,"pingTimeout":20000}',
+      );
+      ws.onMessage((message) => {
+        const packet = message.toString();
+        if (packet.startsWith("40")) ws.send('40{"sid":"mock"}');
+        else if (packet === "2") ws.send("3");
+      });
+    },
+  );
+
   await context.route(
     (url) => url.host !== appHost && url.pathname.startsWith("/api/v1/"),
     async (route) => {
