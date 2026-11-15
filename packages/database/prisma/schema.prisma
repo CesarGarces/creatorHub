@@ -96,6 +96,11 @@ model User {
   generatedScripts     GeneratedScript[]
   communityBotConfig   CommunityBotConfig?
   communityChannels    CommunityChannel[]
+  contentProjects      ContentProject[]
+  contentEvents        ContentEvent[]
+  contentCustomTypes   ContentCustomType[]
+  contentCustomPlatforms ContentCustomPlatform[]
+  contentProductionSteps ContentProductionStep[]
 }
 
 model Account {
@@ -939,4 +944,128 @@ enum CommunityMessageStatus {
   SENT
   FAILED
   SKIPPED
+}
+
+// ============================================================
+// CONTENT PLANNER - Calendar of video production sessions.
+// A ContentProject is one video (publish date + platform); its
+// ContentEvents are the time blocks scheduled to produce it
+// (ideation, scripting, recording, editing...). Events may also
+// exist on their own (e.g. a livestream or a meeting).
+// ============================================================
+
+enum ContentEventType {
+  IDEATION
+  SCRIPTING
+  RECORDING
+  EDITING
+  THUMBNAIL
+  PUBLISHING
+  LIVESTREAM
+  OTHER
+}
+
+enum ContentEventStatus {
+  PLANNED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+model ContentProject {
+  id               String    @id @default(cuid())
+  userId           String
+  title            String
+  /// "youtube-long" | "youtube-short" | "tiktok" | "reels" | "twitch" | "other"
+  platform         String?
+  /// User-defined platform; when set, `platform` is null.
+  customPlatformId String?
+  publishAt        DateTime?
+  notes            String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customPlatform ContentCustomPlatform? @relation(fields: [customPlatformId], references: [id], onDelete: SetNull)
+  events         ContentEvent[]
+
+  @@index([userId, publishAt])
+  @@index([customPlatformId])
+}
+
+model ContentEvent {
+  id           String             @id @default(cuid())
+  userId       String
+  projectId    String?
+  /// User-defined type; when set, `type` is OTHER.
+  customTypeId String?
+  title        String
+  type         ContentEventType   @default(OTHER)
+  status       ContentEventStatus @default(PLANNED)
+  startAt      DateTime
+  endAt        DateTime
+  notes        String?            @db.Text
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project    ContentProject?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  customType ContentCustomType? @relation(fields: [customTypeId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startAt])
+  @@index([projectId])
+  @@index([customTypeId])
+}
+
+/// Session types created by the user (e.g. "Podcast", "Sponsor call").
+/// Deleting one keeps its sessions, which fall back to OTHER.
+model ContentCustomType {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  /// Palette key, e.g. "teal" (see PALETTE_COLORS).
+  color     String
+  /// Icon key, e.g. "mic" (see PALETTE_ICONS).
+  icon      String   @default("tag")
+  createdAt DateTime @default(now())
+
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events ContentEvent[]
+
+  @@unique([userId, name])
+}
+
+/// Platforms created by the user for their video projects (e.g. "Kick").
+model ContentCustomPlatform {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projects ContentProject[]
+
+  @@unique([userId, name])
+}
+
+/// The user's production-step template for "Plan a video", in order.
+/// Saved when a plan is created; without rows the built-in steps are used.
+model ContentProductionStep {
+  id              String            @id @default(cuid())
+  userId          String
+  position        Int
+  /// Built-in type the step comes from; null for steps the user added.
+  baseType        ContentEventType?
+  /// Overrides; null = the built-in type's (translated) name, color, icon.
+  name            String?
+  color           String?
+  icon            String?
+  durationMinutes Int
+  enabled         Boolean           @default(true)
+  /// Scheduled at the publish date/time instead of on a day before it.
+  isPublish       Boolean           @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, position])
 }

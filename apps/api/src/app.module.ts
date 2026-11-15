@@ -57,6 +57,8 @@ import "@creator-hub/x-post-tweet";
 import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
 import "@creator-hub/script-writer";
 import { ScriptWriterModule } from "@creator-hub/script-writer-backend";
+import "@creator-hub/content-planner";
+import { ContentPlannerModule } from "@creator-hub/content-planner-backend";
 
 // Redis storage for rate limiting: limits stay consistent across replicas
 // and restarts (in-memory storage would multiply the effective limit per
@@ -140,6 +142,7 @@ const throttlerStorage = process.env.REDIS_URL
     XPostTweetModule,
     SocialResearchModule,
     ScriptWriterModule,
+    ContentPlannerModule,
   ],
   controllers: [
     AuthController,

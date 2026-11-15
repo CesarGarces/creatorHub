@@ -25,6 +25,10 @@ export const toolCatalog: Messages["toolCatalog"] = {
     name: "Roteirista",
     description: "Escreva roteiros de vídeo envolventes com IA",
   },
+  "content-planner": {
+    name: "Planejador de conteúdo",
+    description: "Planeje e agende a produção dos seus vídeos em um calendário",
+  },
   categories: {
     image: "Imagem",
     thumbnail: "Thumbnail",
@@ -36,6 +40,7 @@ export const toolCatalog: Messages["toolCatalog"] = {
     design: "Design",
     writing: "Escrita",
     translator: "Tradutor",
+    planning: "Planejamento",
     other: "Outro",
   },
 };

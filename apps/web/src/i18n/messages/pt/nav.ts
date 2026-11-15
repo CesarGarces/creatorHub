@@ -4,6 +4,7 @@ export const nav: Messages["nav"] = {
   dashboard: "Painel",
   agents: "Agentes",
   tools: "Ferramentas",
+  planner: "Planejador",
   assets: "Recursos",
   history: "Histórico",
   communityBot: "Bot da comunidade",

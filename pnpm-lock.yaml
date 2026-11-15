@@ -136,6 +136,12 @@ importers:
       '@creator-hub/community-bot':
         specifier: workspace:*
         version: link:../../packages/community-bot
+      '@creator-hub/content-planner':
+        specifier: workspace:*
+        version: link:../../tools/content-planner
+      '@creator-hub/content-planner-backend':
+        specifier: workspace:*
+        version: link:../../tools/content-planner/backend
       '@creator-hub/content-translator':
         specifier: workspace:*
         version: link:../../tools/content-translator
@@ -1095,6 +1101,65 @@ importers:
       vitest:
         specifier: ^3.2.6
         version: 3.2.6(@types/node@20.19.42)(jsdom@22.1.0)(lightningcss@1.32.0)(terser@5.48.0)
+
+  tools/content-planner:
+    dependencies:
+      '@creator-hub/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
+      '@creator-hub/shared-utils':
+        specifier: workspace:*
+        version: link:../../packages/shared-utils
+      '@creator-hub/tool-sdk':
+        specifier: workspace:*
+        version: link:../../packages/tool-sdk
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
+  tools/content-planner/backend:
+    dependencies:
+      '@creator-hub/auth':
+        specifier: workspace:*
+        version: link:../../../packages/auth
+      '@creator-hub/database':
+        specifier: workspace:*
+        version: link:../../../packages/database
+      '@creator-hub/shared-utils':
+        specifier: workspace:*
+        version: link:../../../packages/shared-utils
+      '@nestjs/common':
+        specifier: ^11.1.27
+        version: 11.1.27(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      class-transformer:
+        specifier: ^0.5.0
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.0
+        version: 0.14.4
+      rxjs:
+        specifier: ^7.8.1
+        version: 7.8.2
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../../packages/typescript-config
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.42
+      reflect-metadata:
+        specifier: ^0.2.0
+        version: 0.2.2
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.6
+        version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.48.0)
 
   tools/content-translator:
     dependencies:

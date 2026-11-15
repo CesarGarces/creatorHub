@@ -42,6 +42,23 @@ const EXACT_MESSAGES: Record<string, TranslationKey> = {
   "Script not found": "errors.notFound",
   "Draft not found": "errors.notFound",
   "This asset is not public": "errors.assetNotPublic",
+  "Session not found": "errors.notFound",
+  "Project not found": "errors.notFound",
+  "The session must end after it starts":
+    "contentPlanner.event.errors.endBeforeStart",
+  "A session can't be longer than 24 hours":
+    "contentPlanner.event.errors.tooLong",
+  "Type not found": "errors.notFound",
+  "Type name is required": "contentPlanner.customTypes.errors.nameRequired",
+  "A type with this name already exists":
+    "contentPlanner.customTypes.errors.duplicate",
+  "Platform not found": "errors.notFound",
+  "Platform name is required":
+    "contentPlanner.customPlatforms.errors.nameRequired",
+  "A platform with this name already exists":
+    "contentPlanner.customPlatforms.errors.duplicate",
+  "Every added step needs a name":
+    "contentPlanner.plan.steps.errors.nameRequired",
 };
 
 const PATTERNS: Array<{
@@ -50,6 +67,16 @@ const PATTERNS: Array<{
   params?: (match: RegExpMatchArray) => TranslationParams;
 }> = [
   { pattern: /^Insufficient credits/i, key: "errors.insufficientCredits" },
+  {
+    pattern: /^You can have up to (\d+) custom types/,
+    key: "contentPlanner.customTypes.errors.limit",
+    params: (m) => ({ max: Number(m[1]) }),
+  },
+  {
+    pattern: /^You can have up to (\d+) custom platforms/,
+    key: "contentPlanner.customPlatforms.errors.limit",
+    params: (m) => ({ max: Number(m[1]) }),
+  },
   {
     pattern: /^Please wait (\d+) seconds? before requesting a new code/i,
     key: "errors.waitSeconds",

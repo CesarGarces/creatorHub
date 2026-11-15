@@ -18,6 +18,10 @@ export const commandPalette = {
       label: "X Research Agent",
       description: "Search X trends",
     },
+    planner: {
+      label: "Content Planner",
+      description: "Schedule your video production",
+    },
     dashboard: { label: "Dashboard", description: "Go to dashboard" },
     tools: { label: "All Tools", description: "Browse all tools" },
     agents: { label: "All Agents", description: "Browse all agents" },

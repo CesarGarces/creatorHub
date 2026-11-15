@@ -16,6 +16,7 @@ Creator Hub is a platform where content creators can access AI-powered tools to 
 - **Text to Video** — Generate videos directly from text descriptions
 - **Script Writer** — AI-powered structured video scripts for YouTube, TikTok, Instagram Reels. Multi-platform, multi-tone, with visual cues and streaming generation.
 - **AI Chat** — AI assistant with streaming, dynamic tool routing and integrated actions (opens tools directly from chat)
+- **Content Planner** — Calendar for video production. Plan a video from its publish date and every step (ideation, scripting, recording, editing, thumbnail, publishing) is scheduled backwards, one per day. Week (drag & drop to reschedule), month and agenda views, custom session types (created from the session dialog), overlap warnings, calendar-wide totals, per-video progress. Free (no credits).
 
 **Community Bot:**
 
@@ -82,7 +83,9 @@ creator-hub/
 │   ├── script-writer/        # AI video script generation (SSE streaming)
 │   │   └── backend/          # NestJS controller + service
 │   ├── x-search-trends/      # X trend research with AI analysis
-│   └── x-post-tweet/         # Tweet drafting with RAG style
+│   ├── x-post-tweet/         # Tweet drafting with RAG style
+│   └── content-planner/      # Video production calendar (sessions + video projects)
+│       └── backend/          # NestJS controller + service (CRUD, overlap detection)
 ├── agents/                   # Specialized agents
 │   └── chat-agent/           # Chat with dynamic tool routing
 └── skills/                   # System skills (see .agents/skills/)
@@ -998,6 +1001,20 @@ POST   /api/v1/tools/script-writer/generate    # Generate script (streaming SSE)
 GET    /api/v1/tools/script-writer/scripts      # List generated scripts
 GET    /api/v1/tools/script-writer/scripts/:id  # Get a script
 DELETE /api/v1/tools/script-writer/scripts/:id  # Delete a script
+
+# Content Planner (calendar of video production sessions — free)
+GET    /api/v1/tools/content-planner/events?from&to   # Sessions intersecting a window (max 100 days)
+POST   /api/v1/tools/content-planner/events           # Create a session → { data, conflicts }
+PATCH  /api/v1/tools/content-planner/events/:id       # Edit / reschedule / mark done → { data, conflicts }
+DELETE /api/v1/tools/content-planner/events/:id       # Delete a session
+GET    /api/v1/tools/content-planner/projects         # Video projects with progress + next session
+POST   /api/v1/tools/content-planner/projects         # Create a project, optionally with its sessions
+PATCH  /api/v1/tools/content-planner/projects/:id     # Edit a project
+DELETE /api/v1/tools/content-planner/projects/:id     # Delete a project and its sessions
+GET    /api/v1/tools/content-planner/stats            # Totals over the whole calendar (sessions, planned minutes, done; cancelled excluded)
+GET    /api/v1/tools/content-planner/types            # User's custom session types
+POST   /api/v1/tools/content-planner/types            # Create a custom type { name, color } (409 on duplicate name)
+DELETE /api/v1/tools/content-planner/types/:id        # Delete it; its sessions fall back to "Other"
 
 # Community Bot
 GET    /api/v1/community-bot/config                # Get bot config

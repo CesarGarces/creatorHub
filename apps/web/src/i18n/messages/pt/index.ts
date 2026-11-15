@@ -7,6 +7,7 @@ import { chat } from "./chat";
 import { commandPalette } from "./commandPalette";
 import { common } from "./common";
 import { communityBot } from "./communityBot";
+import { contentPlanner } from "./contentPlanner";
 import { cookieConsent } from "./cookieConsent";
 import { credits } from "./credits";
 import { dashboard } from "./dashboard";
@@ -42,6 +43,7 @@ export const pt: Messages = {
   commandPalette,
   common,
   communityBot,
+  contentPlanner,
   cookieConsent,
   credits,
   dashboard,

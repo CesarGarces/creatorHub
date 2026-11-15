@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "./providers";
 import { CookieConsent } from "@creator-hub/ui";
-import { CookiesModal } from "@/app/cookies/page";
+import { CookiesModal } from "@/components/legal/legal-modals";
 import { getRequestLocale } from "@/i18n/server";
 import { LOCALE_META } from "@/i18n/config";
 import { translate } from "@/i18n/translate";

@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { Button, Input, Card, CardContent, CardHeader } from "@creator-hub/ui";
 import Link from "next/link";
-import { PrivacyModal } from "@/app/privacy/page";
-import { TermsModal } from "@/app/terms/page";
-import { CookiesModal } from "@/app/cookies/page";
+import {
+  CookiesModal,
+  PrivacyModal,
+  TermsModal,
+} from "@/components/legal/legal-modals";
 import { useI18n } from "@/i18n/i18n-provider";
 import { localizeError } from "@/i18n/errors";
 import { AuthLanguageSwitcher } from "@/components/i18n/auth-language-switcher";

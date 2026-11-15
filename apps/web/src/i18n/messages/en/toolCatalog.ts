@@ -29,6 +29,10 @@ export const toolCatalog = {
     name: "Script Writer",
     description: "Write engaging video scripts with AI",
   },
+  "content-planner": {
+    name: "Content Planner",
+    description: "Plan and schedule your video production on a calendar",
+  },
   categories: {
     image: "Image",
     thumbnail: "Thumbnail",
@@ -40,6 +44,7 @@ export const toolCatalog = {
     design: "Design",
     writing: "Writing",
     translator: "Translator",
+    planning: "Planning",
     other: "Other",
   },
 };

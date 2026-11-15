@@ -34,7 +34,8 @@ export class ToolDefinition {
       version: input.version || "1.0.0",
       icon: input.icon,
       category: input.category,
-      creditsPerUse: input.creditsPerUse || 10,
+      // `??` (not `||`): free tools declare `creditsPerUse: 0` explicitly.
+      creditsPerUse: input.creditsPerUse ?? 10,
       permissions: input.permissions || [],
       configSchema: {},
       chatInputParams: input.chatInputParams || [],

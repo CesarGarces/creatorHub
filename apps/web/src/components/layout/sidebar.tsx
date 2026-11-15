@@ -29,6 +29,11 @@ const navItems: NavItem[] = [
     sectionKey: "nav.sections.workspace",
   },
   { labelKey: "nav.tools", href: "/tools", icon: <ToolIcon /> },
+  {
+    labelKey: "nav.planner",
+    href: "/tools/content-planner",
+    icon: <PlannerIcon />,
+  },
   { labelKey: "nav.assets", href: "/assets", icon: <AssetIcon /> },
   { labelKey: "nav.history", href: "/history", icon: <HistoryIcon /> },
   {
@@ -57,6 +62,13 @@ export function Sidebar() {
     logout();
     router.push("/login");
   };
+
+  // Most specific match wins: on /tools/content-planner only "Planner" is
+  // highlighted, not "Tools" as well.
+  const activeHref = navItems
+    .map((item) => item.href)
+    .filter((href) => pathname === href || pathname.startsWith(href + "/"))
+    .sort((a, b) => b.length - a.length)[0];
 
   const groupedItems = navItems.reduce(
     (acc, item) => {
@@ -121,8 +133,7 @@ export function Sidebar() {
             )}
             {group.items.map((item) => {
               const label = t(item.labelKey);
-              const isActive =
-                pathname === item.href || pathname.startsWith(item.href + "/");
+              const isActive = item.href === activeHref;
               const link = (
                 <Link
                   key={item.href}
@@ -239,6 +250,31 @@ function ToolIcon() {
       strokeLinejoin="round"
     >
       <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+    </svg>
+  );
+}
+
+function PlannerIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect width="18" height="18" x="3" y="4" rx="2" />
+      <path d="M16 2v4" />
+      <path d="M8 2v4" />
+      <path d="M3 10h18" />
+      <path d="M8 14h.01" />
+      <path d="M12 14h.01" />
+      <path d="M16 14h.01" />
+      <path d="M8 18h.01" />
+      <path d="M12 18h.01" />
     </svg>
   );
 }

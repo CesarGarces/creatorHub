@@ -9,6 +9,7 @@ export const tools: Messages["tools"] = {
     aiText: "Texto IA",
     aiVideo: "Video IA",
     social: "Social",
+    planning: "Planificación",
     analytics: "Analítica",
   },
   emptyTitle: "No hay herramientas en esta categoría",

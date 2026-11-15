@@ -93,6 +93,12 @@ describe("ToolDefinition.create", () => {
     expect(result.permissions).toHaveLength(1);
   });
 
+  it("keeps creditsPerUse at 0 for free tools instead of the default", () => {
+    expect(
+      ToolDefinition.create(input({ creditsPerUse: 0 })).creditsPerUse,
+    ).toBe(0);
+  });
+
   it("falls back to the tool id when the module has no name", () => {
     const result = ToolDefinition.create(input({ backend: { module: {} } }));
     expect(result.backend.modulePath).toBe("thumbnail-generator");

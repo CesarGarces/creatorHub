@@ -62,6 +62,18 @@ describe("Sidebar", () => {
     ).not.toContain("text-primary");
   });
 
+  it("highlights only the most specific match (Planner, not Tools)", () => {
+    navigationState.pathname = "/tools/content-planner";
+    render(<Sidebar />);
+
+    expect(screen.getByRole("link", { name: "Planner" }).className).toContain(
+      "text-primary",
+    );
+    expect(screen.getByRole("link", { name: "Tools" }).className).not.toContain(
+      "text-primary",
+    );
+  });
+
   it("does not treat a route prefix as active", () => {
     navigationState.pathname = "/toolsettings";
     render(<Sidebar />);

@@ -18,6 +18,7 @@ import {
   CreditCard,
   History,
   Settings,
+  CalendarDays,
 } from "lucide-react";
 import { useI18n } from "@/i18n/i18n-provider";
 
@@ -41,6 +42,7 @@ type DefaultItemId =
   | "thumbnail"
   | "xPostAgent"
   | "xResearchAgent"
+  | "planner"
   | "dashboard"
   | "tools"
   | "agents"
@@ -60,6 +62,12 @@ const defaultItemDefs: {
     id: "thumbnail",
     icon: <Palette className="h-4 w-4 text-text-dim" />,
     href: "/tools/thumbnail-generator",
+    group: "tools",
+  },
+  {
+    id: "planner",
+    icon: <CalendarDays className="h-4 w-4 text-text-dim" />,
+    href: "/tools/content-planner",
     group: "tools",
   },
   {

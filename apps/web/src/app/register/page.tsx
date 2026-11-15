@@ -12,9 +12,11 @@ import {
   Checkbox,
 } from "@creator-hub/ui";
 import { Eye, EyeOff } from "lucide-react";
-import { PrivacyModal } from "@/app/privacy/page";
-import { TermsModal } from "@/app/terms/page";
-import { CookiesModal } from "@/app/cookies/page";
+import {
+  CookiesModal,
+  PrivacyModal,
+  TermsModal,
+} from "@/components/legal/legal-modals";
 import { useI18n } from "@/i18n/i18n-provider";
 import { localizeError } from "@/i18n/errors";
 import { AuthLanguageSwitcher } from "@/components/i18n/auth-language-switcher";

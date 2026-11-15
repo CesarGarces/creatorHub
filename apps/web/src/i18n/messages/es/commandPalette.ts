@@ -23,6 +23,10 @@ export const commandPalette: Messages["commandPalette"] = {
       label: "Agente de investigación en X",
       description: "Busca tendencias en X",
     },
+    planner: {
+      label: "Planificador de contenido",
+      description: "Programa la producción de tus videos",
+    },
     dashboard: { label: "Panel", description: "Ir al panel" },
     tools: {
       label: "Todas las herramientas",

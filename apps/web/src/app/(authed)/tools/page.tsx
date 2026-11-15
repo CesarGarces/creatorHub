@@ -37,6 +37,11 @@ const categories: {
     toolCategories: ["social"],
   },
   {
+    id: "planning",
+    labelKey: "tools.filters.planning",
+    toolCategories: ["planning"],
+  },
+  {
     id: "analytics",
     labelKey: "tools.filters.analytics",
     toolCategories: ["analytics"],

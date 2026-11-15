@@ -7,6 +7,7 @@ export const tools = {
     aiText: "AI Text",
     aiVideo: "AI Video",
     social: "Social",
+    planning: "Planning",
     analytics: "Analytics",
   },
   emptyTitle: "No tools in this category",

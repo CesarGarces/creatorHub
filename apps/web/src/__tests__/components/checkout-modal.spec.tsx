@@ -22,7 +22,10 @@ async function loadCheckoutModal(publicKey: string | undefined) {
   return (await import("@/components/billing/CheckoutModal")).CheckoutModal;
 }
 
-describe("CheckoutModal", () => {
+// Every test re-imports the component after vi.resetModules(), i.e. a cold
+// import of the whole module graph. That can exceed the default 5 s on a
+// loaded machine (e.g. all workspace suites running in parallel).
+describe("CheckoutModal", { timeout: 60_000 }, () => {
   const originalKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
   const baseProps = { planName: "Starter", price: "$9.99" };
 
