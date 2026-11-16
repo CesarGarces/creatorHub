@@ -92,13 +92,13 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             <DialogDescription>{t("upgrade.description")}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3">
+          <div className="space-y-3 px-5 pt-5 sm:px-6">
             {creditPacks.map((plan: any) => (
               <button
                 type="button"
                 key={plan.id}
                 onClick={() => handleBuy(plan)}
-                className={`relative flex w-full items-center justify-between rounded-xl border p-4 transition-all cursor-pointer ${
+                className={`relative flex w-full items-center justify-between gap-3 rounded-xl border p-4 transition-all cursor-pointer ${
                   selectedPlanId === plan.id
                     ? "border-primary bg-primary/10"
                     : "border-border bg-surface-elevated hover:border-border/80"
@@ -113,13 +113,13 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                     {t("upgrade.bestValue")}
                   </Badge>
                 )}
-                <div className="text-left">
+                <div className="min-w-0 text-left">
                   <p className="font-medium text-text">{planName(plan)}</p>
                   <p className="text-sm text-text-muted">
                     {t("upgrade.credits", { count: plan.creditsGiven })}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="shrink-0 text-right">
                   <p className="text-lg font-bold text-primary">
                     {formatUsd(plan.usdAmount)}
                   </p>
@@ -136,7 +136,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             ))}
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 p-5 sm:p-6">
             <Button
               variant="glow"
               size="lg"
@@ -167,7 +167,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             <button
               type="button"
               onClick={onClose}
-              className="w-full text-sm text-text-muted hover:text-text transition-colors"
+              className="w-full min-h-11 text-sm text-text-muted hover:text-text transition-colors sm:min-h-0"
             >
               {t("upgrade.maybeLater")}
             </button>
@@ -180,7 +180,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
           <PayDialogHeader>
             <PayDialogTitle>{t("upgrade.completeTitle")}</PayDialogTitle>
           </PayDialogHeader>
-          <div className="p-6">
+          <div className="p-5 sm:p-6">
             <p className="text-sm text-text-muted">
               {t("upgrade.purchasing", {
                 plan: selectedPlan.name,

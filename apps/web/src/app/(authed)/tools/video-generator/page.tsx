@@ -290,7 +290,8 @@ export default function VideoGeneratorPage() {
             {variations.length > 0 && (
               <button
                 onClick={() => setShowVariations(!showVariations)}
-                className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all cursor-pointer ${
+                aria-label={t("toolShared.variations")}
+                className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 pointer-coarse:min-h-11 text-sm font-medium transition-all cursor-pointer sm:px-3 ${
                   showVariations
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-surface-elevated text-text-muted hover:border-primary/50 hover:bg-primary/5"
@@ -309,8 +310,10 @@ export default function VideoGeneratorPage() {
                   <rect x="3" y="14" width="7" height="7" rx="1" />
                   <rect x="14" y="14" width="7" height="7" rx="1" />
                 </svg>
-                {t("toolShared.variations")}
-                <span className="ml-1 rounded-full bg-primary/20 px-1.5 text-xs">
+                <span className="hidden sm:inline">
+                  {t("toolShared.variations")}
+                </span>
+                <span className="rounded-full bg-primary/20 px-1.5 text-xs sm:ml-1">
                   {variations.length}
                 </span>
               </button>
@@ -327,16 +330,22 @@ export default function VideoGeneratorPage() {
               )}
             </Badge>
             {plan && planVariants[plan] && (
-              <Badge variant={planVariants[plan]} size="sm">
+              <Badge
+                variant={planVariants[plan]}
+                size="sm"
+                className="hidden md:inline-flex"
+              >
                 {tOptional(`common.plans.${plan}`, plan)}
               </Badge>
             )}
           </div>
         }
       />
-      <div className="flex h-[calc(100vh-3.5rem)]">
+      {/* Phones/tablets: controls, then the preview below (stacked, page
+          scroll). lg+: fixed-height split view as before. */}
+      <div className="flex flex-col lg:flex-row lg:h-[calc(100dvh-3.5rem)]">
         {/* Left Panel - Controls */}
-        <div className="w-80 border-r border-border bg-surface p-5 space-y-6 overflow-y-auto flex-shrink-0">
+        <div className="w-full border-b border-border bg-surface p-4 sm:p-5 space-y-6 flex-shrink-0 lg:w-80 lg:border-b-0 lg:border-r lg:overflow-y-auto lg:overscroll-contain">
           <div>
             <label className="block text-sm font-medium text-text-muted mb-2">
               {t("toolShared.prompt")}
@@ -661,7 +670,7 @@ export default function VideoGeneratorPage() {
         </div>
 
         {/* Center - Preview */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg overflow-hidden">
+        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 bg-bg overflow-hidden h-[min(70dvh,40rem)] min-h-[22rem] lg:h-auto lg:min-h-0">
           <div
             className="relative"
             style={{
@@ -715,7 +724,7 @@ export default function VideoGeneratorPage() {
                   />
                 </div>
                 {status === "READY" && (
-                  <div className="flex justify-center gap-3">
+                  <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
                     <Button
                       variant="secondary"
                       size="sm"
@@ -827,19 +836,21 @@ export default function VideoGeneratorPage() {
         />
       )}
       <div
-        className={`fixed inset-y-0 right-0 w-[85vw] max-w-sm bg-surface border-l border-border shadow-2xl z-[99999] transition-transform duration-300 ease-out ${
-          showVariations ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed inset-y-0 right-0 w-[85vw] max-w-sm bg-surface border-l border-border shadow-2xl z-[99999] duration-300 ease-out ${
+          showVariations
+            ? "translate-x-0 visible transition-transform"
+            : "translate-x-full invisible transition-[transform,visibility]"
+        } pb-[env(safe-area-inset-bottom)]`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between flex-shrink-0 px-6 pt-6 pb-4 border-b border-border">
+          <div className="flex items-center justify-between flex-shrink-0 px-5 pt-5 pb-4 sm:px-6 sm:pt-6 border-b border-border">
             <h2 className="text-lg font-semibold text-text">
               {t("toolShared.variations")}
             </h2>
             <button
               onClick={() => setShowVariations(false)}
               aria-label={t("common.actions.close")}
-              className="rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="flex items-center justify-center rounded-md p-1 pointer-coarse:h-11 pointer-coarse:w-11 pointer-coarse:-mr-2 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <svg
                 width="16"

@@ -87,7 +87,7 @@ export function AgendaView({
                 return (
                   <li
                     key={event.id}
-                    className="flex items-center gap-3 px-4 py-3"
+                    className="flex items-center gap-3 px-3 py-3 sm:px-4"
                   >
                     <button
                       type="button"
@@ -100,7 +100,7 @@ export function AgendaView({
                       }
                       onClick={() => onToggleDone(event)}
                       className={cn(
-                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+                        "flex h-5 w-5 pointer-coarse:h-7 pointer-coarse:w-7 shrink-0 items-center justify-center rounded-full border transition-colors",
                         done
                           ? "border-secondary bg-secondary text-white"
                           : "border-border hover:border-primary",
@@ -113,11 +113,12 @@ export function AgendaView({
                       onClick={() => onSelectEvent(event)}
                       {...tooltip.triggerProps(event)}
                       className={cn(
-                        "flex min-w-0 flex-1 items-center gap-3 text-left",
+                        "flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-left sm:flex-nowrap",
                         statusClasses(event.status),
                       )}
                     >
-                      <span className="w-36 shrink-0 whitespace-nowrap text-xs text-text-muted tabular-nums">
+                      {/* Phones: the time sits on its own line above. */}
+                      <span className="w-full shrink-0 whitespace-nowrap text-xs text-text-muted tabular-nums sm:w-36">
                         {time(event.startAt)} – {time(event.endAt)}
                       </span>
                       <span

@@ -258,7 +258,7 @@ function PlanVideoForm({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid max-h-[70vh] gap-6 overflow-y-auto p-6 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+          <div className="grid max-h-[calc(var(--app-vvh,100dvh)-13rem)] sm:max-h-[70vh] gap-6 overflow-y-auto overscroll-contain p-5 sm:p-6 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
             {/* Settings */}
             <div className="space-y-4">
               <Input
@@ -399,7 +399,7 @@ function PlanVideoForm({
           </div>
 
           {error && (
-            <p role="alert" className="px-6 pb-4 text-sm text-error">
+            <p role="alert" className="px-5 pb-4 text-sm text-error sm:px-6">
               {error}
             </p>
           )}

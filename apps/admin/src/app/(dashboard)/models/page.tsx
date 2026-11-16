@@ -273,13 +273,20 @@ export default function ModelsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text">{t("models.title")}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-text">
+            {t("models.title")}
+          </h1>
           <p className="text-text-muted">{t("models.subtitle")}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={handleSync} disabled={syncing} variant="outline">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <Button
+            onClick={handleSync}
+            disabled={syncing}
+            variant="outline"
+            className="pointer-coarse:h-11"
+          >
             {syncing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -287,7 +294,10 @@ export default function ModelsPage() {
             )}
             {t("models.sync")}
           </Button>
-          <Button onClick={() => setCreateOpen(true)}>
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="pointer-coarse:h-11"
+          >
             <Plus className="mr-2 h-4 w-4" />
             {t("models.addModel")}
           </Button>
@@ -296,7 +306,7 @@ export default function ModelsPage() {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-4">
           <div className="rounded-xl border border-border bg-surface p-4">
             <p className="text-xs font-medium text-text-dim">
               {t("models.stats.total")}
@@ -330,9 +340,9 @@ export default function ModelsPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative max-w-sm flex-1">
+      {/* Filters: full-width search, then a 2-column grid on phones. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:flex lg:flex-wrap lg:items-center">
+        <div className="relative col-span-2 sm:col-span-4 lg:max-w-sm lg:flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" />
           <Input
             placeholder={t("models.filters.searchPlaceholder")}
@@ -346,7 +356,7 @@ export default function ModelsPage() {
         <select
           value={taskType}
           onChange={(e) => setTaskType(e.target.value)}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-primary"
+          className="min-w-0 rounded-lg border border-border bg-surface px-3 py-2 pointer-coarse:py-2.5 text-sm text-text outline-none focus:ring-2 focus:ring-primary lg:w-auto"
           aria-label={t("models.filters.typeAria")}
         >
           <option value="">{t("models.filters.allTypes")}</option>
@@ -360,7 +370,7 @@ export default function ModelsPage() {
         <select
           value={tier}
           onChange={(e) => setTier(e.target.value)}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-primary"
+          className="min-w-0 rounded-lg border border-border bg-surface px-3 py-2 pointer-coarse:py-2.5 text-sm text-text outline-none focus:ring-2 focus:ring-primary lg:w-auto"
           aria-label={t("models.filters.tierAria")}
         >
           <option value="">{t("models.filters.allTiers")}</option>
@@ -374,7 +384,7 @@ export default function ModelsPage() {
         <select
           value={providerSlug}
           onChange={(e) => setProviderSlug(e.target.value)}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-primary"
+          className="min-w-0 rounded-lg border border-border bg-surface px-3 py-2 pointer-coarse:py-2.5 text-sm text-text outline-none focus:ring-2 focus:ring-primary lg:w-auto"
           aria-label={t("models.filters.providerAria")}
         >
           <option value="">{t("models.filters.allProviders")}</option>
@@ -388,14 +398,14 @@ export default function ModelsPage() {
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value)}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-primary"
+          className="min-w-0 rounded-lg border border-border bg-surface px-3 py-2 pointer-coarse:py-2.5 text-sm text-text outline-none focus:ring-2 focus:ring-primary lg:w-auto"
           aria-label={t("models.filters.sortAria")}
         >
           <option value="">{t("models.filters.defaultOrder")}</option>
           <option value="newest">{t("models.filters.newest")}</option>
         </select>
 
-        <div className="flex items-center gap-2">
+        <div className="col-span-2 flex min-h-11 items-center gap-2 sm:col-span-4 lg:min-h-0">
           <Switch
             checked={showInactive}
             onCheckedChange={setShowInactive}
@@ -409,8 +419,8 @@ export default function ModelsPage() {
 
       {/* Bulk actions */}
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5">
-          <span className="text-sm text-text">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 sm:px-4">
+          <span className="w-full text-sm text-text sm:w-auto">
             {t("models.bulk.selected", { count: selected.size })}
           </span>
           <Button
@@ -433,215 +443,253 @@ export default function ModelsPage() {
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-surface-elevated/50 text-left text-text-muted">
-              <th className="w-10 px-4 py-3">
-                <input
-                  type="checkbox"
-                  checked={models.length > 0 && selected.size === models.length}
-                  onChange={toggleSelectAll}
-                  aria-label={t("models.table.selectAll")}
-                  className="h-4 w-4 rounded border-border accent-primary"
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                {t("models.table.model")}
-              </th>
-              <th className="px-4 py-3 font-medium">
-                {t("models.table.provider")}
-              </th>
-              <th className="px-4 py-3 font-medium">
-                {t("models.table.type")}
-              </th>
-              <th className="px-4 py-3 font-medium">
-                {t("models.table.tier")}
-              </th>
-              <th className="px-4 py-3 font-medium text-right">
-                {t("models.table.credits")}
-              </th>
-              <th className="px-4 py-3 font-medium text-right">
-                {t("models.table.margin")}
-              </th>
-              <th className="px-4 py-3 font-medium">
-                {t("models.table.status")}
-              </th>
-              <th className="hidden px-4 py-3 font-medium 2xl:table-cell">
-                {t("models.table.integrated")}
-              </th>
-              <th className="px-4 py-3 font-medium text-right">
-                {t("models.table.actions")}
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
-                  <td colSpan={10} className="px-4 py-4">
-                    <Skeleton className="h-8 w-full" />
+      {/* Cards while narrow (see .table-stack); a table that scrolls
+          sideways inside its card when there is room for one. */}
+      <div className="@container overflow-hidden rounded-xl border border-border bg-surface">
+        <div data-scroll-x className="overflow-x-auto">
+          <table className="table-stack w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-surface-elevated/50 text-left text-text-muted">
+                <th
+                  className="w-10 px-4 py-3"
+                  data-stack-keep
+                  data-label={t("models.table.selectAll")}
+                >
+                  <input
+                    type="checkbox"
+                    checked={
+                      models.length > 0 && selected.size === models.length
+                    }
+                    onChange={toggleSelectAll}
+                    aria-label={t("models.table.selectAll")}
+                    className="h-4 w-4 pointer-coarse:h-5 pointer-coarse:w-5 rounded border-border accent-primary"
+                  />
+                </th>
+                <th className="px-4 py-3 font-medium">
+                  {t("models.table.model")}
+                </th>
+                <th className="px-4 py-3 font-medium">
+                  {t("models.table.provider")}
+                </th>
+                <th className="px-4 py-3 font-medium">
+                  {t("models.table.type")}
+                </th>
+                <th className="px-4 py-3 font-medium">
+                  {t("models.table.tier")}
+                </th>
+                <th className="px-4 py-3 font-medium text-right">
+                  {t("models.table.credits")}
+                </th>
+                <th className="px-4 py-3 font-medium text-right">
+                  {t("models.table.margin")}
+                </th>
+                <th className="px-4 py-3 font-medium">
+                  {t("models.table.status")}
+                </th>
+                <th className="hidden px-4 py-3 font-medium 2xl:table-cell">
+                  {t("models.table.integrated")}
+                </th>
+                <th className="px-4 py-3 font-medium text-right">
+                  {t("models.table.actions")}
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>
+                    <td colSpan={10} className="px-4 py-4">
+                      <Skeleton className="h-8 w-full" />
+                    </td>
+                  </tr>
+                ))
+              ) : models.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-4 py-12 text-center text-text-dim"
+                  >
+                    <BrainCircuit className="mx-auto mb-3 h-10 w-10 opacity-30" />
+                    <p>{t("models.empty")}</p>
+                    <p className="mt-1 text-xs">{t("models.emptyHint")}</p>
                   </td>
                 </tr>
-              ))
-            ) : models.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={10}
-                  className="px-4 py-12 text-center text-text-dim"
-                >
-                  <BrainCircuit className="mx-auto mb-3 h-10 w-10 opacity-30" />
-                  <p>{t("models.empty")}</p>
-                  <p className="mt-1 text-xs">{t("models.emptyHint")}</p>
-                </td>
-              </tr>
-            ) : (
-              models.map((model) => (
-                <tr
-                  key={model.id}
-                  className={`hover:bg-surface-elevated/30 ${
-                    !model.isActive ? "opacity-60" : ""
-                  }`}
-                >
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(model.id)}
-                      onChange={() => toggleSelect(model.id)}
-                      aria-label={t("models.table.select", {
+              ) : (
+                models.map((model) => (
+                  <tr
+                    key={model.id}
+                    className={`hover:bg-surface-elevated/30 ${
+                      !model.isActive ? "opacity-60" : ""
+                    }`}
+                  >
+                    <td
+                      className="px-4 py-3"
+                      data-label={t("models.table.select", {
                         name: model.displayName,
                       })}
-                      className="h-4 w-4 rounded border-border accent-primary"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div>
-                      <p className="font-medium text-text">
-                        {model.displayName}
-                      </p>
-                      <p className="flex items-center gap-1.5">
-                        <span className="max-w-[240px] truncate font-mono text-xs text-text-dim">
-                          {model.modelId}
-                        </span>
-                        {model.isCustom && (
-                          <span title={t("models.customHint")}>
-                            <Badge variant="outline" size="sm">
-                              {t("models.custom")}
-                            </Badge>
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" size="sm">
-                      {model.providerSlug}
-                    </Badge>
-                  </td>
-
-                  {/* Task Type */}
-                  <td className="px-4 py-3">
-                    <Badge
-                      variant={
-                        model.taskType === "image-generation"
-                          ? "primary"
-                          : model.taskType === "text-generation"
-                            ? "secondary"
-                            : "accent"
-                      }
-                      size="sm"
                     >
-                      {tOptional(
-                        `models.taskTypes.${model.taskType}`,
-                        model.taskType.replace("-generation", ""),
-                      )}
-                    </Badge>
-                  </td>
-
-                  {/* Tier */}
-                  <td className="px-4 py-3">
-                    <Badge
-                      variant={model.tier === "PRO" ? "premium" : "free"}
-                      size="sm"
-                    >
-                      {tOptional(`models.tiers.${model.tier}`, model.tier)}
-                    </Badge>
-                  </td>
-
-                  <td className="px-4 py-3 text-right font-mono text-text">
-                    {model.creditCost}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono text-text">
-                    {formatNumber(model.profitMargin)}×
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge
-                      variant={model.isActive ? "secondary" : "outline"}
-                      size="sm"
-                    >
-                      {model.isActive
-                        ? t("common.active")
-                        : t("common.inactive")}
-                    </Badge>
-                  </td>
-                  <td
-                    className="hidden whitespace-nowrap px-4 py-3 text-text-muted 2xl:table-cell"
-                    title={
-                      model.integratedAt
-                        ? formatLocaleDate(model.integratedAt, {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          })
-                        : undefined
-                    }
-                  >
-                    {formatDate(model.integratedAt)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Switch
-                        checked={model.isActive}
-                        onCheckedChange={() => handleToggleClick(model)}
-                        aria-label={t("models.toggleAria", {
+                      <input
+                        type="checkbox"
+                        checked={selected.has(model.id)}
+                        onChange={() => toggleSelect(model.id)}
+                        aria-label={t("models.table.select", {
                           name: model.displayName,
                         })}
+                        className="h-4 w-4 pointer-coarse:h-5 pointer-coarse:w-5 rounded border-border accent-primary"
                       />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setDetailModal({ open: true, modelId: model.id })
+                    </td>
+                    <td className="px-4 py-3" data-primary>
+                      <div>
+                        <p className="font-medium text-text">
+                          {model.displayName}
+                        </p>
+                        <p className="flex items-center gap-1.5">
+                          <span className="min-w-0 max-w-[240px] truncate font-mono text-xs text-text-dim">
+                            {model.modelId}
+                          </span>
+                          {model.isCustom && (
+                            <span title={t("models.customHint")}>
+                              <Badge variant="outline" size="sm">
+                                {t("models.custom")}
+                              </Badge>
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </td>
+                    <td
+                      className="px-4 py-3"
+                      data-label={t("models.table.provider")}
+                    >
+                      <Badge variant="outline" size="sm">
+                        {model.providerSlug}
+                      </Badge>
+                    </td>
+
+                    {/* Task Type */}
+                    <td
+                      className="px-4 py-3"
+                      data-label={t("models.table.type")}
+                    >
+                      <Badge
+                        variant={
+                          model.taskType === "image-generation"
+                            ? "primary"
+                            : model.taskType === "text-generation"
+                              ? "secondary"
+                              : "accent"
                         }
-                        aria-label={t("models.configureAria", {
-                          name: model.displayName,
-                        })}
+                        size="sm"
                       >
-                        <Settings2 className="h-4 w-4" />
-                      </Button>
-                      {model.isCustom && (
+                        {tOptional(
+                          `models.taskTypes.${model.taskType}`,
+                          model.taskType.replace("-generation", ""),
+                        )}
+                      </Badge>
+                    </td>
+
+                    {/* Tier */}
+                    <td
+                      className="px-4 py-3"
+                      data-label={t("models.table.tier")}
+                    >
+                      <Badge
+                        variant={model.tier === "PRO" ? "premium" : "free"}
+                        size="sm"
+                      >
+                        {tOptional(`models.tiers.${model.tier}`, model.tier)}
+                      </Badge>
+                    </td>
+
+                    <td
+                      className="px-4 py-3 text-right font-mono text-text"
+                      data-label={t("models.table.credits")}
+                    >
+                      {model.creditCost}
+                    </td>
+                    <td
+                      className="px-4 py-3 text-right font-mono text-text"
+                      data-label={t("models.table.margin")}
+                    >
+                      {formatNumber(model.profitMargin)}×
+                    </td>
+                    <td
+                      className="px-4 py-3"
+                      data-label={t("models.table.status")}
+                    >
+                      <Badge
+                        variant={model.isActive ? "secondary" : "outline"}
+                        size="sm"
+                      >
+                        {model.isActive
+                          ? t("common.active")
+                          : t("common.inactive")}
+                      </Badge>
+                    </td>
+                    <td
+                      className="hidden whitespace-nowrap px-4 py-3 text-text-muted 2xl:table-cell"
+                      title={
+                        model.integratedAt
+                          ? formatLocaleDate(model.integratedAt, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })
+                          : undefined
+                      }
+                    >
+                      {formatDate(model.integratedAt)}
+                    </td>
+                    <td
+                      className="px-4 py-3 text-right"
+                      data-label={t("models.table.actions")}
+                    >
+                      <div className="flex items-center justify-end gap-2">
+                        <Switch
+                          checked={model.isActive}
+                          onCheckedChange={() => handleToggleClick(model)}
+                          aria-label={t("models.toggleAria", {
+                            name: model.displayName,
+                          })}
+                        />
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setDeleteTarget(model)}
-                          aria-label={t("models.deleteAria", {
+                          className="pointer-coarse:h-11 pointer-coarse:w-11"
+                          onClick={() =>
+                            setDetailModal({ open: true, modelId: model.id })
+                          }
+                          aria-label={t("models.configureAria", {
                             name: model.displayName,
                           })}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Settings2 className="h-4 w-4" />
                         </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                        {model.isCustom && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="pointer-coarse:h-11 pointer-coarse:w-11"
+                            onClick={() => setDeleteTarget(model)}
+                            aria-label={t("models.deleteAria", {
+                              name: model.displayName,
+                            })}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination */}
       {meta.totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-text-muted">
             {t("models.pagination", {
               page: meta.page,
@@ -649,10 +697,11 @@ export default function ModelsPage() {
               count: meta.total,
             })}
           </p>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex">
             <Button
               variant="secondary"
               size="sm"
+              className="pointer-coarse:h-11"
               disabled={meta.page <= 1}
               onClick={() => fetchModels(meta.page - 1)}
             >
@@ -661,6 +710,7 @@ export default function ModelsPage() {
             <Button
               variant="secondary"
               size="sm"
+              className="pointer-coarse:h-11"
               disabled={meta.page >= meta.totalPages}
               onClick={() => fetchModels(meta.page + 1)}
             >

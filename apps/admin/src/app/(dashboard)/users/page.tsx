@@ -98,20 +98,22 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text">{t("users.title")}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-text">
+            {t("users.title")}
+          </h1>
           <p className="text-text-muted">{t("users.subtitle")}</p>
         </div>
-        <Link href="/users/new">
-          <Button>
+        <Link href="/users/new" className="shrink-0">
+          <Button className="w-full sm:w-auto pointer-coarse:h-11">
             <Plus className="mr-2 h-4 w-4" />
             {t("users.newUser")}
           </Button>
         </Link>
       </div>
 
-      <div className="relative max-w-md">
+      <div className="relative w-full sm:max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" />
         <Input
           placeholder={t("users.searchPlaceholder")}
@@ -125,8 +127,8 @@ export default function UsersPage() {
         )}
       </div>
 
-      <div className="rounded-xl border border-border bg-surface overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="@container rounded-xl border border-border bg-surface overflow-hidden">
+        <table className="table-stack w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-elevated/50 text-left text-text-muted">
               <th className="px-4 py-3 font-medium">{t("users.table.user")}</th>
@@ -163,7 +165,7 @@ export default function UsersPage() {
             ) : (
               users.map((user) => (
                 <tr key={user.id} className="hover:bg-surface-elevated/30">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" data-primary>
                     <div>
                       <p className="font-medium text-text">
                         {user.name || t("users.unnamed")}
@@ -171,7 +173,7 @@ export default function UsersPage() {
                       <p className="text-xs text-text-dim">{user.email}</p>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" data-label={t("users.table.role")}>
                     <Badge
                       variant={user.role === "ADMIN" ? "premium" : "default"}
                       size="sm"
@@ -179,7 +181,7 @@ export default function UsersPage() {
                       {tOptional(`common.roles.${user.role}`, user.role)}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" data-label={t("users.table.plan")}>
                     <Badge
                       variant={user.plan === "FREE" ? "free" : "premium"}
                       size="sm"
@@ -187,7 +189,10 @@ export default function UsersPage() {
                       {tOptional(`common.plans.${user.plan}`, user.plan)}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3">
+                  <td
+                    className="px-4 py-3"
+                    data-label={t("users.table.credits")}
+                  >
                     <div className="tabular-nums text-text">
                       {formatNumber(user.totalCredits)}
                       <span className="ml-1 text-xs text-text-dim">
@@ -198,7 +203,10 @@ export default function UsersPage() {
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td
+                    className="px-4 py-3"
+                    data-label={t("users.table.status")}
+                  >
                     <Switch
                       checked={user.isActive}
                       onCheckedChange={() => openToggleDialog(user)}
@@ -207,7 +215,10 @@ export default function UsersPage() {
                       })}
                     />
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td
+                    className="px-4 py-3 text-right"
+                    data-label={t("users.table.actions")}
+                  >
                     <Link href={`/users/${user.id}/edit`}>
                       <Button
                         variant="outline"
@@ -215,12 +226,10 @@ export default function UsersPage() {
                         aria-label={t("users.editAria", {
                           name: user.name || user.email,
                         })}
-                        className="min-w-[80px]"
+                        className="min-w-[80px] pointer-coarse:h-11"
                       >
                         <Pencil className="h-4 w-4" />
-                        <span className="hidden sm:inline">
-                          {t("common.edit")}
-                        </span>
+                        <span>{t("common.edit")}</span>
                       </Button>
                     </Link>
                   </td>
@@ -232,12 +241,13 @@ export default function UsersPage() {
       </div>
 
       {meta.totalPages > 1 && (
-        <div className="rounded-lg border border-border bg-surface px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="w-28">
+        <div className="rounded-lg border border-border bg-surface px-3 py-3 sm:px-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="shrink-0 sm:w-28">
               <Button
                 variant="secondary"
                 size="sm"
+                className="pointer-coarse:h-11"
                 disabled={meta.page <= 1}
                 onClick={() => fetchUsers(meta.page - 1)}
               >
@@ -247,10 +257,11 @@ export default function UsersPage() {
             <p className="flex-1 text-center text-sm text-text-muted">
               {t("common.pageOf", { page: meta.page, total: meta.totalPages })}
             </p>
-            <div className="w-28 text-right">
+            <div className="shrink-0 text-right sm:w-28">
               <Button
                 variant="secondary"
                 size="sm"
+                className="pointer-coarse:h-11"
                 disabled={meta.page >= meta.totalPages}
                 onClick={() => fetchUsers(meta.page + 1)}
               >

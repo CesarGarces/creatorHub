@@ -85,7 +85,7 @@ export function ToolCard({
                   onToggleFavorite();
                 }}
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150",
+                  "flex h-8 w-8 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-lg transition-all duration-150",
                   "hover:bg-surface-elevated active:scale-90",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                   isFavorite

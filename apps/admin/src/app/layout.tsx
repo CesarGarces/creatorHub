@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { LOCALE_META } from "@creator-hub/i18n";
+import { VisualViewportObserver } from "@creator-hub/ui";
 import { Providers } from "./providers";
 import { getRequestLocale } from "@/i18n/server";
 import { translate } from "@/i18n/translate";
@@ -16,6 +17,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/** Mobile-first viewport (see apps/web/src/app/layout.tsx). */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+  themeColor: "#0b0f19",
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -28,6 +38,7 @@ export default async function RootLayout({
   return (
     <html lang={LOCALE_META[locale].intlLocale} suppressHydrationWarning>
       <body className="antialiased" suppressHydrationWarning>
+        <VisualViewportObserver />
         <Providers initialLocale={locale}>{children}</Providers>
       </body>
     </html>

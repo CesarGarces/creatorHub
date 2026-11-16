@@ -11,7 +11,7 @@ interface TopUsersTableProps {
 export function TopUsersTable({ users }: TopUsersTableProps) {
   const { t, tOptional, formatNumber } = useI18n();
   return (
-    <div className="rounded-xl border border-border bg-surface p-6">
+    <div className="min-w-0 rounded-xl border border-border bg-surface p-4 sm:p-6">
       <h3 className="text-lg font-semibold text-text">
         {t("dashboard.topUsers.title")}
       </h3>
@@ -19,8 +19,8 @@ export function TopUsersTable({ users }: TopUsersTableProps) {
         {t("dashboard.topUsers.subtitle")}
       </p>
 
-      <div className="mt-6 overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="@container mt-4 sm:mt-6">
+        <table className="table-stack table-stack-flush w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-text-muted">
               <th className="pb-3 font-medium">
@@ -50,13 +50,16 @@ export function TopUsersTable({ users }: TopUsersTableProps) {
             ) : (
               users.map((user) => (
                 <tr key={user.userId} className="hover:bg-surface-elevated/50">
-                  <td className="py-3">
+                  <td className="py-3" data-primary>
                     <div>
                       <p className="font-medium text-text">{user.userName}</p>
                       <p className="text-xs text-text-dim">{user.userEmail}</p>
                     </div>
                   </td>
-                  <td className="py-3">
+                  <td
+                    className="py-3"
+                    data-label={t("dashboard.topUsers.plan")}
+                  >
                     <Badge
                       variant={user.userPlan === "FREE" ? "free" : "premium"}
                       size="sm"
@@ -67,10 +70,16 @@ export function TopUsersTable({ users }: TopUsersTableProps) {
                       )}
                     </Badge>
                   </td>
-                  <td className="py-3 text-right tabular-nums text-text">
+                  <td
+                    className="py-3 text-right tabular-nums text-text"
+                    data-label={t("dashboard.topUsers.usage")}
+                  >
                     {formatNumber(user.usageCount)}
                   </td>
-                  <td className="py-3 text-right tabular-nums text-text">
+                  <td
+                    className="py-3 text-right tabular-nums text-text"
+                    data-label={t("dashboard.topUsers.creditsUsed")}
+                  >
                     {formatNumber(user.creditsUsed)}
                   </td>
                 </tr>

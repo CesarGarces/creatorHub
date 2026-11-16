@@ -19,6 +19,9 @@ export const nav: Messages["nav"] = {
   logout: "Cerrar sesión",
   expandSidebar: "Expandir barra lateral",
   collapseSidebar: "Contraer barra lateral",
+  openMenu: "Abrir menú",
+  closeMenu: "Cerrar menú",
+  mainNavigation: "Navegación principal",
   userFallback: "Usuario",
   logoAlt: "Creator Hub",
 };

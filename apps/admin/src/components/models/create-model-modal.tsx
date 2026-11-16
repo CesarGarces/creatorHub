@@ -123,7 +123,7 @@ export function CreateModelModal({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && close()}>
       <DialogContent
-        className="flex max-h-[90vh] w-full max-w-xl flex-col"
+        className="flex max-h-full w-full max-w-xl flex-col overflow-hidden sm:max-h-[90vh]"
         onClose={close}
         role="dialog"
         aria-modal="true"
@@ -141,7 +141,7 @@ export function CreateModelModal({
           noValidate
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
             {serverError && (
               <div
                 role="alert"
@@ -151,7 +151,7 @@ export function CreateModelModal({
               </div>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <label
                   htmlFor="model-taskType"
@@ -249,7 +249,7 @@ export function CreateModelModal({
               {fieldError("displayName")}
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <label
                   htmlFor="model-tier"

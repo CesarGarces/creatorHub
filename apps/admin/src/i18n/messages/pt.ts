@@ -46,6 +46,9 @@ export const pt: Messages = {
     creditEmails: "E-mails de créditos",
     backups: "Backups",
     logout: "Sair",
+    openMenu: "Abrir menu",
+    closeMenu: "Fechar menu",
+    mainNavigation: "Navegação principal",
   },
   login: {
     title: "Login de administração",

@@ -7,6 +7,7 @@ import { Info, Mail, Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { ActionConfirmDialog, Badge, Skeleton, Switch } from "@creator-hub/ui";
 import { CREDIT_STATES, type CreditState } from "@creator-hub/shared-types";
 import api from "@/lib/api";
+import { ModalShell } from "@/components/modal-shell";
 import { useI18n } from "@/i18n/i18n-provider";
 import type { TranslationKey } from "@/i18n/translate";
 import { CreditEmailEditor } from "@/components/credit-emails/credit-email-editor";
@@ -149,7 +150,7 @@ export default function CreditEmailsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text">
+        <h1 className="text-xl sm:text-2xl font-bold text-text">
           {t("creditEmails.title")}
         </h1>
         <p className="mt-1 text-sm text-text-muted">
@@ -165,8 +166,8 @@ export default function CreditEmailsPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-surface">
-        <table className="w-full text-sm">
+      <div className="@container overflow-hidden rounded-xl border border-border bg-surface">
+        <table className="table-stack w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-elevated/50 text-left text-text-muted">
               <th className="px-4 py-3 font-medium">
@@ -196,7 +197,7 @@ export default function CreditEmailsPage() {
                   const trigger = triggerFor(state);
                   return (
                     <tr key={state} className="hover:bg-surface-elevated/30">
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" data-primary>
                         <span className="font-semibold tabular-nums text-text">
                           {stateLabel(state)}
                         </span>
@@ -204,7 +205,10 @@ export default function CreditEmailsPage() {
                           {state}
                         </p>
                       </td>
-                      <td className="px-4 py-3">
+                      <td
+                        className="px-4 py-3"
+                        data-label={t("creditEmails.columns.email")}
+                      >
                         {trigger ? (
                           <span className="text-text">{trigger.subject}</span>
                         ) : (
@@ -213,7 +217,10 @@ export default function CreditEmailsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td
+                        className="px-4 py-3"
+                        data-label={t("creditEmails.columns.active")}
+                      >
                         {trigger && (
                           <Switch
                             checked={trigger.isActive}
@@ -229,8 +236,11 @@ export default function CreditEmailsPage() {
                           />
                         )}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
+                      <td
+                        className="px-4 py-3"
+                        data-label={t("creditEmails.columns.actions")}
+                      >
+                        <div className="flex flex-wrap justify-end gap-2">
                           {trigger ? (
                             <>
                               <button
@@ -238,7 +248,7 @@ export default function CreditEmailsPage() {
                                 onClick={() => testMutation.mutate(trigger.id)}
                                 disabled={testMutation.isPending}
                                 title={t("creditEmails.testTitle")}
-                                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:bg-surface-elevated disabled:opacity-50"
+                                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 pointer-coarse:min-h-11 text-xs font-medium text-text-muted transition-colors hover:bg-surface-elevated disabled:opacity-50"
                               >
                                 <Send size={14} />
                                 {t("creditEmails.test")}
@@ -246,7 +256,7 @@ export default function CreditEmailsPage() {
                               <button
                                 type="button"
                                 onClick={() => setEditing({ state, trigger })}
-                                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:bg-surface-elevated"
+                                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 pointer-coarse:min-h-11 text-xs font-medium text-text-muted transition-colors hover:bg-surface-elevated"
                               >
                                 <Pencil size={14} />
                                 {t("common.edit")}
@@ -257,7 +267,7 @@ export default function CreditEmailsPage() {
                                 aria-label={t("creditEmails.deleteAria", {
                                   state: stateLabel(state),
                                 })}
-                                className="flex items-center rounded-lg border border-border px-2.5 py-1.5 text-red-500 transition-colors hover:bg-red-500/10"
+                                className="flex items-center justify-center rounded-lg border border-border px-2.5 py-1.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-red-500 transition-colors hover:bg-red-500/10"
                               >
                                 <Trash2 size={14} />
                               </button>
@@ -268,7 +278,7 @@ export default function CreditEmailsPage() {
                               onClick={() =>
                                 setEditing({ state, trigger: null })
                               }
-                              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90"
+                              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 pointer-coarse:min-h-11 text-xs font-medium text-white transition-colors hover:bg-primary/90"
                             >
                               <Plus size={14} />
                               {t("creditEmails.createEmail")}
@@ -287,8 +297,8 @@ export default function CreditEmailsPage() {
         <h2 className="mb-3 text-lg font-semibold text-text">
           {t("creditEmails.recent.title")}
         </h2>
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
-          <table className="w-full text-sm">
+        <div className="@container overflow-hidden rounded-xl border border-border bg-surface">
+          <table className="table-stack w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-elevated/50 text-left text-text-muted">
                 <th className="px-4 py-3 font-medium">
@@ -328,22 +338,38 @@ export default function CreditEmailsPage() {
               ) : (
                 logs.map((log) => (
                   <tr key={log.id} className="hover:bg-surface-elevated/30">
-                    <td className="whitespace-nowrap px-4 py-3 text-text-muted">
+                    <td
+                      className="whitespace-nowrap px-4 py-3 text-text-muted"
+                      data-label={t("creditEmails.recent.date")}
+                    >
                       {new Date(log.createdAt).toLocaleString()}
                     </td>
-                    <td className="px-4 py-3 text-text">{log.email}</td>
-                    <td className="px-4 py-3 text-text-muted">
-                      {stateLabel(log.state)}
-                      <span className="ml-1 text-xs text-text-dim">
-                        {t("creditEmails.recent.creditsLeft", {
-                          credits: log.credits,
-                        })}
+                    <td className="px-4 py-3 text-text" data-primary>
+                      {log.email}
+                    </td>
+                    <td
+                      className="px-4 py-3 text-text-muted"
+                      data-label={t("creditEmails.recent.creditLevel")}
+                    >
+                      <span>
+                        {stateLabel(log.state)}
+                        <span className="ml-1 text-xs text-text-dim">
+                          {t("creditEmails.recent.creditsLeft", {
+                            credits: log.credits,
+                          })}
+                        </span>
                       </span>
                     </td>
-                    <td className="max-w-xs truncate px-4 py-3 text-text-muted">
+                    <td
+                      className="max-w-xs truncate px-4 py-3 text-text-muted"
+                      data-label={t("creditEmails.recent.subject")}
+                    >
                       {log.subject}
                     </td>
-                    <td className="px-4 py-3">
+                    <td
+                      className="px-4 py-3"
+                      data-label={t("creditEmails.recent.status")}
+                    >
                       <div
                         className="flex items-center gap-1.5"
                         title={log.error ?? undefined}
@@ -370,25 +396,30 @@ export default function CreditEmailsPage() {
       </div>
 
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-xl border border-border bg-surface p-6">
-            <h2 className="mb-4 text-lg font-semibold text-text">
-              {t(
-                editing.trigger
-                  ? "creditEmails.modal.editTitle"
-                  : "creditEmails.modal.createTitle",
-                { state: stateLabel(editing.state) },
-              )}
-            </h2>
-            <CreditEmailEditor
-              state={editing.state}
-              trigger={editing.trigger}
-              onSave={handleSave}
-              onCancel={() => setEditing(null)}
-              isSaving={createMutation.isPending || updateMutation.isPending}
-            />
-          </div>
-        </div>
+        <ModalShell
+          labelledBy="credit-email-editor-title"
+          size="5xl"
+          className="sm:max-h-[90vh]"
+        >
+          <h2
+            id="credit-email-editor-title"
+            className="mb-4 text-lg font-semibold text-text"
+          >
+            {t(
+              editing.trigger
+                ? "creditEmails.modal.editTitle"
+                : "creditEmails.modal.createTitle",
+              { state: stateLabel(editing.state) },
+            )}
+          </h2>
+          <CreditEmailEditor
+            state={editing.state}
+            trigger={editing.trigger}
+            onSave={handleSave}
+            onCancel={() => setEditing(null)}
+            isSaving={createMutation.isPending || updateMutation.isPending}
+          />
+        </ModalShell>
       )}
 
       <ActionConfirmDialog

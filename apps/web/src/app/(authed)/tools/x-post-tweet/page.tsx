@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { History, Plus } from "lucide-react";
+import { useIsDesktop } from "@/hooks/use-media-query";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { useCreditsStore } from "@/store/credits.store";
@@ -65,6 +67,12 @@ export default function XPostTweetPage() {
   );
   const [showSettings, setShowSettings] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
+  // Below lg the history is an overlay drawer, closed by default.
+  const isDesktop = useIsDesktop();
+  const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
+  const historyVisible = isDesktop ? showSidebar : mobileHistoryOpen;
+  const toggleHistory = () =>
+    isDesktop ? setShowSidebar((v) => !v) : setMobileHistoryOpen((v) => !v);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { fetchBalance, plan } = useCreditsStore();
   const promptFromUrl = useToolQueryParams();
@@ -148,7 +156,7 @@ export default function XPostTweetPage() {
             { label: t("xPost.title") },
           ]}
         />
-        <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)] p-6">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-3.5rem)] p-4 sm:p-6">
           <div className="max-w-md text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 mx-auto mb-4">
               <svg
@@ -340,12 +348,21 @@ export default function XPostTweetPage() {
           { label: t("xPost.title") },
         ]}
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
-              onClick={() => setShowSidebar((v) => !v)}
-              className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm text-text-muted hover:text-text transition-colors"
+              onClick={toggleHistory}
+              aria-label={
+                historyVisible ? t("xPost.hideHistory") : t("xPost.showHistory")
+              }
+              aria-expanded={historyVisible}
+              className="flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface-elevated px-2 text-sm text-text-muted hover:text-text transition-colors pointer-coarse:h-11 pointer-coarse:min-w-11 sm:h-auto sm:px-3 sm:py-1.5"
             >
-              {showSidebar ? t("xPost.hideHistory") : t("xPost.showHistory")}
+              <History className="h-4 w-4 sm:hidden" aria-hidden="true" />
+              <span className="hidden sm:inline">
+                {historyVisible
+                  ? t("xPost.hideHistory")
+                  : t("xPost.showHistory")}
+              </span>
             </button>
             <button
               onClick={() => {
@@ -353,17 +370,26 @@ export default function XPostTweetPage() {
                 setMessages([]);
                 setInput("");
               }}
-              className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm text-text-muted hover:text-text transition-colors"
+              aria-label={t("xPost.newTweet")}
+              className="flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface-elevated px-2 text-sm text-text-muted hover:text-text transition-colors pointer-coarse:h-11 pointer-coarse:min-w-11 sm:h-auto sm:px-3 sm:py-1.5"
             >
-              {t("xPost.newTweet")}
+              <Plus className="h-4 w-4 sm:hidden" aria-hidden="true" />
+              <span className="hidden sm:inline">{t("xPost.newTweet")}</span>
             </button>
           </div>
         }
       />
-      <div className="flex h-[calc(100vh-3.5rem)]">
-        {/* History Sidebar */}
-        {showSidebar && (
-          <div className="w-72 border-r border-border bg-surface flex flex-col">
+      <div className="relative flex h-[calc(100dvh-3.5rem)]">
+        {/* History: docked from lg, an overlay drawer below. */}
+        {historyVisible && !isDesktop && (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 z-20 bg-black/50 lg:hidden"
+            onClick={() => setMobileHistoryOpen(false)}
+          />
+        )}
+        {historyVisible && (
+          <div className="absolute inset-y-0 left-0 z-30 flex w-[85%] max-w-xs flex-col border-r border-border bg-surface shadow-2xl lg:static lg:z-auto lg:w-72 lg:max-w-none lg:shadow-none">
             <div className="p-3 border-b border-border">
               <h3 className="text-sm font-medium text-text">
                 {t("xPost.tweetHistory")}
@@ -391,7 +417,10 @@ export default function XPostTweetPage() {
                       "group flex items-center gap-2 px-3 py-2.5 cursor-pointer border-b border-border/50 hover:bg-surface-elevated transition-colors",
                       activeSession?.id === session.id && "bg-surface-elevated",
                     )}
-                    onClick={() => selectSession(session.id)}
+                    onClick={() => {
+                      selectSession(session.id);
+                      if (!isDesktop) setMobileHistoryOpen(false);
+                    }}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-text truncate">
@@ -428,7 +457,7 @@ export default function XPostTweetPage() {
                       }}
                       aria-label={t("xPost.deleteDraft")}
                       title={t("xPost.deleteDraft")}
-                      className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-500 transition-all p-1"
+                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 pointer-coarse:p-2.5 text-text-muted hover:text-red-500 transition-all p-1"
                     >
                       <svg
                         width="14"
@@ -449,7 +478,7 @@ export default function XPostTweetPage() {
         )}
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           {/* Settings Panel */}
           {showSettings && (
             <ModelSettingsPanel
@@ -462,7 +491,7 @@ export default function XPostTweetPage() {
           )}
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-6">
             {messages.length === 0 && (
               <div className="max-w-3xl mx-auto text-center py-12">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mx-auto mb-4">
@@ -492,7 +521,7 @@ export default function XPostTweetPage() {
               <div
                 key={msg.id}
                 className={cn(
-                  "flex gap-4 max-w-3xl mx-auto animate-slide-up",
+                  "flex gap-3 sm:gap-4 max-w-3xl mx-auto animate-slide-up",
                   msg.role === "user" && "flex-row-reverse",
                 )}
               >
@@ -508,7 +537,7 @@ export default function XPostTweetPage() {
                 </div>
                 <div
                   className={cn(
-                    "rounded-2xl px-5 py-3.5 text-sm leading-relaxed max-w-[80%]",
+                    "min-w-0 rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 text-sm leading-relaxed max-w-[85%] sm:max-w-[80%]",
                     msg.role === "assistant"
                       ? "bg-surface border border-border text-text"
                       : "bg-primary text-white ml-auto",
@@ -571,14 +600,14 @@ export default function XPostTweetPage() {
 
           {/* Suggestions */}
           {messages.length === 0 && (
-            <div className="px-6 pb-4">
+            <div className="px-4 pb-4 sm:px-6">
               <div className="max-w-3xl mx-auto flex flex-wrap gap-2">
                 {suggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => handleSend(s)}
                     disabled={isStreaming}
-                    className="rounded-full border border-border bg-surface px-4 py-2 text-xs text-text-muted hover:text-text hover:border-primary/30 transition-all disabled:opacity-50"
+                    className="rounded-full border border-border bg-surface px-4 py-2 pointer-coarse:py-2.5 text-xs text-text-muted hover:text-text hover:border-primary/30 transition-all disabled:opacity-50"
                   >
                     {s}
                   </button>
@@ -588,8 +617,12 @@ export default function XPostTweetPage() {
           )}
 
           {/* Input */}
-          <div className="border-t border-border bg-surface p-4">
-            <div className="max-w-3xl mx-auto flex items-center gap-3">
+          <div
+            data-composer
+            className="border-t border-border bg-surface p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4"
+          >
+            {/* Phones: message + send on top, tool buttons below. */}
+            <div className="max-w-3xl mx-auto flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
               <button
                 onClick={() => setShowSettings((v) => !v)}
                 className={cn(
@@ -632,14 +665,15 @@ export default function XPostTweetPage() {
                   e.key === "Enter" && !e.shiftKey && handleSend()
                 }
                 placeholder={t("xPost.inputPlaceholder")}
+                aria-label={t("xPost.inputPlaceholder")}
                 disabled={isStreaming}
-                className="flex-1 rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary transition-colors disabled:opacity-50"
+                className="order-first min-w-0 flex-1 basis-[calc(100%-3.25rem)] rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary transition-colors disabled:opacity-50 sm:order-none sm:basis-auto"
               />
               <button
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isStreaming}
                 aria-label={t("xPost.send")}
-                className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="order-first flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary sm:order-none text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg
                   width="18"
@@ -693,7 +727,7 @@ function TweetDraftCard({
           className="w-full rounded-lg border border-border bg-surface p-3 text-sm text-text resize-none focus:border-primary outline-none"
           rows={4}
         />
-        <div className="flex items-center justify-between mt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
           <span
             className={cn(
               "text-xs",
@@ -708,14 +742,14 @@ function TweetDraftCard({
                 setEditing(false);
                 setEditContent(draft.content);
               }}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-muted hover:text-text transition-colors"
+              className="rounded-lg border border-border px-3 py-1.5 pointer-coarse:min-h-10 text-xs text-text-muted hover:text-text transition-colors"
             >
               {t("xPost.cancel")}
             </button>
             <button
               onClick={handleSave}
               disabled={isOverLimit}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-hover disabled:opacity-50 transition-colors"
+              className="rounded-lg bg-primary px-3 py-1.5 pointer-coarse:min-h-10 text-xs text-white hover:bg-primary-hover disabled:opacity-50 transition-colors"
             >
               {t("xPost.save")}
             </button>
@@ -728,14 +762,14 @@ function TweetDraftCard({
   return (
     <div className="mt-3 rounded-xl border border-border bg-surface-elevated p-4">
       <p className="text-sm text-text whitespace-pre-wrap">{draft.content}</p>
-      <div className="flex items-center justify-between mt-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
         <span className="text-xs text-text-muted">
           {t("xPost.chars", { count: charCount })}
         </span>
         <div className="flex gap-2">
           <button
             onClick={() => setEditing(true)}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-muted hover:text-text transition-colors"
+            className="rounded-lg border border-border px-3 py-1.5 pointer-coarse:min-h-10 text-xs text-text-muted hover:text-text transition-colors"
           >
             {t("xPost.edit")}
           </button>
@@ -743,7 +777,7 @@ function TweetDraftCard({
             onClick={onPublish}
             disabled={isPublishing || draft.status === "PUBLISHED"}
             className={cn(
-              "rounded-lg px-3 py-1.5 text-xs text-white transition-colors",
+              "rounded-lg px-3 py-1.5 pointer-coarse:min-h-10 text-xs text-white transition-colors",
               draft.status === "PUBLISHED"
                 ? "bg-green-600 cursor-default"
                 : "bg-primary hover:bg-primary-hover disabled:opacity-50",

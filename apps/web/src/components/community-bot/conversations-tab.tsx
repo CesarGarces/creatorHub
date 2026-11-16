@@ -42,7 +42,7 @@ export function ConversationsTab() {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <Card
         className={cn(
           "lg:col-span-1",
@@ -50,7 +50,7 @@ export function ConversationsTab() {
         )}
       >
         <CardContent className="p-0">
-          <ScrollArea className="h-[520px]">
+          <ScrollArea className="h-[min(520px,65dvh)]">
             <ConversationList />
           </ScrollArea>
         </CardContent>
@@ -66,7 +66,7 @@ export function ConversationsTab() {
           {activeConversationId ? (
             <MessageThread />
           ) : (
-            <div className="hidden lg:flex h-[520px] items-center justify-center text-sm text-text-muted">
+            <div className="hidden lg:flex h-[min(520px,65dvh)] items-center justify-center text-sm text-text-muted">
               {t("communityBot.conversations.selectThread")}
             </div>
           )}
@@ -150,11 +150,11 @@ function MessageThread() {
   const closeConversation = useCommunityBotStore((s) => s.closeConversation);
 
   if (isLoading) {
-    return <Skeleton className="h-[520px] rounded-xl" />;
+    return <Skeleton className="h-[min(520px,65dvh)] rounded-xl" />;
   }
 
   return (
-    <div className="flex flex-col h-[520px]">
+    <div className="flex flex-col h-[min(520px,65dvh)]">
       <button
         type="button"
         onClick={closeConversation}

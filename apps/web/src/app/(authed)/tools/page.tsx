@@ -99,19 +99,25 @@ export default function ToolsPage() {
           { label: t("nav.tools") },
         ]}
       />
-      <div className="p-6 space-y-6 animate-fade-in">
+      <div className="p-4 sm:p-6 space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold text-text">{t("tools.title")}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-text">
+            {t("tools.title")}
+          </h1>
           <p className="mt-1 text-text-muted">{t("tools.subtitle")}</p>
         </div>
 
         {/* Category Filter */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        {/* Swipeable chip row; bleeds to the screen edges on phones. */}
+        <div
+          data-scroll-x
+          className="-mx-4 flex items-center gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 scrollbar-none sm:mx-0 sm:px-0"
+        >
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-150 ${
+              className={`flex-shrink-0 rounded-full px-4 py-1.5 pointer-coarse:py-2.5 text-sm font-medium transition-all duration-150 ${
                 activeCategory === cat.id
                   ? "bg-primary text-white shadow-lg shadow-primary/20"
                   : "bg-surface-elevated text-text-muted hover:text-text border border-border hover:border-border/80"
@@ -123,7 +129,7 @@ export default function ToolsPage() {
         </div>
 
         {/* Tools Grid */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((tool) => (
             <ToolCard
               key={tool.id}
@@ -153,15 +159,15 @@ export default function ToolsPage() {
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
             {t("tools.comingSoon")}
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {upcomingTools.map((item) => (
               <div
                 key={item.nameKey}
-                className="rounded-xl border border-border bg-surface p-5 opacity-60 cursor-not-allowed"
+                className="rounded-xl border border-border bg-surface p-4 sm:p-5 opacity-60 cursor-not-allowed"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-elevated text-lg">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-surface-elevated text-lg">
                       {item.icon}
                     </div>
                     <div>

@@ -57,7 +57,7 @@ export function BehaviorTab() {
 
   if (isLoading || !draft) {
     return (
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Skeleton className="h-96 rounded-xl" />
         <Skeleton className="h-96 rounded-xl" />
       </div>
@@ -80,7 +80,7 @@ export function BehaviorTab() {
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {/* Activation + model */}
       <Card>
         <CardHeader>

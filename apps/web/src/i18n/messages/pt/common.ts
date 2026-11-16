@@ -26,6 +26,8 @@ export const common: Messages["common"] = {
     count_other: "{count} créditos",
     cost_one: "⚡ {count} crédito",
     cost_other: "⚡ {count} créditos",
+    /** Compact balance for crowded headers on phones. */
+    short: "{count} cr",
   },
   toasts: {
     urlCopied: "URL copiada para a área de transferência",

@@ -272,7 +272,11 @@ export default function ContentTranslatorPage() {
               </Badge>
             )}
             {plan && planVariants[plan] && (
-              <Badge variant={planVariants[plan]} size="sm">
+              <Badge
+                variant={planVariants[plan]}
+                size="sm"
+                className="hidden md:inline-flex"
+              >
                 {tOptional(`common.plans.${plan}`, plan)}
               </Badge>
             )}
@@ -280,11 +284,13 @@ export default function ContentTranslatorPage() {
         }
       />
 
-      <div className="flex flex-col h-[calc(100vh-3.5rem)] relative">
+      {/* Phones: controls, then source and translation stacked (page
+          scroll). md+: full-height side-by-side editor as before. */}
+      <div className="flex flex-col relative md:h-[calc(100dvh-3.5rem)]">
         <LiquidEtherBackground />
 
         {/* Header controls */}
-        <div className="relative z-30 flex items-center gap-3 px-6 py-3 border-b border-border bg-bg/80 backdrop-blur-sm flex-shrink-0">
+        <div className="relative z-30 flex flex-wrap items-center gap-2 px-4 py-3 border-b border-border bg-bg/80 backdrop-blur-sm flex-shrink-0 sm:gap-3 sm:px-6 md:flex-nowrap">
           {/* Mic button — first in the bar */}
           {isSupported && (
             <VoiceButton
@@ -296,14 +302,17 @@ export default function ContentTranslatorPage() {
             />
           )}
 
-          <div className="relative" ref={langDropdownRef}>
+          <div
+            className="relative min-w-0 flex-1 sm:flex-none"
+            ref={langDropdownRef}
+          >
             <button
               type="button"
               onClick={() => !isProcessing && setIsLangOpen((v) => !v)}
               disabled={isProcessing}
               aria-haspopup="listbox"
               aria-expanded={isLangOpen}
-              className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[220px] ${
+              className={`flex w-full items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed sm:min-w-[220px] ${
                 isLangOpen
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border bg-surface-elevated text-text hover:border-primary/50 hover:bg-primary/5"
@@ -382,12 +391,14 @@ export default function ContentTranslatorPage() {
               setSelectedModelCost(model.creditCost);
             }}
             disabled={isProcessing}
+            className="w-full sm:w-auto sm:min-w-[14rem]"
           />
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 md:ml-auto md:w-auto">
             <Button
               variant="glow"
               size="lg"
+              className="w-full md:w-auto"
               disabled={
                 !inputText.trim() ||
                 !creditsHydrated ||
@@ -405,7 +416,7 @@ export default function ContentTranslatorPage() {
         </div>
 
         {/* Text areas */}
-        <div className="relative z-10 flex flex-1 min-h-0">
+        <div className="relative z-10 flex flex-col md:flex-row md:flex-1 md:min-h-0">
           {(status === "GENERATING" || status === "REVEALING") && (
             <div className="absolute inset-0 flex items-center justify-center z-20 bg-bg/60 backdrop-blur-sm animate-fade-in">
               <LoadingSpinner
@@ -417,7 +428,7 @@ export default function ContentTranslatorPage() {
           )}
 
           {/* Input */}
-          <div className="flex-1 flex flex-col border-r border-border">
+          <div className="flex flex-col border-b border-border h-[clamp(14rem,40dvh,24rem)] md:h-auto md:flex-1 md:border-b-0 md:border-r">
             <div className="px-4 py-2 border-b border-border flex items-center gap-2 flex-shrink-0">
               <span className="text-xs font-medium text-text-muted uppercase tracking-wider">
                 {t("translator.sourceText")}
@@ -443,7 +454,7 @@ export default function ContentTranslatorPage() {
           </div>
 
           {/* Output */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex flex-col h-[clamp(14rem,40dvh,24rem)] md:h-auto md:flex-1">
             <div className="px-4 py-2 border-b border-border flex items-center gap-2 flex-shrink-0">
               <span className="text-xs font-medium text-text-muted uppercase tracking-wider">
                 {t("translator.translation")}
@@ -456,7 +467,7 @@ export default function ContentTranslatorPage() {
               {outputText && status === "READY" && (
                 <button
                   onClick={handleCopy}
-                  className="ml-auto flex items-center gap-1 rounded-md px-2 py-1 text-xs text-text-muted hover:text-text hover:bg-surface-elevated transition-colors cursor-pointer"
+                  className="ml-auto flex items-center gap-1 rounded-md px-2 py-1 pointer-coarse:min-h-9 pointer-coarse:px-3 text-xs text-text-muted hover:text-text hover:bg-surface-elevated transition-colors cursor-pointer"
                 >
                   <svg
                     width="12"

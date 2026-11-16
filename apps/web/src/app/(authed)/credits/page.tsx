@@ -313,15 +313,15 @@ export default function CreditsPage() {
           { label: t("nav.credits") },
         ]}
       />
-      <div className="p-6 space-y-8 max-w-6xl mx-auto animate-fade-in">
+      <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 max-w-6xl mx-auto animate-fade-in">
         {/* Balance + Transaction History row */}
-        <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.4fr]">
           {/* Balance Card */}
-          <div className="rounded-xl border border-border bg-surface p-8 flex flex-col items-center justify-center text-center">
+          <div className="rounded-xl border border-border bg-surface p-6 sm:p-8 flex flex-col items-center justify-center text-center">
             <p className="text-sm font-medium text-text-muted uppercase tracking-wider">
               {t("credits.currentBalance")}
             </p>
-            <p className="mt-3 text-5xl font-bold text-text">
+            <p className="mt-3 text-4xl sm:text-5xl font-bold text-text tabular-nums">
               ⚡ {formatNumber(balance)}
             </p>
             <p className="mt-1 text-sm text-text-dim">
@@ -330,7 +330,7 @@ export default function CreditsPage() {
             <Button
               variant="glow"
               size="lg"
-              className="mt-6"
+              className="mt-6 w-full sm:w-auto"
               onClick={() => {
                 setBuyAmount("10");
                 setBuyModalOpen(true);
@@ -342,20 +342,20 @@ export default function CreditsPage() {
 
           {/* Transaction History */}
           <div className="rounded-xl border border-border bg-surface flex flex-col">
-            <div className="px-5 py-4 border-b border-border">
+            <div className="px-4 py-4 sm:px-5 border-b border-border">
               <h2 className="text-sm font-semibold text-text uppercase tracking-wider">
                 {t("credits.transactionHistory")}
               </h2>
             </div>
-            <div className="flex-1 divide-y divide-border overflow-y-auto max-h-80">
+            <div className="flex-1 divide-y divide-border overflow-y-auto overscroll-contain max-h-80">
               {transactions?.map((tx: any) => (
                 <div
                   key={tx.id}
-                  className="flex items-center justify-between px-5 py-3.5 hover:bg-surface-elevated/50 transition-colors"
+                  className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5 hover:bg-surface-elevated/50 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold ${
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${
                         tx.type === "USAGE"
                           ? "bg-error/10 text-error"
                           : tx.type === "PURCHASE"
@@ -365,9 +365,9 @@ export default function CreditsPage() {
                     >
                       {tx.type === "USAGE" ? "↓" : "↑"}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-text">
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <p className="truncate text-sm font-medium text-text">
                           {tx.description || tx.type}
                         </p>
                         {getPaymentStatusBadge(tx)}
@@ -378,7 +378,7 @@ export default function CreditsPage() {
                     </div>
                   </div>
                   <span
-                    className={`text-sm font-semibold tabular-nums ${
+                    className={`shrink-0 text-sm font-semibold tabular-nums ${
                       tx.amount < 0 ? "text-error" : "text-secondary"
                     }`}
                   >
@@ -403,7 +403,7 @@ export default function CreditsPage() {
           <h2 className="text-lg font-semibold text-text mb-4">
             {t("credits.creditPlans")}
           </h2>
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
             {plans?.map((plan: any) => (
               <Card
                 key={plan.id}
@@ -479,7 +479,7 @@ export default function CreditsPage() {
           <DialogHeader>
             <DialogTitle>{t("credits.buyModal.title")}</DialogTitle>
           </DialogHeader>
-          <div className="px-6 pb-6 space-y-4">
+          <div className="px-5 pb-5 sm:px-6 sm:pb-6 space-y-4">
             <p className="text-sm text-text-muted">
               {t("credits.buyModal.description")}
             </p>
@@ -502,9 +502,10 @@ export default function CreditsPage() {
                 count: calculatedCredits,
               })}
             </p>
-            <div className="flex justify-end gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-end">
               <Button
                 variant="secondary"
+                className="pointer-coarse:h-11"
                 onClick={() => setBuyModalOpen(false)}
                 disabled={buyLoading}
               >
@@ -512,6 +513,7 @@ export default function CreditsPage() {
               </Button>
               <Button
                 variant="primary"
+                className="pointer-coarse:h-11"
                 onClick={handleBuyCredits}
                 isLoading={buyLoading}
                 disabled={parseFloat(buyAmount) < 10 || buyLoading}

@@ -24,7 +24,7 @@ export default function Home() {
   }, [isHydrated, user, router]);
 
   return (
-    <div className="flex h-screen items-center justify-center bg-bg">
+    <div className="flex h-dvh items-center justify-center bg-bg">
       <div className="flex flex-col items-center gap-4">
         <img
           src="/isologo_white.png"

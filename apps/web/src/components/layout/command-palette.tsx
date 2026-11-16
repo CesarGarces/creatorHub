@@ -157,7 +157,8 @@ export function CommandPalette({
 
   return (
     <CommandDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <CommandInput placeholder={t("commandPalette.placeholder")} />
+      {/* Focused on open: ⌘K / Ctrl+K then type. */}
+      <CommandInput autoFocus placeholder={t("commandPalette.placeholder")} />
       <CommandList>
         <CommandEmpty>{t("commandPalette.empty")}</CommandEmpty>
         {Object.entries(grouped).map(([category, items]) => (

@@ -128,17 +128,18 @@ export default function CommunityBotPage() {
   }, [activeTab, applyChannelStatus, fetchBalance, fetchConversations]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col lg:h-full">
       <TopBar title={t("communityBot.title")} />
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      {/* Own scroll area on desktop; flows with the page below lg. */}
+      <div className="p-4 sm:p-6 space-y-6 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Bot size={20} />
           </div>
-          <div>
-            <h2 className="text-xl font-semibold text-text">
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-xl font-semibold text-text">
               {t("communityBot.title")}
             </h2>
             <p className="text-sm text-text-muted max-w-2xl">
@@ -148,14 +149,22 @@ export default function CommunityBotPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-border">
+        {/* Swipeable on phones; bleeds to the screen edges. */}
+        <div
+          data-scroll-x
+          role="tablist"
+          aria-label={t("communityBot.title")}
+          className="-mx-4 flex gap-1 overflow-x-auto overscroll-x-contain border-b border-border px-4 scrollbar-none sm:mx-0 sm:px-0"
+        >
           {TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px",
+                "flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-2.5 pointer-coarse:min-h-11 text-sm font-medium transition-colors border-b-2 -mb-px sm:px-4",
                 activeTab === tab.id
                   ? "border-primary text-primary"
                   : "border-transparent text-text-muted hover:text-text",

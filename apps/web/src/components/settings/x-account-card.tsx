@@ -105,9 +105,9 @@ export function XAccountCard() {
         </p>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-between rounded-lg border border-border bg-surface-elevated p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black">
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface-elevated p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black">
               <svg
                 width="20"
                 height="20"
@@ -119,7 +119,7 @@ export function XAccountCard() {
               </svg>
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-medium text-text">
                   {t("settings.integrations.xName")}
                 </p>
@@ -156,7 +156,7 @@ export function XAccountCard() {
               )}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-2 pointer-coarse:[&>button]:h-11 max-sm:[&>button]:flex-1">
             {account ? (
               <>
                 {account.status === "EXPIRED" && (

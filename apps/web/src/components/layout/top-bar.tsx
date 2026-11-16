@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Check, Trash2 } from "lucide-react";
+import { Bell, Check, Menu, Trash2 } from "lucide-react";
 import {
   cn,
   CreditDisplay,
@@ -14,6 +14,8 @@ import {
 import { useAuthStore } from "@/store/auth.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { useNotificationStore } from "@/store/notification.store";
+import { useMobileNavStore } from "@/store/mobile-nav.store";
+import { SIDEBAR_ID } from "@/components/layout/sidebar";
 import { useSocketEvents } from "@/hooks/use-socket-events";
 import { useI18n } from "@/i18n/i18n-provider";
 import { LanguageSelector } from "@/components/i18n/language-selector";
@@ -64,6 +66,9 @@ export function TopBar({
       addNotification(notification);
     },
   });
+
+  const mobileNavOpen = useMobileNavStore((s) => s.isOpen);
+  const openMobileNav = useMobileNavStore((s) => s.open);
 
   const lowCredits = creditsHydrated && !creditsLoading && balance < 50;
 
@@ -143,54 +148,90 @@ export function TopBar({
   return (
     <header
       className={cn(
-        "flex h-14 items-center justify-between border-b border-border bg-surface/80 backdrop-blur-sm px-6 sticky top-0 z-40",
+        "flex h-14 items-center justify-between gap-2 border-b border-border bg-surface/80 backdrop-blur-sm px-3 sm:px-4 lg:px-6 sticky top-0 z-40",
         className,
       )}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+        {/* Phones & portrait tablets: opens the navigation drawer. */}
+        <button
+          type="button"
+          onClick={openMobileNav}
+          aria-label={t("nav.openMenu")}
+          aria-controls={SIDEBAR_ID}
+          aria-expanded={mobileNavOpen}
+          data-testid="mobile-nav-trigger"
+          className="lg:hidden -ml-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
         {breadcrumbs && breadcrumbs.length > 0 ? (
-          <nav className="flex items-center gap-1.5 text-sm">
-            {breadcrumbs.map((crumb, i) => (
-              <span key={crumb.label} className="flex items-center gap-1.5">
-                {i > 0 && <span className="text-text-dim">/</span>}
-                {crumb.href ? (
-                  <a
-                    href={crumb.href}
-                    className="text-text-muted hover:text-text transition-colors"
-                  >
-                    {crumb.label}
-                  </a>
-                ) : (
-                  <span className="text-text font-medium">{crumb.label}</span>
-                )}
-              </span>
-            ))}
+          <nav className="flex min-w-0 items-center gap-1.5 text-sm">
+            {breadcrumbs.map((crumb, i) => {
+              const isLast = i === breadcrumbs.length - 1;
+              return (
+                <span
+                  key={crumb.label}
+                  // Phones only show where you are; the trail from `sm`.
+                  className={cn(
+                    "items-center gap-1.5",
+                    isLast ? "flex min-w-0" : "hidden sm:flex shrink-0",
+                  )}
+                >
+                  {i > 0 && (
+                    <span className="hidden sm:inline text-text-dim">/</span>
+                  )}
+                  {crumb.href ? (
+                    <a
+                      href={crumb.href}
+                      className="truncate text-text-muted hover:text-text transition-colors"
+                    >
+                      {crumb.label}
+                    </a>
+                  ) : (
+                    <span className="truncate text-text font-medium">
+                      {crumb.label}
+                    </span>
+                  )}
+                </span>
+              );
+            })}
           </nav>
         ) : (
-          title && <h1 className="text-lg font-semibold text-text">{title}</h1>
+          title && (
+            <h1 className="truncate text-base sm:text-lg font-semibold text-text">
+              {title}
+            </h1>
+          )
         )}
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {actions && (
+          <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        )}
       </div>
 
-      <div className="flex items-center gap-4">
-        <LanguageSelector compact />
-        <CreditDisplay balance={balance} size="sm" />
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-3 lg:gap-4">
+        {/* On phones the language switcher lives in the navigation drawer. */}
+        <LanguageSelector compact className="hidden sm:inline-flex" />
+        <CreditDisplay balance={balance} size="sm" compactOnMobile />
         <Popover>
           <PopoverTrigger asChild>
             <button
               type="button"
               aria-label={t("topBar.openNotifications")}
-              className="relative text-text-muted hover:text-text transition-colors"
+              className="relative flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
             >
               <Bell className="h-[18px] w-[18px]" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[10px] text-white font-bold">
+                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 px-0.5 items-center justify-center rounded-full bg-error text-[10px] text-white font-bold">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="end">
+          <PopoverContent
+            className="w-80 max-w-[calc(100vw-1rem)] p-0"
+            align="end"
+          >
             <div className="p-3 border-b border-border flex items-center justify-between">
               <h3 className="text-sm font-semibold text-text">
                 {t("topBar.notifications")}
@@ -227,7 +268,7 @@ export function TopBar({
                           <button
                             type="button"
                             onClick={() => handleMarkAsRead(n.id)}
-                            className="text-text-muted hover:text-text transition-colors"
+                            className="flex items-center justify-center rounded text-text-muted hover:text-text transition-colors pointer-coarse:h-9 pointer-coarse:w-9"
                             title={t("topBar.markAsRead")}
                             aria-label={t("topBar.markAsRead")}
                           >
@@ -238,7 +279,7 @@ export function TopBar({
                           <button
                             type="button"
                             onClick={() => handleDeleteNotification(n.id)}
-                            className="text-text-muted hover:text-error transition-colors"
+                            className="flex items-center justify-center rounded text-text-muted hover:text-error transition-colors pointer-coarse:h-9 pointer-coarse:w-9"
                             title={t("topBar.delete")}
                             aria-label={t("topBar.delete")}
                           >

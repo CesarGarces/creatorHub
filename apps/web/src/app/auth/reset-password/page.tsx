@@ -79,7 +79,7 @@ function ResetPasswordForm() {
 
   if (isValidating) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-bg">
+      <div className="flex min-h-dvh px-4 pb-8 pt-[calc(4.5rem+env(safe-area-inset-top))] sm:py-12 items-center justify-center bg-bg">
         <div className="text-text-muted">{t("auth.reset.validating")}</div>
       </div>
     );
@@ -87,7 +87,7 @@ function ResetPasswordForm() {
 
   if (!token || !tokenValid) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-bg relative overflow-hidden">
+      <div className="flex min-h-dvh px-4 pb-8 pt-[calc(4.5rem+env(safe-area-inset-top))] sm:py-12 items-center justify-center bg-bg relative overflow-hidden">
         <AuthLanguageSwitcher />
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
         <Card className="w-full max-w-md relative z-10 border-border/50 bg-surface/90 backdrop-blur-sm">
@@ -106,7 +106,7 @@ function ResetPasswordForm() {
                 <path d="m6 6 12 12" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-text">
+            <h1 className="text-xl sm:text-2xl font-bold text-text">
               {t("auth.reset.invalidTitle")}
             </h1>
             <p className="mt-2 text-sm text-text-muted">
@@ -125,7 +125,7 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg relative overflow-hidden">
+    <div className="flex min-h-dvh px-4 pb-8 pt-[calc(4.5rem+env(safe-area-inset-top))] sm:py-12 items-center justify-center bg-bg relative overflow-hidden">
       <AuthLanguageSwitcher />
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
       <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
@@ -138,7 +138,7 @@ function ResetPasswordForm() {
             alt={t("common.appName")}
             className="mx-auto mb-4 h-14 w-auto"
           />
-          <h1 className="text-2xl font-bold text-text">
+          <h1 className="text-xl sm:text-2xl font-bold text-text">
             {t("auth.reset.title")}
           </h1>
           <p className="text-sm text-text-muted">{t("auth.reset.subtitle")}</p>
@@ -263,7 +263,7 @@ function ResetPasswordForm() {
 function LoadingFallback() {
   const { t } = useI18n();
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg">
+    <div className="flex min-h-dvh px-4 pb-8 pt-[calc(4.5rem+env(safe-area-inset-top))] sm:py-12 items-center justify-center bg-bg">
       <div className="text-text-muted">{t("common.status.loading")}</div>
     </div>
   );

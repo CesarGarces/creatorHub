@@ -76,9 +76,14 @@ export function ActionConfirmDialog({
           left: "50%",
           transform: "translate(-50%, -50%)",
           zIndex: 2147483647,
-          width: "100%",
+          // Keeps a margin on phones and never outgrows the visible
+          // viewport (on-screen keyboard included).
+          width: "calc(100% - 1.5rem)",
           maxWidth: "28rem",
-          padding: "1.5rem",
+          maxHeight: "calc(var(--app-vvh, 100dvh) - 1.5rem)",
+          overflowY: "auto",
+          overscrollBehavior: "contain",
+          padding: "clamp(1.25rem, 4vw, 1.5rem)",
           backgroundColor: "var(--color-surface, #121826)",
           border: "1px solid var(--color-border, #1e293b)",
           borderRadius: "0.75rem",
@@ -136,17 +141,22 @@ export function ActionConfirmDialog({
         <div
           style={{
             display: "flex",
+            flexWrap: "wrap-reverse",
             alignItems: "center",
             justifyContent: "flex-end",
             gap: "0.75rem",
             marginTop: "1.5rem",
           }}
         >
+          {/* Full-width, thumb-sized buttons on phones; inline from `sm`. */}
           <button
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            className={cn(buttonVariants({ variant: "outline" }))}
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "pointer-coarse:h-11 max-sm:flex-1",
+            )}
           >
             {cancelLabel}
           </button>
@@ -154,7 +164,10 @@ export function ActionConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            className={cn(buttonVariants({ variant: confirmVariant }))}
+            className={cn(
+              buttonVariants({ variant: confirmVariant }),
+              "pointer-coarse:h-11 max-sm:flex-1",
+            )}
           >
             {isLoading ? (
               <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">

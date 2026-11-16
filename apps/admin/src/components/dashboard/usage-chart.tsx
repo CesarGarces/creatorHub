@@ -19,13 +19,13 @@ interface UsageChartProps {
 export function UsageChart({ data }: UsageChartProps) {
   const { t } = useI18n();
   return (
-    <div className="rounded-xl border border-border bg-surface p-6">
+    <div className="min-w-0 rounded-xl border border-border bg-surface p-4 sm:p-6">
       <h3 className="text-lg font-semibold text-text">
         {t("dashboard.usage.title")}
       </h3>
       <p className="text-sm text-text-muted">{t("dashboard.usage.subtitle")}</p>
 
-      <div className="mt-6 h-64">
+      <div className="mt-4 h-56 sm:mt-6 sm:h-64">
         {data.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-text-dim">
             {t("dashboard.usage.empty")}

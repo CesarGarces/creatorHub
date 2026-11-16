@@ -209,20 +209,26 @@ export function ChatWidget() {
         />
       )}
 
-      {/* Chat Panel */}
+      {/* Chat Panel — full screen on phones, a side sheet from `sm`. Its
+          height follows the visual viewport, so the composer stays above
+          the on-screen keyboard (iOS included). */}
       <div
         ref={panelRef}
         role="dialog"
         aria-label={t("chat.dialogLabel")}
+        data-state={isWidgetOpen ? "open" : "closed"}
         className={cn(
-          "fixed right-0 top-0 z-[95] h-full w-full max-w-[420px]",
-          "border-l border-border/50 bg-surface/95 backdrop-blur-xl shadow-2xl shadow-black/10",
-          "transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-          isWidgetOpen ? "translate-x-0" : "translate-x-full",
+          "fixed right-0 top-[var(--app-vv-top,0px)] z-[95] flex h-[var(--app-vvh,100dvh)] w-full flex-col sm:max-w-[420px]",
+          "pt-[env(safe-area-inset-top)] sm:pt-0",
+          "sm:border-l border-border/50 bg-surface/95 backdrop-blur-xl shadow-2xl shadow-black/10",
+          "transition-[transform,visibility] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+          isWidgetOpen
+            ? "translate-x-0 visible transition-transform"
+            : "translate-x-full invisible",
         )}
       >
         {/* Header */}
-        <div className="flex h-14 items-center justify-between border-b border-border px-4">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
           <div className="flex items-center gap-2.5">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
               <SparkleIcon className="h-3.5 w-3.5 text-primary" />
@@ -238,7 +244,7 @@ export function ChatWidget() {
             <button
               type="button"
               onClick={handleNewChat}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-text-dim hover:text-text hover:bg-surface-elevated transition-colors"
+              className="flex h-8 w-8 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-lg text-text-dim hover:text-text hover:bg-surface-elevated transition-colors"
               title={t("chat.newChat")}
               aria-label={t("chat.newChat")}
             >
@@ -248,7 +254,7 @@ export function ChatWidget() {
               type="button"
               onClick={() => setShowSettings(!showSettings)}
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                "flex h-8 w-8 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-lg transition-colors",
                 showSettings
                   ? "bg-primary/10 text-primary"
                   : "text-text-dim hover:text-text hover:bg-surface-elevated",
@@ -261,7 +267,7 @@ export function ChatWidget() {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-text-dim hover:text-text hover:bg-surface-elevated transition-colors"
+              className="flex h-8 w-8 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-lg text-text-dim hover:text-text hover:bg-surface-elevated transition-colors"
               title={t("chat.close")}
               aria-label={t("chat.closeChat")}
             >
@@ -282,8 +288,11 @@ export function ChatWidget() {
 
         {/* Session Selector */}
         {sessions.length > 0 && !showSettings && (
-          <div className="border-b border-border px-4 py-2">
-            <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
+          <div className="shrink-0 border-b border-border px-4 py-2">
+            <div
+              data-scroll-x
+              className="flex gap-1.5 overflow-x-auto overscroll-x-contain scrollbar-none"
+            >
               {sessions.slice(0, 5).map((session) => (
                 <div
                   key={session.id}
@@ -298,7 +307,7 @@ export function ChatWidget() {
                     type="button"
                     onClick={() => selectSession(session.id)}
                     className={cn(
-                      "px-3 py-1 text-xs font-medium",
+                      "max-w-[12rem] truncate px-3 py-1 pointer-coarse:py-2 text-xs font-medium",
                       session.id === activeSessionId
                         ? "text-primary"
                         : "text-text-dim hover:text-text",
@@ -312,7 +321,9 @@ export function ChatWidget() {
                       e.stopPropagation();
                       deleteSession(session.id);
                     }}
-                    className="mr-1 flex h-4 w-4 items-center justify-center rounded-full text-text-dim opacity-0 group-hover:opacity-100 hover:text-error hover:bg-error/10 transition-all"
+                    // Hover-revealed with a mouse; always visible (and
+                    // bigger) on touch screens, which have no hover.
+                    className="mr-1 flex h-4 w-4 items-center justify-center rounded-full text-text-dim opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:h-7 pointer-coarse:w-7 pointer-coarse:opacity-100 hover:text-error hover:bg-error/10 transition-all"
                     title={t("chat.deleteChat")}
                     aria-label={
                       session.title
@@ -329,12 +340,9 @@ export function ChatWidget() {
         )}
 
         {/* Messages */}
-        <div
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
-          style={{ height: "calc(100% - 14rem)" }}
-        >
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-3">
           {messages.length === 0 && (
-            <div className="flex h-full items-center justify-center">
+            <div className="flex min-h-full items-center justify-center">
               <div className="text-center max-w-[240px]">
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
                   <SparkleIcon className="h-6 w-6 text-primary" />
@@ -397,14 +405,14 @@ export function ChatWidget() {
         <ChatInput />
       </div>
 
-      {/* FAB */}
-      <div className="fixed bottom-6 right-6 z-[100]">
+      {/* FAB — lifted above bottom composers (pages with data-composer). */}
+      <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[100] sm:bottom-6 sm:right-6 max-sm:group-has-[[data-composer]]/shell:bottom-[calc(9rem+env(safe-area-inset-bottom))] sm:max-lg:group-has-[[data-composer]]/shell:bottom-[6rem]">
         {/* Tooltip */}
         {showTooltip && (
           <div
             className={cn(
               "absolute bottom-full right-0 mb-3",
-              "whitespace-nowrap rounded-xl border border-border bg-surface px-4 py-2.5",
+              "w-max max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-surface px-4 py-2.5",
               "shadow-lg shadow-black/5",
               "text-sm text-text",
               "animate-in fade-in slide-in-from-bottom-2 duration-200",
@@ -509,7 +517,7 @@ function ChatInput() {
   };
 
   return (
-    <div className="border-t border-border bg-surface/80 backdrop-blur-sm px-4 py-3">
+    <div className="shrink-0 border-t border-border bg-surface/80 backdrop-blur-sm px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <div className="flex items-end gap-2">
         <textarea
           ref={textareaRef}
@@ -591,7 +599,7 @@ function SettingsPanel({
 }) {
   const { t } = useI18n();
   return (
-    <div className="border-b border-border bg-surface-elevated/50 px-4 py-3 space-y-3">
+    <div className="shrink-0 border-b border-border bg-surface-elevated/50 px-4 py-3 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-text-dim">
           {t("chat.settings")}
@@ -599,7 +607,7 @@ function SettingsPanel({
         <button
           type="button"
           onClick={onClose}
-          className="flex h-5 w-5 items-center justify-center rounded text-text-dim hover:text-text transition-colors"
+          className="flex h-5 w-5 pointer-coarse:h-9 pointer-coarse:w-9 items-center justify-center rounded text-text-dim hover:text-text transition-colors"
           aria-label={t("chat.closeSettings")}
         >
           <XIcon className="h-3 w-3" />

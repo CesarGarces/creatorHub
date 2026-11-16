@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { Pencil, Trash2, Plus, ArrowUpDown } from "lucide-react";
 import { ActionConfirmDialog, Switch } from "@creator-hub/ui";
+import { ModalShell } from "@/components/modal-shell";
 import { useI18n } from "@/i18n/i18n-provider";
 import { localizeError } from "@/i18n/errors";
 
@@ -89,9 +90,9 @@ export default function CreditPlansPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-text">
             {t("creditPlans.title")}
           </h1>
           <p className="text-sm text-text-muted mt-1">
@@ -104,7 +105,7 @@ export default function CreditPlansPage() {
             setEditingPlan(null);
             setIsCreateMode(true);
           }}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+          className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors sm:min-h-0"
         >
           <Plus size={18} />
           {t("creditPlans.add")}
@@ -112,7 +113,7 @@ export default function CreditPlansPage() {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
@@ -125,11 +126,11 @@ export default function CreditPlansPage() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {plans?.map((plan) => (
             <div
               key={plan.id}
-              className="rounded-xl border border-border bg-surface p-6 flex flex-col relative"
+              className="rounded-xl border border-border bg-surface p-4 sm:p-6 flex flex-col relative"
             >
               <div className="absolute top-4 right-4 flex gap-2">
                 <span
@@ -143,7 +144,9 @@ export default function CreditPlansPage() {
                 </span>
               </div>
 
-              <h3 className="text-lg font-semibold text-text">{plan.name}</h3>
+              <h3 className="pr-20 text-lg font-semibold text-text">
+                {plan.name}
+              </h3>
               <p className="text-3xl font-bold text-text mt-2">
                 {formatUsd(plan.usdAmount)}
               </p>
@@ -177,7 +180,7 @@ export default function CreditPlansPage() {
                     setEditingPlan(plan);
                     setIsCreateMode(false);
                   }}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors"
+                  className="flex-1 flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors sm:min-h-0"
                 >
                   <Pencil size={14} />
                   {t("common.edit")}
@@ -187,7 +190,7 @@ export default function CreditPlansPage() {
                   onClick={() => setDeleteDialog({ isOpen: true, plan })}
                   aria-label={t("creditPlans.deleteAria", { name: plan.name })}
                   title={t("creditPlans.deleteAria", { name: plan.name })}
-                  className="flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors"
+                  className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors sm:min-h-0 sm:min-w-0"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -199,24 +202,25 @@ export default function CreditPlansPage() {
 
       {/* Edit/Create Dialog */}
       {(editingPlan || isCreateMode) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-surface rounded-xl border border-border w-full max-w-md mx-4 p-6">
-            <h2 className="text-lg font-semibold text-text mb-4">
-              {editingPlan
-                ? t("creditPlans.editTitle")
-                : t("creditPlans.createTitle")}
-            </h2>
-            <CreditPlanForm
-              plan={editingPlan}
-              onSave={handleSave}
-              onCancel={() => {
-                setEditingPlan(null);
-                setIsCreateMode(false);
-              }}
-              isLoading={updateMutation.isPending || createMutation.isPending}
-            />
-          </div>
-        </div>
+        <ModalShell labelledBy="credit-plan-form-title">
+          <h2
+            id="credit-plan-form-title"
+            className="text-lg font-semibold text-text mb-4"
+          >
+            {editingPlan
+              ? t("creditPlans.editTitle")
+              : t("creditPlans.createTitle")}
+          </h2>
+          <CreditPlanForm
+            plan={editingPlan}
+            onSave={handleSave}
+            onCancel={() => {
+              setEditingPlan(null);
+              setIsCreateMode(false);
+            }}
+            isLoading={updateMutation.isPending || createMutation.isPending}
+          />
+        </ModalShell>
       )}
 
       <ActionConfirmDialog
@@ -413,19 +417,19 @@ function CreditPlanForm({
         </p>
       )}
 
-      <div className="flex justify-end gap-3 pt-4">
+      <div className="grid grid-cols-2 gap-3 pt-4 sm:flex sm:justify-end">
         <button
           type="button"
           onClick={onCancel}
           disabled={isLoading}
-          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors disabled:opacity-50"
+          className="min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors disabled:opacity-50 sm:min-h-0"
         >
           {t("common.cancel")}
         </button>
         <button
           type="submit"
           disabled={isLoading}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+          className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50 sm:min-h-0"
         >
           {isLoading
             ? t("common.saving")

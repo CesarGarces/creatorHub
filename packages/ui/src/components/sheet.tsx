@@ -17,11 +17,12 @@ function Sheet({ open, onOpenChange: _onOpenChange, children }: SheetProps) {
 
 const SHEET_SIDE_STYLES = {
   top: {
-    container: "inset-x-0 top-0 h-auto max-h-[85vh]",
+    container: "inset-x-0 top-0 h-auto max-h-[85dvh]",
     animation: "slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
   },
   bottom: {
-    container: "inset-x-0 bottom-0 h-auto max-h-[85vh]",
+    container:
+      "inset-x-0 bottom-0 h-auto max-h-[85dvh] pb-[env(safe-area-inset-bottom)]",
     animation: "slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
   },
   left: {

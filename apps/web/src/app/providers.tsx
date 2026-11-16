@@ -22,6 +22,8 @@ function LocalizedUiLabels({ children }: { children: React.ReactNode }) {
       premium: t("ui.premium"),
       formatCredits: (balance: number) =>
         t("common.credits.count", { count: balance }),
+      formatCreditsShort: (balance: number) =>
+        t("common.credits.short", { count: balance }),
       formatToolStatus: (status: string) =>
         tOptional(`ui.toolStatus.${status}`, status),
       cookieConsent: {

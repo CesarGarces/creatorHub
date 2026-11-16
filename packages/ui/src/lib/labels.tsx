@@ -21,6 +21,8 @@ export interface UiLabels {
   premium: string;
   /** Text of <CreditDisplay>, e.g. "1,500 credits". */
   formatCredits: (balance: number) => string;
+  /** Short form for tight spaces (phones), e.g. "1,500 cr". */
+  formatCreditsShort: (balance: number) => string;
   /** Display name for a tool status badge ("beta", "inactive"...). */
   formatToolStatus: (status: string) => string;
   cookieConsent: {
@@ -40,6 +42,7 @@ export const DEFAULT_UI_LABELS: UiLabels = {
   removeFromFavorites: "Remove from favorites",
   premium: "Premium",
   formatCredits: (balance) => `${balance.toLocaleString()} credits`,
+  formatCreditsShort: (balance) => `${balance.toLocaleString()} cr`,
   formatToolStatus: (status) => status,
   cookieConsent: {
     ariaLabel: "Cookie consent",

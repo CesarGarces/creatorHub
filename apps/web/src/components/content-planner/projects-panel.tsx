@@ -74,7 +74,7 @@ export function ProjectsPanel({
           </p>
         </div>
       ) : (
-        <ul className="max-h-[60vh] divide-y divide-border overflow-y-auto">
+        <ul className="divide-y divide-border lg:max-h-[60vh] lg:overflow-y-auto lg:overscroll-contain">
           {projects.map((project) => {
             const { done, total } = project.progress;
             const percent = total > 0 ? Math.round((done / total) * 100) : 0;
@@ -230,7 +230,7 @@ function IconButton({
       aria-label={label}
       title={label}
       className={cn(
-        "flex h-7 w-7 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-surface-elevated hover:text-text",
+        "flex h-7 w-7 pointer-coarse:h-10 pointer-coarse:w-10 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-surface-elevated hover:text-text",
         className,
       )}
     >

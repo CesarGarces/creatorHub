@@ -102,22 +102,23 @@ export default function HistoryPage() {
           { label: t("nav.history") },
         ]}
       />
-      <div className="p-6 max-w-6xl mx-auto animate-fade-in">
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto animate-fade-in">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-text">
+        <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-text">
               {t("history.title")}
             </h1>
             <p className="mt-1 text-text-muted">{t("history.subtitle")}</p>
           </div>
-          <div className="flex rounded-lg border border-border overflow-hidden">
+          <div className="flex shrink-0 self-start rounded-lg border border-border overflow-hidden max-sm:w-full">
             {(["day", "week", "total"] as TimeFilter[]).map((f) => (
               <button
                 type="button"
                 key={f}
                 onClick={() => setTimeFilter(f)}
-                className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                aria-pressed={timeFilter === f}
+                className={`px-4 py-1.5 pointer-coarse:py-2.5 text-sm font-medium transition-colors max-sm:flex-1 ${
                   timeFilter === f
                     ? "bg-primary text-white"
                     : "bg-surface-elevated text-text-muted hover:bg-surface-elevated/80"
@@ -130,30 +131,30 @@ export default function HistoryPage() {
         </div>
 
         {/* Summary */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="rounded-xl border border-border bg-surface p-4 text-center">
-            <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+          <div className="min-w-0 rounded-xl border border-border bg-surface p-3 sm:p-4 text-center">
+            <p className="text-[10px] sm:text-xs font-medium text-text-muted uppercase tracking-wider">
               {t("history.totalTransactions")}
             </p>
-            <p className="mt-1 text-2xl font-bold text-text">
+            <p className="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-text">
               {filtered.length}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-surface p-4 text-center">
-            <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
+          <div className="min-w-0 rounded-xl border border-border bg-surface p-3 sm:p-4 text-center">
+            <p className="text-[10px] sm:text-xs font-medium text-text-muted uppercase tracking-wider">
               {t("history.creditsSpent")}
             </p>
-            <p className="mt-1 text-2xl font-bold text-error">
+            <p className="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-error">
               {filtered
                 .filter((h) => h.amount < 0)
                 .reduce((sum, h) => sum + Math.abs(h.amount), 0)}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-surface p-4 text-center">
-            <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
+          <div className="min-w-0 rounded-xl border border-border bg-surface p-3 sm:p-4 text-center">
+            <p className="text-[10px] sm:text-xs font-medium text-text-muted uppercase tracking-wider">
               {t("history.creditsEarned")}
             </p>
-            <p className="mt-1 text-2xl font-bold text-success">
+            <p className="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-success">
               {filtered
                 .filter((h) => h.amount > 0)
                 .reduce((sum, h) => sum + h.amount, 0)}
@@ -163,19 +164,20 @@ export default function HistoryPage() {
 
         {/* Scrollable list */}
         <div className="rounded-xl border border-border bg-surface flex flex-col">
-          <div className="px-5 py-4 border-b border-border">
+          <div className="px-4 py-4 sm:px-5 border-b border-border">
             <h2 className="text-sm font-semibold text-text uppercase tracking-wider">
               {t("history.activity")}
             </h2>
           </div>
-          <div className="divide-y divide-border overflow-y-auto max-h-[28rem]">
+          {/* Its own scroll area from sm; on phones it flows with the page. */}
+          <div className="divide-y divide-border sm:overflow-y-auto sm:max-h-[28rem]">
             {filtered.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center gap-4 px-5 py-3.5 hover:bg-surface-elevated/50 transition-colors"
+                className="flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5 hover:bg-surface-elevated/50 transition-colors"
               >
                 <div
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm ${getTransactionColor(item)}`}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm ${getTransactionColor(item)}`}
                 >
                   {getTransactionIcon(item)}
                 </div>
@@ -199,17 +201,22 @@ export default function HistoryPage() {
                     )}
                   </p>
                 </div>
-                <span className="text-xs text-text-dim whitespace-nowrap">
-                  {formatDate(item.createdAt)}
-                </span>
-                <span
-                  className={`text-sm font-semibold tabular-nums min-w-[5rem] text-right ${
-                    item.amount < 0 ? "text-error" : "text-success"
-                  }`}
-                >
-                  {item.amount > 0 ? "+" : ""}
-                  {t("history.creditsShort", { count: Math.abs(item.amount) })}
-                </span>
+                {/* Phones: amount over date; a row from sm. */}
+                <div className="flex shrink-0 flex-col-reverse items-end gap-0.5 sm:flex-row sm:items-center sm:gap-4">
+                  <span className="text-xs text-text-dim whitespace-nowrap">
+                    {formatDate(item.createdAt)}
+                  </span>
+                  <span
+                    className={`text-sm font-semibold tabular-nums sm:min-w-[5rem] text-right ${
+                      item.amount < 0 ? "text-error" : "text-success"
+                    }`}
+                  >
+                    {item.amount > 0 ? "+" : ""}
+                    {t("history.creditsShort", {
+                      count: Math.abs(item.amount),
+                    })}
+                  </span>
+                </div>
               </div>
             ))}
             {filtered.length === 0 && (

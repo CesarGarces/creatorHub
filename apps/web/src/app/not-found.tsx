@@ -10,7 +10,7 @@ export default function NotFound() {
   const { t } = useI18n();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg relative overflow-hidden">
+    <div className="flex min-h-dvh px-4 pb-8 pt-[calc(4.5rem+env(safe-area-inset-top))] sm:py-12 items-center justify-center bg-bg relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-accent/5 blur-3xl" />

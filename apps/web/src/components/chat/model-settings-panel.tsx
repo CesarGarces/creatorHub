@@ -27,7 +27,7 @@ export function ModelSettingsPanel({
   const { t } = useI18n();
   return (
     <div className="border-b border-border bg-surface-elevated/50">
-      <div className="max-w-3xl mx-auto px-6 py-4">
+      <div className="max-w-3xl mx-auto px-4 py-4 sm:px-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -50,7 +50,7 @@ export function ModelSettingsPanel({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-text-dim hover:text-text hover:bg-surface transition-all cursor-pointer"
+            className="flex h-7 w-7 pointer-coarse:h-10 pointer-coarse:w-10 items-center justify-center rounded-md text-text-dim hover:text-text hover:bg-surface transition-all cursor-pointer"
             aria-label={t("chat.closeSettings")}
           >
             <svg
@@ -70,7 +70,7 @@ export function ModelSettingsPanel({
         {/* Controls Row */}
         <div className="flex items-start gap-5 flex-wrap">
           {/* Model Selector */}
-          <div className="relative flex-1 min-w-[220px]">
+          <div className="relative w-full flex-1 sm:min-w-[220px]">
             <label className="block text-xs font-medium text-text-dim mb-1.5">
               {t("chat.model")}
             </label>
@@ -85,7 +85,7 @@ export function ModelSettingsPanel({
           </div>
 
           {/* Temperature */}
-          <div className="min-w-[150px]">
+          <div className="min-w-[130px] flex-1 sm:flex-none sm:min-w-[150px]">
             <div className="mb-1.5 flex items-center justify-between">
               <label
                 htmlFor="temp-slider"
@@ -116,7 +116,7 @@ export function ModelSettingsPanel({
           </div>
 
           {/* Max Tokens */}
-          <div className="min-w-[130px]">
+          <div className="min-w-[130px] flex-1 sm:flex-none">
             <div className="mb-1.5 flex items-center justify-between">
               <label
                 htmlFor="tokens-slider"

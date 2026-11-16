@@ -152,7 +152,10 @@ export function CreditEmailEditor({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-2">
+    <form
+      onSubmit={handleSubmit}
+      className="grid grid-cols-1 gap-6 lg:grid-cols-2"
+    >
       <div className="space-y-4">
         <p className="text-sm text-text-muted">
           {t("creditEmails.editor.sentOnce", { state: stateLabel(state) })}
@@ -224,7 +227,7 @@ export function CreditEmailEditor({
                 type="button"
                 title={t(v.descriptionKey)}
                 onClick={() => insertVariable(v.key)}
-                className="rounded border border-dashed border-primary/40 bg-primary/10 px-1.5 py-0.5 font-mono text-xs text-primary hover:bg-primary/20"
+                className="rounded border border-dashed border-primary/40 bg-primary/10 px-1.5 py-0.5 pointer-coarse:px-2.5 pointer-coarse:py-1.5 font-mono text-xs text-primary hover:bg-primary/20"
               >
                 {`{{${v.key}}}`}
               </button>
@@ -232,7 +235,7 @@ export function CreditEmailEditor({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label
               htmlFor="ctaLabel"
@@ -282,19 +285,19 @@ export function CreditEmailEditor({
           </span>
         </div>
 
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="grid grid-cols-2 gap-3 pt-2 sm:flex sm:justify-end">
           <button
             type="button"
             onClick={onCancel}
             disabled={isSaving}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-surface-elevated disabled:opacity-50"
+            className="min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-surface-elevated disabled:opacity-50 sm:min-h-0"
           >
             {t("common.cancel")}
           </button>
           <button
             type="submit"
             disabled={isSaving}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 sm:min-h-0"
           >
             {isSaving
               ? t("common.saving")

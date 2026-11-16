@@ -1,5 +1,11 @@
 export { cn } from "./lib/utils";
 
+// Responsive helpers (layout only)
+export {
+  useVisualViewport,
+  VisualViewportObserver,
+} from "./lib/use-visual-viewport";
+
 // Localizable built-in labels
 export { UiLabelsProvider, useUiLabels, DEFAULT_UI_LABELS } from "./lib/labels";
 export type { UiLabels } from "./lib/labels";

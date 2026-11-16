@@ -341,7 +341,7 @@ function AiPlannerForm({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[70vh] space-y-5 overflow-y-auto p-6">
+        <div className="max-h-[calc(var(--app-vvh,100dvh)-13rem)] sm:max-h-[70vh] space-y-5 overflow-y-auto overscroll-contain p-5 sm:p-6">
           {/* ── Form ── */}
           {phase.name === "form" && (
             <>
@@ -464,7 +464,7 @@ function AiPlannerForm({
                 ))}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <PlatformField
                   value={platformValue}
                   onChange={setPlatformValue}

@@ -32,8 +32,9 @@ const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
     <Dialog {...props}>
       <DialogContent
         style={{
-          width: "min(640px, calc(100vw - 2rem))",
-          height: "480px",
+          width: "min(640px, calc(100vw - 1.5rem))",
+          // Shrinks with the visible viewport (on-screen keyboard open).
+          height: "min(480px, calc(var(--app-vvh, 100dvh) - 1.5rem))",
           maxWidth: "640px",
           border: "1px solid var(--color-border)",
         }}
@@ -51,7 +52,8 @@ const CommandInput = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({ className, ...props }, ref) => (
   <div
-    className="flex items-center border-b border-border px-6 py-4"
+    // pr-12 keeps the field clear of the dialog's close button.
+    className="flex items-center border-b border-border px-4 py-3 pr-12 sm:px-6 sm:py-4 sm:pr-12"
     cmdk-input-wrapper=""
   >
     <Search className="mr-3 h-4 w-4 shrink-0 text-text-dim" />
@@ -98,7 +100,7 @@ const CommandGroup = React.forwardRef<
   <CommandPrimitive.Group
     ref={ref}
     className={cn(
-      "overflow-hidden text-text px-6 pt-5 pb-2 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-text-dim [&_[cmdk-group-items]]:flex [&_[cmdk-group-items]]:flex-col [&_[cmdk-group-items]]:gap-2.5",
+      "overflow-hidden text-text px-3 pt-4 pb-2 sm:px-6 sm:pt-5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-text-dim [&_[cmdk-group-items]]:flex [&_[cmdk-group-items]]:flex-col [&_[cmdk-group-items]]:gap-2.5",
       className,
     )}
     {...props}
@@ -125,7 +127,7 @@ const CommandItem = React.forwardRef<
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer select-none items-center gap-3 rounded-lg px-6 py-3 text-sm text-text outline-none transition-colors duration-150 hover:bg-surface-elevated hover:text-text aria-selected:bg-primary/10 aria-selected:text-text data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-pointer select-none items-center gap-3 rounded-lg px-3 py-3 sm:px-6 text-sm text-text outline-none transition-colors duration-150 hover:bg-surface-elevated hover:text-text aria-selected:bg-primary/10 aria-selected:text-text data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
       className,
     )}
     {...props}

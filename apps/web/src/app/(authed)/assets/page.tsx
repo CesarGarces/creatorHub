@@ -131,14 +131,16 @@ export default function AssetsPage() {
           { label: t("nav.assets") },
         ]}
       />
-      <div className="p-6 animate-fade-in">
+      <div className="p-4 sm:p-6 animate-fade-in">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-text">{t("assets.title")}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-text">
+            {t("assets.title")}
+          </h1>
           <p className="mt-1 text-text-muted">{t("assets.subtitle")}</p>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex flex-wrap items-center gap-2 mb-6">
           {[
             { id: "all" as AssetFilter, label: t("assets.filters.all") },
             { id: "IMAGE" as AssetFilter, label: t("assets.filters.images") },
@@ -148,7 +150,7 @@ export default function AssetsPage() {
               type="button"
               key={tab.id}
               onClick={() => handleFilterChange(tab.id)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all cursor-pointer ${
+              className={`rounded-full px-4 py-1.5 pointer-coarse:py-2.5 text-sm font-medium transition-all cursor-pointer ${
                 assetFilter === tab.id
                   ? "bg-primary text-white shadow-lg shadow-primary/20"
                   : "bg-surface-elevated text-text-muted hover:text-text border border-border hover:border-border/80"
@@ -257,12 +259,13 @@ export default function AssetsPage() {
                         {asset.prompt}
                       </p>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-text-dim">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="shrink-0 text-xs text-text-dim">
                         {formatDate(asset.createdAt, { dateStyle: "short" })}
                       </span>
+                      {/* Card actions: always visible, thumb-sized on touch. */}
                       <div
-                        className="flex gap-1"
+                        className="flex gap-1 pointer-coarse:[&>button]:h-10 pointer-coarse:[&>button]:min-w-10"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Button
@@ -392,12 +395,17 @@ export default function AssetsPage() {
 
       {/* Asset Preview Modal */}
       {selectedAsset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-x-0 top-[var(--app-vv-top,0px)] z-[120] flex h-[var(--app-vvh,100dvh)] items-center justify-center p-3 sm:p-6">
           <div
             className="absolute inset-0 bg-black/80"
             onClick={() => setSelectedAsset(null)}
           />
-          <div className="relative z-10 w-full max-w-4xl max-h-[90vh] flex flex-col bg-surface rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={selectedAsset.prompt || t("assets.untitled")}
+            className="relative z-10 w-full max-w-4xl max-h-full sm:max-h-[90vh] flex flex-col bg-surface rounded-2xl shadow-2xl overflow-hidden animate-scale-in"
+          >
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -426,7 +434,7 @@ export default function AssetsPage() {
                 type="button"
                 onClick={() => setSelectedAsset(null)}
                 aria-label={t("assets.closePreview")}
-                className="ml-4 rounded-lg p-2 text-text-muted hover:text-text hover:bg-surface-elevated transition-colors cursor-pointer"
+                className="ml-2 sm:ml-4 shrink-0 rounded-lg p-2 pointer-coarse:p-3 text-text-muted hover:text-text hover:bg-surface-elevated transition-colors cursor-pointer"
               >
                 <svg
                   width="20"
@@ -440,12 +448,12 @@ export default function AssetsPage() {
                 </svg>
               </button>
             </div>
-            <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-black/50">
+            <div className="min-h-0 flex-1 overflow-auto p-2 sm:p-4 flex items-center justify-center bg-black/50">
               {selectedAsset.type === "VIDEO" ? (
                 <video
                   src={selectedAsset.url}
                   controls
-                  className="max-w-full max-h-[70vh] rounded-lg"
+                  className="max-w-full max-h-[50dvh] sm:max-h-[70vh] rounded-lg"
                   aria-label={t("assets.videoPlayer", {
                     title: selectedAsset.prompt || t("assets.untitled"),
                   })}
@@ -454,11 +462,11 @@ export default function AssetsPage() {
                 <img
                   src={selectedAsset.url}
                   alt={selectedAsset.prompt}
-                  className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                  className="max-w-full max-h-[50dvh] sm:max-h-[70vh] object-contain rounded-lg"
                 />
               )}
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-t border-border">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 border-t border-border">
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="secondary"

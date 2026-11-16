@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { Check, X, Settings } from "lucide-react";
 import type { Mode, ToolWithModes } from "@/types";
+import { ModalShell } from "@/components/modal-shell";
 import { useI18n } from "@/i18n/i18n-provider";
 import { localizeError } from "@/i18n/errors";
 
@@ -71,7 +72,9 @@ export default function ToolsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text">{t("tools.title")}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-text">
+          {t("tools.title")}
+        </h1>
         <p className="text-sm text-text-muted mt-1">{t("tools.subtitle")}</p>
       </div>
 
@@ -92,19 +95,21 @@ export default function ToolsPage() {
           {tools?.map((tool) => (
             <div
               key={tool.id}
-              className="rounded-xl border border-border bg-surface p-6"
+              className="rounded-xl border border-border bg-surface p-4 sm:p-6"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <span className="text-3xl">{tool.icon || "🔧"}</span>
-                  <div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+                  <span className="text-2xl sm:text-3xl">
+                    {tool.icon || "🔧"}
+                  </span>
+                  <div className="min-w-0">
                     <h3 className="text-lg font-semibold text-text">
                       {tool.name}
                     </h3>
                     <p className="text-sm text-text-muted mt-1">
                       {tool.description}
                     </p>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-text-dim">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 text-xs text-text-dim">
                       <span className="px-2 py-0.5 rounded bg-surface-elevated">
                         {tOptional(
                           `tools.categories.${tool.category}`,
@@ -132,7 +137,7 @@ export default function ToolsPage() {
                 <button
                   type="button"
                   onClick={() => openToolModal(tool)}
-                  className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors"
+                  className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors sm:min-h-0"
                 >
                   <Settings size={14} />
                   {t("tools.modes")}
@@ -166,106 +171,103 @@ export default function ToolsPage() {
       )}
 
       {selectedTool && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-surface rounded-xl border border-border w-full max-w-lg mx-4 p-6">
-            <h2 className="text-lg font-semibold text-text mb-1">
-              {t("tools.configureTitle")}
-            </h2>
-            <p className="text-sm text-text-muted mb-6">
-              {rich(
-                "tools.configureDescription",
-                {
-                  tool: (chunks) => (
-                    <span className="font-medium text-text">{chunks}</span>
-                  ),
-                },
-                { tool: selectedTool.name },
-              )}
-            </p>
+        <ModalShell labelledBy="tool-modes-title" size="lg">
+          <h2
+            id="tool-modes-title"
+            className="text-lg font-semibold text-text mb-1"
+          >
+            {t("tools.configureTitle")}
+          </h2>
+          <p className="text-sm text-text-muted mb-6">
+            {rich(
+              "tools.configureDescription",
+              {
+                tool: (chunks) => (
+                  <span className="font-medium text-text">{chunks}</span>
+                ),
+              },
+              { tool: selectedTool.name },
+            )}
+          </p>
 
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {activeModes.map((mode) => {
-                const isSelected = selectedModeIds.includes(mode.id);
-                return (
-                  <button
-                    key={mode.id}
-                    type="button"
-                    onClick={() => toggleMode(mode.id)}
-                    className={`w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all ${
-                      isSelected
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:bg-surface-elevated"
+          <div className="space-y-2 max-h-80 overflow-y-auto overscroll-contain">
+            {activeModes.map((mode) => {
+              const isSelected = selectedModeIds.includes(mode.id);
+              return (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => toggleMode(mode.id)}
+                  className={`w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all ${
+                    isSelected
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-surface-elevated"
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                      isSelected ? "border-primary bg-primary" : "border-border"
                     }`}
                   >
+                    {isSelected && <Check size={12} className="text-white" />}
+                  </div>
+
+                  {mode.icon ? (
+                    <span className="text-xl">{mode.icon}</span>
+                  ) : (
                     <div
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                        isSelected
-                          ? "border-primary bg-primary"
-                          : "border-border"
-                      }`}
+                      className="w-8 h-8 rounded flex items-center justify-center"
+                      style={{ backgroundColor: mode.color || "#6366f1" }}
                     >
-                      {isSelected && <Check size={12} className="text-white" />}
+                      <span className="text-white text-xs font-bold">
+                        {mode.name.charAt(0)}
+                      </span>
                     </div>
+                  )}
 
-                    {mode.icon ? (
-                      <span className="text-xl">{mode.icon}</span>
-                    ) : (
-                      <div
-                        className="w-8 h-8 rounded flex items-center justify-center"
-                        style={{ backgroundColor: mode.color || "#6366f1" }}
-                      >
-                        <span className="text-white text-xs font-bold">
-                          {mode.name.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-text">
-                        {mode.name}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text">{mode.name}</p>
+                    {mode.description && (
+                      <p className="text-xs text-text-dim truncate">
+                        {mode.description}
                       </p>
-                      {mode.description && (
-                        <p className="text-xs text-text-dim truncate">
-                          {mode.description}
-                        </p>
-                      )}
-                    </div>
+                    )}
+                  </div>
 
-                    <span className="text-xs font-mono text-text-dim">
-                      {mode.slug}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                  <span className="hidden text-xs font-mono text-text-dim min-[400px]:inline">
+                    {mode.slug}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-            <div className="flex justify-between items-center mt-6 pt-4 border-t border-border">
-              <p className="text-sm text-text-dim">
-                {t("tools.modesSelected", { count: selectedModeIds.length })}
-              </p>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedTool(null)}
-                  disabled={setModesMutation.isPending}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors disabled:opacity-50"
-                >
-                  {t("common.cancel")}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={setModesMutation.isPending}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
-                >
-                  {setModesMutation.isPending
-                    ? t("common.saving")
-                    : t("common.saveChanges")}
-                </button>
-              </div>
+          <div className="flex flex-col gap-3 mt-6 pt-4 border-t border-border sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-text-dim">
+              {t("tools.modesSelected", { count: selectedModeIds.length })}
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:flex">
+              <button
+                type="button"
+                onClick={() => setSelectedTool(null)}
+                disabled={setModesMutation.isPending}
+                className="min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors disabled:opacity-50 sm:min-h-0"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={setModesMutation.isPending}
+                className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50 sm:min-h-0"
+              >
+                {setModesMutation.isPending
+                  ? t("common.saving")
+                  : t("common.saveChanges")}
+              </button>
             </div>
           </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

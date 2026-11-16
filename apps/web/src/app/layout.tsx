@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "./providers";
-import { CookieConsent } from "@creator-hub/ui";
+import { CookieConsent, VisualViewportObserver } from "@creator-hub/ui";
 import { CookiesModal } from "@/components/legal/legal-modals";
 import { getRequestLocale } from "@/i18n/server";
 import { LOCALE_META } from "@/i18n/config";
@@ -24,6 +24,20 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/**
+ * Mobile-first viewport: `interactive-widget=resizes-content` makes Chromium
+ * shrink the layout when the on-screen keyboard opens (iOS is handled by
+ * VisualViewportObserver), and `viewport-fit=cover` exposes the safe-area
+ * insets used by the drawer, chat and bottom-anchored UI.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+  themeColor: "#0b0f19",
+};
+
 export default async function RootLayout({
   children,
 }: {
@@ -40,6 +54,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className={`${inter.variable} font-sans`} suppressHydrationWarning>
+        <VisualViewportObserver />
         <Providers initialLocale={locale}>
           {children}
           <CookieConsent CookiesModal={CookiesModal} />

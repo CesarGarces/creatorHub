@@ -177,30 +177,38 @@ export function ShareModal({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    // Above the app shell and the asset preview it can be opened from.
+    <div className="fixed inset-x-0 top-[var(--app-vv-top,0px)] z-[130] flex h-[var(--app-vvh,100dvh)] items-center justify-center p-3 sm:p-4">
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-md bg-surface rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-modal-title"
+        className="relative z-10 flex w-full max-w-md max-h-full flex-col bg-surface rounded-2xl shadow-2xl overflow-hidden animate-scale-in"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex shrink-0 items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Share2 size={18} className="text-primary" />
-            <h3 className="font-semibold text-text">{t("share.title")}</h3>
+            <h3 id="share-modal-title" className="font-semibold text-text">
+              {t("share.title")}
+            </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label={t("share.close")}
-            className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
+            className="p-2 pointer-coarse:p-3 -mr-1 rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 space-y-4">
           {/* Not public warning */}
           {!isPublic && (
             <div className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
@@ -236,13 +244,13 @@ export function ShareModal({
                 aria-label={t("share.shareLink")}
                 value={shareUrl}
                 readOnly
-                className="flex-1 px-3 py-2 bg-surface-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="min-w-0 flex-1 px-3 py-2 bg-surface-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
               <button
                 type="button"
                 onClick={handleCopyLink}
                 disabled={!isPublic}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                className={`shrink-0 px-3 sm:px-4 py-2 pointer-coarse:min-h-11 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                   isPublic
                     ? "bg-primary text-white hover:bg-primary/90"
                     : "bg-surface-elevated text-text-muted cursor-not-allowed opacity-50"
@@ -298,7 +306,7 @@ export function ShareModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border bg-surface-elevated/50">
+        <div className="shrink-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-border bg-surface-elevated/50 sm:pb-4">
           <p className="text-xs text-text-muted text-center">
             {isPublic ? t("share.publicFooter") : t("share.privateFooter")}
           </p>

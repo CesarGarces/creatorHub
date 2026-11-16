@@ -24,6 +24,8 @@ export const common = {
     count_other: "{count} credits",
     cost_one: "⚡ {count} credit",
     cost_other: "⚡ {count} credits",
+    /** Compact balance for crowded headers on phones. */
+    short: "{count} cr",
   },
   toasts: {
     urlCopied: "URL copied to clipboard",

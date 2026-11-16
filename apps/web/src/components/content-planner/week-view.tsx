@@ -240,229 +240,240 @@ export function WeekView({
 
   return (
     <div className="rounded-xl border border-border bg-surface overflow-hidden">
-      {/* Day headers */}
-      <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-border">
-        <div />
-        {days.map((day) => {
-          const isToday = isSameDay(day, now);
-          return (
-            <div
-              key={day.getTime()}
-              className="flex flex-col items-center py-2 border-l border-border"
-            >
-              <span className="text-[11px] uppercase tracking-wide text-text-dim">
-                {formatDate(day, { weekday: "short" })}
-              </span>
-              <span
-                className={cn(
-                  "mt-0.5 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold",
-                  isToday ? "bg-primary text-white" : "text-text",
-                )}
-              >
-                {day.getDate()}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Time grid */}
+      {/* Small screens: the 7 days keep a readable width and the grid
+          scrolls sideways (hour labels stay pinned on the left). */}
       <div
-        ref={scrollRef}
-        className="overflow-y-auto"
-        style={{ height: "min(70vh, 720px)" }}
+        data-scroll-x
+        data-testid="planner-week-scroller"
+        className="overflow-x-auto overscroll-x-contain"
       >
-        <div
-          className="relative grid grid-cols-[64px_repeat(7,minmax(0,1fr))]"
-          style={{ height: GRID_HEIGHT }}
-        >
-          {/* Hour labels */}
-          <div className="relative">
-            {HOURS.slice(1).map((h) => (
-              <span
-                key={h}
-                className="absolute right-2 -translate-y-1/2 whitespace-nowrap text-[11px] text-text-dim"
-                style={{ top: h * HOUR_HEIGHT }}
-              >
-                {timeLabel(new Date(2000, 0, 1, h))}
-              </span>
-            ))}
+        <div className="min-w-[46rem] md:min-w-0">
+          {/* Day headers */}
+          <div className="grid grid-cols-[52px_repeat(7,minmax(0,1fr))] sm:grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-border">
+            <div className="sticky left-0 z-20 bg-surface" />
+            {days.map((day) => {
+              const isToday = isSameDay(day, now);
+              return (
+                <div
+                  key={day.getTime()}
+                  className="flex flex-col items-center py-2 border-l border-border"
+                >
+                  <span className="text-[11px] uppercase tracking-wide text-text-dim">
+                    {formatDate(day, { weekday: "short" })}
+                  </span>
+                  <span
+                    className={cn(
+                      "mt-0.5 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold",
+                      isToday ? "bg-primary text-white" : "text-text",
+                    )}
+                  >
+                    {day.getDate()}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
-          {days.map((day, dayIndex) => {
-            const positioned = layoutDay(displayEvents, day);
-            const isToday = isSameDay(day, now);
-            return (
-              <div
-                key={day.getTime()}
-                data-testid={`planner-day-${dayIndex}`}
-                className={cn(
-                  "relative border-l border-border cursor-pointer",
-                  isToday && "bg-primary/[0.03]",
-                )}
-                onClick={(e) => handleColumnClick(day, e)}
-                onDragOver={(e) => handleDragOver(dayIndex, e)}
-                onDragLeave={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                    setDropPreview((p) =>
-                      p?.dayIndex === dayIndex ? null : p,
-                    );
-                  }
-                }}
-                onDrop={(e) => handleDrop(day, e)}
-              >
-                {HOURS.map((h) => (
-                  <div
+          {/* Time grid */}
+          <div
+            ref={scrollRef}
+            className="overflow-y-auto overscroll-contain"
+            style={{ height: "min(70dvh, 720px)" }}
+          >
+            <div
+              className="relative grid grid-cols-[52px_repeat(7,minmax(0,1fr))] sm:grid-cols-[64px_repeat(7,minmax(0,1fr))]"
+              style={{ height: GRID_HEIGHT }}
+            >
+              {/* Hour labels */}
+              <div className="sticky left-0 z-20 bg-surface">
+                {HOURS.slice(1).map((h) => (
+                  <span
                     key={h}
-                    className="pointer-events-none absolute inset-x-0 border-t border-border/50"
+                    className="absolute right-2 -translate-y-1/2 whitespace-nowrap text-[11px] text-text-dim"
                     style={{ top: h * HOUR_HEIGHT }}
-                  />
-                ))}
-
-                {dropPreview?.dayIndex === dayIndex && (
-                  <div
-                    className="pointer-events-none absolute inset-x-1 rounded-md border-2 border-dashed border-primary bg-primary/10 z-20"
-                    style={{
-                      top: minutesToPx(dropPreview.minute),
-                      height: minutesToPx(
-                        Math.min(
-                          dropPreview.duration,
-                          MINUTES_PER_DAY - dropPreview.minute,
-                        ),
-                      ),
-                    }}
                   >
-                    <span className="px-1.5 text-[11px] font-medium text-primary">
-                      {timeLabel(addMinutes(day, dropPreview.minute))}
-                    </span>
-                  </div>
-                )}
+                    {timeLabel(new Date(2000, 0, 1, h))}
+                  </span>
+                ))}
+              </div>
 
-                {positioned.map((p) => {
-                  const event = p.item;
-                  const style = eventStyle(event);
-                  const Icon = style.icon;
-                  const start = new Date(event.startAt);
-                  const end = new Date(event.endAt);
-                  const height = Math.max(
-                    minutesToPx(p.endMinute - p.startMinute),
-                    20,
-                  );
-                  const dimmed =
-                    focusedProjectId !== null &&
-                    event.projectId !== focusedProjectId;
-                  const range = `${timeLabel(start)} – ${timeLabel(end)}`;
-                  const isResizing = resizePreview?.eventId === event.id;
-                  const original =
-                    events.find((ev) => ev.id === event.id) ?? event;
-                  return (
-                    <button
-                      key={event.id}
-                      type="button"
-                      draggable={!isResizing}
-                      aria-label={`${event.title}, ${range}`}
-                      {...tooltip.triggerProps(original)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (suppressClickRef.current) return;
-                        onSelectEvent(original);
-                      }}
-                      onDragStart={(e) => {
-                        if (resizeRef.current) {
-                          e.preventDefault();
-                          return;
-                        }
-                        tooltip.hide();
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const segmentOffset =
-                          (day.getTime() - start.getTime()) / 60_000;
-                        dragRef.current = {
-                          eventId: event.id,
-                          grabOffset:
-                            pxToMinutes(e.clientY - rect.top) +
-                            (p.continuesBefore ? segmentOffset : 0),
-                          durationMinutes:
-                            (end.getTime() - start.getTime()) / 60_000,
-                        };
-                        e.dataTransfer.effectAllowed = "move";
-                        e.dataTransfer.setData("text/plain", event.id);
-                      }}
-                      onDragEnd={() => {
-                        dragRef.current = null;
-                        setDropPreview(null);
-                      }}
-                      className={cn(
-                        "group absolute z-10 flex flex-col overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-left text-xs shadow-sm transition-[opacity,background-color] cursor-grab active:cursor-grabbing",
-                        style.block,
-                        statusClasses(event.status),
-                        dimmed && "opacity-25",
-                        isResizing &&
-                          "z-20 opacity-100 ring-2 ring-primary shadow-lg",
-                        p.continuesBefore && "rounded-t-none",
-                        p.continuesAfter && "rounded-b-none",
-                      )}
-                      style={{
-                        top: minutesToPx(p.startMinute),
-                        height,
-                        left: `calc(${(p.column / p.columns) * 100}% + 2px)`,
-                        width: `calc(${100 / p.columns}% - 4px)`,
-                      }}
-                    >
-                      <span className="flex items-center gap-1 font-semibold leading-tight">
-                        {event.status === "DONE" ? (
-                          <Check className="h-3 w-3 shrink-0" />
-                        ) : (
-                          <Icon className="h-3 w-3 shrink-0" />
-                        )}
-                        <span className="truncate">{event.title}</span>
-                      </span>
-                      {height >= 36 && (
-                        <span className="truncate opacity-80">{range}</span>
-                      )}
-                      {height >= 56 && event.project && (
-                        <span className="truncate opacity-60">
-                          {event.project.title}
+              {days.map((day, dayIndex) => {
+                const positioned = layoutDay(displayEvents, day);
+                const isToday = isSameDay(day, now);
+                return (
+                  <div
+                    key={day.getTime()}
+                    data-testid={`planner-day-${dayIndex}`}
+                    className={cn(
+                      "relative border-l border-border cursor-pointer",
+                      isToday && "bg-primary/[0.03]",
+                    )}
+                    onClick={(e) => handleColumnClick(day, e)}
+                    onDragOver={(e) => handleDragOver(dayIndex, e)}
+                    onDragLeave={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                        setDropPreview((p) =>
+                          p?.dayIndex === dayIndex ? null : p,
+                        );
+                      }
+                    }}
+                    onDrop={(e) => handleDrop(day, e)}
+                  >
+                    {HOURS.map((h) => (
+                      <div
+                        key={h}
+                        className="pointer-events-none absolute inset-x-0 border-t border-border/50"
+                        style={{ top: h * HOUR_HEIGHT }}
+                      />
+                    ))}
+
+                    {dropPreview?.dayIndex === dayIndex && (
+                      <div
+                        className="pointer-events-none absolute inset-x-1 rounded-md border-2 border-dashed border-primary bg-primary/10 z-20"
+                        style={{
+                          top: minutesToPx(dropPreview.minute),
+                          height: minutesToPx(
+                            Math.min(
+                              dropPreview.duration,
+                              MINUTES_PER_DAY - dropPreview.minute,
+                            ),
+                          ),
+                        }}
+                      >
+                        <span className="px-1.5 text-[11px] font-medium text-primary">
+                          {timeLabel(addMinutes(day, dropPreview.minute))}
                         </span>
-                      )}
-                      {/* Resize handles (the edit dialog is the keyboard
+                      </div>
+                    )}
+
+                    {positioned.map((p) => {
+                      const event = p.item;
+                      const style = eventStyle(event);
+                      const Icon = style.icon;
+                      const start = new Date(event.startAt);
+                      const end = new Date(event.endAt);
+                      const height = Math.max(
+                        minutesToPx(p.endMinute - p.startMinute),
+                        20,
+                      );
+                      const dimmed =
+                        focusedProjectId !== null &&
+                        event.projectId !== focusedProjectId;
+                      const range = `${timeLabel(start)} – ${timeLabel(end)}`;
+                      const isResizing = resizePreview?.eventId === event.id;
+                      const original =
+                        events.find((ev) => ev.id === event.id) ?? event;
+                      return (
+                        <button
+                          key={event.id}
+                          type="button"
+                          draggable={!isResizing}
+                          aria-label={`${event.title}, ${range}`}
+                          {...tooltip.triggerProps(original)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (suppressClickRef.current) return;
+                            onSelectEvent(original);
+                          }}
+                          onDragStart={(e) => {
+                            if (resizeRef.current) {
+                              e.preventDefault();
+                              return;
+                            }
+                            tooltip.hide();
+                            const rect =
+                              e.currentTarget.getBoundingClientRect();
+                            const segmentOffset =
+                              (day.getTime() - start.getTime()) / 60_000;
+                            dragRef.current = {
+                              eventId: event.id,
+                              grabOffset:
+                                pxToMinutes(e.clientY - rect.top) +
+                                (p.continuesBefore ? segmentOffset : 0),
+                              durationMinutes:
+                                (end.getTime() - start.getTime()) / 60_000,
+                            };
+                            e.dataTransfer.effectAllowed = "move";
+                            e.dataTransfer.setData("text/plain", event.id);
+                          }}
+                          onDragEnd={() => {
+                            dragRef.current = null;
+                            setDropPreview(null);
+                          }}
+                          className={cn(
+                            "group absolute z-10 flex flex-col overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-left text-xs shadow-sm transition-[opacity,background-color] cursor-grab active:cursor-grabbing",
+                            style.block,
+                            statusClasses(event.status),
+                            dimmed && "opacity-25",
+                            isResizing &&
+                              "z-20 opacity-100 ring-2 ring-primary shadow-lg",
+                            p.continuesBefore && "rounded-t-none",
+                            p.continuesAfter && "rounded-b-none",
+                          )}
+                          style={{
+                            top: minutesToPx(p.startMinute),
+                            height,
+                            left: `calc(${(p.column / p.columns) * 100}% + 2px)`,
+                            width: `calc(${100 / p.columns}% - 4px)`,
+                          }}
+                        >
+                          <span className="flex items-center gap-1 font-semibold leading-tight">
+                            {event.status === "DONE" ? (
+                              <Check className="h-3 w-3 shrink-0" />
+                            ) : (
+                              <Icon className="h-3 w-3 shrink-0" />
+                            )}
+                            <span className="truncate">{event.title}</span>
+                          </span>
+                          {height >= 36 && (
+                            <span className="truncate opacity-80">{range}</span>
+                          )}
+                          {height >= 56 && event.project && (
+                            <span className="truncate opacity-60">
+                              {event.project.title}
+                            </span>
+                          )}
+                          {/* Resize handles (the edit dialog is the keyboard
                           alternative). Hidden on edges that continue
                           into another day. */}
-                      {!p.continuesBefore && (
-                        <ResizeHandle
-                          edge="start"
-                          eventId={event.id}
-                          onPointerDown={(e) =>
-                            startResize(e, original, "start", day)
-                          }
-                        />
-                      )}
-                      {!p.continuesAfter && (
-                        <ResizeHandle
-                          edge="end"
-                          eventId={event.id}
-                          onPointerDown={(e) =>
-                            startResize(e, original, "end", day)
-                          }
-                        />
-                      )}
-                    </button>
-                  );
-                })}
+                          {!p.continuesBefore && (
+                            <ResizeHandle
+                              edge="start"
+                              eventId={event.id}
+                              onPointerDown={(e) =>
+                                startResize(e, original, "start", day)
+                              }
+                            />
+                          )}
+                          {!p.continuesAfter && (
+                            <ResizeHandle
+                              edge="end"
+                              eventId={event.id}
+                              onPointerDown={(e) =>
+                                startResize(e, original, "end", day)
+                              }
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
 
-                {isToday && (
-                  <div
-                    className="pointer-events-none absolute inset-x-0 z-30 flex items-center"
-                    style={{ top: minutesToPx(minutesIntoDay(now)) }}
-                    title={t("contentPlanner.calendar.now")}
-                    aria-hidden
-                  >
-                    <span className="-ml-1 h-2 w-2 rounded-full bg-error" />
-                    <span className="h-px flex-1 bg-error" />
+                    {isToday && (
+                      <div
+                        className="pointer-events-none absolute inset-x-0 z-30 flex items-center"
+                        style={{ top: minutesToPx(minutesIntoDay(now)) }}
+                        title={t("contentPlanner.calendar.now")}
+                        aria-hidden
+                      >
+                        <span className="-ml-1 h-2 w-2 rounded-full bg-error" />
+                        <span className="h-px flex-1 bg-error" />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
       {tooltip.node}

@@ -210,3 +210,48 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ─── Responsive & touch foundation (mobile-first) ─────────────────────── */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Removes the double-tap-to-zoom delay on every control. In the base
+   layer so utilities (e.g. `touch-none` on drag handles) still win. */
+@layer base {
+  a,
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label,
+  summary {
+    touch-action: manipulation;
+  }
+}
+
+/*
+ * iOS/iPadOS zoom the page when a field under 16px gets focus, which breaks
+ * the layout while the keyboard is open. Phones and touch devices get 16px
+ * fields; unlayered on purpose so it wins over text-xs/text-sm utilities.
+ */
+@media (max-width: 639.98px), (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+      [type="color"]
+    ):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Opt-in horizontal scrollers (chip rows, wide grids) without a scrollbar. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

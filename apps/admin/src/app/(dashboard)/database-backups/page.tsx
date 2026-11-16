@@ -113,9 +113,11 @@ export default function DatabaseBackupsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text">{t("backups.title")}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-text">
+            {t("backups.title")}
+          </h1>
           <p className="text-sm text-text-muted mt-1">
             {t("backups.subtitle")}
           </p>
@@ -124,7 +126,7 @@ export default function DatabaseBackupsPage() {
           type="button"
           onClick={() => setCreateDialog(true)}
           disabled={createMutation.isPending}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+          className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50 sm:min-h-0"
         >
           {createMutation.isPending ? (
             <Loader2 size={18} className="animate-spin" />
@@ -136,7 +138,7 @@ export default function DatabaseBackupsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         <div className="rounded-xl border border-border bg-surface p-4">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-primary/10 p-2">
@@ -197,8 +199,8 @@ export default function DatabaseBackupsPage() {
           ))}
         </div>
       ) : backups && backups.length > 0 ? (
-        <div className="rounded-xl border border-border bg-surface overflow-hidden">
-          <table className="w-full">
+        <div className="@container rounded-xl border border-border bg-surface overflow-hidden">
+          <table className="table-stack w-full">
             <thead>
               <tr className="border-b border-border">
                 <th className="px-4 py-3 text-left text-sm font-medium text-text-muted">
@@ -230,24 +232,36 @@ export default function DatabaseBackupsPage() {
                   key={backup.id}
                   className="border-b border-border last:border-0 hover:bg-surface-elevated transition-colors"
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" data-primary>
                     <div className="flex items-center gap-2">
-                      <Database size={14} className="text-text-dim" />
-                      <span className="text-sm font-medium text-text">
+                      <Database size={14} className="shrink-0 text-text-dim" />
+                      <span className="min-w-0 break-all text-sm font-medium text-text">
                         {backup.filename}
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-text-muted">
+                  <td
+                    className="px-4 py-3 text-sm text-text-muted"
+                    data-label={t("backups.table.size")}
+                  >
                     {formatBytes(backup.size)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-text-muted">
+                  <td
+                    className="px-4 py-3 text-sm text-text-muted"
+                    data-label={t("backups.table.created")}
+                  >
                     {formatDate(backup.createdAt)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-text-muted">
+                  <td
+                    className="px-4 py-3 text-sm text-text-muted"
+                    data-label={t("backups.table.database")}
+                  >
                     {backup.database}
                   </td>
-                  <td className="px-4 py-3">
+                  <td
+                    className="px-4 py-3"
+                    data-label={t("backups.table.environment")}
+                  >
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
                         backup.environment === "production"
@@ -261,7 +275,10 @@ export default function DatabaseBackupsPage() {
                       )}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td
+                    className="px-4 py-3"
+                    data-label={t("backups.table.status")}
+                  >
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
                         backup.status === "completed"
@@ -284,13 +301,16 @@ export default function DatabaseBackupsPage() {
                       )}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td
+                    className="px-4 py-3"
+                    data-label={t("backups.table.actions")}
+                  >
                     <div className="flex items-center justify-end gap-2">
                       {backup.status === "completed" && (
                         <button
                           type="button"
                           onClick={() => handleDownload(backup)}
-                          className="flex items-center justify-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-elevated transition-colors"
+                          className="flex items-center justify-center gap-1 rounded-lg border border-border px-3 py-1.5 pointer-coarse:min-h-11 text-xs font-medium text-text-muted hover:bg-surface-elevated transition-colors"
                         >
                           <Download size={12} />
                           {t("backups.download")}
@@ -307,7 +327,7 @@ export default function DatabaseBackupsPage() {
                         title={t("backups.deleteAria", {
                           name: backup.filename,
                         })}
-                        className="flex items-center justify-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors"
+                        className="flex items-center justify-center gap-1 rounded-lg border border-border px-3 py-1.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors"
                       >
                         <Trash2 size={12} />
                       </button>
@@ -319,7 +339,7 @@ export default function DatabaseBackupsPage() {
           </table>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-surface p-12 text-center">
+        <div className="rounded-xl border border-border bg-surface p-8 sm:p-12 text-center">
           <Database size={48} className="mx-auto text-text-dim mb-4" />
           <h3 className="text-lg font-medium text-text">
             {t("backups.emptyTitle")}

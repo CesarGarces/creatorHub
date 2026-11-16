@@ -67,7 +67,7 @@ function Block({ block, isFirst }: { block: LegalBlock; isFirst: boolean }) {
       );
     case "table":
       return (
-        <div className="overflow-x-auto">
+        <div data-scroll-x className="overflow-x-auto">
           <table className="w-full border-collapse mb-4">
             <thead>
               <tr className="border-b border-border">
@@ -124,7 +124,8 @@ export function LegalDocumentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden">
+      {/* A column: header and footer stay put, only the text scrolls. */}
+      <DialogContent className="flex max-w-3xl max-h-full flex-col overflow-hidden sm:max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>{doc.title}</DialogTitle>
           <DialogDescription>
@@ -136,10 +137,10 @@ export function LegalDocumentModal({
             })}
           </DialogDescription>
         </DialogHeader>
-        <div className="p-6 pb-0">
+        <div className="flex min-h-0 flex-1 flex-col p-5 pb-0 sm:p-6 sm:pb-0">
           <div
             lang={locale}
-            className="max-h-[60vh] overflow-y-auto prose prose-sm text-text"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain prose prose-sm text-text sm:max-h-[60vh]"
           >
             {doc.sections.map((section) => (
               <section key={section.title} className="mb-6">
@@ -151,7 +152,7 @@ export function LegalDocumentModal({
             ))}
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0 pt-4">
           <Button
             variant="glow"
             className="w-full sm:w-auto"

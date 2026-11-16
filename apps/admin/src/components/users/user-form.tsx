@@ -67,7 +67,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-6 rounded-xl border border-border bg-surface p-6"
+      className="space-y-6 rounded-xl border border-border bg-surface p-4 sm:p-6"
     >
       {error && (
         <div className="rounded-lg bg-error/10 p-3 text-sm text-error">
@@ -75,7 +75,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div>
           <label
             htmlFor="user-email"
@@ -172,7 +172,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         <p className="text-sm font-medium text-text-muted">
           {t("users.form.creditBalance")}
         </p>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label
               htmlFor="currentCredits"
@@ -210,7 +210,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex min-h-11 items-center gap-3 sm:min-h-0">
         <Switch
           checked={form.isActive}
           onCheckedChange={(checked) => updateField("isActive", checked)}
@@ -221,13 +221,18 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         </span>
       </div>
 
-      <div className="flex items-center gap-3 pt-4">
-        <Button type="submit" isLoading={loading}>
+      <div className="grid grid-cols-2 gap-3 pt-4 sm:flex sm:items-center">
+        <Button
+          type="submit"
+          isLoading={loading}
+          className="pointer-coarse:h-11"
+        >
           {user ? t("users.form.update") : t("users.form.create")}
         </Button>
         <Button
           type="button"
           variant="secondary"
+          className="pointer-coarse:h-11"
           onClick={() => router.push("/users")}
         >
           {t("common.cancel")}

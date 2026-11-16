@@ -46,6 +46,9 @@ export const es: Messages = {
     creditEmails: "Emails de crédito",
     backups: "Copias de seguridad",
     logout: "Cerrar sesión",
+    openMenu: "Abrir menú",
+    closeMenu: "Cerrar menú",
+    mainNavigation: "Navegación principal",
   },
   login: {
     title: "Acceso de administración",

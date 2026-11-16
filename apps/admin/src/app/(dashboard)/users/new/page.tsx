@@ -17,7 +17,7 @@ export default function NewUserPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text">
+        <h1 className="text-xl sm:text-2xl font-bold text-text">
           {t("users.newPage.title")}
         </h1>
         <p className="text-text-muted">{t("users.newPage.subtitle")}</p>

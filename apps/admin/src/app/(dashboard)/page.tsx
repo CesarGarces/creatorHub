@@ -53,7 +53,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
@@ -61,7 +61,7 @@ export default function DashboardPage() {
             />
           ))}
         </div>
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="h-80 rounded-xl border border-border bg-surface animate-pulse" />
           <div className="h-80 rounded-xl border border-border bg-surface animate-pulse" />
         </div>
@@ -78,20 +78,22 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-text">{t("dashboard.title")}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-text">
+          {t("dashboard.title")}
+        </h1>
         <p className="text-text-muted">{t("dashboard.subtitle")}</p>
       </div>
 
       {stats && <StatsCards stats={stats} />}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
         <UsageChart data={usage} />
         <FavoriteToolsChart data={favorites} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
         <RegistrationsChart />
         <TopUsersTable users={topUsers} />
       </div>

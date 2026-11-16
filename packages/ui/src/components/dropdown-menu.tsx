@@ -14,13 +14,15 @@ const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 const DropdownMenuContent = React.forwardRef<
   React.ComponentRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
+>(({ className, sideOffset = 4, collisionPadding = 8, ...props }, ref) => (
   <DropdownMenuPrimitive.Portal>
     <DropdownMenuPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
+      collisionPadding={collisionPadding}
       className={cn(
-        "z-[99999] min-w-[8rem] overflow-hidden rounded-xl border border-border bg-surface p-1 text-text shadow-md",
+        // Never wider/taller than the room left on screen (phones).
+        "z-[99999] min-w-[8rem] max-w-[calc(100vw-1rem)] max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-surface p-1 text-text shadow-md",
         className,
       )}
       {...props}
@@ -38,7 +40,7 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer select-none items-center gap-2 rounded-lg px-3 py-2 text-sm text-text outline-none transition-colors duration-150 hover:bg-surface-elevated hover:text-text focus:bg-surface-elevated data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-pointer select-none items-center gap-2 rounded-lg px-3 py-2 pointer-coarse:min-h-11 text-sm text-text outline-none transition-colors duration-150 hover:bg-surface-elevated hover:text-text focus:bg-surface-elevated data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       inset && "pl-8",
       className,
     )}

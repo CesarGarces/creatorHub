@@ -44,6 +44,9 @@ export const en = {
     creditEmails: "Credit Emails",
     backups: "Backups",
     logout: "Logout",
+    openMenu: "Open menu",
+    closeMenu: "Close menu",
+    mainNavigation: "Main navigation",
   },
   login: {
     title: "Admin Login",

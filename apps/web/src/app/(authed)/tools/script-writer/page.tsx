@@ -16,6 +16,8 @@ import {
 } from "@/store/script-writer.store";
 import { useI18n } from "@/i18n/i18n-provider";
 import { useToolQueryParams } from "@/hooks/use-tool-query-params";
+import { useIsDesktop } from "@/hooks/use-media-query";
+import { History, Plus } from "lucide-react";
 import type { TranslationKey } from "@/i18n/translate";
 
 const PLATFORMS = ["youtube-long", "youtube-short", "tiktok", "reels"] as const;
@@ -89,6 +91,13 @@ export default function ScriptWriterPage() {
   );
   const [showSettings, setShowSettings] = useState(false);
   const [showScriptConfig, setShowScriptConfig] = useState(false);
+  // Below lg the history is an overlay drawer with its own (closed by
+  // default) state; the store's `showSidebar` keeps driving the docked panel.
+  const isDesktop = useIsDesktop();
+  const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
+  const historyVisible = isDesktop ? showSidebar : mobileHistoryOpen;
+  const toggleHistory = () =>
+    isDesktop ? toggleSidebar() : setMobileHistoryOpen((v) => !v);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { fetchBalance } = useCreditsStore();
 
@@ -156,31 +165,51 @@ export default function ScriptWriterPage() {
           { label: t("toolCatalog.script-writer.name") },
         ]}
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
-              onClick={toggleSidebar}
-              className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm text-text-muted hover:text-text transition-colors"
+              onClick={toggleHistory}
+              aria-label={
+                historyVisible
+                  ? t("scriptWriter.hideHistory")
+                  : t("scriptWriter.showHistory")
+              }
+              aria-expanded={historyVisible}
+              className="flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface-elevated px-2 text-sm text-text-muted hover:text-text transition-colors pointer-coarse:h-11 pointer-coarse:min-w-11 sm:h-auto sm:px-3 sm:py-1.5"
             >
-              {showSidebar
-                ? t("scriptWriter.hideHistory")
-                : t("scriptWriter.showHistory")}
+              <History className="h-4 w-4 sm:hidden" aria-hidden="true" />
+              <span className="hidden sm:inline">
+                {historyVisible
+                  ? t("scriptWriter.hideHistory")
+                  : t("scriptWriter.showHistory")}
+              </span>
             </button>
             <button
               onClick={() => {
                 clearChat();
                 setInput("");
               }}
-              className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm text-text-muted hover:text-text transition-colors"
+              aria-label={t("scriptWriter.newScript")}
+              className="flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface-elevated px-2 text-sm text-text-muted hover:text-text transition-colors pointer-coarse:h-11 pointer-coarse:min-w-11 sm:h-auto sm:px-3 sm:py-1.5"
             >
-              {t("scriptWriter.newScript")}
+              <Plus className="h-4 w-4 sm:hidden" aria-hidden="true" />
+              <span className="hidden sm:inline">
+                {t("scriptWriter.newScript")}
+              </span>
             </button>
           </div>
         }
       />
-      <div className="flex h-[calc(100vh-3.5rem)]">
-        {/* History Sidebar */}
-        {showSidebar && (
-          <div className="w-72 border-r border-border bg-surface flex flex-col">
+      <div className="relative flex h-[calc(100dvh-3.5rem)]">
+        {/* History: docked from lg, an overlay drawer below. */}
+        {historyVisible && !isDesktop && (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 z-20 bg-black/50 lg:hidden"
+            onClick={() => setMobileHistoryOpen(false)}
+          />
+        )}
+        {historyVisible && (
+          <div className="absolute inset-y-0 left-0 z-30 flex w-[85%] max-w-xs flex-col border-r border-border bg-surface shadow-2xl lg:static lg:z-auto lg:w-72 lg:max-w-none lg:shadow-none">
             <div className="p-3 border-b border-border">
               <h3 className="text-sm font-medium text-text">
                 {t("scriptWriter.scriptHistory")}
@@ -198,7 +227,10 @@ export default function ScriptWriterPage() {
                     className={cn(
                       "group flex items-center gap-2 px-3 py-2.5 cursor-pointer border-b border-border/50 hover:bg-surface-elevated transition-colors",
                     )}
-                    onClick={() => selectScript(script.id)}
+                    onClick={() => {
+                      selectScript(script.id);
+                      if (!isDesktop) setMobileHistoryOpen(false);
+                    }}
                   >
                     <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-primary/10 text-primary text-[10px] font-bold flex-shrink-0">
                       {PLATFORM_ICONS[script.platform] || "SC"}
@@ -225,7 +257,7 @@ export default function ScriptWriterPage() {
                       }}
                       aria-label={t("scriptWriter.deleteScript")}
                       title={t("scriptWriter.deleteScript")}
-                      className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-500 transition-all p-1"
+                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 pointer-coarse:p-2.5 text-text-muted hover:text-red-500 transition-all p-1"
                     >
                       <svg
                         width="14"
@@ -246,7 +278,7 @@ export default function ScriptWriterPage() {
         )}
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           {/* Model Settings Panel */}
           {showSettings && (
             <ModelSettingsPanel
@@ -261,7 +293,7 @@ export default function ScriptWriterPage() {
           {/* Script Config Panel */}
           {showScriptConfig && (
             <div className="border-b border-border bg-surface-elevated/50">
-              <div className="max-w-3xl mx-auto px-6 py-4">
+              <div className="max-w-3xl mx-auto px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <svg
@@ -374,7 +406,7 @@ export default function ScriptWriterPage() {
           )}
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-6">
             {messages.length === 0 && (
               <div className="max-w-3xl mx-auto text-center py-12">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mx-auto mb-4">
@@ -450,14 +482,14 @@ export default function ScriptWriterPage() {
 
           {/* Suggestions */}
           {messages.length === 0 && (
-            <div className="px-6 pb-4">
+            <div className="px-4 pb-4 sm:px-6">
               <div className="max-w-3xl mx-auto flex flex-wrap gap-2">
                 {SUGGESTION_KEYS.map((key) => t(key)).map((s) => (
                   <button
                     key={s}
                     onClick={() => handleSend(s)}
                     disabled={isGenerating}
-                    className="rounded-full border border-border bg-surface px-4 py-2 text-xs text-text-muted hover:text-text hover:border-primary/30 transition-all disabled:opacity-50"
+                    className="rounded-full border border-border bg-surface px-4 py-2 pointer-coarse:py-2.5 text-xs text-text-muted hover:text-text hover:border-primary/30 transition-all disabled:opacity-50"
                   >
                     {s}
                   </button>
@@ -467,8 +499,12 @@ export default function ScriptWriterPage() {
           )}
 
           {/* Input */}
-          <div className="border-t border-border bg-surface p-4">
-            <div className="max-w-3xl mx-auto flex items-center gap-3">
+          <div
+            data-composer
+            className="border-t border-border bg-surface p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4"
+          >
+            {/* Phones: message + send on top, tool buttons below. */}
+            <div className="max-w-3xl mx-auto flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
               {/* Gear icon = Model Settings */}
               <button
                 onClick={() => setShowSettings((v) => !v)}
@@ -540,8 +576,9 @@ export default function ScriptWriterPage() {
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder={t("scriptWriter.inputPlaceholder")}
+                aria-label={t("scriptWriter.inputPlaceholder")}
                 disabled={isGenerating}
-                className="flex-1 rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary transition-colors disabled:opacity-50"
+                className="order-first min-w-0 flex-1 basis-[calc(100%-3.25rem)] rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary transition-colors disabled:opacity-50 sm:order-none sm:basis-auto"
               />
 
               {/* Send */}
@@ -549,7 +586,7 @@ export default function ScriptWriterPage() {
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isGenerating}
                 aria-label={t("scriptWriter.send")}
-                className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="order-first flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary sm:order-none text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg
                   width="18"
@@ -588,7 +625,7 @@ function MessageBubble({ message }: { message: ScriptMessage }) {
   return (
     <div
       className={cn(
-        "flex gap-4 max-w-3xl mx-auto animate-slide-up",
+        "flex gap-3 sm:gap-4 max-w-3xl mx-auto animate-slide-up",
         isUser && "flex-row-reverse",
       )}
     >
@@ -628,7 +665,7 @@ function MessageBubble({ message }: { message: ScriptMessage }) {
       </div>
       <div
         className={cn(
-          "rounded-2xl px-5 py-3.5 text-sm leading-relaxed max-w-[80%]",
+          "min-w-0 rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 text-sm leading-relaxed max-w-[85%] sm:max-w-[80%]",
           isUser
             ? "bg-primary text-white ml-auto"
             : "bg-surface border border-border text-text",

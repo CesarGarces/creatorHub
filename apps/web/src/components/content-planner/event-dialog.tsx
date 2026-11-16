@@ -256,7 +256,9 @@ function EventDialogForm({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 p-6 max-h-[70vh] overflow-y-auto">
+          {/* Leaves room for header + footer inside the visible viewport,
+              so the actions stay on screen with the keyboard open. */}
+          <div className="space-y-4 p-5 sm:p-6 max-h-[calc(var(--app-vvh,100dvh)-11rem)] sm:max-h-[70vh] overflow-y-auto overscroll-contain">
             <Input
               label={t("contentPlanner.event.title")}
               placeholder={t("contentPlanner.event.titlePlaceholder")}
@@ -292,7 +294,8 @@ function EventDialogForm({
               )}
             </div>
 
-            <div className="grid gap-4 grid-cols-[1.4fr_1fr_1fr]">
+            {/* Phones: date on its own row, start/end below. */}
+            <div className="grid gap-4 grid-cols-2 [&>*:first-child]:col-span-2 sm:grid-cols-[1.4fr_1fr_1fr] sm:[&>*:first-child]:col-span-1">
               <Input
                 type="date"
                 label={t("contentPlanner.event.date")}

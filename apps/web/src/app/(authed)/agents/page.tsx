@@ -65,9 +65,11 @@ export default function AgentsPage() {
           { label: t("nav.agents") },
         ]}
       />
-      <div className="p-6 space-y-8 animate-fade-in">
+      <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold text-text">{t("agents.title")}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-text">
+            {t("agents.title")}
+          </h1>
           <p className="mt-1 text-text-muted">{t("agents.subtitle")}</p>
         </div>
 
@@ -76,20 +78,20 @@ export default function AgentsPage() {
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
             {t("agents.yourAgents")}
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {agents.map((agent) => (
               <div
                 key={agent.id}
-                className={`group cursor-pointer rounded-xl border border-border bg-surface p-6 transition-all duration-200 ${agent.hoverColor} hover:shadow-lg`}
+                className={`group cursor-pointer rounded-xl border border-border bg-surface p-4 sm:p-6 transition-all duration-200 ${agent.hoverColor} hover:shadow-lg`}
                 onClick={() => router.push(`/tools/${agent.toolId}`)}
               >
                 <div className="flex items-start gap-4">
                   <div
-                    className={`flex h-14 w-14 items-center justify-center rounded-xl ${agent.color} text-3xl transition-colors`}
+                    className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl ${agent.color} text-2xl sm:text-3xl transition-colors`}
                   >
                     {agent.icon}
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-text">
                       {t(agent.nameKey)}
                     </h3>
@@ -113,14 +115,14 @@ export default function AgentsPage() {
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
             {t("agents.comingSoon")}
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {upcomingAgents.map((agent) => (
               <div
                 key={agent.nameKey}
-                className="rounded-xl border border-border bg-surface p-6 opacity-60"
+                className="rounded-xl border border-border bg-surface p-4 sm:p-6 opacity-60"
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-surface-elevated text-3xl">
+                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl bg-surface-elevated text-2xl sm:text-3xl">
                     {agent.icon}
                   </div>
                   <div>

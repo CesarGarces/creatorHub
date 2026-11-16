@@ -48,25 +48,25 @@ export function StatsCards({ stats }: StatsCardsProps) {
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
           <div
             key={card.label}
-            className="rounded-xl border border-border bg-surface p-6 transition-all hover:border-border/80"
+            className="min-w-0 rounded-xl border border-border bg-surface p-4 sm:p-6 transition-all hover:border-border/80"
           >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-text-muted">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-text-muted">
                   {card.label}
                 </p>
-                <p className="mt-2 text-3xl font-bold text-text">
+                <p className="mt-2 text-2xl sm:text-3xl font-bold text-text tabular-nums">
                   {formatNumber(card.value)}
                 </p>
                 <p className="mt-1 text-xs text-text-dim">{card.sub}</p>
               </div>
-              <div className={`rounded-lg ${card.bg} p-3`}>
+              <div className={`shrink-0 rounded-lg ${card.bg} p-2 sm:p-3`}>
                 <Icon className={`h-5 w-5 ${card.color}`} />
               </div>
             </div>

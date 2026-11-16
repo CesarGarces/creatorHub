@@ -57,30 +57,30 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       {/* Header */}
       <header className="border-b border-border bg-surface/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-2">
+          <a href="/" className="flex shrink-0 items-center gap-2">
             <img
               src="/isologo_white.png"
               alt={t("common.appName")}
-              className="h-8 w-auto"
+              className="h-7 w-auto sm:h-8"
             />
           </a>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <LanguageSelector compact />
             <button
               type="button"
               onClick={handleLogin}
-              className="px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
+              className="hidden px-3 py-2 text-sm text-text-muted hover:text-text transition-colors min-[400px]:inline-flex sm:px-4"
             >
               {t("share.page.signIn")}
             </button>
             <button
               type="button"
               onClick={handleRegister}
-              className="px-4 py-2 text-sm bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+              className="whitespace-nowrap px-3 py-2 pointer-coarse:min-h-11 text-sm bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors sm:px-4"
             >
               {t("share.page.getStarted")}
             </button>
@@ -89,7 +89,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
         {/* Asset Display */}
         <div className="bg-surface rounded-2xl overflow-hidden border border-border shadow-lg">
           {/* Image/Video */}
@@ -98,7 +98,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
               <video
                 src={asset.url}
                 controls
-                className="max-w-full max-h-[70vh] rounded-lg"
+                className="max-w-full max-h-[60dvh] sm:max-h-[70vh] rounded-lg"
                 poster={
                   asset.thumbnailUrl || "/video-thumbnail-placeholder.png"
                 }
@@ -108,14 +108,14 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
               <img
                 src={asset.url}
                 alt={asset.prompt}
-                className="max-w-full max-h-[70vh] object-contain"
+                className="max-w-full max-h-[60dvh] sm:max-h-[70vh] object-contain"
                 loading="eager"
               />
             )}
           </div>
 
           {/* Asset Info */}
-          <div className="p-6">
+          <div className="p-5 sm:p-6">
             {/* Creator Info */}
             <div className="flex items-center gap-3 mb-4">
               {asset.creator.avatarUrl ? (
@@ -201,7 +201,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
             </div>
 
             {/* Stats */}
-            <div className="flex items-center gap-6 mt-6 pt-6 border-t border-border text-sm text-text-muted">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-6 pt-6 border-t border-border text-sm text-text-muted">
               <div className="flex items-center gap-1">
                 <Heart size={14} />
                 <span>{t("share.page.likes", { count: asset.likeCount })}</span>
@@ -225,7 +225,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
         </div>
 
         {/* CTA Banner */}
-        <div className="mt-8 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-2xl p-8 border border-primary/20">
+        <div className="mt-8 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-2xl p-5 sm:p-8 border border-primary/20">
           <div className="text-center max-w-2xl mx-auto">
             <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
@@ -242,10 +242,10 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
                 <path d="M2 12l10 5 10-5" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-text mb-3">
+            <h2 className="text-xl sm:text-2xl font-bold text-text mb-3">
               {t("share.page.ctaTitle")}
             </h2>
-            <p className="text-text-muted mb-6 text-lg">
+            <p className="text-text-muted mb-6 text-base sm:text-lg">
               {rich(
                 asset.type === "VIDEO"
                   ? "share.page.ctaVideo"
@@ -264,14 +264,14 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
               <button
                 type="button"
                 onClick={handleRegister}
-                className="px-8 py-4 bg-primary text-white rounded-xl font-semibold text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+                className="px-6 py-3.5 sm:px-8 sm:py-4 bg-primary text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
               >
                 {t("share.page.startCreating")}
               </button>
               <button
                 type="button"
                 onClick={handleLogin}
-                className="px-8 py-4 bg-transparent border border-border text-text-muted rounded-xl font-semibold text-lg hover:bg-surface transition-colors"
+                className="px-6 py-3.5 sm:px-8 sm:py-4 bg-transparent border border-border text-text-muted rounded-xl font-semibold text-base sm:text-lg hover:bg-surface transition-colors"
               >
                 {t("share.page.signIn")}
               </button>

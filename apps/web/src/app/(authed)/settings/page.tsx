@@ -172,9 +172,9 @@ export default function SettingsPage() {
           { label: t("nav.settings") },
         ]}
       />
-      <div className="p-6 space-y-8 max-w-3xl mx-auto animate-fade-in">
+      <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 max-w-3xl mx-auto animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold text-text">
+          <h1 className="text-xl sm:text-2xl font-bold text-text">
             {t("settings.title")}
           </h1>
           <p className="mt-1 text-text-muted">{t("settings.subtitle")}</p>
@@ -205,7 +205,7 @@ export default function SettingsPage() {
                     setProfileOpen(true);
                   }}
                   aria-label={t("settings.profile.editAvatar")}
-                  className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-surface-elevated border border-border text-text-muted hover:text-primary hover:border-primary transition-colors"
+                  className="absolute -bottom-1 -right-1 flex h-7 w-7 pointer-coarse:h-9 pointer-coarse:w-9 items-center justify-center rounded-full bg-surface-elevated border border-border text-text-muted hover:text-primary hover:border-primary transition-colors"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
@@ -290,6 +290,7 @@ export default function SettingsPage() {
                 pwLoading
               }
               onClick={() => setConfirmOpen(true)}
+              className="w-full sm:w-auto pointer-coarse:h-11"
             >
               {t("settings.password.submit")}
             </Button>
@@ -307,8 +308,8 @@ export default function SettingsPage() {
             </p>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between rounded-lg border border-error/20 bg-error/5 p-4">
-              <div>
+            <div className="flex flex-col gap-3 rounded-lg border border-error/20 bg-error/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-text">
                   {t("settings.danger.deleteTitle")}
                 </p>
@@ -319,6 +320,7 @@ export default function SettingsPage() {
               <Button
                 variant="danger"
                 size="sm"
+                className="shrink-0 pointer-coarse:h-11"
                 onClick={() => {
                   setDeleteConfirmation("");
                   setDeleteOpen(true);
@@ -340,13 +342,13 @@ export default function SettingsPage() {
           <DialogHeader>
             <DialogTitle>{t("settings.editProfile.title")}</DialogTitle>
           </DialogHeader>
-          <div className="px-6 pb-6 space-y-4">
+          <div className="px-5 pb-5 sm:px-6 sm:pb-6 space-y-4">
             <Input
               label={t("settings.editProfile.name")}
               value={profileName}
               onChange={(e) => setProfileName(e.target.value)}
             />
-            <div className="flex justify-end gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-end pointer-coarse:[&>button]:h-11">
               <Button
                 variant="secondary"
                 onClick={() => setProfileOpen(false)}
@@ -376,11 +378,11 @@ export default function SettingsPage() {
           <DialogHeader>
             <DialogTitle>{t("settings.password.confirmTitle")}</DialogTitle>
           </DialogHeader>
-          <div className="px-6 pb-6 space-y-4">
+          <div className="px-5 pb-5 sm:px-6 sm:pb-6 space-y-4">
             <p className="text-sm text-text-muted">
               {t("settings.password.confirmDescription")}
             </p>
-            <div className="flex justify-end gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-end pointer-coarse:[&>button]:h-11">
               <Button
                 variant="secondary"
                 onClick={() => setConfirmOpen(false)}
@@ -411,7 +413,7 @@ export default function SettingsPage() {
               {t("settings.danger.deleteTitle")}
             </DialogTitle>
           </DialogHeader>
-          <div className="px-6 pb-6 space-y-4">
+          <div className="px-5 pb-5 sm:px-6 sm:pb-6 space-y-4">
             <p className="text-sm text-text-muted">
               {t("settings.danger.modalDescription")}
             </p>
@@ -432,7 +434,7 @@ export default function SettingsPage() {
               onChange={(e) => setDeleteConfirmation(e.target.value)}
               placeholder={confirmWord}
             />
-            <div className="flex justify-end gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-end pointer-coarse:[&>button]:h-11">
               <Button
                 variant="secondary"
                 onClick={() => setDeleteOpen(false)}

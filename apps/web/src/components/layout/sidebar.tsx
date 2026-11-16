@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { cn, Tooltip, Separator, Avatar } from "@creator-hub/ui";
 import { useAuthStore } from "@/store/auth.store";
+import { useMobileNavStore } from "@/store/mobile-nav.store";
 import { useI18n } from "@/i18n/i18n-provider";
+import { LanguageSelector } from "@/components/i18n/language-selector";
 import type { TranslationKey } from "@/i18n/translate";
+
+/** Shared with the top bar's menu button (`aria-controls`). */
+export const SIDEBAR_ID = "app-sidebar";
 
 interface NavItem {
   labelKey: TranslationKey;
@@ -57,6 +63,39 @@ export function Sidebar() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const { t } = useI18n();
+  const mobileOpen = useMobileNavStore((s) => s.isOpen);
+  const closeMobileNav = useMobileNavStore((s) => s.close);
+  const asideRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Below `lg` the sidebar is a drawer: it closes after every navigation…
+  useEffect(() => {
+    closeMobileNav();
+  }, [pathname, closeMobileNav]);
+
+  // …always shows full labels (the icon-only mode is a desktop preference),
+  // takes focus while open, and hands it back to the menu button on close.
+  useEffect(() => {
+    if (mobileOpen) {
+      setCollapsed(false);
+      closeButtonRef.current?.focus();
+      return;
+    }
+    if (asideRef.current?.contains(document.activeElement)) {
+      document
+        .querySelector<HTMLElement>(`[aria-controls="${SIDEBAR_ID}"]`)
+        ?.focus();
+    }
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeMobileNav();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mobileOpen, closeMobileNav]);
 
   const handleLogout = () => {
     logout();
@@ -89,9 +128,21 @@ export function Sidebar() {
 
   return (
     <aside
+      ref={asideRef}
+      id={SIDEBAR_ID}
+      data-state={mobileOpen ? "open" : "closed"}
       className={cn(
-        "flex flex-col h-screen border-r border-border bg-surface transition-all duration-200 sticky top-0",
-        collapsed ? "w-16" : "w-60",
+        "flex flex-col h-dvh border-r border-border bg-surface",
+        // Phones & portrait tablets: off-canvas drawer, closed by default.
+        "fixed inset-y-0 left-0 z-[110] w-72 max-w-[85vw] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-[transform,visibility,width] duration-200 ease-out",
+        // Visibility only transitions on close (it stays visible while
+        // sliding out); on open it applies at once so focus can move in.
+        mobileOpen
+          ? "translate-x-0 visible transition-[transform,width] shadow-2xl shadow-black/40"
+          : "-translate-x-full invisible",
+        // Desktop (lg+): docked and collapsible, as before.
+        "lg:sticky lg:top-0 lg:z-auto lg:max-w-none lg:translate-x-0 lg:visible lg:shadow-none lg:pt-0 lg:pb-0",
+        collapsed ? "lg:w-16" : "lg:w-60",
       )}
     >
       {/* Logo */}
@@ -111,14 +162,26 @@ export function Sidebar() {
           aria-label={
             collapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")
           }
-          className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
+          className="hidden lg:flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
         >
           {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+        </button>
+        <button
+          ref={closeButtonRef}
+          type="button"
+          onClick={closeMobileNav}
+          aria-label={t("nav.closeMenu")}
+          className="lg:hidden -mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
+        >
+          <X className="h-5 w-5" />
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
+      <nav
+        aria-label={t("nav.mainNavigation")}
+        className="flex-1 overflow-y-auto overscroll-contain px-2 py-3 space-y-1"
+      >
         {groupedItems.map((group, gi) => (
           <div key={gi}>
             {group.section && (
@@ -138,8 +201,10 @@ export function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={closeMobileNav}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+                    "flex min-h-11 lg:min-h-0 items-center gap-3 rounded-lg px-3 py-2.5 lg:py-2 text-sm font-medium transition-all duration-150",
                     isActive
                       ? "bg-primary/10 text-primary border-l-2 border-primary -ml-px"
                       : "text-text-muted hover:text-text hover:bg-surface-elevated",
@@ -164,6 +229,13 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-border p-3 space-y-3">
+        {/* Phones: the top bar has no room for it, so it lives here. */}
+        <div className="sm:hidden">
+          <LanguageSelector
+            align="start"
+            className="h-11 w-full justify-start text-sm"
+          />
+        </div>
         <div className="flex items-center gap-3">
           <Avatar
             name={user?.name || user?.email || t("nav.userFallback")}
@@ -181,7 +253,7 @@ export function Sidebar() {
             <button
               type="button"
               onClick={handleLogout}
-              className="text-text-dim hover:text-error transition-colors"
+              className="flex h-11 w-11 -mr-2 items-center justify-center rounded-lg text-text-dim hover:text-error transition-colors lg:mr-0 lg:h-auto lg:w-auto"
               title={t("nav.logout")}
               aria-label={t("nav.logout")}
             >

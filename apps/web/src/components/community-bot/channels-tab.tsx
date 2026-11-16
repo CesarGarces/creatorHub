@@ -43,7 +43,7 @@ export function ChannelsTab() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {[0, 1, 2].map((i) => (
           <Skeleton key={i} className="h-56 rounded-xl" />
         ))}
@@ -52,7 +52,7 @@ export function ChannelsTab() {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       <TelegramChannelCard />
       <WhatsAppChannelCard />
       <ComingSoonChannelCard

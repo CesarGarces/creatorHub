@@ -43,11 +43,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-bg p-4">
-      <div className="absolute right-4 top-4">
+    <div className="relative flex min-h-dvh items-center justify-center bg-bg p-4 pt-[calc(4.5rem+env(safe-area-inset-top))] sm:pt-4">
+      <div className="absolute right-4 top-[calc(1rem+env(safe-area-inset-top))]">
         <LanguageSwitcher />
       </div>
-      <div className="w-full max-w-md space-y-6 rounded-xl border border-border bg-surface p-8">
+      <div className="w-full max-w-md space-y-6 rounded-xl border border-border bg-surface p-6 sm:p-8">
         <div className="text-center">
           <div className="mb-6 flex justify-center">
             <Image
@@ -55,7 +55,7 @@ export default function LoginPage() {
               alt={t("common.logoAlt")}
               width={512}
               height={512}
-              className="h-auto w-56"
+              className="h-auto w-44 sm:w-56"
               priority
               sizes="224px"
             />
@@ -103,7 +103,11 @@ export default function LoginPage() {
             </div>
           )}
 
-          <Button type="submit" className="w-full" isLoading={loading}>
+          <Button
+            type="submit"
+            className="w-full pointer-coarse:h-11"
+            isLoading={loading}
+          >
             {t("login.submit")}
           </Button>
         </form>

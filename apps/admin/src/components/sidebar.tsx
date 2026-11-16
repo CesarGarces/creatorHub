@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -12,10 +13,15 @@ import {
   Database,
   BrainCircuit,
   Mail,
+  X,
 } from "lucide-react";
+import { cn } from "@creator-hub/ui";
 import { useI18n } from "@/i18n/i18n-provider";
 import type { TranslationKey } from "@/i18n/translate";
 import { LanguageSwitcher } from "@/components/language-switcher";
+
+/** Shared with the mobile top bar's menu button (`aria-controls`). */
+export const ADMIN_SIDEBAR_ID = "admin-sidebar";
 
 const navItems: {
   href: string;
@@ -32,10 +38,31 @@ const navItems: {
   { href: "/database-backups", labelKey: "nav.backups", icon: Database },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  /** Drawer state below `lg` (ignored from `lg`, where it is docked). */
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const { t } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
+  const asideRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Focus moves into the drawer while open and back to the menu button.
+  useEffect(() => {
+    if (mobileOpen) {
+      closeButtonRef.current?.focus();
+      return;
+    }
+    if (asideRef.current?.contains(document.activeElement)) {
+      document
+        .querySelector<HTMLElement>(`[aria-controls="${ADMIN_SIDEBAR_ID}"]`)
+        ?.focus();
+    }
+  }, [mobileOpen]);
 
   const handleLogout = () => {
     localStorage.removeItem("admin_token");
@@ -44,14 +71,42 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-border bg-surface">
-      <div className="flex h-16 items-center border-b border-border px-6">
-        <span className="text-lg font-bold text-text">
+    <aside
+      ref={asideRef}
+      id={ADMIN_SIDEBAR_ID}
+      data-state={mobileOpen ? "open" : "closed"}
+      className={cn(
+        "fixed left-0 top-0 z-50 flex h-dvh w-72 max-w-[85vw] flex-col border-r border-border bg-surface",
+        "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-[transform,visibility] duration-200 ease-out",
+        // Below lg: off-canvas drawer, closed by default.
+        // Visibility only transitions on close (it stays visible while
+        // sliding out); on open it applies at once so focus can move in.
+        mobileOpen
+          ? "translate-x-0 visible transition-transform shadow-2xl shadow-black/40"
+          : "-translate-x-full invisible",
+        // lg+: docked, as before.
+        "lg:w-64 lg:max-w-none lg:translate-x-0 lg:visible lg:shadow-none lg:pt-0 lg:pb-0",
+      )}
+    >
+      <div className="flex h-16 items-center justify-between border-b border-border px-6">
+        <span className="truncate text-lg font-bold text-text">
           {t("common.appName")}
         </span>
+        <button
+          ref={closeButtonRef}
+          type="button"
+          onClick={onMobileClose}
+          aria-label={t("nav.closeMenu")}
+          className="lg:hidden -mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
+        >
+          <X size={20} />
+        </button>
       </div>
 
-      <nav className="flex-1 space-y-1 p-4">
+      <nav
+        aria-label={t("nav.mainNavigation")}
+        className="flex-1 space-y-1 overflow-y-auto overscroll-contain p-4"
+      >
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -61,7 +116,9 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              onClick={onMobileClose}
+              aria-current={isActive ? "page" : undefined}
+              className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                 isActive
                   ? "bg-primary/10 text-primary"
                   : "text-text-muted hover:bg-surface-elevated hover:text-text"
@@ -75,11 +132,14 @@ export function Sidebar() {
       </nav>
 
       <div className="space-y-2 border-t border-border p-4">
-        <LanguageSwitcher align="start" className="w-full justify-start" />
+        <LanguageSwitcher
+          align="start"
+          className="w-full justify-start pointer-coarse:h-11"
+        />
         <button
           type="button"
           onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-text-muted transition-colors hover:bg-surface-elevated hover:text-error"
+          className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-text-muted transition-colors hover:bg-surface-elevated hover:text-error"
         >
           <LogOut size={18} />
           {t("nav.logout")}

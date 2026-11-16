@@ -17,6 +17,9 @@ export const nav = {
   logout: "Logout",
   expandSidebar: "Expand sidebar",
   collapseSidebar: "Collapse sidebar",
+  openMenu: "Open menu",
+  closeMenu: "Close menu",
+  mainNavigation: "Main navigation",
   userFallback: "User",
   logoAlt: "Creator Hub",
 };

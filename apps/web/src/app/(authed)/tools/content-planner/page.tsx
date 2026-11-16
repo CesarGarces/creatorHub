@@ -38,9 +38,13 @@ import { AiPlannerDialog } from "@/components/content-planner/ai-planner-dialog"
 import { ProjectsPanel } from "@/components/content-planner/projects-panel";
 import { useConflictToast } from "@/components/content-planner/use-conflict-toast";
 import { PlannerStats } from "@/components/content-planner/planner-stats";
+import { PHONE_QUERY, useMediaQuery } from "@/hooks/use-media-query";
 
 const VIEWS: PlannerView[] = ["week", "month", "agenda"];
 const DEFAULT_START_HOUR = 10;
+
+// Phones open the planner on the agenda once per visit (see below).
+let phoneAgendaApplied = false;
 
 export default function ContentPlannerPage() {
   const { t, intlLocale, formatDate } = useI18n();
@@ -100,6 +104,16 @@ export default function ContentPlannerPage() {
     fetchCustomPlatforms,
     fetchProductionSteps,
   ]);
+
+  // Presentation only: on phones the agenda (sessions in date order) is the
+  // most usable view, so it is shown first — once per visit, so the user's
+  // own choice sticks. Declared before the deep link below, which wins.
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  useEffect(() => {
+    if (!isPhone || phoneAgendaApplied) return;
+    phoneAgendaApplied = true;
+    setView("agenda");
+  }, [isPhone, setView]);
 
   // "Open in planner" from a reminder: /tools/content-planner?date=<ISO>.
   useEffect(() => {
@@ -227,24 +241,31 @@ export default function ContentPlannerPage() {
         ]}
       />
 
-      <div className="space-y-5 p-6 animate-fade-in">
+      <div className="space-y-4 p-4 sm:space-y-5 sm:p-6 animate-fade-in">
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-text">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-text">
               {t("contentPlanner.title")}
             </h1>
             <p className="mt-1 text-text-muted">
               {t("contentPlanner.subtitle")}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => openCreate()}>
+          {/* Phones: the AI planner (primary) first and full width, then the
+              two manual actions side by side. */}
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+            <Button
+              variant="secondary"
+              className="pointer-coarse:h-11 max-sm:px-2"
+              onClick={() => openCreate()}
+            >
               <CalendarPlus className="mr-2 h-4 w-4" />
               {t("contentPlanner.actions.newSession")}
             </Button>
             <Button
               variant="secondary"
+              className="pointer-coarse:h-11 max-sm:px-2"
               onClick={() => {
                 setPlanInitial(null);
                 setPlanOpen(true);
@@ -253,7 +274,10 @@ export default function ContentPlannerPage() {
               <Sparkles className="mr-2 h-4 w-4" />
               {t("contentPlanner.actions.planVideo")}
             </Button>
-            <Button onClick={() => setAiOpen(true)}>
+            <Button
+              className="col-span-2 -order-1 pointer-coarse:h-11 sm:order-none"
+              onClick={() => setAiOpen(true)}
+            >
               <Wand2 className="mr-2 h-4 w-4" />
               {t("contentPlanner.ai.button")}
             </Button>
@@ -265,11 +289,11 @@ export default function ContentPlannerPage() {
 
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="icon"
-              className="h-9 w-9"
+              className="h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11"
               aria-label={t("contentPlanner.actions.previous")}
               onClick={() => shift(-1)}
             >
@@ -278,7 +302,7 @@ export default function ContentPlannerPage() {
             <Button
               variant="outline"
               size="sm"
-              className="h-9"
+              className="h-9 pointer-coarse:h-11"
               onClick={goToday}
             >
               {t("contentPlanner.actions.today")}
@@ -286,14 +310,14 @@ export default function ContentPlannerPage() {
             <Button
               variant="outline"
               size="icon"
-              className="h-9 w-9"
+              className="h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11"
               aria-label={t("contentPlanner.actions.next")}
               onClick={() => shift(1)}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
             <h2
-              className="ml-2 text-lg font-semibold capitalize text-text"
+              className="ml-1 text-base font-semibold capitalize text-text sm:ml-2 sm:text-lg"
               aria-live="polite"
             >
               {rangeLabel}
@@ -303,7 +327,7 @@ export default function ContentPlannerPage() {
           <div
             role="tablist"
             aria-label={t("contentPlanner.views.label")}
-            className="flex rounded-lg border border-border bg-surface p-0.5"
+            className="flex w-full rounded-lg border border-border bg-surface p-0.5 sm:w-auto"
           >
             {VIEWS.map((v) => (
               <button
@@ -313,7 +337,7 @@ export default function ContentPlannerPage() {
                 aria-selected={view === v}
                 onClick={() => setView(v)}
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  "flex-1 rounded-md px-3 py-1.5 pointer-coarse:py-2.5 text-sm font-medium transition-colors sm:flex-none",
                   view === v
                     ? "bg-primary text-white"
                     : "text-text-muted hover:text-text",
@@ -333,7 +357,7 @@ export default function ContentPlannerPage() {
                 type="button"
                 onClick={() => setFocusedProject(null)}
                 aria-label={t("contentPlanner.projects.clearFocus")}
-                className="rounded-full hover:bg-primary/20"
+                className="rounded-full hover:bg-primary/20 pointer-coarse:p-1.5"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -341,7 +365,7 @@ export default function ContentPlannerPage() {
           </div>
         )}
 
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="min-w-0 space-y-2">
             {eventsError ? (
               <div className="rounded-xl border border-error/40 bg-error-light p-6 text-center">
@@ -399,7 +423,7 @@ export default function ContentPlannerPage() {
               />
             )}
             {view === "week" && !eventsError && (
-              <p className="text-xs text-text-dim">
+              <p className="hidden text-xs text-text-dim pointer-fine:block">
                 {t("contentPlanner.calendar.dragHint")}
               </p>
             )}

@@ -149,7 +149,9 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={() => setCmdOpen(true)}
-            className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text-dim hover:text-text-muted transition-colors"
+            aria-label={t("dashboard.search")}
+            aria-keyshortcuts="Meta+K Control+K"
+            className="flex h-9 min-w-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm text-text-dim hover:text-text-muted transition-colors pointer-coarse:h-11 pointer-coarse:min-w-11 sm:px-3"
           >
             <svg
               width="14"
@@ -162,17 +164,18 @@ export default function DashboardPage() {
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
             </svg>
-            <span>{t("dashboard.search")}</span>
-            <kbd className="ml-2 rounded border border-border bg-surface-elevated px-1 py-0.5 text-[10px] font-mono">
+            <span className="hidden sm:inline">{t("dashboard.search")}</span>
+            {/* Keyboard hint only where there is a keyboard. */}
+            <kbd className="ml-2 hidden rounded border border-border bg-surface-elevated px-1 py-0.5 text-[10px] font-mono pointer-fine:sm:inline">
               ⌘K
             </kbd>
           </button>
         }
       />
-      <div className="p-6 space-y-8 animate-fade-in">
+      <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 animate-fade-in">
         {/* Greeting */}
         <div>
-          <h1 className="text-2xl font-bold text-text">
+          <h1 className="text-xl sm:text-2xl font-bold text-text">
             {t(getGreetingKey(), {
               name: user?.name || user?.email?.split("@")[0] || "",
             })}
@@ -181,19 +184,21 @@ export default function DashboardPage() {
         </div>
 
         {/* Dashboard Grid: Main Content + Chat */}
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {/* Quick Prompt */}
           <div className="relative">
             <div className="rounded-xl border border-border bg-surface p-1 shadow-lg shadow-primary/5">
-              <div className="flex items-center gap-3 rounded-lg bg-surface-elevated px-4 py-3">
-                <span className="text-primary">✦</span>
+              <div className="flex items-center gap-2 sm:gap-3 rounded-lg bg-surface-elevated px-3 py-2 sm:px-4 sm:py-3">
+                <span className="hidden text-primary min-[400px]:inline">
+                  ✦
+                </span>
                 <input
                   type="text"
                   value={quickPrompt}
                   onChange={(e) => setQuickPrompt(e.target.value)}
                   placeholder={t("dashboard.quickPrompt.placeholder")}
                   aria-label={t("dashboard.quickPrompt.ariaLabel")}
-                  className="flex-1 bg-transparent text-sm text-text placeholder:text-text-dim outline-none"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-text placeholder:text-text-dim outline-none"
                   onKeyDown={(e) => {
                     if (
                       e.key === "Enter" &&
@@ -216,7 +221,7 @@ export default function DashboardPage() {
                     }
                   }}
                   disabled={isStreaming || !quickPrompt.trim()}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="shrink-0 rounded-lg bg-primary px-3 py-2 pointer-coarse:min-h-11 sm:px-4 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isStreaming
                     ? t("dashboard.quickPrompt.making")
@@ -224,7 +229,8 @@ export default function DashboardPage() {
                 </button>
               </div>
             </div>
-            <div className="absolute -bottom-6 left-4 flex gap-2 text-xs text-text-dim">
+            {/* In the flow (wrapping) on phones; tucked under the box from sm. */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-xs text-text-dim sm:absolute sm:-bottom-6 sm:left-4 sm:mt-0 sm:flex-nowrap sm:px-0">
               <span>{t("dashboard.quickPrompt.try")}</span>
               <button
                 type="button"
@@ -265,7 +271,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Quick Access */}
-          <div className="mt-8">
+          <div className="sm:mt-8">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
               {favoriteTools.length > 0
                 ? t("dashboard.favoriteTools")
@@ -281,7 +287,7 @@ export default function DashboardPage() {
                   items={favoriteIds}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {recentTools.map((tool) => (
                       <SortableToolCard
                         key={tool.id}
@@ -303,7 +309,7 @@ export default function DashboardPage() {
                 </SortableContext>
               </DndContext>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {recentTools.map((tool) => (
                   <ToolCard
                     key={tool.id}
@@ -349,10 +355,10 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={tx.id}
-                    className="flex items-center gap-4 px-5 py-3.5"
+                    className="flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5"
                   >
                     <div
-                      className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm ${
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm ${
                         tx.type === "USAGE"
                           ? "bg-surface-elevated"
                           : tx.type === "PURCHASE"
@@ -386,7 +392,11 @@ export default function DashboardPage() {
                         })}
                       </p>
                     </div>
-                    <Badge variant="primary" size="sm">
+                    <Badge
+                      variant="primary"
+                      size="sm"
+                      className="hidden shrink-0 min-[420px]:inline-flex"
+                    >
                       {tx.type === "USAGE"
                         ? tx.toolName || t("dashboard.txType.tool")
                         : tx.type === "PURCHASE"
@@ -409,7 +419,7 @@ export default function DashboardPage() {
             <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
               {t("dashboard.recommendedAgents")}
             </h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div
                 className="group cursor-pointer rounded-xl border border-border bg-surface p-5 transition-all duration-200 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5"
                 onClick={() => router.push("/tools/x-post-tweet")}
@@ -512,7 +522,7 @@ function SortableToolCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative transition-all duration-200",
+        "relative min-w-0 transition-all duration-200",
         isDragging &&
           "rounded-xl shadow-2xl shadow-primary/20 ring-2 ring-primary/30 scale-[1.03] opacity-90",
       )}
@@ -525,7 +535,8 @@ function SortableToolCard({
         tabIndex={0}
         className={cn(
           "absolute -top-2 -left-2 z-20",
-          "flex h-8 w-8 items-center justify-center rounded-lg",
+          // touch-none: lets dnd-kit's pointer sensor drag on touch screens.
+          "flex h-8 w-8 pointer-coarse:h-10 pointer-coarse:w-10 touch-none items-center justify-center rounded-lg",
           "bg-surface border border-border-subtle shadow-sm",
           "cursor-grab active:cursor-grabbing",
           "text-text-dim hover:text-text-muted hover:bg-surface-elevated hover:border-border hover:shadow-md",

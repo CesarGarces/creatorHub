@@ -72,7 +72,7 @@ export function CheckoutModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col items-center my-6 mx-6 p-5 rounded-lg bg-surface-elevated/50 border border-border">
+        <div className="flex flex-col items-center m-5 sm:m-6 p-5 rounded-lg bg-surface-elevated/50 border border-border text-center">
           <span className="text-sm text-text-muted">
             {t("credits.checkout.selectedPlan")}
           </span>
@@ -80,7 +80,7 @@ export function CheckoutModal({
           <span className="text-2xl font-bold mt-2 text-text">{price}</span>
         </div>
 
-        <div className="mx-6 pb-6">
+        <div className="mx-5 pb-5 sm:mx-6 sm:pb-6">
           {preferenceId && MP_KEY ? (
             <Wallet
               initialization={{ preferenceId }}

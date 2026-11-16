@@ -51,7 +51,7 @@ export default function EditUserPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text">
+        <h1 className="text-xl sm:text-2xl font-bold text-text">
           {t("users.editPage.title")}
         </h1>
         <p className="text-text-muted">{t("users.editPage.subtitle")}</p>

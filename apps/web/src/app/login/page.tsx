@@ -47,7 +47,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg relative overflow-hidden">
+    <div className="flex min-h-dvh px-4 pb-8 pt-[calc(4.5rem+env(safe-area-inset-top))] sm:py-12 items-center justify-center bg-bg relative overflow-hidden">
       <AuthLanguageSwitcher />
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
@@ -61,7 +61,7 @@ export default function LoginPage() {
             alt={t("common.appName")}
             className="mx-auto mb-4 h-14 w-auto"
           />
-          <h1 className="text-2xl font-bold text-text">
+          <h1 className="text-xl sm:text-2xl font-bold text-text">
             {t("auth.login.title")}
           </h1>
           <p className="text-sm text-text-muted">{t("auth.login.subtitle")}</p>

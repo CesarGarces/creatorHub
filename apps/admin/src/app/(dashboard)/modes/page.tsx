@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Pencil, Trash2, Plus, Layers, Cpu, Wrench } from "lucide-react";
 import { ActionConfirmDialog, Switch } from "@creator-hub/ui";
 import type { Mode } from "@/types";
+import { ModalShell } from "@/components/modal-shell";
 import { useI18n } from "@/i18n/i18n-provider";
 import { localizeError } from "@/i18n/errors";
 
@@ -76,9 +77,11 @@ export default function ModesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text">{t("modes.title")}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-text">
+            {t("modes.title")}
+          </h1>
           <p className="text-sm text-text-muted mt-1">{t("modes.subtitle")}</p>
         </div>
         <button
@@ -87,7 +90,7 @@ export default function ModesPage() {
             setEditingMode(null);
             setIsCreateMode(true);
           }}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+          className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors sm:min-h-0"
         >
           <Plus size={18} />
           {t("modes.add")}
@@ -95,7 +98,7 @@ export default function ModesPage() {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
@@ -108,11 +111,11 @@ export default function ModesPage() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {modes?.map((mode) => (
             <div
               key={mode.id}
-              className="rounded-xl border border-border bg-surface p-6 flex flex-col relative"
+              className="rounded-xl border border-border bg-surface p-4 sm:p-6 flex flex-col relative"
             >
               <div className="absolute top-4 right-4 flex gap-2">
                 <span
@@ -126,7 +129,7 @@ export default function ModesPage() {
                 </span>
               </div>
 
-              <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center gap-3 mb-3 pr-20">
                 {mode.icon ? (
                   <span className="text-2xl">{mode.icon}</span>
                 ) : (
@@ -181,7 +184,7 @@ export default function ModesPage() {
                     setEditingMode(mode);
                     setIsCreateMode(false);
                   }}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors"
+                  className="flex-1 flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors sm:min-h-0"
                 >
                   <Pencil size={14} />
                   {t("common.edit")}
@@ -191,7 +194,7 @@ export default function ModesPage() {
                   onClick={() => setDeleteDialog({ isOpen: true, mode })}
                   aria-label={t("modes.deleteAria", { name: mode.name })}
                   title={t("modes.deleteAria", { name: mode.name })}
-                  className="flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors"
+                  className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors sm:min-h-0 sm:min-w-0"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -202,22 +205,23 @@ export default function ModesPage() {
       )}
 
       {(editingMode || isCreateMode) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-surface rounded-xl border border-border w-full max-w-md mx-4 p-6">
-            <h2 className="text-lg font-semibold text-text mb-4">
-              {editingMode ? t("modes.editTitle") : t("modes.createTitle")}
-            </h2>
-            <ModeForm
-              mode={editingMode}
-              onSave={handleSave}
-              onCancel={() => {
-                setEditingMode(null);
-                setIsCreateMode(false);
-              }}
-              isLoading={updateMutation.isPending || createMutation.isPending}
-            />
-          </div>
-        </div>
+        <ModalShell labelledBy="mode-form-title">
+          <h2
+            id="mode-form-title"
+            className="text-lg font-semibold text-text mb-4"
+          >
+            {editingMode ? t("modes.editTitle") : t("modes.createTitle")}
+          </h2>
+          <ModeForm
+            mode={editingMode}
+            onSave={handleSave}
+            onCancel={() => {
+              setEditingMode(null);
+              setIsCreateMode(false);
+            }}
+            isLoading={updateMutation.isPending || createMutation.isPending}
+          />
+        </ModalShell>
       )}
 
       <ActionConfirmDialog
@@ -384,19 +388,19 @@ function ModeForm({
         </span>
       </div>
 
-      <div className="flex justify-end gap-3 pt-4">
+      <div className="grid grid-cols-2 gap-3 pt-4 sm:flex sm:justify-end">
         <button
           type="button"
           onClick={onCancel}
           disabled={isLoading}
-          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors disabled:opacity-50"
+          className="min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-surface-elevated transition-colors disabled:opacity-50 sm:min-h-0"
         >
           {t("common.cancel")}
         </button>
         <button
           type="submit"
           disabled={isLoading}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+          className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50 sm:min-h-0"
         >
           {isLoading
             ? t("common.saving")

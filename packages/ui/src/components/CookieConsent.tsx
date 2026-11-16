@@ -47,7 +47,8 @@ export function CookieConsent({ CookiesModal }: CookieConsentProps) {
       {showBanner && (
         <div
           className={cn(
-            "fixed bottom-4 right-4 z-50 max-w-sm w-full animate-slide-up",
+            // Inset on both sides on phones; a corner card from `sm`.
+            "fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 animate-slide-up sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-full sm:max-w-sm",
             "bg-slate-900/95 border border-slate-800 rounded-xl shadow-2xl backdrop-blur-xl",
             "overflow-hidden",
           )}
@@ -60,7 +61,7 @@ export function CookieConsent({ CookiesModal }: CookieConsentProps) {
               <Button
                 variant="primary"
                 size="sm"
-                className="w-full sm:w-auto flex-1"
+                className="w-full sm:w-auto sm:flex-1 pointer-coarse:h-11"
                 onClick={() => handleAccept("granted")}
               >
                 {labels.acceptAll}
@@ -68,7 +69,7 @@ export function CookieConsent({ CookiesModal }: CookieConsentProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full sm:w-auto flex-1 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                className="w-full sm:w-auto sm:flex-1 pointer-coarse:h-11 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
                 onClick={() => handleAccept("essential_only")}
               >
                 {labels.essentialOnly}

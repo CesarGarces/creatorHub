@@ -48,7 +48,7 @@ export function RegistrationsChart() {
   }, [from, to]);
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-6">
+    <div className="min-w-0 rounded-xl border border-border bg-surface p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-text">
@@ -58,14 +58,14 @@ export function RegistrationsChart() {
             {t("dashboard.registrations.subtitle")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
             max={to}
             aria-label={t("dashboard.registrations.from")}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text"
+            className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 pointer-coarse:py-2.5 text-sm text-text sm:flex-none"
           />
           <span className="text-text-dim">
             {t("dashboard.registrations.to")}
@@ -77,12 +77,12 @@ export function RegistrationsChart() {
             min={from}
             max={formatDate(today)}
             aria-label={t("dashboard.registrations.toDate")}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text"
+            className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 pointer-coarse:py-2.5 text-sm text-text sm:flex-none"
           />
         </div>
       </div>
 
-      <div className="mt-6 h-64">
+      <div className="mt-4 h-56 sm:mt-6 sm:h-64">
         {loading ? (
           <div className="flex h-full items-center justify-center text-sm text-text-dim">
             {t("common.loading")}

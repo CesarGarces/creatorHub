@@ -336,6 +336,81 @@ packages/ui/
 
 ---
 
+## 2c. Responsive UI — Mobile-First (web & admin)
+
+Both Next.js apps are designed mobile-first: base classes target phones and
+`sm:` / `md:` / `lg:` layer the larger layouts on top. Only layout, styling and
+navigation components are involved — stores, API calls, sockets and event
+flows are the same on every screen size.
+
+### Breakpoints
+
+| Range             | Devices                       | Navigation                                       |
+| ----------------- | ----------------------------- | ------------------------------------------------ |
+| `< 640px`         | Phones                        | Drawer (closed by default) + top-bar menu button |
+| `sm` 640 – 1023px | Large phones, tablets (port.) | Drawer (closed by default) + top-bar menu button |
+| `lg` ≥ 1024px     | Tablets (landscape), desktop  | Docked sidebar (collapsible in the web app)      |
+
+### App shell
+
+- **Web** — `DashboardLayout` renders one `<aside id="app-sidebar">` that is an
+  off-canvas drawer below `lg` and docked from `lg`. Its open state lives in
+  `store/mobile-nav.store.ts` (UI-only Zustand store) shared by the `TopBar`
+  menu button (`aria-controls`, `aria-expanded`) and the sidebar. The drawer
+  closes on navigation, backdrop tap and `Escape`; focus moves into it and back
+  to the menu button. On phones the language selector moves into the drawer
+  and the credits pill shows its short form (`CreditDisplay compactOnMobile`).
+- **Admin** — `AdminLayout` adds a sticky mobile top bar and the same drawer
+  pattern (`#admin-sidebar`) with local React state.
+- `<main>` keeps bottom room on phones so the assistant button never covers
+  the last row of content. Pages with their own bottom composer mark it with
+  `data-composer`; the shell then drops that padding and lifts the button
+  above the composer (CSS `:has()`, no JS).
+
+### On-screen keyboard
+
+- Root layouts export `viewport` with `interactive-widget=resizes-content`
+  (Chromium shrinks the layout when the keyboard opens) and
+  `viewport-fit=cover` (safe-area insets).
+- `VisualViewportObserver` (`@creator-hub/ui`) publishes `--app-vvh`,
+  `--app-vv-top` and `--app-keyboard` from `window.visualViewport` (covers iOS,
+  which only moves the visual viewport). Full-height surfaces — dialogs, the
+  chat panel, admin modals — size themselves with
+  `h-[var(--app-vvh,100dvh)]`, so headers, inputs and action buttons stay
+  above the keyboard.
+- Form fields are 16px on phones and touch devices (global CSS), which stops
+  iOS/iPadOS from zooming into a focused field.
+
+### Components & conventions
+
+| Concern          | Convention                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ |
+| Touch targets    | ≥ 44px on touch (`pointer-coarse:h-11` …); nothing is revealed only on hover (`pointer-coarse:opacity-100`)  |
+| Grids            | Always `grid-cols-1` first, columns added at a breakpoint                                                    |
+| Dialogs          | `DialogContent` has `role="dialog"`, is labelled by its `DialogTitle`, never exceeds the visible viewport    |
+| Split tool views | Controls and preview stack below `lg`; chat-like tools open their history as an overlay drawer               |
+| Calendar         | Phones open the planner on the agenda; week/month grids scroll sideways inside their card (`data-scroll-x`)  |
+| Admin tables     | `table-stack` inside an `@container`: under 48rem of room each row is a card, cells labelled by `data-label` |
+| Scrollers        | Intentional horizontal scrollers (chip rows, tabs, wide grids) carry `data-scroll-x`                         |
+
+### App-shell z-index (web, below dialogs and popovers)
+
+| Layer                               | z-index       |
+| ----------------------------------- | ------------- |
+| Chat backdrop / panel / button      | 90 / 95 / 100 |
+| Navigation drawer backdrop / drawer | 105 / 110     |
+| Asset preview / share modal         | 120 / 130     |
+
+### Testing
+
+`apps/e2e` covers every page of both apps at 360px, 390px, 768px and
+1024px (touch emulation) plus a desktop regression pass: no sideways
+scrolling, drawer behaviour, keyboard shortcuts (⌘/Ctrl+K, `Escape`),
+dialogs and the chat with the keyboard open, card actions without hover and
+touch-target sizes. Screenshots are saved to `apps/e2e/artifacts/responsive/`.
+
+---
+
 ## 3. Tool Registry System
 
 ### Architecture

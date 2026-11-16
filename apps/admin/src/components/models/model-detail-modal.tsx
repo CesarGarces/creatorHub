@@ -118,14 +118,14 @@ export function ModelDetailModal({
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : model ? (
-          <div className="space-y-5 px-6 py-4">
+          <div className="space-y-5 px-5 py-4 sm:px-6">
             {/* Header */}
-            <div className="flex items-start justify-between">
-              <div>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
                 <h3 className="text-base font-semibold text-text">
                   {model.displayName}
                 </h3>
-                <p className="mt-0.5 font-mono text-xs text-text-dim">
+                <p className="mt-0.5 break-all font-mono text-xs text-text-dim">
                   {model.modelId}
                 </p>
               </div>
