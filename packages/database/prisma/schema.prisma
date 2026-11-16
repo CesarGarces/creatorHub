@@ -101,6 +101,8 @@ model User {
   contentCustomTypes   ContentCustomType[]
   contentCustomPlatforms ContentCustomPlatform[]
   contentProductionSteps ContentProductionStep[]
+  contentAiPlans         ContentAiPlan[]
+  contentKnowledgeChunks ContentKnowledgeChunk[]
 }
 
 model Account {
@@ -379,6 +381,8 @@ model ModelMetadata {
   isActive          Boolean  @default(false)
   creditCost        Int      @default(10)
   profitMargin      Float    @default(2.0)
+  /// Added by an admin ("Add model"); provider sync never updates or deactivates it.
+  isCustom          Boolean  @default(false)
 
   // Metadata
   description       String?
@@ -734,6 +738,7 @@ enum NotificationType {
   SUBSCRIPTION_EXPIRING
   SYSTEM
   ASSET_LIKE
+  SESSION_REMINDER
 }
 
 enum MarketingEventType {
@@ -994,19 +999,28 @@ model ContentProject {
 }
 
 model ContentEvent {
-  id           String             @id @default(cuid())
-  userId       String
-  projectId    String?
+  id              String             @id @default(cuid())
+  userId          String
+  projectId       String?
   /// User-defined type; when set, `type` is OTHER.
-  customTypeId String?
-  title        String
-  type         ContentEventType   @default(OTHER)
-  status       ContentEventStatus @default(PLANNED)
-  startAt      DateTime
-  endAt        DateTime
-  notes        String?            @db.Text
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  customTypeId    String?
+  title           String
+  type            ContentEventType   @default(OTHER)
+  status          ContentEventStatus @default(PLANNED)
+  startAt         DateTime
+  endAt           DateTime
+  notes           String?            @db.Text
+  /// Minutes before `startAt` to notify the user; null = no reminder.
+  reminderMinutes Int?               @default(15)
+  /// `startAt - reminderMinutes`, kept in sync on every write (indexed for the reminder poller).
+  remindAt        DateTime?
+  /// Set when the reminder was sent; reset when the session is rescheduled.
+  reminderSentAt  DateTime?
+  /// Platform tool suggested for this session, e.g.
+  /// { toolId: "thumbnail-generator", intention: "...", prompt: "..." }.
+  toolAction      Json?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   project    ContentProject?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -1015,6 +1029,7 @@ model ContentEvent {
   @@index([userId, startAt])
   @@index([projectId])
   @@index([customTypeId])
+  @@index([remindAt])
 }
 
 /// Session types created by the user (e.g. "Podcast", "Sponsor call").
@@ -1068,4 +1083,56 @@ model ContentProductionStep {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, position])
+}
+
+enum ContentAiPlanStatus {
+  ANALYZED
+  APPLIED
+}
+
+/// One run of the AI planning assistant: the model's structured plan,
+/// what it cost and, once added to the calendar, the project it created.
+model ContentAiPlan {
+  id             String              @id @default(cuid())
+  userId         String
+  /// Text model used (ModelMetadata.modelId).
+  modelId        String
+  status         ContentAiPlanStatus @default(ANALYZED)
+  title          String
+  complexity     String
+  /// Normalised plan (steps, tool actions, estimates, RAG evidence).
+  result         Json
+  /// What the user gave: idea length, file names, whether voice was used.
+  inputSummary   Json?
+  creditsCharged Int
+  projectId      String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+/// Vector RAG index of the planner: embedded summaries of the user's past
+/// productions (sourceType "project"), retrieved by cosine similarity to
+/// calibrate new plans. Vectors of different embedding models are never
+/// compared: `embeddingModel` is part of every lookup.
+model ContentKnowledgeChunk {
+  id             String   @id @default(cuid())
+  userId         String
+  sourceType     String
+  sourceId       String
+  content        String   @db.Text
+  /// Hash of `content`, to re-embed only what changed.
+  contentHash    String
+  embedding      Float[]  @db.Real
+  embeddingModel String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sourceType, sourceId, embeddingModel], name: "chunkSource", map: "ContentKnowledgeChunk_source_key")
+  @@index([userId, embeddingModel])
 }

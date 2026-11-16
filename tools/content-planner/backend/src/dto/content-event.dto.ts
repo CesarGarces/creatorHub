@@ -10,10 +10,12 @@ import {
   ValidateNested,
 } from "class-validator";
 import { CreateCustomTypeDto } from "./custom-type.dto";
+import { ToolActionDto } from "./tool-action.dto";
 import {
   CONTENT_EVENT_STATUSES,
   CONTENT_EVENT_TYPES,
   LIMITS,
+  REMINDER_OPTIONS,
   type ContentEventStatusValue,
   type ContentEventTypeValue,
 } from "../content-planner.constants";
@@ -42,6 +44,17 @@ export class ProjectEventInputDto {
   @IsString()
   @MaxLength(LIMITS.notesMaxLength)
   notes?: string;
+
+  /** Minutes before the start to notify; null = no reminder; absent = 15. */
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsIn(REMINDER_OPTIONS)
+  reminderMinutes?: number | null;
+
+  /** Platform tool suggested for the session (shown with an "Open tool" link). */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ToolActionDto)
+  toolAction?: ToolActionDto;
 }
 
 /**
@@ -107,6 +120,16 @@ export class UpdateContentEventDto {
   @IsString()
   @IsNotEmpty()
   customTypeId?: string | null;
+
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsIn(REMINDER_OPTIONS)
+  reminderMinutes?: number | null;
+
+  /** null removes the suggested tool. */
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @ValidateNested()
+  @Type(() => ToolActionDto)
+  toolAction?: ToolActionDto | null;
 }
 
 export class ListContentEventsQueryDto {

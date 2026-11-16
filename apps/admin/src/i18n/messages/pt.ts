@@ -427,6 +427,61 @@ export const pt: Messages = {
     title: "Modelos de IA",
     subtitle: "Gerencie o registro de modelos, os preços e a disponibilidade",
     sync: "Sincronizar modelos",
+    addModel: "Adicionar modelo",
+    custom: "Personalizado",
+    customHint: "Adicionado manualmente — a sincronização nunca o altera",
+    deleteAria: "Excluir {name}",
+    remove: {
+      title: "Excluir modelo",
+      description:
+        'Excluir "{name}"? As ferramentas que o usam passarão para outros modelos ativos.',
+      confirm: "Excluir",
+    },
+    create: {
+      title: "Adicionar modelo",
+      subtitle:
+        "Registre um modelo de um provedor conectado. Modelos sincronizados são atualizados automaticamente; os que você adicionar aqui nunca são alterados pela sincronização.",
+      taskType: "Tipo de tarefa",
+      provider: "Provedor",
+      modelId: "ID do modelo",
+      modelIdPlaceholder: "ex.: openai/gpt-4o-mini",
+      modelIdHint: "Exatamente como o provedor o chama.",
+      displayName: "Nome exibido",
+      displayNamePlaceholder: "ex.: GPT-4o mini",
+      tier: "Nível",
+      creditCost: "Custo em créditos",
+      contextLength: "Tamanho do contexto (tokens)",
+      description: "Descrição",
+      tags: "Tags",
+      tagsPlaceholder: "rápido, planejamento",
+      tagsHint: "Separadas por vírgula, até 10.",
+      streaming: "Suporta streaming",
+      vision: "Suporta imagens (visão)",
+      activate: "Ativar agora",
+      taskHints: {
+        "text-generation":
+          "Aparece no seletor de modelos de todas as ferramentas de texto (Planejador IA, Roteirista, chat…).",
+        "image-generation":
+          "Aparece no seletor de modelos das ferramentas de imagem.",
+        "video-generation":
+          "Aparece no seletor de modelos das ferramentas de vídeo.",
+        embedding:
+          "Transforma os projetos em vetores para a busca por similaridade do Planejador IA. Se nenhum estiver ativo, é usado um embedding embutido gratuito.",
+        "speech-to-text":
+          "Seu custo em créditos é o preço por minuto de entrada por voz. Mantenha um ativo.",
+      },
+      errors: {
+        required: "Obrigatório",
+        invalidModelId: "Apenas letras, números e . - _ / : @",
+        tooLong: "Muito longo",
+        invalidNumber: "Digite um número inteiro",
+        creditRange: "Entre 0 e 1000",
+        tooManyTags: "Até 10 tags",
+      },
+      submit: "Adicionar modelo",
+      created: "{name} adicionado",
+      createFailed: "Não foi possível adicionar o modelo",
+    },
     stats: {
       total: "Total",
       active: "Ativos",
@@ -450,6 +505,8 @@ export const pt: Messages = {
       "image-generation": "Imagem",
       "text-generation": "Texto",
       "video-generation": "Vídeo",
+      embedding: "Embedding",
+      "speech-to-text": "Voz para texto",
     },
     tiers: {
       FREE: "Grátis",
@@ -501,6 +558,8 @@ export const pt: Messages = {
       activated: "{name} ativado",
       deactivated: "{name} desativado",
       updateFailed: "Não foi possível atualizar o modelo",
+      deleted: "{name} excluído",
+      deleteFailed: "Não foi possível excluir o modelo",
     },
     detail: {
       title: "Configuração do modelo",
@@ -511,8 +570,12 @@ export const pt: Messages = {
         "image-generation": "Geração de imagens",
         "text-generation": "Geração de texto",
         "video-generation": "Geração de vídeo",
+        embedding: "Embedding (busca RAG)",
+        "speech-to-text": "Voz para texto (entrada por voz)",
       },
       creditCost: "Custo em créditos",
+      creditCostHint:
+        "Modelos de texto, imagem e vídeo: créditos por uso. Embedding: créditos por indexação (0 = grátis). Voz para texto: créditos por minuto de entrada por voz.",
       profitMargin: "Margem de lucro (×)",
       pricing: "Preços",
       prompt: "Prompt:",
@@ -542,5 +605,8 @@ export const pt: Messages = {
     planSlugExists: 'Já existe um plano de créditos com o slug "{slug}"',
     modeSlugExists: 'Já existe um modo com o slug "{slug}"',
     providerSlugExists: 'Já existe um provedor com o slug "{slug}"',
+    modelExists: "Já existe um modelo com este ID para este provedor",
+    onlyCustomDeletable:
+      "Só é possível excluir modelos adicionados manualmente. Desative os modelos sincronizados.",
   },
 };

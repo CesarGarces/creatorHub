@@ -52,6 +52,23 @@ describe("localizeError", () => {
     );
   });
 
+  it("translates the AI model create/delete errors", () => {
+    expect(
+      localizeError(
+        apiError("A model with this id already exists for this provider"),
+      ),
+    ).toBe("Ya existe un modelo con este ID para este proveedor");
+    expect(
+      localizeError(
+        apiError(
+          "Only models added manually can be deleted. Deactivate synced models instead.",
+        ),
+      ),
+    ).toBe(
+      "Solo se pueden eliminar los modelos añadidos a mano. Desactiva los modelos sincronizados.",
+    );
+  });
+
   it("uses the first validation message and keeps unknown ones", () => {
     expect(localizeError(apiError(["slug must be a string"]))).toBe(
       "slug must be a string",

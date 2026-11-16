@@ -8,6 +8,7 @@ import { GatewayFactory } from "./gateways/gateway-factory";
 import { OpenRouterModelsService } from "./models/openrouter-models.service";
 import { ModelRegistryService } from "./models/model-registry.service";
 import { ModelSyncService } from "./models/model-sync.service";
+import { EmbeddingService } from "./embeddings/embedding.service";
 
 @Module({
   providers: [
@@ -20,6 +21,7 @@ import { ModelSyncService } from "./models/model-sync.service";
     OpenRouterModelsService,
     ModelRegistryService,
     ModelSyncService,
+    EmbeddingService,
   ],
   exports: [
     AIEngineService,
@@ -31,6 +33,7 @@ import { ModelSyncService } from "./models/model-sync.service";
     OpenRouterModelsService,
     ModelRegistryService,
     ModelSyncService,
+    EmbeddingService,
   ],
 })
 export class AIEngineModule {}

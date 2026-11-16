@@ -24,9 +24,12 @@ import {
   Plus,
   RotateCcw,
   Trash2,
+  Wrench,
 } from "lucide-react";
 import { Button, Input, cn } from "@creator-hub/ui";
 import { useI18n } from "@/i18n/i18n-provider";
+import { useToolText } from "@/i18n/use-tool-text";
+import { useToolsStore } from "@/store/tools.store";
 import { BUILTIN_LOOKS } from "@/lib/content-planner/palette";
 import {
   MAX_STEPS,
@@ -39,7 +42,7 @@ import {
   stepName,
   type ProductionStep,
 } from "@/lib/content-planner/steps";
-import type { ContentEventType } from "@/lib/content-planner/types";
+import type { ContentEventType, ToolAction } from "@/lib/content-planner/types";
 import { AppearancePicker } from "./appearance-picker";
 import { lookStyle } from "./event-type-meta";
 
@@ -279,6 +282,7 @@ function StepRow({
             </span>
           )}
         </label>
+        {step.toolAction && <ToolChip action={step.toolAction} />}
         <input
           type="number"
           min={15}
@@ -365,5 +369,27 @@ function StepRow({
         </div>
       )}
     </li>
+  );
+}
+
+/** Marks a step that comes with a suggested platform tool (AI planner). */
+function ToolChip({ action }: { action: ToolAction }) {
+  const { t } = useI18n();
+  const tools = useToolsStore((s) => s.tools);
+  const { toolName } = useToolText();
+  const tool = tools.find((x) => x.id === action.toolId);
+  const label = t("contentPlanner.ai.toolChip", {
+    tool: tool ? toolName(tool) : action.toolId,
+    intention: action.intention,
+  });
+  return (
+    <span
+      className="flex shrink-0 items-center text-primary"
+      title={label}
+      aria-label={label}
+      role="img"
+    >
+      <Wrench className="h-3.5 w-3.5" />
+    </span>
   );
 }

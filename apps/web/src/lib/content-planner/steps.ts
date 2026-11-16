@@ -7,7 +7,7 @@ import {
   type PaletteColor,
   type PaletteIcon,
 } from "./palette";
-import type { ContentEventType } from "./types";
+import type { ContentEventType, PlannedEventInput, ToolAction } from "./types";
 
 /** Limits shared with the API. */
 export const MAX_STEPS = 20;
@@ -31,12 +31,14 @@ export interface ProductionStep {
   enabled: boolean;
   /** Happens at the publish date/time instead of on a day before it. */
   isPublish: boolean;
+  /** Tool suggested for this step (AI plans); becomes the session's. */
+  toolAction?: ToolAction | null;
 }
 
 /** The API's shape (GET/PUT /steps). */
 export type SavedProductionStep = Omit<
   ProductionStep,
-  "key" | "color" | "icon"
+  "key" | "color" | "icon" | "toolAction"
 > & {
   id?: string;
   color: string | null;
@@ -163,8 +165,9 @@ export function insertStep(
   return [...steps.slice(0, publishAt), step, ...steps.slice(publishAt)];
 }
 
+/** The reusable template: tool actions belong to one plan, not to it. */
 export function toSaved(steps: ProductionStep[]): SavedProductionStep[] {
-  return steps.map(({ key: _key, ...rest }) => rest);
+  return steps.map(({ key: _key, toolAction: _toolAction, ...rest }) => rest);
 }
 
 /** From the API; unknown colors/icons fall back to the built-in look. */
@@ -200,4 +203,39 @@ export function duplicateStepName(
     seen.add(key);
   }
   return null;
+}
+
+/**
+ * Session payloads for a scheduled plan: built-in steps keep their type,
+ * customised ones carry their look (a custom type), and AI-suggested tools
+ * travel with their session.
+ */
+export function plannedEventsFor(
+  sessions: { step: ProductionStep; startAt: Date; endAt: Date }[],
+  options: {
+    sessionTitle: (step: ProductionStep) => string;
+    builtinName: (type: ContentEventType) => string;
+    reminderMinutes: number | null;
+  },
+): PlannedEventInput[] {
+  return sessions.map(({ step, startAt, endAt }) => {
+    const look = stepLook(step);
+    return {
+      title: options.sessionTitle(step),
+      type: step.baseType ?? "OTHER",
+      startAt: startAt.toISOString(),
+      endAt: endAt.toISOString(),
+      reminderMinutes: options.reminderMinutes,
+      ...(isCustomized(step)
+        ? {
+            customType: {
+              name: stepName(step, options.builtinName).trim(),
+              color: look.color,
+              icon: look.icon,
+            },
+          }
+        : {}),
+      ...(step.toolAction ? { toolAction: step.toolAction } : {}),
+    };
+  });
 }

@@ -424,6 +424,59 @@ export const en = {
     title: "AI Models",
     subtitle: "Manage model registry, pricing, and availability",
     sync: "Sync Models",
+    addModel: "Add model",
+    custom: "Custom",
+    customHint: "Added by hand — model sync never changes it",
+    deleteAria: "Delete {name}",
+    remove: {
+      title: "Delete model",
+      description:
+        'Delete "{name}"? Tools using it will fall back to other active models.',
+      confirm: "Delete",
+    },
+    create: {
+      title: "Add model",
+      subtitle:
+        "Register a model from a connected provider. Synced models are updated automatically; models you add here are never changed by sync.",
+      taskType: "Task type",
+      provider: "Provider",
+      modelId: "Model ID",
+      modelIdPlaceholder: "e.g. openai/gpt-4o-mini",
+      modelIdHint: "Exactly as the provider names it.",
+      displayName: "Display name",
+      displayNamePlaceholder: "e.g. GPT-4o mini",
+      tier: "Tier",
+      creditCost: "Credit cost",
+      contextLength: "Context length (tokens)",
+      description: "Description",
+      tags: "Tags",
+      tagsPlaceholder: "fast, planning",
+      tagsHint: "Comma-separated, up to 10.",
+      streaming: "Supports streaming",
+      vision: "Supports images (vision)",
+      activate: "Activate now",
+      taskHints: {
+        "text-generation":
+          "Shown in every text tool's model selector (AI Planner, Script Writer, chat…).",
+        "image-generation": "Shown in the image tools' model selector.",
+        "video-generation": "Shown in the video tools' model selector.",
+        embedding:
+          "Turns projects into vectors for the AI Planner's similarity search. When none is active, a free built-in embedding is used.",
+        "speech-to-text":
+          "Its credit cost is the price per minute of voice input. Keep one active.",
+      },
+      errors: {
+        required: "Required",
+        invalidModelId: "Only letters, numbers and . - _ / : @",
+        tooLong: "Too long",
+        invalidNumber: "Enter a whole number",
+        creditRange: "Between 0 and 1000",
+        tooManyTags: "Up to 10 tags",
+      },
+      submit: "Add model",
+      created: "{name} added",
+      createFailed: "Could not add the model",
+    },
     stats: {
       total: "Total",
       active: "Active",
@@ -447,6 +500,8 @@ export const en = {
       "image-generation": "Image",
       "text-generation": "Text",
       "video-generation": "Video",
+      embedding: "Embedding",
+      "speech-to-text": "Speech-to-text",
     },
     tiers: {
       FREE: "Free",
@@ -497,6 +552,8 @@ export const en = {
       activated: "{name} activated",
       deactivated: "{name} deactivated",
       updateFailed: "Failed to update model",
+      deleted: "{name} deleted",
+      deleteFailed: "Could not delete the model",
     },
     detail: {
       title: "Model Configuration",
@@ -507,8 +564,12 @@ export const en = {
         "image-generation": "Image Generation",
         "text-generation": "Text Generation",
         "video-generation": "Video Generation",
+        embedding: "Embedding (RAG search)",
+        "speech-to-text": "Speech-to-text (voice input)",
       },
       creditCost: "Credit Cost",
+      creditCostHint:
+        "Text, image and video models: credits per use. Embedding: credits per indexing run (0 = free). Speech-to-text: credits per minute of voice input.",
       profitMargin: "Profit Margin (×)",
       pricing: "Pricing",
       prompt: "Prompt:",
@@ -537,5 +598,8 @@ export const en = {
     planSlugExists: 'A credit plan with slug "{slug}" already exists',
     modeSlugExists: 'A mode with slug "{slug}" already exists',
     providerSlugExists: 'A provider with slug "{slug}" already exists',
+    modelExists: "A model with this ID already exists for this provider",
+    onlyCustomDeletable:
+      "Only models added by hand can be deleted. Deactivate synced models instead.",
   },
 };

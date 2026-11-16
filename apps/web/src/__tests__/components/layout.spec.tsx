@@ -255,6 +255,46 @@ describe("TopBar", () => {
     expect(notificationActions.markAllAsRead).toHaveBeenCalled();
   });
 
+  it("shows session reminders in local time and opens the planner on that week", () => {
+    // Built in local time so the assertion holds in any time zone.
+    const start = new Date(2026, 2, 4, 10, 0);
+    const sentAt = new Date(start.getTime() - 15 * 60_000);
+    useNotificationStore.setState({
+      notifications: [
+        notification({
+          id: "r1",
+          type: "SESSION_REMINDER",
+          title: "Upcoming session",
+          body: '"Record intro" starts in 15 minutes', // English fallback
+          createdAt: sentAt.toISOString(),
+          data: {
+            kind: "session-reminder",
+            eventId: "e1",
+            eventTitle: "Record intro",
+            startAt: start.toISOString(),
+            endAt: new Date(2026, 2, 4, 12, 0).toISOString(),
+            reminderMinutes: 15,
+          },
+        }),
+      ],
+      unreadCount: 1,
+    });
+    renderTopBar();
+    openNotifications();
+
+    expect(
+      screen.getByText(
+        /^You have “Record intro” at .*10:00\sAM — starts in 15m$/,
+      ),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Open in planner →" }));
+
+    expect(notificationActions.markAsRead).toHaveBeenCalledWith("r1");
+    expect(routerMock.push).toHaveBeenCalledWith(
+      `/tools/content-planner?date=${encodeURIComponent(start.toISOString())}`,
+    );
+  });
+
   it("shows an empty state", () => {
     renderTopBar();
     openNotifications();

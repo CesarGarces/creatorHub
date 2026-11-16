@@ -33,6 +33,13 @@ import { useContentPlannerStore } from "@/store/content-planner.store";
 import { SelectField } from "./select-field";
 import { TypeField, customTypeValue, parseTypeValue } from "./type-field";
 import { useConflictToast } from "./use-conflict-toast";
+import { ReminderSelect } from "./reminder-select";
+import { ToolActionCard } from "./tool-action-card";
+import {
+  DEFAULT_REMINDER_MINUTES,
+  reminderToValue,
+  valueToReminder,
+} from "@/lib/content-planner/reminders";
 
 /** What the dialog edits: an existing session, or a new one at `start`. */
 export type EventDialogTarget =
@@ -70,6 +77,8 @@ interface FormState {
   endTime: string;
   projectId: string;
   notes: string;
+  /** Reminder select value: "none" or minutes before ("15"). */
+  reminder: string;
 }
 
 function initialState(target: EventDialogTarget): FormState {
@@ -86,6 +95,12 @@ function initialState(target: EventDialogTarget): FormState {
       startTime: toTimeInputValue(start),
       endTime: toTimeInputValue(new Date(event.endAt)),
       projectId: event.projectId ?? "",
+      // Sessions from before reminders existed behave like the default.
+      reminder: reminderToValue(
+        event.reminderMinutes === undefined
+          ? DEFAULT_REMINDER_MINUTES
+          : event.reminderMinutes,
+      ),
       notes: event.notes ?? "",
     };
   }
@@ -97,6 +112,7 @@ function initialState(target: EventDialogTarget): FormState {
     startTime: toTimeInputValue(target.start),
     endTime: toTimeInputValue(addMinutes(target.start, 60)),
     projectId: "",
+    reminder: reminderToValue(DEFAULT_REMINDER_MINUTES),
     notes: "",
   };
 }
@@ -170,12 +186,14 @@ function EventDialogForm({
               notes: form.notes.trim() || null,
               projectId: form.projectId || null,
               customTypeId,
+              reminderMinutes: valueToReminder(form.reminder),
             })
           : await createEvent({
               ...common,
               ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
               ...(form.projectId ? { projectId: form.projectId } : {}),
               ...(customTypeId ? { customTypeId } : {}),
+              reminderMinutes: valueToReminder(form.reminder),
             });
       toast.success(
         t(
@@ -307,6 +325,21 @@ function EventDialogForm({
                 onChange={(v) => patch("projectId", v)}
               />
             )}
+
+            {target.mode === "edit" && target.event.toolAction && (
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium text-text-muted">
+                  {t("contentPlanner.ai.suggestedTool")}
+                </p>
+                <ToolActionCard action={target.event.toolAction} />
+              </div>
+            )}
+
+            <ReminderSelect
+              label={t("contentPlanner.reminders.label")}
+              value={form.reminder}
+              onChange={(v) => patch("reminder", v)}
+            />
 
             <Textarea
               label={t("contentPlanner.event.notes")}

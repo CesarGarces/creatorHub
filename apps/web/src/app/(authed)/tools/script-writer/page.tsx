@@ -15,6 +15,7 @@ import {
   type ScriptMessage,
 } from "@/store/script-writer.store";
 import { useI18n } from "@/i18n/i18n-provider";
+import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 import type { TranslationKey } from "@/i18n/translate";
 
 const PLATFORMS = ["youtube-long", "youtube-short", "tiktok", "reels"] as const;
@@ -111,6 +112,16 @@ export default function ScriptWriterPage() {
     fetchBalance();
     fetchScripts();
   }, [fetchBalance, fetchScripts]);
+
+  // Links from other tools (e.g. a Content Planner step) prefill the input.
+  // The user reviews it and sends it themselves — nothing is charged until then.
+  const promptFromUrl = useToolQueryParams();
+  useEffect(() => {
+    if (promptFromUrl) {
+      committedTextRef.current = promptFromUrl;
+      setInput(promptFromUrl);
+    }
+  }, [promptFromUrl]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

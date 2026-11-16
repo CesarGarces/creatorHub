@@ -30,6 +30,7 @@ import { AIModule } from "./modules/ai/ai.module";
 import { WebhooksController } from "./modules/webhooks/webhooks.controller";
 import { SharingModule } from "./modules/sharing/sharing.module";
 import { NotificationModule } from "./modules/notification/notification.module";
+import { ContentPlannerRemindersModule } from "./modules/content-planner-reminders/content-planner-reminders.module";
 
 import { WebsocketModule } from "./modules/websocket/websocket.module";
 import { ThumbnailListenerModule } from "./modules/thumbnail-listener/thumbnail-listener.module";
@@ -58,7 +59,10 @@ import { XPostTweetModule } from "@creator-hub/x-post-tweet-backend";
 import "@creator-hub/script-writer";
 import { ScriptWriterModule } from "@creator-hub/script-writer-backend";
 import "@creator-hub/content-planner";
-import { ContentPlannerModule } from "@creator-hub/content-planner-backend";
+import {
+  ContentPlannerAiModule,
+  ContentPlannerModule,
+} from "@creator-hub/content-planner-backend";
 
 // Redis storage for rate limiting: limits stay consistent across replicas
 // and restarts (in-memory storage would multiply the effective limit per
@@ -143,6 +147,10 @@ const throttlerStorage = process.env.REDIS_URL
     SocialResearchModule,
     ScriptWriterModule,
     ContentPlannerModule,
+    // AI planning assistant (RAG + models + credits)
+    ContentPlannerAiModule,
+    // "Your session starts soon" notifications
+    ContentPlannerRemindersModule,
   ],
   controllers: [
     AuthController,

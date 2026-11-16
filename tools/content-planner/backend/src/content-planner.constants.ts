@@ -77,6 +77,14 @@ export const PALETTE_ICONS = [
 ] as const;
 export type PaletteIcon = (typeof PALETTE_ICONS)[number];
 
+/** "Remind me" choices, in minutes before the session (0 = when it starts). */
+export const REMINDER_OPTIONS = [0, 5, 10, 15, 30, 60, 120, 1440] as const;
+export const DEFAULT_REMINDER_MINUTES = 15;
+/** Sessions that started longer ago than this are not reminded any more. */
+export const REMINDER_GRACE_MINUTES = 10;
+/** Reminders handled per poll. */
+export const REMINDER_BATCH_SIZE = 100;
+
 export const LIMITS = {
   titleMaxLength: 120,
   notesMaxLength: 5000,

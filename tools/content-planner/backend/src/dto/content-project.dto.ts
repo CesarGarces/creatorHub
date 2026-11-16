@@ -39,6 +39,12 @@ export class CreateContentProjectDto {
   @MaxLength(LIMITS.notesMaxLength)
   notes?: string;
 
+  /** The AI plan this project comes from ("Add to calendar"). */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  aiPlanId?: string;
+
   /** Production sessions to schedule together with the project. */
   @IsOptional()
   @IsArray()

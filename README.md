@@ -17,6 +17,7 @@ Creator Hub is a platform where content creators can access AI-powered tools to 
 - **Script Writer** — AI-powered structured video scripts for YouTube, TikTok, Instagram Reels. Multi-platform, multi-tone, with visual cues and streaming generation.
 - **AI Chat** — AI assistant with streaming, dynamic tool routing and integrated actions (opens tools directly from chat)
 - **Content Planner** — Calendar for video production. Plan a video from its publish date and every step (ideation, scripting, recording, editing, thumbnail, publishing) is scheduled backwards, one per day. Week (drag & drop to reschedule), month and agenda views, custom session types (created from the session dialog), overlap warnings, calendar-wide totals, per-video progress. Free (no credits).
+  - **Plan with AI** — describe the video (type it, dictate it or attach PDF/DOCX/TXT/JSON/MD files), pick any active text model and the assistant rates its complexity, estimates the steps and their time from your past productions (vector search), suggests a platform tool for each step with its intention (Script Writer, Thumbnail Generator, Video Generator…, one click opens it pre-filled) and fills the calendar. Costs the model's credits (set in Admin → AI Models); voice input is billed per minute.
 
 **Community Bot:**
 
@@ -621,12 +622,19 @@ POST   /api/v1/admin/users                    # Create user
 PUT    /api/v1/admin/users/:id                # Edit user
 POST   /api/v1/admin/users/:id/deactivate     # Deactivate user (soft delete)
 POST   /api/v1/admin/users/:id/activate       # Reactivate user
+
+GET    /api/v1/admin/models                   # AI models (filters: taskType, tier, providerSlug, isActive, search)
+POST   /api/v1/admin/models                   # "Add model" by hand (isCustom; sync never touches it; 409 on duplicate)
+PUT    /api/v1/admin/models/:id/config        # Active, credit cost, margin, tier, task type
+DELETE /api/v1/admin/models/:id               # Delete a hand-added model (synced ones can only be deactivated)
+POST   /api/v1/admin/models/sync              # Sync models from OpenRouter / SiliconFlow
 ```
 
 **Features:**
 
 - Dashboard with metrics and charts
 - AI provider management (tier, cost, model, tasks)
+- AI models: sync from providers or **add a model by hand** (text, image, video, embedding, speech-to-text). The credit cost is what users pay: per use for text/image/video (e.g. the AI Planner's analysis), per run for the embedding model of the AI Planner's knowledge search (0 = free), per minute of voice input for the active speech-to-text model (default 1)
 - User management with soft delete (`isActive`)
 - User credits are read-only in the admin panel
 - Protection: cannot deactivate the last admin or oneself
@@ -1015,6 +1023,18 @@ GET    /api/v1/tools/content-planner/stats            # Totals over the whole ca
 GET    /api/v1/tools/content-planner/types            # User's custom session types
 POST   /api/v1/tools/content-planner/types            # Create a custom type { name, color } (409 on duplicate name)
 DELETE /api/v1/tools/content-planner/types/:id        # Delete it; its sessions fall back to "Other"
+GET    /api/v1/tools/content-planner/platforms        # User's custom platforms
+POST   /api/v1/tools/content-planner/platforms        # Create a custom platform { name } (409 on duplicate)
+DELETE /api/v1/tools/content-planner/platforms/:id    # Delete it; its projects keep no platform
+GET    /api/v1/tools/content-planner/steps            # User's production steps template ("Plan a video")
+PUT    /api/v1/tools/content-planner/steps            # Save the template
+
+# Content Planner — AI planning assistant (costs credits)
+GET    /api/v1/tools/content-planner/ai-plans/estimate?model  # Credits a run costs (model + knowledge search)
+GET    /api/v1/tools/content-planner/ai-plans/tools   # Platform tools a plan can suggest
+POST   /api/v1/tools/content-planner/ai-plans         # multipart: model, idea?, transcript?, platform?, publishDate?, language?, files[≤5] → SSE stage…done|error
+GET    /api/v1/tools/content-planner/ai-plans/:id     # A saved plan (owner only)
+# "Add to calendar": POST /projects with { aiPlanId, events[].toolAction }
 
 # Community Bot
 GET    /api/v1/community-bot/config                # Get bot config

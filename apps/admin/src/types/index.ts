@@ -128,6 +128,8 @@ export interface ModelMetadata {
   creditCost: number;
   profitMargin: number;
   isActive: boolean;
+  /** Added in Admin → AI Models → "Add model"; sync never changes it. */
+  isCustom?: boolean;
   description: string | null;
   tags: string[];
   integratedAt: string;

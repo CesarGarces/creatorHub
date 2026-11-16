@@ -23,6 +23,7 @@
 14. [X (Twitter) Integration](#14b-x-twitter-integration)
     14c. [Script Writer](#14c-script-writer)
     14d. [Community Bot](#14d-community-bot)
+    14e. [Content Planner — AI Planning Assistant](#14e-content-planner--ai-planning-assistant)
 15. [Testing Strategy](#14-testing-strategy)
 16. [CI/CD Strategy](#14-cicd-strategy)
 17. [Scalability Roadmap](#15-scalability-roadmap)
@@ -1061,6 +1062,11 @@ new credit cycle.
 
 Provider-specific cost: each `Provider` row defines `costPerCredit`. ThumbnailService reads this value at request time and passes it to the worker. Credit deduction uses the actual provider cost, not a flat rate.
 
+Model-priced features read `ModelMetadata.creditCost` (Admin → AI Models):
+the Content Planner's AI analysis (chosen text model + active embedding
+model), and voice input (active `speech-to-text` model, **per minute**,
+default 1). See [14e](#14e-content-planner--ai-planning-assistant).
+
 ### Provider Selection by Plan
 
 ```
@@ -1084,6 +1090,7 @@ AdminController
   ├── AdminGuard (role === ADMIN)
   ├── Providers CRUD
   ├── Users CRUD (soft delete via isActive)
+  ├── AI Models (sync, config, "Add model" by hand, delete custom ones)
   └── Credit Emails CRUD (email per credit state, preview, test send, delivery log)
 ```
 
@@ -2629,6 +2636,188 @@ apps/community-worker/
 │       ├── reply-generator.service.ts      # AI reply generation
 │       └── community-guard.service.ts      # Cost/abuse guards
 ```
+
+## 14e. Content Planner — AI Planning Assistant
+
+"Plan with AI" in the Content Planner turns an idea into a scheduled
+production plan. The creator describes the video (typed, dictated with the
+voice button, and/or up to 5 attached files), picks any active text model,
+and gets back: a complexity rating, the steps with realistic durations based
+on their own past productions, a suggested platform tool per step (with its
+intention and a ready-to-send prompt), and the sessions placed on the
+calendar.
+
+### Architecture
+
+```
+┌────────────────────────── apps/web ──────────────────────────┐
+│ AiPlannerDialog                                              │
+│  ProviderSelect (text models) · VoiceButton (STT, per min)   │
+│  files (.pdf .docx .txt .json .md) · platform · publish date │
+│  GET estimate ──► cost shown before running                  │
+│  POST multipart ──► SSE: stage… → done{plan, planId, credits}│
+│  Result: complexity · similar productions · steps + tools    │
+│   ├─ "Add to calendar" → POST /projects {aiPlanId, events[]} │
+│   └─ "Review and edit" → PlanVideoDialog (prefilled)         │
+└──────────────────────────────┬───────────────────────────────┘
+                               ▼
+┌──── tools/content-planner/backend/src/ai-planner ────────────┐
+│ AiPlannerController  (FilesInterceptor, SSE, abort on close) │
+│ AiPlannerService.analyze()                                   │
+│  1 reading     document-extractor (unpdf, fflate; limits)    │
+│  2 indexing    KnowledgeIndexService.syncProjectHistory()    │
+│  3 retrieving  similar productions + best excerpts (cosine)  │
+│  4 analyzing   planning-prompt → ProviderRegistry model      │
+│                parsePlanResponse (validate/clamp/normalise)  │
+│  5 saving      ContentAiPlan → CreditService.deduct()        │
+└──────────┬───────────────────────┬───────────────────────────┘
+           ▼                       ▼
+  @creator-hub/ai-engine     PostgreSQL
+  EmbeddingService           ContentKnowledgeChunk (real[] vectors)
+  (admin model | local)      ContentAiPlan · ContentEvent.toolAction
+```
+
+`ContentPlannerAiModule` is separate from `ContentPlannerModule`, so the
+calendar keeps working without AI, billing or providers.
+
+### Vector RAG layer
+
+- **Index** — one vector per past production of the user
+  (`ContentKnowledgeChunk`, `sourceType = "project"`, at most the 50 most
+  recent). The vector embeds the project's **topic** (title + notes); the
+  stored `content` is the full summary (sessions, durations, done/planned),
+  which is what the model sees as evidence. Sync is incremental: a project is
+  re-embedded only when its topic changes; new sessions just refresh the
+  stored summary.
+- **Scoping** — every vector carries `userId` and `embeddingModel`. Searches
+  only compare vectors of the current model; vectors of a previous model are
+  deleted on the next sync (switching models rebuilds the index).
+- **Retrieval** — the query is the idea + transcript + the opening of each
+  file. Top 3 projects above the embedder's threshold (`minSimilarity`)
+  become "similar productions" (with their real total time). When the files
+  don't fit the prompt budget (12k chars), they are chunked and the chunks
+  most similar to the query are kept, in document order.
+- **Embedders** — `EmbeddingService.resolve()` uses the admin-activated
+  `embedding` model when its provider is available (SiliconFlow, e.g.
+  `BAAI/bge-m3`; `minSimilarity` 0.5), otherwise the built-in
+  `LocalHashEmbeddingProvider` (`local:hash-v2`: 384-d hashed words, accent
+  and stopword aware, creator-domain stopwords like "video"/platform names;
+  `minSimilarity` 0.15; free, no network). The local one is lexical: it
+  finds "Sourdough starter" for a sourdough idea but not "pizza dough" —
+  activate a semantic model for that.
+- **Uploaded files are transient** — extracted, used for the prompt and
+  discarded; only a summary (file names, text lengths) is kept in
+  `ContentAiPlan.inputSummary`.
+- **Scale path** — vectors are `real[]` compared in Node (fine for ≤ 50 per
+  user). For large corpora, move to `pgvector` with an HNSW index; the
+  `embeddingModel` column already keeps models apart.
+
+### Complexity, steps and time
+
+The prompt carries the brief, the excerpts, the similar productions with
+their real durations, a heuristic score (size of the brief, number of
+sources/tools mentioned, history) and the catalogue of platform tools
+(`ToolRegistry.getActive()` minus the planner itself). The reply is parsed
+defensively (`parsePlanResponse`): JSON extracted from prose/fences, known
+session types only, durations clamped to 15–720 min in 15-min steps, unknown
+tools dropped, names de-duplicated, max 12 steps, exactly one publishing
+step (last), and a timeframe of at least one working day per session
+(`suggestedPublishInDays ≥ work sessions + 1`, so nothing lands in the past).
+An invalid reply is an error, not a charge.
+
+### Tool actions
+
+A step may carry `toolAction = { toolId, intention, prompt }`. It travels to
+the calendar (`ContentEvent.toolAction`, JSON) and is shown in the plan, in
+"Plan a video" (wrench chip) and in the session dialog. "Open tool" links to
+`/tools/{toolId}?prompt=…`; tool pages read it with `useToolQueryParams()`
+and **prefill** their input (the user still sends it; nothing is charged
+until then).
+
+### Credits
+
+Integrated with the existing credit flow (`CreditService.deduct()` — atomic
+conditional debit, `CreditTransaction`, threshold events, credit emails):
+
+| What             | Price                                                                      | Where it is set   |
+| ---------------- | -------------------------------------------------------------------------- | ----------------- |
+| Analysis         | `creditCost` of the chosen text model                                      | Admin → AI Models |
+| Knowledge search | `creditCost` of the active embedding model (0 with the local embedder)     | Admin → AI Models |
+| Voice input      | `creditCost` of the active speech-to-text model **per minute** (default 1) | Admin → AI Models |
+
+- `GET …/ai-plans/estimate` shows the total before running; the web disables
+  "Analyze" when the balance is lower.
+- Order: save the plan → charge (description "AI plan: {title}"). If the
+  charge fails the saved plan is deleted; if the user cancels (closes the
+  stream) before the end, nothing is charged. PRO models are refused for FREE
+  users (same rule as other tools). Usage is logged with `PlatformUsageLogger`.
+- Voice input is billed by the STT gateway at the end of each session:
+  `calculateCredits(durationMs, creditsPerMinute)` with the rate read from the
+  active `speech-to-text` model (`getSttCreditsPerMinute`, cached 60 s,
+  fallback `STT_CREDITS_PER_MINUTE` = 1). The web voice buttons show the same
+  rate (`useSttCreditsPerMinute`). Keep one speech-to-text model active.
+
+### Admin — AI Models
+
+- **Add model** (`POST /admin/models`): provider (OpenRouter, SiliconFlow,
+  Deepgram), model id, name, task type (`text-generation`,
+  `image-generation`, `video-generation`, `embedding`, `speech-to-text`),
+  tier, credit cost (0–1000), context length, tags, streaming/vision, active.
+  Stored with `isCustom = true`: model sync never updates or deactivates it.
+  Generative models also get their `Provider` row (as synced ones do).
+- Custom models can be **deleted** (`DELETE /admin/models/:id`, disables its
+  Provider); synced ones can only be deactivated.
+- A new active text model appears at once in every text tool's model
+  selector (AI Planner, Script Writer, chat…).
+
+### Data model
+
+```prisma
+model ContentAiPlan {            // one analysis
+  id, userId, modelId, status (ANALYZED | APPLIED), title, complexity,
+  result Json,                   // AiPlanResult (steps, tools, similar…)
+  inputSummary Json?, creditsCharged, projectId?   // set when added to the calendar
+}
+model ContentKnowledgeChunk {    // vector index
+  id, userId, sourceType, sourceId, content, contentHash,
+  embedding Float[] @db.Real, embeddingModel
+  @@unique([userId, sourceType, sourceId, embeddingModel])
+}
+ContentEvent.toolAction Json?    // { toolId, intention, prompt }
+ModelMetadata.isCustom Boolean   // added by hand in Admin
+```
+
+Migration: `20261124000000_add_ai_planner`.
+
+### Limits and errors
+
+Files: 5 per run, 5 MB each, 60 000 extracted characters kept per file;
+DOCX archives are checked against zip bombs; unreadable or empty files are
+reported by name. Idea and transcript ≤ 20 000 chars each. Errors before the stream are HTTP
+errors (validation, 413); later ones are SSE `{type:"error", status, error}`
+(5xx are replaced by a generic message). All messages are translated in the
+web (`i18n/errors.ts`).
+
+### Tests
+
+- Unit (vitest, `tools/content-planner/backend`): extractor (real PDF/DOCX
+  buffers), chunking, prompt/parser, knowledge index, service (charge order,
+  refunds, abort, tiers), controller (SSE), DTOs.
+- Integration (real PostgreSQL, skipped without `DATABASE_URL`):
+  `ai-planner.integration.spec.ts` — vectors in `real[]`, retrieval excludes
+  unrelated projects, atomic debit + transaction, plan applied to the
+  calendar with tool actions, stale vectors of other models removed.
+- ai-engine (jest): vector math, local embedder calibration (related vs
+  unrelated projects), SiliconFlow client, `EmbeddingService` selection.
+- Web (vitest + RTL): `ai-plan.ts` (SSE parsing, files, schedule), dialog
+  (model, voice, files, cost, stages, cancel, errors, result, add/review),
+  STT price hook, Plan a video prefill, session tool card.
+- Admin: `model-form` helpers (vitest) and `admin.models.spec.ts`
+  (Playwright): add / validate / delete models.
+
+---
+
+## 14. Testing Strategy
 
 ### Test Pyramid
 

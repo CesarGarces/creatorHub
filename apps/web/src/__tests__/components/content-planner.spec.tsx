@@ -185,6 +185,7 @@ describe("EventDialog", () => {
       type: "LIVESTREAM",
       startAt: new Date(2026, 2, 4, 22, 0).toISOString(),
       endAt: new Date(2026, 2, 5, 1, 30).toISOString(),
+      reminderMinutes: 15, // default reminder
     });
     expect(toast.success).toHaveBeenCalledWith("Session created");
   });
@@ -241,6 +242,7 @@ describe("EventDialog", () => {
       notes: null,
       projectId: null,
       customTypeId: null,
+      reminderMinutes: 15,
     });
     await waitFor(() =>
       expect(toast.warning).toHaveBeenCalledWith(
@@ -767,6 +769,64 @@ describe("event tooltip", () => {
     // Near the bottom → pulled up to fit.
     expect(place({ top: 750, left: 300, right: 400 }, 200, viewport).top).toBe(
       800 - 200 - 8,
+    );
+  });
+});
+
+// ─── Reminders ───────────────────────────────────────────────────────
+
+describe("session reminder setting", () => {
+  it("defaults to 15 minutes before and can be changed or turned off", async () => {
+    const onClose = vi.fn();
+    render(
+      <EventDialog
+        target={{ mode: "create", start: new Date(2026, 2, 4, 10, 0) }}
+        projects={[]}
+        onClose={onClose}
+      />,
+    );
+    const reminder = screen.getByLabelText("Reminder") as HTMLSelectElement;
+    expect(reminder.value).toBe("15");
+    expect(Array.from(reminder.options).map((o) => o.textContent)).toEqual([
+      "No reminder",
+      "When it starts",
+      "5 minutes before",
+      "10 minutes before",
+      "15 minutes before",
+      "30 minutes before",
+      "1 hour before",
+      "2 hours before",
+      "1 day before",
+    ]);
+
+    fireEvent.change(screen.getByLabelText("Title"), {
+      target: { value: "Shoot" },
+    });
+    fireEvent.change(reminder, { target: { value: "60" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create session" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(actions.createEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ reminderMinutes: 60 }),
+    );
+  });
+
+  it("shows the session's own setting when editing and can remove it", async () => {
+    render(
+      <EventDialog
+        target={{ mode: "edit", event: { ...recording, reminderMinutes: 0 } }}
+        projects={[]}
+        onClose={vi.fn()}
+      />,
+    );
+    const reminder = screen.getByLabelText("Reminder") as HTMLSelectElement;
+    expect(reminder.value).toBe("0");
+    fireEvent.change(reminder, { target: { value: "none" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(actions.updateEvent).toHaveBeenCalledWith(
+        "rec",
+        expect.objectContaining({ reminderMinutes: null }),
+      ),
     );
   });
 });

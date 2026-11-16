@@ -447,6 +447,13 @@ describe("STTSessionManager / STTEngineService", () => {
     expect(engine.calculateCredits(ms)).toBe(credits);
   });
 
+  it("bills with the admin-configured rate per started minute", () => {
+    expect(engine.calculateCredits(60_000, 3)).toBe(3);
+    expect(engine.calculateCredits(90_000, 2)).toBe(4);
+    // A free rate (0) never charges, not even the 1-credit minimum.
+    expect(engine.calculateCredits(90_000, 0)).toBe(0);
+  });
+
   it("reports availability from the registry", () => {
     expect(engine.isAvailable()).toBe(true);
     expect(

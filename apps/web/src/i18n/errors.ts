@@ -59,6 +59,13 @@ const EXACT_MESSAGES: Record<string, TranslationKey> = {
     "contentPlanner.customPlatforms.errors.duplicate",
   "Every added step needs a name":
     "contentPlanner.plan.steps.errors.nameRequired",
+  "AI plan not found": "errors.notFound",
+  "Describe your idea, record it or attach a file (at least 10 characters)":
+    "contentPlanner.ai.needInput",
+  "The model didn't return a valid plan. Try again or choose another model.":
+    "contentPlanner.ai.invalidPlan",
+  "Planning failed. Please try again.": "contentPlanner.ai.failed",
+  "Too many files": "contentPlanner.ai.fileErrors.count",
 };
 
 const PATTERNS: Array<{
@@ -76,6 +83,26 @@ const PATTERNS: Array<{
     pattern: /^You can have up to (\d+) custom platforms/,
     key: "contentPlanner.customPlatforms.errors.limit",
     params: (m) => ({ max: Number(m[1]) }),
+  },
+  {
+    pattern: /^Unsupported file type: "(.+)"/,
+    key: "contentPlanner.ai.fileErrors.type",
+    params: (m) => ({ name: m[1]! }),
+  },
+  {
+    pattern: /^"(.+)" is larger than 5 MB$/,
+    key: "contentPlanner.ai.fileErrors.size",
+    params: (m) => ({ name: m[1]! }),
+  },
+  {
+    pattern: /^Couldn't read "(.+)"$/,
+    key: "contentPlanner.ai.fileErrors.unreadable",
+    params: (m) => ({ name: m[1]! }),
+  },
+  {
+    pattern: /^"(.+)" has no readable text$/,
+    key: "contentPlanner.ai.fileErrors.empty",
+    params: (m) => ({ name: m[1]! }),
   },
   {
     pattern: /^Please wait (\d+) seconds? before requesting a new code/i,

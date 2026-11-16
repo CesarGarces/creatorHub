@@ -30,3 +30,27 @@ export type {
   ModelInfo,
   RateLimitInfo,
 } from "./gateways/ai-gateway.interface";
+
+// Embeddings (vector RAG)
+export {
+  EmbeddingService,
+  EMBEDDING_TASK_TYPE,
+  REMOTE_EMBEDDING_MIN_SIMILARITY,
+} from "./embeddings/embedding.service";
+export {
+  LocalHashEmbeddingProvider,
+  LOCAL_EMBEDDING_MODEL,
+  LOCAL_EMBEDDING_DIMENSIONS,
+  LOCAL_EMBEDDING_MIN_SIMILARITY,
+} from "./embeddings/local-hash-embedding.provider";
+export { SiliconFlowEmbeddingProvider } from "./embeddings/siliconflow-embedding.provider";
+export type {
+  EmbeddingProviderInterface,
+  ResolvedEmbedder,
+} from "./embeddings/embedding-provider.interface";
+export {
+  cosineSimilarity,
+  normalize,
+  topKBySimilarity,
+  type Scored,
+} from "./embeddings/vector-math";

@@ -119,3 +119,68 @@ describe("Content Planner page — resizing", () => {
     expect(block.style.height).toBe(`${2 * HOUR_PX}px`);
   });
 });
+
+describe("Content Planner page — opened from a reminder", () => {
+  it("shows the week of ?date= and cleans the URL", async () => {
+    useContentPlannerStore.setState({ view: "month" });
+    const sessionStart = new Date(2030, 2, 6, 10, 0); // Wed 6 March 2030
+    window.history.replaceState(
+      null,
+      "",
+      `/tools/content-planner?date=${encodeURIComponent(sessionStart.toISOString())}`,
+    );
+
+    render(<ContentPlannerPage />);
+
+    await waitFor(() =>
+      expect(useContentPlannerStore.getState().cursor).toEqual(sessionStart),
+    );
+    expect(useContentPlannerStore.getState().view).toBe("week");
+    expect(window.location.search).toBe("");
+    // The events request covers that week.
+    await waitFor(() =>
+      expect(apiMock.get).toHaveBeenCalledWith(
+        "/tools/content-planner/events",
+        {
+          params: {
+            from: new Date(2030, 2, 4).toISOString(),
+            to: new Date(2030, 2, 11).toISOString(),
+          },
+        },
+      ),
+    );
+  });
+
+  it("ignores an invalid date", () => {
+    const cursor = useContentPlannerStore.getState().cursor;
+    window.history.replaceState(null, "", "/tools/content-planner?date=soon");
+    render(<ContentPlannerPage />);
+    expect(useContentPlannerStore.getState().cursor).toBe(cursor);
+    expect(window.location.search).toBe("");
+  });
+});
+
+describe("Content Planner page — AI planner", () => {
+  it("“Plan with AI” opens the assistant with the text-model selector", async () => {
+    render(<ContentPlannerPage />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Plan with AI" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "AI planning assistant",
+    });
+    expect(dialog.textContent).toContain("Your idea");
+    await waitFor(() =>
+      expect(apiMock.get).toHaveBeenCalledWith("/ai/models", {
+        params: { taskTypes: "text-generation" },
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "AI planning assistant" }),
+      ).toBeNull(),
+    );
+  });
+});

@@ -12,6 +12,9 @@ const EXACT: Record<string, TranslationKey> = {
   "You cannot deactivate your own account": "errors.cannotDeactivateSelf",
   "Cannot deactivate the last active admin": "errors.lastAdmin",
   "Admin access required": "errors.adminRequired",
+  "A model with this id already exists for this provider": "errors.modelExists",
+  "Only models added manually can be deleted. Deactivate synced models instead.":
+    "errors.onlyCustomDeletable",
 };
 
 const SLUG_EXISTS: Array<[RegExp, TranslationKey]> = [

@@ -61,6 +61,13 @@ export interface ContentProjectSummary {
   platform: string | null;
 }
 
+/** A platform tool suggested for a session ("intention" = why). */
+export interface ToolAction {
+  toolId: string;
+  intention: string;
+  prompt: string;
+}
+
 export interface ContentEvent {
   id: string;
   projectId: string | null;
@@ -73,6 +80,10 @@ export interface ContentEvent {
   startAt: string;
   endAt: string;
   notes: string | null;
+  /** Minutes before the start to notify; null = no reminder. */
+  reminderMinutes?: number | null;
+  /** Tool suggested for this session (e.g. by the AI planner). */
+  toolAction?: ToolAction | null;
   project?: ContentProjectSummary | null;
 }
 
@@ -108,11 +119,14 @@ export interface ContentEventInput {
   notes?: string;
   projectId?: string;
   customTypeId?: string;
+  reminderMinutes?: number | null;
+  toolAction?: ToolAction;
 }
 
 export type ContentEventPatch = Partial<
-  Omit<ContentEventInput, "notes" | "projectId" | "customTypeId">
+  Omit<ContentEventInput, "notes" | "projectId" | "customTypeId" | "toolAction">
 > & {
+  toolAction?: ToolAction | null;
   notes?: string | null;
   projectId?: string | null;
   customTypeId?: string | null;
@@ -128,6 +142,8 @@ export type PlannedEventInput = Omit<
 
 export interface ContentProjectInput {
   title: string;
+  /** The AI plan this project comes from. */
+  aiPlanId?: string;
   platform?: ContentPlatform;
   customPlatformId?: string;
   publishAt?: string;

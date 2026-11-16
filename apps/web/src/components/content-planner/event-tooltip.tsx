@@ -14,6 +14,8 @@ import { useI18n } from "@/i18n/i18n-provider";
 import type { ContentEvent } from "@/lib/content-planner/types";
 import { eventStyle } from "./event-type-meta";
 import { useTypeLabel } from "./use-type-label";
+import { useToolsStore } from "@/store/tools.store";
+import { useToolText } from "@/i18n/use-tool-text";
 
 /** Hover delay, so sweeping the mouse across the calendar doesn't flicker. */
 export const TOOLTIP_DELAY_MS = 300;
@@ -97,6 +99,12 @@ function EventTooltip({
 }) {
   const { t, formatDate } = useI18n();
   const typeLabel = useTypeLabel();
+  const tools = useToolsStore((s) => s.tools);
+  const { toolName: localizedToolName } = useToolText();
+  const toolName = (id: string) => {
+    const tool = tools.find((x) => x.id === id);
+    return tool ? localizedToolName(tool) : id;
+  };
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState(() => place(anchor, 0));
 
@@ -136,6 +144,14 @@ function EventTooltip({
       {event.project && (
         <p className="mt-0.5 truncate text-xs text-text-dim">
           {event.project.title}
+        </p>
+      )}
+      {event.toolAction && (
+        <p className="mt-1.5 text-xs text-primary">
+          {t("contentPlanner.ai.toolChip", {
+            tool: toolName(event.toolAction.toolId),
+            intention: event.toolAction.intention,
+          })}
         </p>
       )}
       <div className="mt-2 border-t border-border pt-2">

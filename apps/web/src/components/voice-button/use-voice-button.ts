@@ -2,8 +2,7 @@
 
 import { useCallback, useRef, useState, useEffect } from "react";
 import { useLiveSpeechToText } from "@/hooks/use-live-speech-to-text";
-
-const CREDITS_PER_MINUTE = 1;
+import { useSttCreditsPerMinute } from "./use-stt-rate";
 
 interface UseVoiceButtonOptions {
   /** Language code for speech recognition (e.g., "en", "es") */
@@ -55,6 +54,8 @@ export function useVoiceButton(
     externalIsListening,
     setExternalListening,
   } = options;
+
+  const creditsPerMinute = useSttCreditsPerMinute();
 
   // Internal state that updates immediately on user action
   const [internalListening, setInternalListening] = useState(false);
@@ -138,6 +139,6 @@ export function useVoiceButton(
     toggleMic,
     startListening,
     stopListening,
-    creditsPerMinute: CREDITS_PER_MINUTE,
+    creditsPerMinute,
   };
 }

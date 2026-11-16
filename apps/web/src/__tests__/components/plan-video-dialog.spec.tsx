@@ -21,7 +21,10 @@ import { toast } from "sonner";
 import { PlanVideoDialog } from "@/components/content-planner/plan-video-dialog";
 import { EventDialog } from "@/components/content-planner/event-dialog";
 import { useContentPlannerStore } from "@/store/content-planner.store";
-import type { SavedProductionStep } from "@/lib/content-planner/steps";
+import type {
+  ProductionStep,
+  SavedProductionStep,
+} from "@/lib/content-planner/steps";
 
 const actions = {
   createProject: vi.fn(),
@@ -577,5 +580,188 @@ describe("custom type icon", () => {
         "mic",
       ),
     );
+  });
+});
+
+describe("plan reminders", () => {
+  it("applies the chosen reminder to every planned session", async () => {
+    renderDialog();
+    const reminder = screen.getByLabelText(
+      "Remind me before each session",
+    ) as HTMLSelectElement;
+    expect(reminder.value).toBe("15");
+    fireEvent.change(reminder, { target: { value: "1440" } });
+    fillBasics();
+    submit();
+    await waitFor(() => expect(actions.createProject).toHaveBeenCalled());
+    expect(new Set(sentEvents().map((e) => e.reminderMinutes))).toEqual(
+      new Set([1440]),
+    );
+  });
+});
+
+// ─── Continuing from the AI planner ─────────────────────────────────
+
+describe("review of an AI plan", () => {
+  const aiSteps = (): ProductionStep[] => [
+    {
+      key: "a",
+      baseType: "SCRIPTING",
+      name: null,
+      color: null,
+      icon: null,
+      durationMinutes: 60,
+      enabled: true,
+      isPublish: false,
+      toolAction: {
+        toolId: "script-writer",
+        intention: "Draft the script",
+        prompt: "Write it",
+      },
+    },
+    {
+      key: "b",
+      baseType: "RECORDING",
+      name: "Dough timelapse",
+      color: null,
+      icon: null,
+      durationMinutes: 120,
+      enabled: true,
+      isPublish: false,
+    },
+    {
+      key: "c",
+      baseType: "PUBLISHING",
+      name: null,
+      color: null,
+      icon: null,
+      durationMinutes: 30,
+      enabled: true,
+      isPublish: true,
+    },
+  ];
+
+  function renderWithInitial() {
+    const props = { onClose: vi.fn(), onPlanned: vi.fn() };
+    render(
+      <PlanVideoDialog
+        open
+        {...props}
+        initial={{
+          title: "Sourdough",
+          platformValue: "tiktok",
+          publishDate: "2030-03-08",
+          publishTime: "17:30",
+          steps: aiSteps(),
+          aiPlanId: "plan-1",
+        }}
+      />,
+    );
+    return props;
+  }
+
+  it("starts from the AI plan instead of the saved steps", () => {
+    useContentPlannerStore.setState({
+      productionSteps: [
+        {
+          baseType: "EDITING",
+          name: null,
+          durationMinutes: 90,
+          enabled: true,
+          isPublish: false,
+        },
+      ] as SavedProductionStep[],
+    });
+    renderWithInitial();
+    expect(
+      (screen.getByLabelText("Video title") as HTMLInputElement).value,
+    ).toBe("Sourdough");
+    expect(
+      (screen.getByLabelText("Publish date") as HTMLInputElement).value,
+    ).toBe("2030-03-08");
+    expect(
+      (screen.getByLabelText("Publish time") as HTMLInputElement).value,
+    ).toBe("17:30");
+    expect(stepNames()).toEqual([
+      "Scripting",
+      "Dough timelapse",
+      "PublishingAt publish time",
+    ]);
+    expect(total()).toBe("Total plan: 3h 30m");
+    expect(
+      screen.getByRole("img", {
+        name: "Suggested tool: script-writer — Draft the script",
+      }),
+    ).toBeTruthy();
+  });
+
+  it("links the project to the plan, keeps tool actions and does not overwrite saved steps", async () => {
+    const props = renderWithInitial();
+    submit();
+    await waitFor(() => expect(props.onClose).toHaveBeenCalled());
+    expect(actions.createProject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Sourdough",
+        platform: "tiktok",
+        aiPlanId: "plan-1",
+        publishAt: new Date(2030, 2, 8, 17, 30).toISOString(),
+      }),
+    );
+    expect(sentEvents()[0]).toMatchObject({
+      type: "SCRIPTING",
+      toolAction: { toolId: "script-writer", intention: "Draft the script" },
+    });
+    expect(sentEvents()[1]).toMatchObject({
+      customType: { name: "Dough timelapse" },
+    });
+    expect(actions.saveProductionSteps).not.toHaveBeenCalled();
+  });
+});
+
+describe("session with a suggested tool", () => {
+  it("shows the tool, its intention and a pre-filled link", () => {
+    render(
+      <EventDialog
+        target={{
+          mode: "edit",
+          event: {
+            id: "e1",
+            projectId: "p1",
+            title: "Scripting: Sourdough",
+            type: "SCRIPTING",
+            status: "PLANNED",
+            startAt: new Date(2030, 2, 5, 10, 0).toISOString(),
+            endAt: new Date(2030, 2, 5, 11, 0).toISOString(),
+            notes: null,
+            toolAction: {
+              toolId: "script-writer",
+              intention: "Draft the voice-over",
+              prompt: "Write a sourdough script",
+            },
+          },
+        }}
+        projects={[]}
+        onClose={vi.fn()}
+      />,
+    );
+    const card = screen.getByTestId("tool-action");
+    expect(card.textContent).toContain("Intention: Draft the voice-over");
+    expect(card.textContent).toContain("“Write a sourdough script”");
+    expect(
+      within(card)
+        .getByRole("link", { name: "Open script-writer" })
+        .getAttribute("href"),
+    ).toBe("/tools/script-writer?prompt=Write%20a%20sourdough%20script");
+  });
+
+  it("sessions without one show no card", () => {
+    render(
+      <EventDialog
+        target={{ mode: "create", start: new Date(2030, 2, 5, 10, 0) }}
+        projects={[]}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId("tool-action")).toBeNull();
   });
 });

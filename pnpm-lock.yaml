@@ -1123,27 +1123,51 @@ importers:
 
   tools/content-planner/backend:
     dependencies:
+      '@creator-hub/ai-engine':
+        specifier: workspace:*
+        version: link:../../../packages/ai-engine
+      '@creator-hub/analytics':
+        specifier: workspace:*
+        version: link:../../../packages/analytics
       '@creator-hub/auth':
         specifier: workspace:*
         version: link:../../../packages/auth
+      '@creator-hub/billing':
+        specifier: workspace:*
+        version: link:../../../packages/billing
       '@creator-hub/database':
         specifier: workspace:*
         version: link:../../../packages/database
+      '@creator-hub/shared-types':
+        specifier: workspace:*
+        version: link:../../../packages/shared-types
       '@creator-hub/shared-utils':
         specifier: workspace:*
         version: link:../../../packages/shared-utils
+      '@creator-hub/tool-sdk':
+        specifier: workspace:*
+        version: link:../../../packages/tool-sdk
       '@nestjs/common':
         specifier: ^11.1.27
         version: 11.1.27(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/platform-express':
+        specifier: ^11.1.27
+        version: 11.1.27(@nestjs/common@11.1.27(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.27)
       class-transformer:
         specifier: ^0.5.0
         version: 0.5.1
       class-validator:
         specifier: ^0.14.0
         version: 0.14.4
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
       rxjs:
         specifier: ^7.8.1
         version: 7.8.2
+      unpdf:
+        specifier: ^1.8.1
+        version: 1.8.1
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*
@@ -5884,6 +5908,9 @@ packages:
     resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
     engines: {node: ^12.20 || >= 14.13}
 
+  fflate@0.8.3:
+    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
+
   ffmpeg-static@5.3.0:
     resolution: {integrity: sha512-H+K6sW6TiIX6VGend0KQwthe+kaceeH/luE8dIZyOP35ik7ahYojDuqlTV1bOrtEwl01sy2HFNGQfi5IDJvotg==}
     engines: {node: '>=16'}
@@ -8378,6 +8405,15 @@ packages:
   universalify@2.0.1:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
+
+  unpdf@1.8.1:
+    resolution: {integrity: sha512-xkURhy2SoGpOIH0a1gLHNkASPIQYonadDJs2AQwPEfUakafeD9EA1WTWWsaR++gfTCXJpV27W7tU1nXuk82UKQ==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@napi-rs/canvas': ^0.1.69 || ^1.0.0
+    peerDependenciesMeta:
+      '@napi-rs/canvas':
+        optional: true
 
   unpipe@1.0.0:
     resolution: {integrity: sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==}
@@ -13333,6 +13369,8 @@ snapshots:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.3
 
+  fflate@0.8.3: {}
+
   ffmpeg-static@5.3.0:
     dependencies:
       '@derhuerst/http-basic': 8.2.4
@@ -16118,6 +16156,8 @@ snapshots:
   unpipe@1.0.0: {}
 
   untildify@4.0.0: {}
+
+  unpdf@1.8.1: {}
 
   update-browserslist-db@1.2.3(browserslist@4.28.2):
     dependencies:

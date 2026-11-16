@@ -114,9 +114,11 @@ export class ModelRegistryService {
       deactivated: 0,
     };
 
-    // Get existing models for this provider
+    // Get existing synced models for this provider. Models added by an admin
+    // ("Add model", isCustom) are never updated nor deactivated by the sync;
+    // if the provider lists the same id, createMany(skipDuplicates) skips it.
     const existingModels = await prisma.modelMetadata.findMany({
-      where: { providerSlug },
+      where: { providerSlug, isCustom: false },
     });
 
     const existingMap = new Map(existingModels.map((m) => [m.modelId, m]));

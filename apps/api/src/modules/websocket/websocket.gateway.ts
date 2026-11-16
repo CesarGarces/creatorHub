@@ -19,6 +19,7 @@ import {
   type STTProviderName,
 } from "@creator-hub/shared-types";
 import * as Sentry from "@sentry/nestjs";
+import { getSttCreditsPerMinute } from "./stt-pricing";
 
 const allowedOrigins = [
   process.env.FRONTEND_URL || "http://localhost:3000",
@@ -283,7 +284,10 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const result = await this.sttEngine.endSession(client.id);
 
     if (result) {
-      const credits = this.sttEngine.calculateCredits(result.durationMs);
+      const credits = this.sttEngine.calculateCredits(
+        result.durationMs,
+        await getSttCreditsPerMinute(),
+      );
 
       // Breadcrumb: STT session ended
       Sentry.addBreadcrumb({

@@ -17,6 +17,12 @@ import { useNotificationStore } from "@/store/notification.store";
 import { useSocketEvents } from "@/hooks/use-socket-events";
 import { useI18n } from "@/i18n/i18n-provider";
 import { LanguageSelector } from "@/components/i18n/language-selector";
+import {
+  parseSessionReminder,
+  sessionReminderText,
+  type SessionReminderData,
+} from "@/lib/content-planner/reminders";
+import { openSessionInPlanner } from "@/components/content-planner/open-in-planner";
 
 interface TopBarProps {
   title?: string;
@@ -32,7 +38,7 @@ export function TopBar({
   className,
 }: TopBarProps) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { user } = useAuthStore();
   const {
     balance,
@@ -76,6 +82,8 @@ export function TopBar({
     message: string;
     action?: string;
     actionLabel?: string;
+    /** Session reminders open their week in the planner. */
+    reminder?: SessionReminderData;
     readAt: string | null;
     createdAt: string;
   }[] = [];
@@ -97,6 +105,20 @@ export function TopBar({
 
   // Add real notifications
   notifications.forEach((n) => {
+    const reminder = parseSessionReminder(n);
+    if (reminder) {
+      // Rendered here, in the user's language and local time.
+      allNotifications.push({
+        id: n.id,
+        type: n.type,
+        message: sessionReminderText(reminder, n.createdAt, locale).message,
+        actionLabel: t("contentPlanner.reminders.open"),
+        reminder,
+        readAt: n.readAt,
+        createdAt: n.createdAt,
+      });
+      return;
+    }
     allNotifications.push({
       id: n.id,
       type: n.type,
@@ -230,6 +252,20 @@ export function TopBar({
                         type="button"
                         onClick={() => {
                           router.push(n.action!);
+                        }}
+                        className="text-xs font-medium text-primary hover:text-primary-hover transition-colors"
+                      >
+                        {n.actionLabel} →
+                      </button>
+                    )}
+                    {n.reminder && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!n.readAt) void handleMarkAsRead(n.id);
+                          openSessionInPlanner(n.reminder!, (url) =>
+                            router.push(url),
+                          );
                         }}
                         className="text-xs font-medium text-primary hover:text-primary-hover transition-colors"
                       >

@@ -9,6 +9,8 @@ import {
   PowerOff,
   Settings2,
   BrainCircuit,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -22,22 +24,18 @@ import {
 } from "@creator-hub/ui";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ModelDetailModal } from "@/components/models/model-detail-modal";
+import { CreateModelModal } from "@/components/models/create-model-modal";
+import { MODEL_PROVIDERS, MODEL_TASK_TYPES } from "@/lib/model-form";
 import type { ModelMetadata, ModelStats, PaginatedResponse } from "@/types";
 import { useI18n, t as translateNow } from "@/i18n/i18n-provider";
+import { localizeError } from "@/i18n/errors";
 
-const TASK_TYPES = [
-  "image-generation",
-  "text-generation",
-  "video-generation",
-] as const;
+const TASK_TYPES = MODEL_TASK_TYPES;
 
 const TIERS = ["FREE", "PRO"] as const;
 
 // Provider names are brands and stay untranslated.
-const PROVIDERS = [
-  { value: "openrouter", label: "OpenRouter" },
-  { value: "siliconflow", label: "SiliconFlow" },
-];
+const PROVIDERS = MODEL_PROVIDERS;
 
 export default function ModelsPage() {
   const {
@@ -83,6 +81,9 @@ export default function ModelsPage() {
     open: boolean;
     modelId: string | null;
   }>({ open: false, modelId: null });
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ModelMetadata | null>(null);
 
   // Confirmation dialog for toggling active/inactive
   const [toggleDialog, setToggleDialog] = useState<{
@@ -245,6 +246,30 @@ export default function ModelsPage() {
     }
   };
 
+  // ──────────────────────────────────────────────
+  // Delete (models added by hand only)
+  // ──────────────────────────────────────────────
+
+  const handleDeleteConfirm = async () => {
+    const model = deleteTarget;
+    if (!model) return;
+    try {
+      await api.delete(`/admin/models/${model.id}`);
+      toast.success(t("models.toasts.deleted", { name: model.displayName }));
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(model.id);
+        return next;
+      });
+      fetchModels(meta.page);
+      fetchStats();
+    } catch (err) {
+      toast.error(localizeError(err, "models.toasts.deleteFailed"));
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -253,14 +278,20 @@ export default function ModelsPage() {
           <h1 className="text-2xl font-bold text-text">{t("models.title")}</h1>
           <p className="text-text-muted">{t("models.subtitle")}</p>
         </div>
-        <Button onClick={handleSync} disabled={syncing} variant="outline">
-          {syncing ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-2 h-4 w-4" />
-          )}
-          {t("models.sync")}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={handleSync} disabled={syncing} variant="outline">
+            {syncing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            {t("models.sync")}
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t("models.addModel")}
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -402,7 +433,7 @@ export default function ModelsPage() {
       )}
 
       {/* Table */}
-      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+      <div className="overflow-x-auto rounded-xl border border-border bg-surface">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-elevated/50 text-left text-text-muted">
@@ -436,7 +467,7 @@ export default function ModelsPage() {
               <th className="px-4 py-3 font-medium">
                 {t("models.table.status")}
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="hidden px-4 py-3 font-medium 2xl:table-cell">
                 {t("models.table.integrated")}
               </th>
               <th className="px-4 py-3 font-medium text-right">
@@ -488,8 +519,17 @@ export default function ModelsPage() {
                       <p className="font-medium text-text">
                         {model.displayName}
                       </p>
-                      <p className="max-w-[240px] truncate font-mono text-xs text-text-dim">
-                        {model.modelId}
+                      <p className="flex items-center gap-1.5">
+                        <span className="max-w-[240px] truncate font-mono text-xs text-text-dim">
+                          {model.modelId}
+                        </span>
+                        {model.isCustom && (
+                          <span title={t("models.customHint")}>
+                            <Badge variant="outline" size="sm">
+                              {t("models.custom")}
+                            </Badge>
+                          </span>
+                        )}
                       </p>
                     </div>
                   </td>
@@ -545,7 +585,7 @@ export default function ModelsPage() {
                     </Badge>
                   </td>
                   <td
-                    className="whitespace-nowrap px-4 py-3 text-text-muted"
+                    className="hidden whitespace-nowrap px-4 py-3 text-text-muted 2xl:table-cell"
                     title={
                       model.integratedAt
                         ? formatLocaleDate(model.integratedAt, {
@@ -578,6 +618,18 @@ export default function ModelsPage() {
                       >
                         <Settings2 className="h-4 w-4" />
                       </Button>
+                      {model.isCustom && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDeleteTarget(model)}
+                          aria-label={t("models.deleteAria", {
+                            name: model.displayName,
+                          })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -648,6 +700,30 @@ export default function ModelsPage() {
             <Power className="h-5 w-5" />
           )
         }
+      />
+
+      {/* Delete confirmation (custom models only) */}
+      <ActionConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteConfirm}
+        title={t("models.remove.title")}
+        description={t("models.remove.description", {
+          name: deleteTarget?.displayName ?? "",
+        })}
+        confirmLabel={t("models.remove.confirm")}
+        cancelLabel={t("common.cancel")}
+        confirmVariant="danger"
+        icon={<Trash2 className="h-5 w-5" />}
+      />
+
+      <CreateModelModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          fetchModels(1);
+          fetchStats();
+        }}
       />
 
       {/* Detail Modal */}

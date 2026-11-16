@@ -2,7 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { t } from "@/i18n/runtime";
+import { useRouter } from "next/navigation";
+import { getClientLocale, t } from "@/i18n/runtime";
+import {
+  parseSessionReminder,
+  sessionReminderText,
+} from "@/lib/content-planner/reminders";
+import { openSessionInPlanner } from "@/components/content-planner/open-in-planner";
 import { localizeError } from "@/i18n/errors";
 import { useGenerationStore } from "@/store/generation.store";
 import { useTranslatorStore } from "@/store/translator.store";
@@ -31,6 +37,10 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
 
   const fetchBalance = useCreditsStore((s) => s.fetchBalance);
   const attachedRef = useRef(false);
+  // Handlers outlive renders: read the router through a ref.
+  const router = useRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
 
   useEffect(() => {
     const socket = connectSocket();
@@ -122,8 +132,27 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
       });
 
       socket.on("notification:new", (notification: any) => {
-        // Show toast for new notifications
-        if (notification.title) {
+        const reminder = parseSessionReminder(notification);
+        if (reminder) {
+          // "You have “Record intro” at 10:00 AM" in the user's language.
+          const text = sessionReminderText(
+            reminder,
+            notification.createdAt ?? new Date(),
+            getClientLocale(),
+          );
+          toast.info(text.title, {
+            description: text.message,
+            duration: 15_000,
+            action: {
+              label: t("contentPlanner.reminders.open"),
+              onClick: () =>
+                openSessionInPlanner(reminder, (url) =>
+                  routerRef.current.push(url),
+                ),
+            },
+          });
+        } else if (notification.title) {
+          // Show toast for new notifications
           toast.info(notification.title, {
             description: notification.body,
           });

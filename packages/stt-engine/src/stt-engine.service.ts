@@ -57,8 +57,17 @@ export class STTEngineService {
     await this.sessionManager.closeSession(clientId);
   }
 
-  calculateCredits(durationMs: number): number {
-    return Math.max(1, Math.ceil(durationMs / 60_000) * STT_CREDITS_PER_MINUTE);
+  /**
+   * Credits for a session: started minutes × rate. The rate is admin
+   * configurable (an active "speech-to-text" model in Admin → AI Models);
+   * callers pass it in, the default is STT_CREDITS_PER_MINUTE.
+   */
+  calculateCredits(
+    durationMs: number,
+    creditsPerMinute: number = STT_CREDITS_PER_MINUTE,
+  ): number {
+    if (creditsPerMinute <= 0) return 0;
+    return Math.max(1, Math.ceil(durationMs / 60_000) * creditsPerMinute);
   }
 
   hasActiveSession(clientId: string): boolean {

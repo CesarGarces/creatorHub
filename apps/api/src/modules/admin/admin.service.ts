@@ -3,8 +3,9 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
 } from "@nestjs/common";
-import { Prisma } from "@creator-hub/database";
+import { Prisma, type ModelMetadata } from "@creator-hub/database";
 import { prisma } from "@creator-hub/database";
 import * as bcrypt from "bcryptjs";
 import { CreateProviderDto, UpdateProviderDto } from "./dto/provider.dto";
@@ -14,6 +15,7 @@ import {
   UpdateCreditPlanDto,
 } from "./dto/credit-plan.dto";
 import { CreateModeDto, UpdateModeDto } from "./dto/mode.dto";
+import { CreateModelDto, GENERATIVE_TASK_TYPES } from "./dto/model.dto";
 
 @Injectable()
 export class AdminService {
@@ -847,6 +849,72 @@ export class AdminService {
     };
   }
 
+  /**
+   * "Add model": registers a model by hand (e.g. an embedding model for the
+   * planner's RAG, or a speech-to-text price). Marked isCustom so the provider
+   * sync never overwrites or deactivates it.
+   */
+  async createModel(dto: CreateModelDto): Promise<ModelMetadata> {
+    const modelId = dto.modelId.trim();
+    const existing = await prisma.modelMetadata.findUnique({
+      where: {
+        providerSlug_modelId: { providerSlug: dto.providerSlug, modelId },
+      },
+    });
+    if (existing) {
+      throw new ConflictException(
+        "A model with this id already exists for this provider",
+      );
+    }
+    const now = new Date();
+    const created = await prisma.modelMetadata.create({
+      data: {
+        providerSlug: dto.providerSlug,
+        modelId,
+        displayName: dto.displayName.trim(),
+        taskType: dto.taskType,
+        tier: dto.tier,
+        creditCost: dto.creditCost,
+        contextLength: dto.contextLength ?? null,
+        maxOutputTokens: dto.maxOutputTokens ?? null,
+        supportsStreaming: dto.supportsStreaming ?? false,
+        supportsVision: dto.supportsVision ?? false,
+        description: dto.description?.trim() || null,
+        tags: dto.tags ?? [],
+        isActive: dto.isActive ?? false,
+        isCustom: true,
+        integratedAt: now,
+        lastSyncedAt: now,
+      },
+    });
+    try {
+      await this.syncProviderFromModel(created);
+    } catch (err) {
+      console.error("[AdminService] Provider sync failed:", err);
+    }
+    return created;
+  }
+
+  /** Only models added by hand can be deleted (synced ones are deactivated). */
+  async deleteModel(id: string): Promise<{ deleted: true }> {
+    const model = await prisma.modelMetadata.findUnique({ where: { id } });
+    if (!model) {
+      throw new NotFoundException(`Model not found: ${id}`);
+    }
+    if (!model.isCustom) {
+      throw new BadRequestException(
+        "Only models added manually can be deleted. Deactivate synced models instead.",
+      );
+    }
+    await prisma.modelMetadata.delete({ where: { id } });
+    // Its generation Provider (if any) must not stay selectable.
+    await prisma.provider.updateMany({
+      where: { model: model.modelId },
+      data: { isActive: false },
+    });
+    return { deleted: true };
+  }
+
   async findModelById(id: string): Promise<any> {
     const model = await prisma.modelMetadata.findUnique({ where: { id } });
     if (!model) {
@@ -911,6 +979,10 @@ export class AdminService {
     taskType: string;
     providerSlug: string;
   }): Promise<void> {
+    // Embedding / speech-to-text models are priced from ModelMetadata
+    // directly; they must not appear as generation providers.
+    if (!GENERATIVE_TASK_TYPES.includes(model.taskType)) return;
+
     const slug = this.toSlug(model.displayName);
 
     // Determine supported tasks from taskType

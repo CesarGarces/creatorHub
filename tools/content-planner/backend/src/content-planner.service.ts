@@ -4,9 +4,14 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { prisma } from "@creator-hub/database";
+import {
+  prisma,
+  Prisma,
+  type ContentEvent,
+  type ContentProject,
+} from "@creator-hub/database";
 import { Logger } from "@creator-hub/shared-utils";
-import { LIMITS } from "./content-planner.constants";
+import { DEFAULT_REMINDER_MINUTES, LIMITS } from "./content-planner.constants";
 import { findOverlaps, type TimeSlot } from "./overlaps";
 import type {
   CreateContentEventDto,
@@ -53,6 +58,25 @@ export interface ContentPlannerStats {
   done: number;
 }
 
+/** A session as returned by the API, with its project and custom type. */
+export type ContentEventRecord = ContentEvent & {
+  project: { id: string; title: string; platform: string | null } | null;
+  customType: { id: string; name: string; color: string; icon: string } | null;
+};
+
+export interface EventMutationResult {
+  event: ContentEventRecord;
+  conflicts: ContentEventConflict[];
+}
+
+export interface ProjectCreationResult {
+  project: ContentProject & {
+    customPlatform: { id: string; name: string } | null;
+    events: ContentEvent[];
+  };
+  conflicts: ContentEventConflict[];
+}
+
 /** Minimal view of an overlapping session, returned as a non-blocking warning. */
 export interface ContentEventConflict {
   id: string;
@@ -90,6 +114,38 @@ function toDate(value: string, field: string): Date {
   return date;
 }
 
+/**
+ * Reminder columns for a session starting at `startAt`. A new schedule
+ * always clears `reminderSentAt`, so a rescheduled session is reminded again.
+ */
+export function reminderFields(startAt: Date, minutes: number | null) {
+  return {
+    reminderMinutes: minutes,
+    remindAt:
+      minutes === null ? null : new Date(startAt.getTime() - minutes * 60_000),
+    reminderSentAt: null,
+  };
+}
+
+/** Prisma data for a session's suggested tool (null clears it). */
+function toolActionData(
+  action:
+    | { toolId: string; intention: string; prompt: string }
+    | null
+    | undefined,
+) {
+  if (action === undefined) return {};
+  return {
+    toolAction: action
+      ? {
+          toolId: action.toolId,
+          intention: action.intention.trim(),
+          prompt: action.prompt.trim(),
+        }
+      : Prisma.DbNull,
+  };
+}
+
 function assertValidSlot(startAt: Date, endAt: Date): void {
   if (endAt <= startAt) {
     throw new BadRequestException("The session must end after it starts");
@@ -105,7 +161,10 @@ export class ContentPlannerService {
 
   // ─── Sessions (calendar events) ────────────────────────────────────────
 
-  async listEvents(userId: string, query: ListContentEventsQueryDto) {
+  async listEvents(
+    userId: string,
+    query: ListContentEventsQueryDto,
+  ): Promise<ContentEventRecord[]> {
     const from = toDate(query.from, "from");
     const to = toDate(query.to, "to");
     if (to <= from) {
@@ -128,7 +187,10 @@ export class ContentPlannerService {
     });
   }
 
-  async createEvent(userId: string, dto: CreateContentEventDto) {
+  async createEvent(
+    userId: string,
+    dto: CreateContentEventDto,
+  ): Promise<EventMutationResult> {
     const startAt = toDate(dto.startAt, "startAt");
     const endAt = toDate(dto.endAt, "endAt");
     assertValidSlot(startAt, endAt);
@@ -149,6 +211,13 @@ export class ContentPlannerService {
         startAt,
         endAt,
         notes: cleanNotes(dto.notes),
+        ...reminderFields(
+          startAt,
+          dto.reminderMinutes === undefined
+            ? DEFAULT_REMINDER_MINUTES
+            : dto.reminderMinutes,
+        ),
+        ...toolActionData(dto.toolAction),
       },
       include: EVENT_INCLUDE,
     });
@@ -162,7 +231,7 @@ export class ContentPlannerService {
     userId: string,
     eventId: string,
     dto: UpdateContentEventDto,
-  ) {
+  ): Promise<EventMutationResult> {
     const current = await prisma.contentEvent.findFirst({
       where: { id: eventId, userId },
     });
@@ -176,6 +245,17 @@ export class ContentPlannerService {
     if (dto.projectId) await this.assertProjectOwned(userId, dto.projectId);
     const typeData = await this.resolveTypeUpdate(userId, dto);
 
+    // Re-arm the reminder only when its moment actually changes (moving the
+    // session or changing the setting — not resizing its end).
+    const minutes =
+      dto.reminderMinutes !== undefined
+        ? dto.reminderMinutes
+        : current.reminderMinutes;
+    const reminder = reminderFields(startAt, minutes);
+    const reminderChanged =
+      minutes !== current.reminderMinutes ||
+      reminder.remindAt?.getTime() !== current.remindAt?.getTime();
+
     const event = await prisma.contentEvent.update({
       where: { id: eventId },
       data: {
@@ -184,6 +264,8 @@ export class ContentPlannerService {
         ...(dto.status !== undefined ? { status: dto.status } : {}),
         ...(dto.notes !== undefined ? { notes: cleanNotes(dto.notes) } : {}),
         ...(dto.projectId !== undefined ? { projectId: dto.projectId } : {}),
+        ...(dto.toolAction !== undefined ? toolActionData(dto.toolAction) : {}),
+        ...(reminderChanged ? reminder : {}),
         startAt,
         endAt,
       },
@@ -245,12 +327,22 @@ export class ContentPlannerService {
     });
   }
 
-  async createProject(userId: string, dto: CreateContentProjectDto) {
+  async createProject(
+    userId: string,
+    dto: CreateContentProjectDto,
+  ): Promise<ProjectCreationResult> {
     const inputs = dto.events ?? [];
     // Validate every session before touching the database.
     const events = inputs.map((e) => this.toEventData(userId, e));
     if (dto.customPlatformId) {
       await this.assertCustomPlatformOwned(userId, dto.customPlatformId);
+    }
+    if (dto.aiPlanId) {
+      const aiPlan = await prisma.contentAiPlan.findFirst({
+        where: { id: dto.aiPlanId, userId },
+        select: { id: true },
+      });
+      if (!aiPlan) throw new NotFoundException("AI plan not found");
     }
     const typeIds = await this.resolveCustomTypeSpecs(
       userId,
@@ -283,10 +375,18 @@ export class ContentPlannerService {
       },
     });
 
+    if (dto.aiPlanId) {
+      await prisma.contentAiPlan.update({
+        where: { id: dto.aiPlanId },
+        data: { status: "APPLIED", projectId: project.id },
+      });
+    }
+
     this.logger.info("Content project created", {
       userId,
       projectId: project.id,
       events: project.events.length,
+      aiPlanId: dto.aiPlanId,
     });
     const conflicts = await this.findConflicts(userId, project.events);
     return { project, conflicts };
@@ -626,6 +726,13 @@ export class ContentPlannerService {
       startAt,
       endAt,
       notes: cleanNotes(input.notes),
+      ...reminderFields(
+        startAt,
+        input.reminderMinutes === undefined
+          ? DEFAULT_REMINDER_MINUTES
+          : input.reminderMinutes,
+      ),
+      ...toolActionData(input.toolAction),
     };
   }
 

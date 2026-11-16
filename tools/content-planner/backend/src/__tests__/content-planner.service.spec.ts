@@ -21,12 +21,17 @@ const prismaMock = vi.hoisted(() => {
     contentCustomType: model(),
     contentCustomPlatform: model(),
     contentProductionStep: model(),
+    contentAiPlan: model(),
     // Array form: the queries were already built; just await them.
     $transaction: vi.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
   };
 });
 
-vi.mock("@creator-hub/database", () => ({ prisma: prismaMock }));
+// Real exports (e.g. Prisma.DbNull) with the client replaced.
+vi.mock("@creator-hub/database", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  prisma: prismaMock,
+}));
 
 import { ContentPlannerService } from "../content-planner.service";
 
@@ -116,6 +121,10 @@ describe("createEvent", () => {
           startAt: d(body.startAt),
           endAt: d(body.endAt),
           notes: null,
+          // Default reminder: 15 minutes before the start.
+          reminderMinutes: 15,
+          remindAt: d("2026-03-02T09:45:00.000Z"),
+          reminderSentAt: null,
         },
       }),
     );
@@ -161,6 +170,8 @@ describe("updateEvent", () => {
     userId: USER,
     startAt: d("2026-03-02T10:00:00.000Z"),
     endAt: d("2026-03-02T12:00:00.000Z"),
+    reminderMinutes: 15,
+    remindAt: d("2026-03-02T09:45:00.000Z"),
   };
 
   it("404s for sessions the user doesn't own", async () => {
@@ -200,6 +211,10 @@ describe("updateEvent", () => {
         data: {
           status: "CANCELLED",
           projectId: null,
+          // Moved a day later: the reminder follows and is re-armed.
+          reminderMinutes: 15,
+          remindAt: d("2026-03-03T09:45:00.000Z"),
+          reminderSentAt: null,
           startAt: d("2026-03-03T10:00:00.000Z"),
           endAt: d("2026-03-03T11:00:00.000Z"),
         },
@@ -512,6 +527,8 @@ describe("sessions with a custom type", () => {
       userId: USER,
       startAt: d(slot.startAt),
       endAt: d(slot.endAt),
+      reminderMinutes: 15,
+      remindAt: d("2026-03-02T09:45:00.000Z"),
     };
     beforeEach(() => {
       prismaMock.contentEvent.findFirst.mockResolvedValue(current);
@@ -816,5 +833,221 @@ describe("production steps template", () => {
       ]),
     ).rejects.toThrow("Only one step can be the publishing step");
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("session reminders", () => {
+  const slot = {
+    title: "Record intro",
+    type: "RECORDING" as const,
+    startAt: "2026-03-02T10:00:00.000Z",
+    endAt: "2026-03-02T11:00:00.000Z",
+  };
+  const created = () => prismaMock.contentEvent.create.mock.calls[0][0].data;
+
+  beforeEach(() => {
+    prismaMock.contentEvent.create.mockImplementation(
+      async ({ data }: any) => ({
+        id: "e1",
+        ...data,
+      }),
+    );
+  });
+
+  it("reminds 15 minutes before by default", async () => {
+    await service.createEvent(USER, slot);
+    expect(created()).toMatchObject({
+      reminderMinutes: 15,
+      remindAt: d("2026-03-02T09:45:00.000Z"),
+      reminderSentAt: null,
+    });
+  });
+
+  it("supports 'when it starts', a day before, and no reminder", async () => {
+    await service.createEvent(USER, { ...slot, reminderMinutes: 0 });
+    expect(created().remindAt).toEqual(d(slot.startAt));
+
+    prismaMock.contentEvent.create.mockClear();
+    await service.createEvent(USER, { ...slot, reminderMinutes: 1440 });
+    expect(created().remindAt).toEqual(d("2026-03-01T10:00:00.000Z"));
+
+    prismaMock.contentEvent.create.mockClear();
+    await service.createEvent(USER, { ...slot, reminderMinutes: null });
+    expect(created()).toMatchObject({ reminderMinutes: null, remindAt: null });
+  });
+
+  describe("on update", () => {
+    const current = {
+      id: "e1",
+      userId: USER,
+      status: "PLANNED",
+      startAt: d(slot.startAt),
+      endAt: d(slot.endAt),
+      reminderMinutes: 15,
+      remindAt: d("2026-03-02T09:45:00.000Z"),
+    };
+    beforeEach(() => {
+      prismaMock.contentEvent.findFirst.mockResolvedValue(current);
+      prismaMock.contentEvent.update.mockImplementation(
+        async ({ data }: any) => ({
+          ...current,
+          ...data,
+        }),
+      );
+    });
+    const sent = () => prismaMock.contentEvent.update.mock.calls[0][0].data;
+
+    it("moving the session moves the reminder and re-arms it", async () => {
+      await service.updateEvent(USER, "e1", {
+        startAt: "2026-03-05T16:00:00.000Z",
+        endAt: "2026-03-05T17:00:00.000Z",
+      });
+      expect(sent()).toMatchObject({
+        remindAt: d("2026-03-05T15:45:00.000Z"),
+        reminderSentAt: null,
+      });
+    });
+
+    it("changing the setting re-arms it; turning it off clears it", async () => {
+      await service.updateEvent(USER, "e1", { reminderMinutes: 60 });
+      expect(sent()).toMatchObject({
+        reminderMinutes: 60,
+        remindAt: d("2026-03-02T09:00:00.000Z"),
+        reminderSentAt: null,
+      });
+
+      prismaMock.contentEvent.update.mockClear();
+      await service.updateEvent(USER, "e1", { reminderMinutes: null });
+      expect(sent()).toMatchObject({ reminderMinutes: null, remindAt: null });
+    });
+
+    it("resizing only the end or editing the title keeps an already-sent reminder", async () => {
+      await service.updateEvent(USER, "e1", {
+        endAt: "2026-03-02T12:30:00.000Z",
+        title: "Record the intro",
+      });
+      expect(sent()).not.toHaveProperty("reminderSentAt");
+      expect(sent()).not.toHaveProperty("remindAt");
+    });
+  });
+
+  it("plan sessions get the default reminder, or the plan's choice", async () => {
+    prismaMock.contentProject.create.mockImplementation(
+      async ({ data }: any) => ({
+        id: "p1",
+        ...data,
+        events: data.events.create.map((e: any, i: number) => ({
+          id: `e${i}`,
+          ...e,
+        })),
+      }),
+    );
+    await service.createProject(USER, {
+      title: "Video",
+      events: [slot, { ...slot, reminderMinutes: 60 }],
+    });
+    const events =
+      prismaMock.contentProject.create.mock.calls[0][0].data.events.create;
+    expect(
+      events.map((e: any) => [e.reminderMinutes, e.remindAt.toISOString()]),
+    ).toEqual([
+      [15, "2026-03-02T09:45:00.000Z"],
+      [60, "2026-03-02T09:00:00.000Z"],
+    ]);
+  });
+});
+
+describe("tool actions and AI plans", () => {
+  const slot = {
+    title: "Thumbnail",
+    type: "THUMBNAIL" as const,
+    startAt: "2026-03-02T10:00:00.000Z",
+    endAt: "2026-03-02T11:00:00.000Z",
+  };
+  const toolAction = {
+    toolId: "thumbnail-generator",
+    intention: "  Make the cover  ",
+    prompt: " Bright studio ",
+  };
+
+  it("stores a session's suggested tool, trimmed", async () => {
+    prismaMock.contentEvent.create.mockImplementation(
+      async ({ data }: any) => ({ id: "e1", ...data }),
+    );
+    await service.createEvent(USER, { ...slot, toolAction });
+    expect(
+      prismaMock.contentEvent.create.mock.calls[0][0].data.toolAction,
+    ).toEqual({
+      toolId: "thumbnail-generator",
+      intention: "Make the cover",
+      prompt: "Bright studio",
+    });
+  });
+
+  it("clears it with null and leaves it alone when absent", async () => {
+    const current = {
+      id: "e1",
+      userId: USER,
+      startAt: d(slot.startAt),
+      endAt: d(slot.endAt),
+      reminderMinutes: 15,
+      remindAt: d("2026-03-02T09:45:00.000Z"),
+    };
+    prismaMock.contentEvent.findFirst.mockResolvedValue(current);
+    prismaMock.contentEvent.update.mockImplementation(
+      async ({ data }: any) => ({ ...current, status: "PLANNED", ...data }),
+    );
+
+    await service.updateEvent(USER, "e1", { toolAction: null });
+    const cleared =
+      prismaMock.contentEvent.update.mock.calls[0][0].data.toolAction;
+    expect(cleared).toBeDefined();
+    expect(cleared).not.toBeNull(); // Prisma.DbNull, not JS null
+    expect(String(cleared)).toMatch(/DbNull/);
+
+    await service.updateEvent(USER, "e1", { title: "New title" });
+    expect(
+      prismaMock.contentEvent.update.mock.calls[1][0].data,
+    ).not.toHaveProperty("toolAction");
+  });
+
+  it("links the project to the user's AI plan and marks it applied", async () => {
+    prismaMock.contentAiPlan.findFirst.mockResolvedValue({ id: "plan1" });
+    prismaMock.contentProject.create.mockImplementation(
+      async ({ data }: any) => ({
+        id: "p1",
+        ...data,
+        events: data.events.create.map((e: any, i: number) => ({
+          id: `e${i}`,
+          ...e,
+        })),
+      }),
+    );
+
+    await service.createProject(USER, {
+      title: "Video",
+      aiPlanId: "plan1",
+      events: [{ ...slot, toolAction }],
+    });
+
+    expect(prismaMock.contentAiPlan.findFirst).toHaveBeenCalledWith({
+      where: { id: "plan1", userId: USER },
+      select: { id: true },
+    });
+    expect(prismaMock.contentAiPlan.update).toHaveBeenCalledWith({
+      where: { id: "plan1" },
+      data: { status: "APPLIED", projectId: "p1" },
+    });
+    const [event] =
+      prismaMock.contentProject.create.mock.calls[0][0].data.events.create;
+    expect(event.toolAction).toMatchObject({ toolId: "thumbnail-generator" });
+  });
+
+  it("refuses another user's AI plan before creating anything", async () => {
+    prismaMock.contentAiPlan.findFirst.mockResolvedValue(null);
+    await expect(
+      service.createProject(USER, { title: "Video", aiPlanId: "theirs" }),
+    ).rejects.toThrow("AI plan not found");
+    expect(prismaMock.contentProject.create).not.toHaveBeenCalled();
   });
 });

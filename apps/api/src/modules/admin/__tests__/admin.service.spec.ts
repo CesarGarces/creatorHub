@@ -1,10 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from "@nestjs/common";
 import * as bcrypt from "bcryptjs";
+
+// The service hashes with cost 12. Keep real bcrypt in these tests but with a
+// low cost factor so the suite does not time out when the whole monorepo runs
+// its test workers in parallel on the same CPU.
+vi.mock("bcryptjs", async (importOriginal) => {
+  const mod = (await importOriginal()) as Record<string, any>;
+  const actual = mod.default ?? mod;
+  const hash = (value: string) => actual.hash(value, 4);
+  const hashSync = (value: string) => actual.hashSync(value, 4);
+  return {
+    ...actual,
+    hash,
+    hashSync,
+    default: { ...actual, hash, hashSync },
+  };
+});
 
 vi.mock("@creator-hub/database", async (importOriginal) => {
   const { prismaMock } = await import("../../../__tests__/helpers/prisma-mock");
@@ -733,6 +750,121 @@ describe("AdminService", () => {
         byTaskType: { "text-generation": 7 },
         byTier: { PRO: 4 },
       });
+    });
+  });
+
+  // ──────────────────────────── Custom models ────────────────────────────
+
+  describe("createModel (Admin → AI Models → Add model)", () => {
+    const dto = {
+      providerSlug: "siliconflow",
+      modelId: " BAAI/bge-m3 ",
+      displayName: " BGE M3 ",
+      taskType: "embedding",
+      tier: "FREE" as const,
+      creditCost: 1,
+      isActive: true,
+    };
+
+    it("creates a custom model the sync will never touch", async () => {
+      prismaMock.modelMetadata.findUnique.mockResolvedValue(null);
+      prismaMock.modelMetadata.create.mockImplementation(
+        async ({ data }: any) => ({
+          id: "m1",
+          ...data,
+        }),
+      );
+
+      const created = await service.createModel(dto);
+
+      expect(prismaMock.modelMetadata.findUnique).toHaveBeenCalledWith({
+        where: {
+          providerSlug_modelId: {
+            providerSlug: "siliconflow",
+            modelId: "BAAI/bge-m3",
+          },
+        },
+      });
+      expect(created).toMatchObject({
+        modelId: "BAAI/bge-m3",
+        displayName: "BGE M3",
+        taskType: "embedding",
+        creditCost: 1,
+        isActive: true,
+        isCustom: true,
+        tags: [],
+      });
+      // Embedding models are priced from ModelMetadata: no generation Provider.
+      expect(prismaMock.provider.create).not.toHaveBeenCalled();
+      expect(prismaMock.provider.findFirst).not.toHaveBeenCalled();
+    });
+
+    it("adds a matching generation Provider for active text models", async () => {
+      prismaMock.modelMetadata.findUnique.mockResolvedValue(null);
+      prismaMock.modelMetadata.create.mockImplementation(
+        async ({ data }: any) => ({
+          id: "m2",
+          ...data,
+        }),
+      );
+      prismaMock.provider.findFirst.mockResolvedValue(null);
+      prismaMock.provider.findUnique.mockResolvedValue(null);
+
+      await service.createModel({
+        ...dto,
+        modelId: "deepseek-ai/DeepSeek-V4",
+        displayName: "DeepSeek Planner",
+        taskType: "text-generation",
+        creditCost: 4,
+      });
+
+      expect(prismaMock.provider.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          slug: "deepseek-planner",
+          model: "deepseek-ai/DeepSeek-V4",
+          costPerCredit: 4,
+          isActive: true,
+        }),
+      });
+    });
+
+    it("rejects a duplicate model id for the same provider", async () => {
+      prismaMock.modelMetadata.findUnique.mockResolvedValue({ id: "existing" });
+      await expect(service.createModel(dto)).rejects.toThrow(ConflictException);
+      expect(prismaMock.modelMetadata.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("deleteModel", () => {
+    it("deletes custom models and disables their provider", async () => {
+      prismaMock.modelMetadata.findUnique.mockResolvedValue({
+        id: "m1",
+        modelId: "my/model",
+        isCustom: true,
+      });
+      expect(await service.deleteModel("m1")).toEqual({ deleted: true });
+      expect(prismaMock.modelMetadata.delete).toHaveBeenCalledWith({
+        where: { id: "m1" },
+      });
+      expect(prismaMock.provider.updateMany).toHaveBeenCalledWith({
+        where: { model: "my/model" },
+        data: { isActive: false },
+      });
+    });
+
+    it("refuses to delete synced models and 404s for unknown ones", async () => {
+      prismaMock.modelMetadata.findUnique.mockResolvedValueOnce({
+        id: "s1",
+        isCustom: false,
+      });
+      await expect(service.deleteModel("s1")).rejects.toThrow(
+        BadRequestException,
+      );
+      prismaMock.modelMetadata.findUnique.mockResolvedValueOnce(null);
+      await expect(service.deleteModel("nope")).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prismaMock.modelMetadata.delete).not.toHaveBeenCalled();
     });
   });
 });

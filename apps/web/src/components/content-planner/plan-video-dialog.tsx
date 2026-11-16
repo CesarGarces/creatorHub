@@ -29,7 +29,7 @@ import {
   defaultSteps,
   duplicateStepName,
   fromSaved,
-  isCustomized,
+  plannedEventsFor,
   stepLook,
   stepName,
   toSaved,
@@ -43,28 +43,51 @@ import { PlatformField, parsePlatformValue } from "./platform-field";
 import { StepsEditor } from "./steps-editor";
 import { useConflictToast } from "./use-conflict-toast";
 import { useFormatDuration } from "./use-format-duration";
+import { ReminderSelect } from "./reminder-select";
+import {
+  DEFAULT_REMINDER_MINUTES,
+  reminderToValue,
+  valueToReminder,
+} from "@/lib/content-planner/reminders";
 
 const TITLE_MAX = 120;
+
+/** Pre-filled values, e.g. from the AI planning assistant ("Review and edit"). */
+export interface PlanVideoInitial {
+  title: string;
+  platformValue?: string;
+  /** "YYYY-MM-DD" and "HH:mm". */
+  publishDate?: string;
+  publishTime?: string;
+  steps: ProductionStep[];
+  /** Links the created project to the AI plan it comes from. */
+  aiPlanId?: string;
+}
 
 interface PlanVideoDialogProps {
   open: boolean;
   onClose: () => void;
   /** Called with the first planned session so the calendar can jump to it. */
   onPlanned: (firstSessionStart: Date) => void;
+  initial?: PlanVideoInitial | null;
 }
 
 export function PlanVideoDialog({
   open,
   onClose,
   onPlanned,
+  initial,
 }: PlanVideoDialogProps) {
   if (!open) return null;
-  return <PlanVideoForm onClose={onClose} onPlanned={onPlanned} />;
+  return (
+    <PlanVideoForm onClose={onClose} onPlanned={onPlanned} initial={initial} />
+  );
 }
 
 function PlanVideoForm({
   onClose,
   onPlanned,
+  initial,
 }: Omit<PlanVideoDialogProps, "open">) {
   const { t, formatDate } = useI18n();
   const titleId = useId();
@@ -84,23 +107,33 @@ function PlanVideoForm({
   const builtinName = (type: ContentEventType) =>
     t(`contentPlanner.types.${type}`);
 
-  const [title, setTitle] = useState("");
-  const [platformValue, setPlatformValue] = useState("youtube-long");
-  // Default: one week from today at 18:00 — enough room for every step.
-  const [publishDate, setPublishDate] = useState(() =>
-    toDateInputValue(addDays(new Date(), 7)),
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [platformValue, setPlatformValue] = useState(
+    initial?.platformValue ?? "youtube-long",
   );
-  const [publishTime, setPublishTime] = useState("18:00");
+  // Default: one week from today at 18:00 — enough room for every step.
+  const [publishDate, setPublishDate] = useState(
+    () => initial?.publishDate ?? toDateInputValue(addDays(new Date(), 7)),
+  );
+  const [publishTime, setPublishTime] = useState(
+    initial?.publishTime ?? "18:00",
+  );
   const [workStart, setWorkStart] = useState("10:00");
   const [skipWeekends, setSkipWeekends] = useState(true);
-  const [steps, setSteps] = useState<ProductionStep[]>(() =>
-    savedSteps?.length ? fromSaved(savedSteps) : defaultSteps(),
+  const [reminder, setReminder] = useState(() =>
+    reminderToValue(DEFAULT_REMINDER_MINUTES),
+  );
+  const [steps, setSteps] = useState<ProductionStep[]>(
+    () =>
+      initial?.steps ??
+      (savedSteps?.length ? fromSaved(savedSteps) : defaultSteps()),
   );
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Load the user's saved steps; adopt them unless the list was already edited.
-  const stepsTouched = useRef(false);
+  // (An AI plan's steps are never replaced by the template.)
+  const stepsTouched = useRef(Boolean(initial));
   useEffect(() => {
     void fetchProductionSteps();
     void fetchCustomPlatforms();
@@ -164,27 +197,13 @@ function PlanVideoForm({
     try {
       const { conflicts } = await createProject({
         title: videoTitle,
+        ...(initial?.aiPlanId ? { aiPlanId: initial.aiPlanId } : {}),
         ...parsePlatformValue(platformValue),
         publishAt: publishAt.toISOString(),
-        events: plan.map(({ step, startAt, endAt }) => {
-          const look = stepLook(step);
-          return {
-            title: sessionTitle(step, videoTitle),
-            type: step.baseType ?? "OTHER",
-            startAt: startAt.toISOString(),
-            endAt: endAt.toISOString(),
-            // Added/edited steps keep their name, color and icon on the
-            // calendar through a custom type.
-            ...(isCustomized(step)
-              ? {
-                  customType: {
-                    name: stepName(step, builtinName).trim(),
-                    color: look.color,
-                    icon: look.icon,
-                  },
-                }
-              : {}),
-          };
+        events: plannedEventsFor(plan, {
+          sessionTitle: (step) => sessionTitle(step, videoTitle),
+          builtinName,
+          reminderMinutes: valueToReminder(reminder),
         }),
       });
       toast.success(
@@ -195,10 +214,13 @@ function PlanVideoForm({
       );
       showConflicts(conflicts);
       // Remember these steps for the next video (not critical if it fails).
-      try {
-        await saveProductionSteps(toSaved(steps));
-      } catch {
-        toast.warning(t("contentPlanner.plan.steps.notSaved"));
+      // An AI plan is specific to its video: it doesn't become the template.
+      if (!initial?.aiPlanId) {
+        try {
+          await saveProductionSteps(toSaved(steps));
+        } catch {
+          toast.warning(t("contentPlanner.plan.steps.notSaved"));
+        }
       }
       if (plan[0]) onPlanned(plan[0].startAt);
       onClose();
@@ -284,6 +306,12 @@ function PlanVideoForm({
                   {t("contentPlanner.plan.skipWeekends")}
                 </label>
               </div>
+
+              <ReminderSelect
+                label={t("contentPlanner.reminders.planLabel")}
+                value={reminder}
+                onChange={setReminder}
+              />
 
               <fieldset>
                 <legend className="mb-2 text-sm font-medium text-text-muted">

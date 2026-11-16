@@ -175,6 +175,23 @@ describe("ModelRegistryService.syncModels", () => {
     siliconFlow as never,
   );
 
+  it("never updates or deactivates models an admin added (isCustom)", async () => {
+    jest.clearAllMocks();
+    openRouter.fetchModels.mockResolvedValue([]);
+    siliconFlow.listModels.mockResolvedValue([]);
+    // The query only returns synced models: a custom embedding model that the
+    // provider doesn't list must not be treated as stale.
+    mockPrisma.modelMetadata.findMany.mockResolvedValue([]);
+
+    const result = await registry.syncModels();
+
+    for (const [args] of mockPrisma.modelMetadata.findMany.mock.calls) {
+      expect(args.where).toMatchObject({ isCustom: false });
+    }
+    expect(result.deactivated).toBe(0);
+    expect(mockPrisma.modelMetadata.update).not.toHaveBeenCalled();
+  });
+
   it("creates new models inactive, updates existing ones and deactivates stale ones", async () => {
     openRouter.fetchModels.mockResolvedValue([
       model({

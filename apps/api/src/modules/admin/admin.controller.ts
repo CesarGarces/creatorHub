@@ -44,6 +44,8 @@ import {
 } from "./dto/credit-email-trigger.dto";
 import { CreditEmailTriggerService } from "./credit-email-trigger.service";
 import { CreditEmailService } from "../credit-emails/credit-email.service";
+import { CreateModelDto } from "./dto/model.dto";
+import type { ModelMetadata } from "@creator-hub/database";
 
 @Controller("admin")
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -378,6 +380,17 @@ export class AdminController {
       tags: tagArray,
       sort,
     });
+  }
+
+  /** Admin → AI Models → "Add model". */
+  @Post("models")
+  async createModel(@Body() dto: CreateModelDto): Promise<ModelMetadata> {
+    return this.adminService.createModel(dto);
+  }
+
+  @Delete("models/:id")
+  async deleteModel(@Param("id") id: string): Promise<{ deleted: true }> {
+    return this.adminService.deleteModel(id);
   }
 
   @Get("models/stats")

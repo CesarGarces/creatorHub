@@ -3,8 +3,7 @@
 import { MicrophoneIcon, StopIcon } from "./voice-button-icons";
 import { useI18n } from "@/i18n/i18n-provider";
 import { cn } from "@creator-hub/ui";
-
-const CREDITS_PER_MINUTE = 1;
+import { useSttCreditsPerMinute } from "./use-stt-rate";
 
 interface VoiceButtonProps {
   /** Visual variant */
@@ -39,6 +38,7 @@ export function VoiceButton({
   className,
 }: VoiceButtonProps) {
   const { t } = useI18n();
+  const creditsPerMinute = useSttCreditsPerMinute();
   if (!isSupported) return null;
 
   const Icon = isListening ? StopIcon : MicrophoneIcon;
@@ -79,7 +79,7 @@ export function VoiceButton({
           <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
           {showCredits && variant === "icon-text" && (
             <span className="text-[10px] text-red-400/80 ml-0.5">
-              {t("voice.creditsPerMinute", { count: CREDITS_PER_MINUTE })}
+              {t("voice.creditsPerMinute", { count: creditsPerMinute })}
             </span>
           )}
         </>

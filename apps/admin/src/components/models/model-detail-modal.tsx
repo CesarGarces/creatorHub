@@ -17,6 +17,7 @@ import {
 } from "@creator-hub/ui";
 import type { ModelMetadata } from "@/types";
 import { useI18n } from "@/i18n/i18n-provider";
+import { MODEL_TASK_TYPES } from "@/lib/model-form";
 
 interface ModelDetailModalProps {
   open: boolean;
@@ -25,16 +26,14 @@ interface ModelDetailModalProps {
   onSaved: () => void;
 }
 
-const TASK_TYPES = [
-  "image-generation",
-  "text-generation",
-  "video-generation",
-] as const;
+const TASK_TYPES = MODEL_TASK_TYPES;
 
 const taskTypeColor: Record<string, string> = {
   "image-generation": "bg-purple-100 text-purple-700",
   "text-generation": "bg-blue-100 text-blue-700",
   "video-generation": "bg-orange-100 text-orange-700",
+  embedding: "bg-teal-100 text-teal-700",
+  "speech-to-text": "bg-pink-100 text-pink-700",
 };
 
 export function ModelDetailModal({
@@ -215,11 +214,18 @@ export function ModelDetailModal({
                 <Input
                   aria-label={t("models.detail.creditCost")}
                   type="number"
-                  min={1}
+                  min={0}
                   value={creditCost}
                   onChange={(e) => setCreditCost(Number(e.target.value))}
                   className="w-full"
+                  aria-describedby="model-detail-cost-hint"
                 />
+                <p
+                  id="model-detail-cost-hint"
+                  className="text-xs text-text-muted"
+                >
+                  {t("models.detail.creditCostHint")}
+                </p>
               </div>
 
               <div className="space-y-1.5">

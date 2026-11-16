@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Wand2,
   X,
 } from "lucide-react";
 import { Button, Skeleton, cn } from "@creator-hub/ui";
@@ -29,7 +30,11 @@ import {
   EventDialog,
   type EventDialogTarget,
 } from "@/components/content-planner/event-dialog";
-import { PlanVideoDialog } from "@/components/content-planner/plan-video-dialog";
+import {
+  PlanVideoDialog,
+  type PlanVideoInitial,
+} from "@/components/content-planner/plan-video-dialog";
+import { AiPlannerDialog } from "@/components/content-planner/ai-planner-dialog";
 import { ProjectsPanel } from "@/components/content-planner/projects-panel";
 import { useConflictToast } from "@/components/content-planner/use-conflict-toast";
 import { PlannerStats } from "@/components/content-planner/planner-stats";
@@ -68,6 +73,9 @@ export default function ContentPlannerPage() {
     null,
   );
   const [planOpen, setPlanOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  // An AI plan continued in "Plan a video" ("Review and edit").
+  const [planInitial, setPlanInitial] = useState<PlanVideoInitial | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const range = useMemo(() => visibleRange(view, cursor), [view, cursor]);
@@ -92,6 +100,18 @@ export default function ContentPlannerPage() {
     fetchCustomPlatforms,
     fetchProductionSteps,
   ]);
+
+  // "Open in planner" from a reminder: /tools/content-planner?date=<ISO>.
+  useEffect(() => {
+    const date = new URLSearchParams(window.location.search).get("date");
+    if (!date) return;
+    const target = new Date(date);
+    if (!Number.isNaN(target.getTime())) {
+      setCursor(target);
+      setView("week");
+    }
+    window.history.replaceState(null, "", window.location.pathname);
+  }, [setCursor, setView]);
 
   const focusedProject = projects.find((p) => p.id === focusedProjectId);
 
@@ -223,9 +243,19 @@ export default function ContentPlannerPage() {
               <CalendarPlus className="mr-2 h-4 w-4" />
               {t("contentPlanner.actions.newSession")}
             </Button>
-            <Button onClick={() => setPlanOpen(true)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setPlanInitial(null);
+                setPlanOpen(true);
+              }}
+            >
               <Sparkles className="mr-2 h-4 w-4" />
               {t("contentPlanner.actions.planVideo")}
+            </Button>
+            <Button onClick={() => setAiOpen(true)}>
+              <Wand2 className="mr-2 h-4 w-4" />
+              {t("contentPlanner.ai.button")}
             </Button>
           </div>
         </div>
@@ -393,8 +423,22 @@ export default function ContentPlannerPage() {
       />
       <PlanVideoDialog
         open={planOpen}
-        onClose={() => setPlanOpen(false)}
+        initial={planInitial}
+        onClose={() => {
+          setPlanOpen(false);
+          setPlanInitial(null);
+        }}
         onPlanned={(firstStart) => setCursor(firstStart)}
+      />
+      <AiPlannerDialog
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        onPlanned={(firstStart) => setCursor(firstStart)}
+        onReview={(initial) => {
+          setAiOpen(false);
+          setPlanInitial(initial);
+          setPlanOpen(true);
+        }}
       />
     </>
   );
