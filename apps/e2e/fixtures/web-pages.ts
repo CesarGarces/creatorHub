@@ -154,6 +154,20 @@ const CHAT_MODELS = [
     tags: ["fast"],
   },
   {
+    id: "m-vision",
+    providerSlug: "openrouter",
+    modelId: "google/gemini-2.5-flash",
+    displayName: "Gemini 2.5 Flash",
+    taskType: "text-generation",
+    tier: "free",
+    creditCost: 4,
+    isActive: true,
+    supportsStreaming: true,
+    supportsVision: true,
+    description: "Multimodal (vision) model",
+    tags: ["vision"],
+  },
+  {
     id: "m-image",
     providerSlug: "siliconflow",
     modelId: "black-forest-labs/FLUX.1-schnell",
@@ -229,6 +243,42 @@ export const webPageRoutes: Record<string, unknown> = {
       embeddingCost: 0,
       total: 3,
     },
+  },
+  "/tools/video-clipper/analyses": {
+    success: true,
+    data: [
+      {
+        id: "va-1",
+        fileName: "pasta-vlog.mp4",
+        durationSec: 185,
+        frameCount: 20,
+        modelId: "google/gemini-2.5-flash",
+        creditsCharged: 8,
+        highlights: 3,
+        topTitle: "Fresh pasta in 10 minutes (no machine)",
+        createdAt: hoursAgo(4),
+      },
+    ],
+    meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
+  },
+  "/tools/video-clipper/estimate": ({
+    search,
+  }: {
+    search: URLSearchParams;
+  }) => {
+    const frames = Number(search.get("frames") ?? 12);
+    const units = Math.max(1, Math.ceil(frames / 12));
+    return {
+      success: true,
+      data: {
+        modelId: "google/gemini-2.5-flash",
+        modelName: "Gemini 2.5 Flash",
+        modelCost: 4,
+        frames,
+        units,
+        total: 4 * units,
+      },
+    };
   },
   "/tools/script-writer/scripts": {
     success: true,
@@ -365,6 +415,10 @@ export const WEB_PAGES: PageSpec[] = [
   { path: "/tools/x-post-tweet", ready: heading(/Post to X/) },
   { path: "/tools/x-search-trends", ready: heading(/X Trend Research/) },
   { path: "/tools/content-planner", ready: h1("Content Planner") },
+  {
+    path: "/tools/video-clipper",
+    ready: h1("AI Video Analyzer & Smart Clipper"),
+  },
   { path: "/assets", ready: h1("Assets") },
   { path: "/history", ready: h1("History") },
   { path: "/community-bot", ready: h1("Community Bot") },

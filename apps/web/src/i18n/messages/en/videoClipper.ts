@@ -1,0 +1,163 @@
+export const videoClipper = {
+  title: "AI Video Analyzer & Smart Clipper",
+  subtitle:
+    "Find the best moments of your video, get hooks and titles, and export short clips — without uploading your video.",
+  privacy:
+    "Processed in your browser: your video never leaves your device. Only small keyframes are sent to the AI.",
+  upload: {
+    label: "Upload a video",
+    title: "Drop your video here",
+    subtitle: "MP4, MOV or WebM, up to {max}",
+    choose: "Choose video",
+    dropNow: "Drop to load the video",
+    errors: {
+      type: "This file isn't a video. Choose an MP4, MOV or WebM file.",
+      empty: "This file is empty.",
+      size: "This video is {size}. The browser clipper supports files up to {max}.",
+      decode: "Your browser can't read this video. Try an MP4 (H.264) file.",
+      sampling: "Couldn't extract keyframes from this video. Try another file.",
+    },
+    dismiss: "Dismiss",
+  },
+  roadmap: {
+    badge: "Coming soon",
+    title: "Heavy camera files up to 10 GB",
+    description:
+      "Support for large camera originals (4K, ProRes, up to 10 GB) is coming in a future release. For now, export a lighter MP4 (up to 250 MB) from your editor or phone.",
+  },
+  video: {
+    player: "Video preview",
+    change: "Change video",
+    remove: "Remove video",
+    reading: "Reading the video…",
+    sampling: "Extracting keyframes… {done}/{total}",
+    keyframes_one: "{count} keyframe",
+    keyframes_other: "{count} keyframes",
+    keyframesHint:
+      "Sampled about every {interval} s and compressed in your browser.",
+    keyframeAlt: "Keyframe at {time}",
+    keyframesLabel: "Keyframes",
+    seekTo: "Go to {time}",
+    reattach:
+      "Attach the original video ({name}) to preview and export these clips.",
+  },
+  analyze: {
+    heading: "Analyze with AI",
+    model: "Vision model",
+    noModels:
+      "No vision (multimodal) model is active. An admin can enable one in AI Models.",
+    platform: "Clips for",
+    platforms: {
+      "youtube-shorts": "YouTube Shorts",
+      tiktok: "TikTok",
+      "instagram-reels": "Instagram Reels",
+      youtube: "YouTube",
+    },
+    platformHint: "Clips of {min}–{max} s",
+    context: "What's the video about? (optional)",
+    contextPlaceholder: "e.g. Recipe: fresh homemade pasta in 10 minutes",
+    cost: "This analysis costs {total} credits",
+    costFree: "This analysis is free with this model",
+    costBreakdown:
+      "{model}: {modelCost} credits × {units} (per 12 keyframes) · {frames} keyframes",
+    balance: "Your balance: {balance} credits",
+    notEnough: "You don't have enough credits for this analysis.",
+    getCredits: "Get credits",
+    submit: "Analyze video",
+    analyzing: "Analyzing {count} keyframes with {model}…",
+    cancel: "Cancel",
+    needVideo: "Add a video to start.",
+    waitFrames: "Keyframes are still being extracted…",
+    charged_one: "Analysis ready · {count} credit used",
+    charged_other: "Analysis ready · {count} credits used",
+    chargedFree: "Analysis ready",
+  },
+  results: {
+    summary: "Summary",
+    titles: "Title ideas",
+    hooks: "Hooks",
+    hashtags: "Hashtags",
+    copy: "Copy",
+    copyItem: "Copy “{text}”",
+    copyAll: "Copy all",
+    copied: "Copied to clipboard",
+    copyFailed: "Couldn't copy to the clipboard",
+    model: "Analyzed with {model}",
+  },
+  clips: {
+    heading: "Detected clips",
+    count_one: "{count} clip",
+    count_other: "{count} clips",
+    timeline: "Clip timeline",
+    timelineClip: "Clip {index}, {start} to {end}",
+    handleStart: "Start of clip {index}",
+    handleEnd: "End of clip {index}",
+    timelineHint:
+      "Drag the handles to trim. Press and hold the clip to move it — arrow keys work too.",
+    timelineHintTouch:
+      "Drag the handles to trim. Press and hold the clip, then drag it to move it.",
+    moved: "Clip {index} moved to {start} – {end}",
+    untitled: "Clip {index}",
+    score: "Score {score}",
+    length: "{seconds} s",
+    preview: "Preview",
+    stop: "Stop",
+    export: "Export",
+    exporting: "Exporting… {percent}%",
+    cancelExport: "Cancel export",
+    exported: "Clip saved to your device",
+    exportFailed: "The clip couldn't be exported. Try again.",
+    start: "Start",
+    end: "End",
+    startEarlier: "Start 1 second earlier",
+    startLater: "Start 1 second later",
+    endEarlier: "End 1 second earlier",
+    endLater: "End 1 second later",
+    resetTrim: "Reset trim",
+    trimmed: "Trimmed",
+    format: "Export format",
+    formats: {
+      original: "Original",
+      vertical: "Vertical 9:16",
+    },
+    realtimeNote:
+      "Clips are recorded in real time in your browser (a 30 s clip takes about 30 s). Keep this tab open.",
+    unsupported:
+      "This browser can't export clips. Use a recent version of Chrome, Edge, Firefox or Safari.",
+    needVideo: "Attach the video to preview and export",
+  },
+  history: {
+    heading: "Recent analyses",
+    empty: "Your analyses will appear here.",
+    open: "Open the analysis of {name}",
+    delete: "Delete the analysis of {name}",
+    clips_one: "{count} clip",
+    clips_other: "{count} clips",
+    deleted: "Analysis deleted",
+  },
+  leave: {
+    notice:
+      "Your video is only kept in this tab. If you refresh, close or leave this page, you'll need to add it again.",
+    noticeAnalysis:
+      "Your video is only kept in this tab. If you refresh, close or leave this page, the video and this analysis will be deleted. Credits already used are not refunded.",
+    title: "Leave this page?",
+    description:
+      "Your video is only kept in this tab. If you leave, you'll need to add it again.",
+    descriptionAnalysis:
+      "Your video is only kept in this tab. If you leave, the video and its analysis will be deleted. Credits already used are not refunded.",
+    confirm: "Leave page",
+    confirmAnalysis: "Leave and delete",
+    stay: "Stay",
+  },
+  errors: {
+    failed: "The analysis failed. Please try again.",
+    notVision: "This model can't analyze video frames. Choose a vision model.",
+    invalidAnalysis:
+      "The model didn't return a valid analysis. Try again or choose another model.",
+    modelFailed:
+      "The AI model couldn't analyze this video. Try again or choose another model.",
+    tooLarge: "Videos larger than 250 MB are not supported yet.",
+    openFailed: "Couldn't open this analysis.",
+    deleteFailed: "Couldn't delete this analysis.",
+  },
+};

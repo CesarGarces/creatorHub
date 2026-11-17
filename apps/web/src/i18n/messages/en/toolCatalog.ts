@@ -33,6 +33,11 @@ export const toolCatalog = {
     name: "Content Planner",
     description: "Plan and schedule your video production on a calendar",
   },
+  "video-clipper": {
+    name: "AI Video Analyzer & Smart Clipper",
+    description:
+      "Find highlights, hooks and titles with AI and export short clips from your browser",
+  },
   categories: {
     image: "Image",
     thumbnail: "Thumbnail",

@@ -34,11 +34,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         )}
       />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Bottom room on phones so the chat button never covers the last
-            row of content (cards' action buttons, pagination…). Pages with
-            their own bottom composer (`data-composer`) fill the height
-            instead; the chat button then floats above the composer. */}
-        <main className="flex-1 overflow-y-auto overscroll-contain pb-[calc(5.5rem+env(safe-area-inset-bottom))] has-[[data-composer]]:pb-0 lg:pb-0">
+        {/* Bottom room on every screen so the chat launcher never covers
+            the last row of content (cards' action buttons, pagination…).
+            Pages with their own bottom composer (`data-composer`) fill the
+            height instead — the launcher floats above the composer — and
+            desktop split layouts sized to the viewport (`data-full-height`)
+            keep no extra room from lg. */}
+        <main className="flex-1 overflow-y-auto overscroll-contain pb-[calc(5.5rem+env(safe-area-inset-bottom))] has-[[data-composer]]:pb-0 lg:has-[[data-full-height]]:pb-0">
           {children}
         </main>
       </div>

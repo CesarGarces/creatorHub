@@ -31,6 +31,7 @@ import { translator } from "./translator";
 import { ui } from "./ui";
 import { upgrade } from "./upgrade";
 import { video } from "./video";
+import { videoClipper } from "./videoClipper";
 import { voice } from "./voice";
 import { xPost } from "./xPost";
 import { xResearch } from "./xResearch";
@@ -67,6 +68,7 @@ export const pt: Messages = {
   ui,
   upgrade,
   video,
+  videoClipper,
   voice,
   xPost,
   xResearch,

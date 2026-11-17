@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mockApi } from "../fixtures/api-mock";
 import { expectAccessible } from "../fixtures/a11y";
-import { dismissCookieBanner, signInWeb } from "../fixtures/web-data";
+import { dismissCookieBanner, openChat, signInWeb } from "../fixtures/web-data";
 import {
   PLANNER_EVENTS,
   PUBLIC_WEB_PAGES,
@@ -95,7 +95,7 @@ test.describe("web a11y · opened screens · phone", () => {
 
   test("assistant chat", async ({ page }, testInfo) => {
     await page.goto("/dashboard");
-    await page.getByRole("button", { name: "Open chat" }).tap();
+    await openChat(page, "tap");
     const panel = page.getByRole("dialog", { name: "Chat" });
     await expect.poll(async () => (await panel.boundingBox())!.x).toBe(0);
     await check(page, testInfo, "chat");

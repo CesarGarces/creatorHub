@@ -54,3 +54,6 @@ export {
   topKBySimilarity,
   type Scored,
 } from "./embeddings/vector-math";
+
+// Multimodal (vision) input
+export { buildUserMessageContent } from "./providers/message-content";

@@ -57,6 +57,13 @@ export interface ProviderSelectProps {
   label?: string;
   /** Optional class on the root wrapper */
   className?: string;
+  /**
+   * Only list vision (multimodal) models — `ModelMetadata.supportsVision`.
+   * For tools that send images to the model (e.g. the Video Clipper).
+   */
+  requireVision?: boolean;
+  /** Message when no model matches (default: localized "no models"). */
+  emptyMessage?: string;
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────
@@ -68,6 +75,8 @@ export function ProviderSelect({
   disabled = false,
   label,
   className,
+  requireVision = false,
+  emptyMessage,
 }: ProviderSelectProps) {
   const [models, setModels] = useState<ModelOption[]>([]);
   const { t, tOptional } = useI18n();
@@ -96,7 +105,9 @@ export function ProviderSelect({
         params: { taskTypes: taskTypesQuery },
       })
       .then((data) => {
-        const list = Array.isArray(data) ? data : [];
+        const list = (Array.isArray(data) ? data : []).filter(
+          (m) => !requireVision || m.supportsVision,
+        );
 
         // Deduplicate by modelId — prefer entries with active providers
         const seen = new Map<string, ModelOption>();
@@ -120,7 +131,7 @@ export function ProviderSelect({
         setModels([]);
       })
       .finally(() => setLoading(false));
-  }, [taskTypesQuery]);
+  }, [taskTypesQuery, requireVision]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -151,7 +162,9 @@ export function ProviderSelect({
           </span>
         </div>
       ) : models.length === 0 ? (
-        <p className="text-xs text-text-dim">{t("providerSelect.empty")}</p>
+        <p className="text-xs text-text-dim">
+          {emptyMessage ?? t("providerSelect.empty")}
+        </p>
       ) : (
         <>
           {/* Trigger */}

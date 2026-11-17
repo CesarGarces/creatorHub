@@ -1,4 +1,4 @@
-import type { BrowserContext } from "@playwright/test";
+import { expect, type BrowserContext, type Page } from "@playwright/test";
 
 const hoursAgo = (h: number) =>
   new Date(Date.now() - h * 3_600_000).toISOString();
@@ -47,6 +47,16 @@ export const webApiRoutes: Record<string, unknown> = {
       category: "translator",
       creditsPerUse: 1,
       status: "beta",
+    },
+    {
+      id: "video-clipper",
+      name: "AI Video Analyzer & Smart Clipper",
+      description:
+        "Find highlights, hooks and titles with AI and export short clips from your browser",
+      icon: "🎬",
+      category: "video",
+      creditsPerUse: 0,
+      status: "active",
     },
   ],
   "/user/favorites": [],
@@ -125,4 +135,19 @@ export async function dismissCookieBanner(context: BrowserContext) {
   await context.addInitScript(() =>
     localStorage.setItem("creator_hub_cookie_consent", "granted"),
   );
+}
+
+/**
+ * Opens the assistant from its floating launcher. The launcher tucks into an
+ * edge tab after 5 s idle or on scroll; a touch on the tab first expands it
+ * (a second tap opens the chat), a mouse click opens it directly.
+ */
+export async function openChat(page: Page, input: "tap" | "click" = "click") {
+  const launcher = page.getByRole("button", { name: "Open chat" });
+  const dialog = page.getByRole("dialog", { name: "Chat" });
+  await expect(async () => {
+    if (await dialog.isVisible()) return;
+    await launcher[input]({ timeout: 2_000 });
+    await expect(dialog).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
 }

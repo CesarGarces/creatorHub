@@ -19,6 +19,7 @@ import {
   History,
   Settings,
   CalendarDays,
+  Scissors,
 } from "lucide-react";
 import { useI18n } from "@/i18n/i18n-provider";
 
@@ -43,6 +44,7 @@ type DefaultItemId =
   | "xPostAgent"
   | "xResearchAgent"
   | "planner"
+  | "clipper"
   | "dashboard"
   | "tools"
   | "agents"
@@ -68,6 +70,12 @@ const defaultItemDefs: {
     id: "planner",
     icon: <CalendarDays className="h-4 w-4 text-text-dim" />,
     href: "/tools/content-planner",
+    group: "tools",
+  },
+  {
+    id: "clipper",
+    icon: <Scissors className="h-4 w-4 text-text-dim" />,
+    href: "/tools/video-clipper",
     group: "tools",
   },
   {

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mockApi } from "../fixtures/api-mock";
-import { dismissCookieBanner, signInWeb } from "../fixtures/web-data";
+import { dismissCookieBanner, openChat, signInWeb } from "../fixtures/web-data";
 import {
   PUBLIC_WEB_PAGES,
   WEB_PAGES,
@@ -78,7 +78,7 @@ test.describe("web responsiveness (INP)", () => {
     await page.keyboard.press("Escape");
     await page.getByRole("textbox").first().click();
     await page.keyboard.type("Ideas for a cooking video", { delay: 40 });
-    await page.getByRole("button", { name: "Open chat" }).click();
+    await openChat(page, "click");
     await expect(page.getByRole("dialog", { name: "Chat" })).toBeVisible();
     await page.getByRole("button", { name: "Close chat" }).click();
   }

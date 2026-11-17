@@ -80,6 +80,48 @@ describe("ProviderSelect", () => {
     });
   });
 
+  it("lists only vision models when the tool sends images", async () => {
+    const vision = model({
+      id: "v",
+      modelId: "google/gemini-2.5-flash",
+      displayName: "Gemini 2.5 Flash",
+      supportsVision: true,
+      creditCost: 4,
+    });
+    get.mockResolvedValue([FREE_MODEL, vision]);
+    const onChange = vi.fn();
+
+    render(
+      <ProviderSelect
+        toolModes={["text"]}
+        requireVision
+        value=""
+        onChange={onChange}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(onChange).toHaveBeenCalledWith("google/gemini-2.5-flash", vision),
+    );
+    fireEvent.click(await screen.findByRole("button", { expanded: false }));
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+    expect(screen.queryByText("DeepSeek V4")).toBeNull();
+  });
+
+  it("shows the tool's message when no model qualifies", async () => {
+    get.mockResolvedValue([FREE_MODEL]);
+    render(
+      <ProviderSelect
+        toolModes={["text"]}
+        requireVision
+        value=""
+        onChange={vi.fn()}
+        emptyMessage="No vision model is active."
+      />,
+    );
+    await screen.findByText("No vision model is active.");
+  });
+
   it("does not query the API when the tool has no known modes", async () => {
     render(
       <ProviderSelect toolModes={["audio"]} value="" onChange={vi.fn()} />,

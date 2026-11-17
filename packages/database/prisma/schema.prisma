@@ -103,6 +103,7 @@ model User {
   contentProductionSteps ContentProductionStep[]
   contentAiPlans         ContentAiPlan[]
   contentKnowledgeChunks ContentKnowledgeChunk[]
+  videoAnalyses          VideoAnalysis[]
 }
 
 model Account {
@@ -1135,4 +1136,30 @@ model ContentKnowledgeChunk {
 
   @@unique([userId, sourceType, sourceId, embeddingModel], name: "chunkSource", map: "ContentKnowledgeChunk_source_key")
   @@index([userId, embeddingModel])
+}
+
+// ============================================================
+// VIDEO CLIPPER - AI video analysis (the video never leaves the browser)
+// ============================================================
+
+/// One run of the AI Video Analyzer & Smart Clipper. Only the structured
+/// result is stored: the video and its keyframes stay on the user's device.
+model VideoAnalysis {
+  id             String   @id @default(cuid())
+  userId         String
+  /// Vision model used (ModelMetadata.modelId).
+  modelId        String
+  /// Name of the local file (shown in history; the file is not uploaded).
+  fileName       String
+  durationSec    Float
+  /// Keyframes sent to the model (drives the price).
+  frameCount     Int
+  /// Normalised analysis: highlights (timestamped clips), hooks, titles…
+  result         Json
+  creditsCharged Int
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

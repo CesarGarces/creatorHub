@@ -1,4 +1,5 @@
 import type {
+  AIChatMessageContent,
   AIRequest,
   AIResponse,
   AIStreamChunk,
@@ -93,7 +94,7 @@ export interface AIGatewayInterface {
    */
   chatCompletion(params: {
     model: string;
-    messages: Array<{ role: string; content: string }>;
+    messages: Array<{ role: string; content: AIChatMessageContent }>;
     temperature?: number;
     maxTokens?: number;
     stream?: boolean;
@@ -104,7 +105,7 @@ export interface AIGatewayInterface {
    */
   chatCompletionStream(params: {
     model: string;
-    messages: Array<{ role: string; content: string }>;
+    messages: Array<{ role: string; content: AIChatMessageContent }>;
     temperature?: number;
     maxTokens?: number;
   }): AsyncGenerator<{

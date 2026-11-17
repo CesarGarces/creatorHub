@@ -254,7 +254,10 @@ export default function ThumbnailGeneratorPage() {
       />
       {/* Phones/tablets: controls, then the preview below (stacked, page
           scroll). lg+: fixed-height split view as before. */}
-      <div className="flex flex-col lg:flex-row lg:h-[calc(100dvh-3.5rem)]">
+      <div
+        data-full-height
+        className="flex flex-col lg:flex-row lg:h-[calc(100dvh-3.5rem)]"
+      >
         {/* Left Panel - Controls */}
         <div className="w-full border-b border-border bg-surface p-4 sm:p-5 space-y-6 flex-shrink-0 lg:w-80 lg:border-b-0 lg:border-r lg:overflow-y-auto lg:overscroll-contain">
           <div>

@@ -24,6 +24,7 @@
     14c. [Script Writer](#14c-script-writer)
     14d. [Community Bot](#14d-community-bot)
     14e. [Content Planner — AI Planning Assistant](#14e-content-planner--ai-planning-assistant)
+    14f. [AI Video Analyzer & Smart Clipper](#14f-ai-video-analyzer--smart-clipper)
 15. [Testing Strategy](#14-testing-strategy)
 16. [CI/CD Strategy](#14-cicd-strategy)
 17. [Scalability Roadmap](#15-scalability-roadmap)
@@ -236,6 +237,18 @@ creator-hub/
 │       │       └── style-injection.service.ts
 │       └── package.json
 │
+│   └── video-clipper/         # AI Video Analyzer & Smart Clipper (see §14f)
+│       ├── index.ts           # Tool manifest (registerTool)
+│       ├── backend/
+│       │   └── src/
+│       │       ├── video-clipper.module.ts
+│       │       ├── video-clipper.controller.ts
+│       │       ├── video-clipper.service.ts
+│       │       ├── analysis-prompt.ts   # Prompt + defensive JSON parser
+│       │       ├── pricing.ts
+│       │       └── dto/analyze-video.dto.ts
+│       └── package.json
+│
 └── .github/
     └── workflows/
         └── ci.yml
@@ -363,10 +376,18 @@ flows are the same on every screen size.
   and the credits pill shows its short form (`CreditDisplay compactOnMobile`).
 - **Admin** — `AdminLayout` adds a sticky mobile top bar and the same drawer
   pattern (`#admin-sidebar`) with local React state.
-- `<main>` keeps bottom room on phones so the assistant button never covers
-  the last row of content. Pages with their own bottom composer mark it with
-  `data-composer`; the shell then drops that padding and lifts the button
-  above the composer (CSS `:has()`, no JS).
+- `<main>` keeps bottom room on every screen so the assistant button never
+  covers the last row of content. Pages with their own bottom composer mark it
+  with `data-composer`; the shell then drops that padding and lifts the button
+  above the composer (CSS `:has()`, no JS). Desktop split layouts sized to the
+  viewport mark their root `data-full-height` and keep no room from `lg`.
+- The assistant launcher (`ChatLauncher` + `useAutoCollapse`) is expanded on
+  load, then after 5 s without interaction or as soon as anything scrolls it
+  tucks into a 44px tab against the right edge. Hover and keyboard focus
+  expand it; on touch the first tap expands it and the second opens the chat.
+  Only the inner pill animates (`translate`, radius, colours) inside a fixed
+  slot that ignores the pointer: no layout shift (CLS), and content beside the
+  tab stays clickable. E2E specs open the chat with `openChat()`.
 
 ### On-screen keyboard
 
@@ -700,8 +721,20 @@ interface AIProviderInterface {
   generate(request: AIRequest): Promise<AIResponse>;
   generateImage(options: ImageGenerationOptions): Promise<AIResponse>;
   validateConfig(): boolean; // Checks if API keys exist
+  readonly supportsImageInput?: boolean; // Reads AIRequest.images (vision)
 }
 ```
+
+### Multimodal (vision) input
+
+`AIRequest.images?: AIImageInput[]` (`{ url, caption?, detail? }`, `@creator-hub/shared-types`)
+attaches images to a text-generation request. Providers that declare
+`supportsImageInput` (OpenRouter, SiliconFlow — both OpenAI-compatible) send
+the user message as content parts via `buildUserMessageContent()`: the prompt,
+then each image preceded by its caption. Gateways accept
+`content: string | AIChatContentPart[]`. Tools must pick a model whose
+`ModelMetadata.supportsVision` is true (the web `ProviderSelect` has a
+`requireVision` filter).
 
 ### Provider Selection Strategy
 
@@ -879,6 +912,13 @@ POST   /api/v1/tools/script-writer/generate    # Generate script (SSE streaming)
 GET    /api/v1/tools/script-writer/scripts      # List scripts
 GET    /api/v1/tools/script-writer/scripts/:id  # Get a script
 DELETE /api/v1/tools/script-writer/scripts/:id  # Delete a script
+
+GET    /api/v1/tools/video-clipper/limits             # Browser limits, platforms, roadmap
+GET    /api/v1/tools/video-clipper/estimate           # ?model&frames → credits
+POST   /api/v1/tools/video-clipper/analyses           # Keyframes + metadata → structured JSON
+GET    /api/v1/tools/video-clipper/analyses           # History (paginated)
+GET    /api/v1/tools/video-clipper/analyses/:id       # One analysis
+DELETE /api/v1/tools/video-clipper/analyses/:id       # Delete an analysis
 
 GET    /api/v1/community-bot/config                # Get bot config
 PUT    /api/v1/community-bot/config                # Update bot settings
@@ -1260,8 +1300,10 @@ Provider-specific cost: each `Provider` row defines `costPerCredit`. ThumbnailSe
 
 Model-priced features read `ModelMetadata.creditCost` (Admin → AI Models):
 the Content Planner's AI analysis (chosen text model + active embedding
-model), and voice input (active `speech-to-text` model, **per minute**,
-default 1). See [14e](#14e-content-planner--ai-planning-assistant).
+model), voice input (active `speech-to-text` model, **per minute**,
+default 1), and the Video Clipper's analysis (chosen vision model ×
+started batches of 12 keyframes). See [14e](#14e-content-planner--ai-planning-assistant)
+and [14f](#14f-ai-video-analyzer--smart-clipper).
 
 ### Provider Selection by Plan
 
@@ -3013,6 +3055,132 @@ web (`i18n/errors.ts`).
 
 ---
 
+## 14f. AI Video Analyzer & Smart Clipper
+
+Upload a video, let a multimodal model find the moments worth clipping, get
+hooks and optimized titles, then preview and export short clips — with the
+video **never leaving the browser** (zero upload, zero storage cost).
+
+### Architecture
+
+```
+Browser (apps/web /tools/video-clipper)                    API (tools/video-clipper/backend)
+┌──────────────────────────────────────────────┐          ┌──────────────────────────────────────┐
+│ File (≤ 250 MB) → URL.createObjectURL()      │          │ VideoClipperController               │
+│   │  readVideoMetadata()  (duration, size)   │          │  GET  /estimate   GET /limits        │
+│   │  planKeyframeTimestamps(duration)        │  JSON    │  POST /analyses  (DTO-validated)     │
+│   │  extractKeyframes() <video>→<canvas>→JPEG├─────────►│  GET/DELETE /analyses[/:id]          │
+│   │    6–32 frames, ≤ 512 px, ~30–60 KB each │ frames + │            │                         │
+│   │                                          │ metadata │ VideoClipperService                  │
+│   ▼                                          │          │  resolve vision model (tier check)   │
+│ Player · timeline · keyframe strip           │◄─────────┤  hasEnoughCredits → AI (images) →    │
+│ Clip cards: preview, trim ±1 s, export       │ analysis │  parse/clamp → save → deduct         │
+│   exportClip(): <video>→<canvas> (orig/9:16) │   JSON   │            │                         │
+│     + WebAudio → MediaRecorder → download    │          │  ProviderRegistry → OpenRouter /     │
+└──────────────────────────────────────────────┘          │  SiliconFlow (supportsImageInput)    │
+                                                          └──────────────────────────────────────┘
+```
+
+### How it works
+
+1. **Ingest (browser):** `useLocalVideo` validates the file (video type, ≤ 250 MB;
+   larger files show the roadmap note), opens it as an object URL (revoked on
+   change/unmount) and reads duration/resolution.
+2. **Keyframes (browser):** `keyframeCount(d) = clamp(round(6 + 5·log2(1 + d/30)), 6, 32)`
+   (15 s → 9, 1 min → 14, 10 min → 28, ≥ 17 min → 32), sampled at the centre of
+   equal slices, scaled to ≤ 512 px and encoded as JPEG (re-encoded lower if a
+   frame exceeds the 450 KB server limit). They stream into the UI as extracted.
+3. **Model + cost:** the dropdown lists active `text-generation` models with
+   `supportsVision` (`ProviderSelect requireVision`). `GET /estimate` returns
+   `creditCost × ceil(frames / 12)`; the button is disabled when the balance is
+   lower, with a link to buy credits.
+4. **Analysis (API):** keyframes are sent as `AIRequest.images`, each captioned
+   with its timestamp, plus a system prompt holding a strict JSON contract
+   (summary, contentType, highlights `{start,end,title,hook,reason,score,tags}`,
+   hooks, titles, hashtags) in the UI language, with the platform's clip-length
+   rules (Shorts 5–60 s, TikTok/Reels 5–90 s, YouTube 10–180 s).
+5. **Parsing:** `parseAnalysisResponse()` extracts JSON from prose/fences,
+   accepts `mm:ss` and alternative keys, clamps clips to the video and the
+   platform rules, resolves overlaps, keeps the 8 best (time order) and caps
+   texts. No valid highlight → 400, nothing charged.
+6. **Clips (browser):** preview seeks the page player and stops at the out
+   point. Trims: ±1 s buttons on the clip card, or drag the selected clip's
+   start/end handles on the timeline (Pointer Events — mouse, touch or pen;
+   `touch-action: none`; 44px on touch; arrow keys; snapped to 0.1 s; the
+   player seeks to the handle while dragging). Move a whole clip: press and
+   hold it on the timeline (~400 ms; moving > 8 px first cancels, so taps and
+   scrolls still work) until it lifts, then drag — the change is shown at once
+   (optimistic) and the clip glides after the pointer (`useSmoothedValue`,
+   frame-rate independent easing, instant with reduced motion); it is
+   committed on release, reverted on Escape / cancelled gesture; arrow keys
+   move it too. Always ≥ 1 s, ≤ platform max, inside the video. Export plays the
+   segment in an off-screen `<video>`, paints a `<canvas>` (original, or a 9:16
+   centre crop), routes audio through WebAudio (recorded, not heard) and records
+   with `MediaRecorder` — H.264/AAC MP4 where supported (Chrome ≥ 126, Safari),
+   else WebM — then downloads it. Real time; pauses with the tab.
+
+### Leaving the page
+
+The video exists only in the tab's memory, so while one is loaded
+(`useLeaveGuard`) the page shows a notice and:
+
+- **refresh / close / other sites** → the browser's own "Leave site?" prompt
+  (`beforeunload`; browsers ignore custom text, hence the notice);
+- **links inside the app** → an in-app dialog ("Leave and delete" / "Stay").
+
+Accepting discards the analysis made from that video: on `pagehide` its id is
+written to `localStorage` and a `keepalive` DELETE is fired; the next visit of
+the tool (`flushPendingDeletions()`) deletes whatever didn't complete **before**
+loading the history (404 = already gone). Analyses reopened from history
+without their video are never touched. Credits are not refunded.
+
+### Credits
+
+Same rules as §14e: vision model `creditCost` (Admin → AI Models) × units;
+PRO models refused on FREE; `hasEnoughCredits` before the model call; **save →
+`CreditService.deduct()` → delete the row if the debit fails** (atomic, threshold
+events and credit emails included). Model/provider failures (502), invalid
+replies (400) and client disconnects (499, detected with `res.on("close")`)
+charge nothing. Usage is logged with `PlatformUsageLogger`.
+
+### Data model
+
+```prisma
+model VideoAnalysis {   // only the JSON result — never the video or frames
+  id, userId, modelId, fileName, durationSec Float, frameCount Int,
+  result Json,          // VideoAnalysisResult
+  creditsCharged Int, createdAt
+  @@index([userId, createdAt])
+}
+```
+
+Migration: `20261125000000_add_video_analysis`. A reopened analysis asks for the
+original file (matched by duration ± 1.5 s) to enable preview/export.
+
+### Roadmap
+
+Heavy camera files (4K/ProRes, up to **10 GB**) need a server/worker pipeline
+(multipart upload to storage, FFmpeg keyframes and lossless cuts in a BullMQ
+worker). The UI shows this as a "Coming soon" note; `GET /limits` exposes
+`roadmap.heavyFilesMaxBytes`.
+
+### Tests
+
+- Backend (vitest, `tools/video-clipper/backend`): prompt/parser, pricing, DTOs,
+  service (charge order, tiers, vision-only, abort, 502, refund on failed
+  debit), controller (defaults, 499).
+- API (`apps/api`, supertest): HTTP contract through the global ValidationPipe
+  (250 MB limit, no video payload, query coercion) and Tool SDK discovery.
+- ai-engine (jest): multimodal content parts for OpenRouter and SiliconFlow.
+- Web (vitest + RTL): sampling plan, file checks, export geometry/format/file
+  names, keyframe extraction + export with fake media elements, store, hook,
+  components, and the page flow (upload → analyze → preview → export).
+- E2E (Playwright, `web.video-clipper.spec.ts`): a real WebM in Chromium —
+  keyframes decoded, request payload, preview stop, MediaRecorder export
+  (playable 9:16 file), phone layout, touch targets and axe on the results.
+
+---
+
 ## 14. Testing Strategy
 
 ### Test Pyramid
@@ -3458,6 +3626,7 @@ The `beforeSend` hook in `sentry.config.ts` sanitizes all events before sending:
 | ----------------------- | ---------------------------------------- |
 | Passwords, tokens       | Replaced with `[Filtered]`               |
 | User prompts >200 chars | Truncated + `...[truncated]`             |
+| Nested body data        | Same rules at every depth; arrays ≤ 10   |
 | Request headers         | `authorization`, `cookie` → `[Filtered]` |
 | IP addresses            | Never sent (`sendDefaultPii: false`)     |
 | Session Replays         | All text masked, all media blocked       |
@@ -3471,6 +3640,7 @@ The `SentryExceptionFilter` intelligently filters what gets reported:
 | 401         | No        | Expected (unauthenticated users)       |
 | 403         | No        | Expected (unauthorized access)         |
 | 404         | No        | Client requesting nonexistent resource |
+| 499         | No        | Client closed the request (cancelled)  |
 | 429         | **Yes**   | Rate limit = operational issue         |
 | 400/422     | **Yes**   | Possible validation bug                |
 | 5xx         | **Yes**   | Server-side bugs (always)              |

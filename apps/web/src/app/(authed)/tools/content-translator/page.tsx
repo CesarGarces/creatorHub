@@ -286,7 +286,10 @@ export default function ContentTranslatorPage() {
 
       {/* Phones: controls, then source and translation stacked (page
           scroll). md+: full-height side-by-side editor as before. */}
-      <div className="flex flex-col relative md:h-[calc(100dvh-3.5rem)]">
+      <div
+        data-full-height
+        className="flex flex-col relative md:h-[calc(100dvh-3.5rem)]"
+      >
         <LiquidEtherBackground />
 
         {/* Header controls */}

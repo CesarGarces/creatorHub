@@ -8,6 +8,7 @@ import { cn, Badge } from "@creator-hub/ui";
 import api from "@/lib/api";
 import { UpgradeModal } from "@/components/modals/upgrade-modal";
 import { TweetActionCard } from "@/components/chat/tweet-action-card";
+import { ChatLauncher } from "@/components/chat/chat-launcher";
 import { ProviderSelect } from "@/components/provider-select";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { VoiceButton, useVoiceButton } from "@/components/voice-button";
@@ -103,9 +104,8 @@ export function ChatWidget() {
   const router = useRouter();
   const { t } = useI18n();
   const [showSettings, setShowSettings] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
+  // Once the chat has been opened, the launcher's hint is not shown again.
   const [tooltipDismissed, setTooltipDismissed] = useState(false);
-  const tooltipTimeout = useRef<NodeJS.Timeout | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -150,33 +150,8 @@ export function ChatWidget() {
     }
   }, [isHydrated, isLoading, balance, plan]);
 
-  // Show tooltip after 3s if chat hasn't been opened, auto-dismiss after 20s
   useEffect(() => {
-    if (tooltipDismissed) return;
-    tooltipTimeout.current = setTimeout(() => {
-      if (!isWidgetOpen) setShowTooltip(true);
-    }, 3000);
-    return () => {
-      if (tooltipTimeout.current) clearTimeout(tooltipTimeout.current);
-    };
-  }, [isWidgetOpen, tooltipDismissed]);
-
-  // Auto-dismiss tooltip after 20s
-  useEffect(() => {
-    if (!showTooltip) return;
-    const dismissTimer = setTimeout(() => {
-      setShowTooltip(false);
-      setTooltipDismissed(true);
-    }, 20000);
-    return () => clearTimeout(dismissTimer);
-  }, [showTooltip]);
-
-  // Dismiss tooltip on any open
-  useEffect(() => {
-    if (isWidgetOpen) {
-      setShowTooltip(false);
-      setTooltipDismissed(true);
-    }
+    if (isWidgetOpen) setTooltipDismissed(true);
   }, [isWidgetOpen]);
 
   // Close on Escape
@@ -190,7 +165,6 @@ export function ChatWidget() {
 
   const handleToggle = () => {
     setIsOpen(!isWidgetOpen);
-    setShowTooltip(false);
     setTooltipDismissed(true);
   };
 
@@ -409,63 +383,11 @@ export function ChatWidget() {
         <ChatInput />
       </div>
 
-      {/* FAB — lifted above bottom composers (pages with data-composer). */}
-      <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[100] sm:bottom-6 sm:right-6 max-sm:group-has-[[data-composer]]/shell:bottom-[calc(9rem+env(safe-area-inset-bottom))] sm:max-lg:group-has-[[data-composer]]/shell:bottom-[6rem]">
-        {/* Tooltip */}
-        {showTooltip && (
-          <div
-            className={cn(
-              "absolute bottom-full right-0 mb-3",
-              "w-max max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-surface px-4 py-2.5",
-              "shadow-lg shadow-black/5",
-              "text-sm text-text",
-              "animate-in fade-in slide-in-from-bottom-2 duration-200",
-            )}
-            role="tooltip"
-          >
-            <span className="font-medium">{t("chat.tooltip")}</span>
-            <div className="absolute -bottom-1.5 right-6 h-2.5 w-2.5 rotate-45 border-r border-b border-border bg-surface" />
-          </div>
-        )}
-
-        {/* Button */}
-        {!isWidgetOpen && (
-          <button
-            type="button"
-            onClick={handleToggle}
-            onMouseEnter={() => {
-              if (!isWidgetOpen && !tooltipDismissed) setShowTooltip(true);
-            }}
-            onMouseLeave={() => {
-              setShowTooltip(false);
-            }}
-            className={cn(
-              "group relative flex h-14 w-14 items-center justify-center rounded-full",
-              "bg-primary text-primary-foreground shadow-lg shadow-primary/25",
-              "transition-all duration-200 ease-out",
-              "hover:scale-105 hover:shadow-xl hover:shadow-primary/30",
-              "active:scale-95",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-              isWidgetOpen &&
-                "bg-surface-elevated text-text shadow-none hover:bg-surface",
-            )}
-            aria-label={isWidgetOpen ? t("chat.closeChat") : t("chat.openChat")}
-            aria-expanded={isWidgetOpen}
-          >
-            {/* Chat icon (when closed) */}
-            <ChatBubbleIcon
-              className={cn(
-                "h-6 w-6 transition-transform duration-200",
-                isWidgetOpen ? "rotate-90 scale-0" : "rotate-0 scale-100",
-              )}
-            />
-            {/* Pulse ring when closed */}
-            {!isWidgetOpen && (
-              <span className="absolute inset-0 rounded-full animate-ping bg-primary/20" />
-            )}
-          </button>
-        )}
-      </div>
+      {/* Launcher — lifted above bottom composers (pages with data-composer),
+          auto-collapses into an edge tab when idle or while scrolling. */}
+      {!isWidgetOpen && (
+        <ChatLauncher onOpen={handleToggle} hideTooltip={tooltipDismissed} />
+      )}
 
       <UpgradeModal
         isOpen={showUpgradeModal}
@@ -905,22 +827,6 @@ function SparkleIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
       <path d="M11.5 2L13 8.5L19.5 7L14.5 11.5L19.5 16L13 14.5L11.5 21L10 14.5L3.5 16L8.5 11.5L3.5 7L10 8.5L11.5 2Z" />
-    </svg>
-  );
-}
-
-function ChatBubbleIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
     </svg>
   );
 }

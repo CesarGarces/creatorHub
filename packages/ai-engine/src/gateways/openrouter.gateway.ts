@@ -7,7 +7,10 @@ import type {
   ModelInfo,
   RateLimitInfo,
 } from "./ai-gateway.interface";
-import type { AITaskType } from "@creator-hub/shared-types";
+import type {
+  AIChatMessageContent,
+  AITaskType,
+} from "@creator-hub/shared-types";
 
 // ──────────────────────────────────────────────
 // OPENROUTER API RESPONSE TYPES
@@ -144,7 +147,7 @@ export class OpenRouterGateway implements AIGatewayInterface {
 
   async chatCompletion(params: {
     model: string;
-    messages: Array<{ role: string; content: string }>;
+    messages: Array<{ role: string; content: AIChatMessageContent }>;
     temperature?: number;
     maxTokens?: number;
     stream?: boolean;
@@ -209,7 +212,7 @@ export class OpenRouterGateway implements AIGatewayInterface {
 
   async *chatCompletionStream(params: {
     model: string;
-    messages: Array<{ role: string; content: string }>;
+    messages: Array<{ role: string; content: AIChatMessageContent }>;
     temperature?: number;
     maxTokens?: number;
   }): AsyncGenerator<{

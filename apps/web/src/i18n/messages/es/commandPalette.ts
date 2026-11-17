@@ -28,6 +28,10 @@ export const commandPalette: Messages["commandPalette"] = {
       label: "Planificador de contenido",
       description: "Programa la producción de tus videos",
     },
+    clipper: {
+      label: "Recortador de video",
+      description: "Encuentra momentos destacados y exporta clips",
+    },
     dashboard: { label: "Panel", description: "Ir al panel" },
     tools: {
       label: "Todas las herramientas",

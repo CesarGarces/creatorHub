@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mockApi } from "../fixtures/api-mock";
-import { signInWeb } from "../fixtures/web-data";
+import { openChat, signInWeb } from "../fixtures/web-data";
 import { webPageRoutes } from "../fixtures/web-pages";
 import {
   VIEWPORTS,
@@ -277,7 +277,7 @@ test.describe("web keyboard shortcuts", () => {
       await page.keyboard.press("Escape");
       await expect(mainNav(page)).toBeHidden();
 
-      await page.getByRole("button", { name: "Open chat" }).tap();
+      await openChat(page, "tap");
       const chat = page.getByRole("dialog", { name: "Chat" });
       await expect(chat).toBeVisible();
       await page.keyboard.press("Escape");

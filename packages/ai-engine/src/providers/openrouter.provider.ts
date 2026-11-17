@@ -1,5 +1,6 @@
 import { AIProviderBase } from "./ai-provider.base";
 import type {
+  AIChatMessageContent,
   AIRequest,
   AIResponse,
   AITaskType,
@@ -8,6 +9,7 @@ import type {
 } from "@creator-hub/shared-types";
 import type { ImageGenerationOptions } from "./provider.interface";
 import type { AIGatewayInterface } from "../gateways/ai-gateway.interface";
+import { buildUserMessageContent } from "./message-content";
 
 /**
  * OpenRouterProvider - Generic provider for all OpenRouter models.
@@ -35,6 +37,8 @@ export class OpenRouterProvider extends AIProviderBase {
   ];
   readonly supportedModels: string[] = []; // Dynamic - managed by ModelRegistry
   readonly tier = "pro" as const;
+  /** Vision models (e.g. Gemini, GPT-4o, Claude) read `request.images`. */
+  readonly supportsImageInput = true;
 
   private gateway: AIGatewayInterface | undefined;
 
@@ -260,8 +264,8 @@ export class OpenRouterProvider extends AIProviderBase {
 
   private buildMessages(
     request: AIRequest,
-  ): Array<{ role: string; content: string }> {
-    const messages: Array<{ role: string; content: string }> = [];
+  ): Array<{ role: string; content: AIChatMessageContent }> {
+    const messages: Array<{ role: string; content: AIChatMessageContent }> = [];
 
     // Add system prompt if provided
     if (request.parameters?.systemPrompt) {
@@ -280,10 +284,10 @@ export class OpenRouterProvider extends AIProviderBase {
       messages.push(...history);
     }
 
-    // Add current user message
+    // Add current user message (text + attached images for vision models)
     messages.push({
       role: "user",
-      content: request.prompt,
+      content: buildUserMessageContent(request),
     });
 
     return messages;

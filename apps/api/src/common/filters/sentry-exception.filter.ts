@@ -22,6 +22,7 @@ import { Prisma } from "@creator-hub/database";
  * Filtering strategy:
  * - 401/403: NOT captured (expected auth/authorization failures)
  * - 404: NOT captured (client requesting nonexistent resource)
+ * - 499: NOT captured (client closed the request, e.g. a cancelled analysis)
  * - 429: CAPTURED (rate limit = operational issue)
  * - 400/422: CAPTURED (possible validation bug)
  * - 5xx: ALWAYS CAPTURED (server-side bugs)
@@ -29,6 +30,15 @@ import { Prisma } from "@creator-hub/database";
  * Registered globally in main.ts via:
  *   app.useGlobalFilters(new SentryExceptionFilter());
  */
+
+/** Nginx-style status for requests the client abandoned. */
+const CLIENT_CLOSED_REQUEST = 499;
+
+/** Request body sanitization limits (see sanitizeBody). */
+const SENSITIVE_FIELDS = ["password", "token", "secret", "apiKey"];
+const MAX_STRING = 200;
+const MAX_ITEMS = 10;
+const MAX_DEPTH = 4;
 
 @Catch()
 export class SentryExceptionFilter implements ExceptionFilter {
@@ -138,6 +148,10 @@ export class SentryExceptionFilter implements ExceptionFilter {
     // domain checks and rare lost races, both are client errors, not bugs)
     if (status === HttpStatus.CONFLICT) return true;
 
+    // Ignore 499 Client Closed Request (the user cancelled/left — nothing
+    // failed, e.g. a cancelled Video Clipper analysis)
+    if (status === CLIENT_CLOSED_REQUEST) return true;
+
     // Ignore health check endpoints
     if (request.url.includes("/health") || request.url.includes("/ready")) {
       return true;
@@ -160,29 +174,36 @@ export class SentryExceptionFilter implements ExceptionFilter {
   }
 
   /**
-   * Sanitize request body before sending to Sentry.
-   * Removes passwords, tokens, and truncates long fields.
+   * Sanitize request body before sending to Sentry, at every depth:
+   * sensitive fields filtered, long strings (user prompts, base64 keyframes)
+   * truncated, long arrays capped and deep nesting cut — so user content and
+   * multi-megabyte payloads never reach Sentry.
    */
-  private sanitizeBody(body: unknown): unknown {
+  private sanitizeBody(body: unknown, depth = 0): unknown {
+    if (typeof body === "string") {
+      return body.length > MAX_STRING
+        ? body.substring(0, MAX_STRING) + "...[truncated]"
+        : body;
+    }
     if (!body || typeof body !== "object") return body;
+    if (depth >= MAX_DEPTH) return "[Truncated]";
 
-    const sanitized = { ...(body as Record<string, unknown>) };
-
-    // Remove sensitive fields
-    const sensitiveFields = ["password", "token", "secret", "apiKey"];
-    for (const field of sensitiveFields) {
-      if (field in sanitized) {
-        sanitized[field] = "[Filtered]";
+    if (Array.isArray(body)) {
+      const items = body
+        .slice(0, MAX_ITEMS)
+        .map((item) => this.sanitizeBody(item, depth + 1));
+      if (body.length > MAX_ITEMS) {
+        items.push(`...[${body.length - MAX_ITEMS} more]`);
       }
+      return items;
     }
 
-    // Truncate long strings (user prompts)
-    for (const [key, value] of Object.entries(sanitized)) {
-      if (typeof value === "string" && value.length > 200) {
-        sanitized[key] = value.substring(0, 200) + "...[truncated]";
-      }
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(body)) {
+      sanitized[key] = SENSITIVE_FIELDS.includes(key)
+        ? "[Filtered]"
+        : this.sanitizeBody(value, depth + 1);
     }
-
     return sanitized;
   }
 

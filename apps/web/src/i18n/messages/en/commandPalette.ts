@@ -23,6 +23,10 @@ export const commandPalette = {
       label: "Content Planner",
       description: "Schedule your video production",
     },
+    clipper: {
+      label: "Video Clipper",
+      description: "Find highlights and export clips",
+    },
     dashboard: { label: "Dashboard", description: "Go to dashboard" },
     tools: { label: "All Tools", description: "Browse all tools" },
     agents: { label: "All Agents", description: "Browse all agents" },

@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { mockApi } from "../fixtures/api-mock";
-import { signInWeb } from "../fixtures/web-data";
+import { openChat, signInWeb } from "../fixtures/web-data";
 import { PLANNER_EVENTS, webPageRoutes } from "../fixtures/web-pages";
 import {
   VIEWPORTS,
@@ -43,7 +43,7 @@ test.describe("assistant chat · phone", () => {
     page,
   }, testInfo) => {
     await page.goto("/dashboard");
-    await page.getByRole("button", { name: "Open chat" }).tap();
+    await openChat(page, "tap");
 
     const panel = page.getByRole("dialog", { name: "Chat" });
     await expect(panel).toBeVisible();

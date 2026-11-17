@@ -35,6 +35,8 @@
     "@creator-hub/thumbnail-generator": "workspace:*",
     "@creator-hub/thumbnail-generator-backend": "workspace:*",
     "@creator-hub/tool-sdk": "workspace:*",
+    "@creator-hub/video-clipper": "workspace:*",
+    "@creator-hub/video-clipper-backend": "workspace:*",
     "@creator-hub/video-generator": "workspace:*",
     "@creator-hub/video-generator-backend": "workspace:*",
     "@creator-hub/x-post-tweet": "workspace:*",

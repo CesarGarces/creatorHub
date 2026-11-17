@@ -119,7 +119,7 @@ describe("ChatWidget", () => {
   });
 
   describe("tooltip", () => {
-    it("appears after 3s while closed and disappears after 20s", () => {
+    it("appears shortly after load while closed and is gone after 20s", () => {
       vi.useFakeTimers();
       renderWidget();
 

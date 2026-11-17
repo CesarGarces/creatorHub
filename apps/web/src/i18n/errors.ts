@@ -66,6 +66,13 @@ const EXACT_MESSAGES: Record<string, TranslationKey> = {
     "contentPlanner.ai.invalidPlan",
   "Planning failed. Please try again.": "contentPlanner.ai.failed",
   "Too many files": "contentPlanner.ai.fileErrors.count",
+  "This model can't analyze video frames. Choose a vision model.":
+    "videoClipper.errors.notVision",
+  "The model didn't return a valid analysis. Try again or choose another model.":
+    "videoClipper.errors.invalidAnalysis",
+  "The AI model couldn't analyze this video. Try again or choose another model.":
+    "videoClipper.errors.modelFailed",
+  "Analysis not found": "errors.notFound",
 };
 
 const PATTERNS: Array<{
@@ -74,6 +81,11 @@ const PATTERNS: Array<{
   params?: (match: RegExpMatchArray) => TranslationParams;
 }> = [
   { pattern: /^Insufficient credits/i, key: "errors.insufficientCredits" },
+  // Nested DTO errors arrive prefixed with the field path ("video.…").
+  {
+    pattern: /Videos larger than 250 MB are not supported yet/,
+    key: "videoClipper.errors.tooLarge",
+  },
   {
     pattern: /^You can have up to (\d+) custom types/,
     key: "contentPlanner.customTypes.errors.limit",

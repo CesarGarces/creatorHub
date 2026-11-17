@@ -85,8 +85,10 @@ creator-hub/
 │   │   └── backend/          # NestJS controller + service
 │   ├── x-search-trends/      # X trend research with AI analysis
 │   ├── x-post-tweet/         # Tweet drafting with RAG style
-│   └── content-planner/      # Video production calendar (sessions + video projects)
-│       └── backend/          # NestJS controller + service (CRUD, overlap detection)
+│   ├── content-planner/      # Video production calendar (sessions + video projects)
+│   │   └── backend/          # NestJS controller + service (CRUD, overlap detection)
+│   └── video-clipper/        # AI Video Analyzer & Smart Clipper (video stays in the browser)
+│       └── backend/          # Vision-model analysis (keyframes → highlights/hooks/titles) + credits
 ├── agents/                   # Specialized agents
 │   └── chat-agent/           # Chat with dynamic tool routing
 └── skills/                   # System skills (see .agents/skills/)
@@ -1058,6 +1060,14 @@ GET    /api/v1/tools/content-planner/ai-plans/tools   # Platform tools a plan ca
 POST   /api/v1/tools/content-planner/ai-plans         # multipart: model, idea?, transcript?, platform?, publishDate?, language?, files[≤5] → SSE stage…done|error
 GET    /api/v1/tools/content-planner/ai-plans/:id     # A saved plan (owner only)
 # "Add to calendar": POST /projects with { aiPlanId, events[].toolAction }
+
+# AI Video Analyzer & Smart Clipper (browser-side video ≤ 250 MB; costs credits)
+GET    /api/v1/tools/video-clipper/limits             # Browser limits (250 MB, 32 keyframes), platforms, 10 GB roadmap
+GET    /api/v1/tools/video-clipper/estimate?model&frames  # Credits: vision model creditCost × ceil(frames / 12)
+POST   /api/v1/tools/video-clipper/analyses           # { model, video{fileName,durationSec,…}, frames[{timestamp,image}], platform?, language?, context? } → structured JSON
+GET    /api/v1/tools/video-clipper/analyses           # History (JSON results only — never the video)
+GET    /api/v1/tools/video-clipper/analyses/:id       # One analysis (owner only)
+DELETE /api/v1/tools/video-clipper/analyses/:id       # Delete an analysis
 
 # Community Bot
 GET    /api/v1/community-bot/config                # Get bot config

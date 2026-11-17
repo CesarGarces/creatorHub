@@ -63,6 +63,8 @@ import {
   ContentPlannerAiModule,
   ContentPlannerModule,
 } from "@creator-hub/content-planner-backend";
+import "@creator-hub/video-clipper";
+import { VideoClipperModule } from "@creator-hub/video-clipper-backend";
 
 // Redis storage for rate limiting: limits stay consistent across replicas
 // and restarts (in-memory storage would multiply the effective limit per
@@ -151,6 +153,8 @@ const throttlerStorage = process.env.REDIS_URL
     ContentPlannerAiModule,
     // "Your session starts soon" notifications
     ContentPlannerRemindersModule,
+    // AI Video Analyzer & Smart Clipper (browser-side video, vision AI)
+    VideoClipperModule,
   ],
   controllers: [
     AuthController,

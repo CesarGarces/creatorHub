@@ -52,7 +52,38 @@ export interface AIRequest {
   parameters?: Record<string, unknown>;
   userId?: string;
   toolId?: string;
+  /**
+   * Images sent with the prompt to vision (multimodal) models, in order.
+   * Only providers with `supportsImageInput` read them; check the model's
+   * `ModelMetadata.supportsVision` before sending.
+   */
+  images?: AIImageInput[];
 }
+
+// ──────────────────────────────────────────────
+// MULTIMODAL INPUT
+// ──────────────────────────────────────────────
+
+/** One image attached to a text-generation request. */
+export interface AIImageInput {
+  /** `data:image/...;base64,...` URL or a public https URL. */
+  url: string;
+  /** Text placed right before the image (e.g. "Frame 3 at 00:45"). */
+  caption?: string;
+  /** Vision detail hint for OpenAI-compatible APIs (default "auto"). */
+  detail?: "low" | "high" | "auto";
+}
+
+/** OpenAI-compatible chat content part (text or image). */
+export type AIChatContentPart =
+  | { type: "text"; text: string }
+  | {
+      type: "image_url";
+      image_url: { url: string; detail?: "low" | "high" | "auto" };
+    };
+
+/** Chat message content: plain text, or parts for multimodal messages. */
+export type AIChatMessageContent = string | AIChatContentPart[];
 
 export interface AIResponse {
   id: string;

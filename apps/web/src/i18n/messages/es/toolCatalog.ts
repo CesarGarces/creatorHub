@@ -30,6 +30,11 @@ export const toolCatalog: Messages["toolCatalog"] = {
     description:
       "Planifica y programa la producción de tus videos en un calendario",
   },
+  "video-clipper": {
+    name: "Analizador de video con IA y recortes inteligentes",
+    description:
+      "Encuentra momentos destacados, ganchos y títulos con IA y exporta clips cortos desde tu navegador",
+  },
   categories: {
     image: "Imagen",
     thumbnail: "Miniatura",

@@ -52,7 +52,23 @@ export interface AIRequest {
   parameters?: Record<string, unknown>;
   userId?: string;
   toolId?: string;
+  images?: AIImageInput[];
 }
+
+export interface AIImageInput {
+  url: string;
+  caption?: string;
+  detail?: "low" | "high" | "auto";
+}
+
+export type AIChatContentPart =
+  | { type: "text"; text: string }
+  | {
+      type: "image_url";
+      image_url: { url: string; detail?: "low" | "high" | "auto" };
+    };
+
+export type AIChatMessageContent = string | AIChatContentPart[];
 
 export interface AIResponse {
   id: string;

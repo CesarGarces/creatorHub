@@ -1,5 +1,6 @@
 import { AIProviderBase } from "./ai-provider.base";
 import type {
+  AIChatMessageContent,
   AIRequest,
   AIResponse,
   AITaskType,
@@ -7,6 +8,7 @@ import type {
   AIStreamChunk,
 } from "@creator-hub/shared-types";
 import type { ImageGenerationOptions } from "./provider.interface";
+import { buildUserMessageContent } from "./message-content";
 
 const SILICONFLOW_CHAT_URL = "https://api.siliconflow.com/v1/chat/completions";
 const SILICONFLOW_IMAGE_URL =
@@ -28,6 +30,8 @@ export class SiliconFlowProvider extends AIProviderBase {
     "THUDM/glm-4-plus",
   ];
   readonly tier = "free" as const;
+  /** SiliconFlow VLMs (e.g. Qwen2.5-VL, GLM-4.5V) read `request.images`. */
+  readonly supportsImageInput = true;
 
   async generate(request: AIRequest): Promise<AIResponse> {
     if (request.taskType === "text-generation") {
@@ -119,7 +123,7 @@ export class SiliconFlowProvider extends AIProviderBase {
     const maxTokens = (request.parameters?.maxTokens as number) ?? 4096;
     const systemPrompt = request.parameters?.systemPrompt as string | undefined;
 
-    const messages: Array<{ role: string; content: string }> = [];
+    const messages: Array<{ role: string; content: AIChatMessageContent }> = [];
 
     if (systemPrompt) {
       messages.push({ role: "system", content: systemPrompt });
@@ -132,7 +136,7 @@ export class SiliconFlowProvider extends AIProviderBase {
       messages.push(...conversationHistory);
     }
 
-    messages.push({ role: "user", content: request.prompt });
+    messages.push({ role: "user", content: buildUserMessageContent(request) });
 
     const response = await fetch(SILICONFLOW_CHAT_URL, {
       method: "POST",
@@ -186,7 +190,7 @@ export class SiliconFlowProvider extends AIProviderBase {
     const maxTokens = (request.parameters?.maxTokens as number) ?? 8000;
     const systemPrompt = request.parameters?.systemPrompt as string | undefined;
 
-    const messages: Array<{ role: string; content: string }> = [];
+    const messages: Array<{ role: string; content: AIChatMessageContent }> = [];
 
     if (systemPrompt) {
       messages.push({ role: "system", content: systemPrompt });
@@ -199,7 +203,7 @@ export class SiliconFlowProvider extends AIProviderBase {
       messages.push(...conversationHistory);
     }
 
-    messages.push({ role: "user", content: request.prompt });
+    messages.push({ role: "user", content: buildUserMessageContent(request) });
 
     const response = await fetch(SILICONFLOW_CHAT_URL, {
       method: "POST",

@@ -23,6 +23,11 @@ export interface AIProviderInterface {
   readonly supportedTasks: AITaskType[];
   readonly supportedModels: string[];
   readonly tier?: ProviderTier;
+  /**
+   * True when `generate()` forwards `AIRequest.images` to the model
+   * (multimodal chat). Providers without it ignore images.
+   */
+  readonly supportsImageInput?: boolean;
 
   generate(request: AIRequest): Promise<AIResponse>;
   generateImage(options: ImageGenerationOptions): Promise<AIResponse>;
