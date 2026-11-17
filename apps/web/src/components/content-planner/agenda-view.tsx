@@ -102,7 +102,7 @@ export function AgendaView({
                       className={cn(
                         "flex h-5 w-5 pointer-coarse:h-7 pointer-coarse:w-7 shrink-0 items-center justify-center rounded-full border transition-colors",
                         done
-                          ? "border-secondary bg-secondary text-white"
+                          ? "border-secondary bg-secondary text-primary-foreground"
                           : "border-border hover:border-primary",
                       )}
                     >

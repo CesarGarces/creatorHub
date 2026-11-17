@@ -119,7 +119,7 @@ export default function ToolsPage() {
               onClick={() => setActiveCategory(cat.id)}
               className={`flex-shrink-0 rounded-full px-4 py-1.5 pointer-coarse:py-2.5 text-sm font-medium transition-all duration-150 ${
                 activeCategory === cat.id
-                  ? "bg-primary text-white shadow-lg shadow-primary/20"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                   : "bg-surface-elevated text-text-muted hover:text-text border border-border hover:border-border/80"
               }`}
             >
@@ -163,18 +163,20 @@ export default function ToolsPage() {
             {upcomingTools.map((item) => (
               <div
                 key={item.nameKey}
-                className="rounded-xl border border-border bg-surface p-4 sm:p-5 opacity-60 cursor-not-allowed"
+                // Not available yet: dashed border, faded icon and quieter
+                // text — which still meets 4.5:1 (no whole-card opacity).
+                className="rounded-xl border border-dashed border-border bg-surface p-4 sm:p-5 cursor-not-allowed"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-surface-elevated text-lg">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-surface-elevated text-lg opacity-60 grayscale">
                       {item.icon}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-text">
+                      <h3 className="font-semibold text-text-muted">
                         {t(item.nameKey)}
                       </h3>
-                      <p className="text-sm text-text-muted">
+                      <p className="text-sm text-text-dim">
                         {t(item.descriptionKey)}
                       </p>
                     </div>

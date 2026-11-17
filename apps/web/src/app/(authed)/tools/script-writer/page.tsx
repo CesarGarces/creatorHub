@@ -257,7 +257,7 @@ export default function ScriptWriterPage() {
                       }}
                       aria-label={t("scriptWriter.deleteScript")}
                       title={t("scriptWriter.deleteScript")}
-                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 pointer-coarse:p-2.5 text-text-muted hover:text-red-500 transition-all p-1"
+                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 pointer-coarse:p-2.5 text-text-muted hover:text-red-400 transition-all p-1"
                     >
                       <svg
                         width="14"
@@ -440,7 +440,7 @@ export default function ScriptWriterPage() {
               messages.length > 0 &&
               messages[messages.length - 1]?.role === "user" && (
                 <div className="flex gap-4 max-w-3xl mx-auto">
-                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white text-sm">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm">
                     <svg
                       width="16"
                       height="16"
@@ -586,7 +586,7 @@ export default function ScriptWriterPage() {
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isGenerating}
                 aria-label={t("scriptWriter.send")}
-                className="order-first flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary sm:order-none text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="order-first flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary sm:order-none text-primary-foreground hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg
                   width="18"
@@ -634,7 +634,7 @@ function MessageBubble({ message }: { message: ScriptMessage }) {
           "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm",
           isUser
             ? "bg-surface-elevated text-text-muted"
-            : "bg-primary text-white",
+            : "bg-primary text-primary-foreground",
         )}
       >
         {isUser ? (
@@ -667,7 +667,7 @@ function MessageBubble({ message }: { message: ScriptMessage }) {
         className={cn(
           "min-w-0 rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 text-sm leading-relaxed max-w-[85%] sm:max-w-[80%]",
           isUser
-            ? "bg-primary text-white ml-auto"
+            ? "bg-primary text-primary-foreground ml-auto"
             : "bg-surface border border-border text-text",
         )}
       >

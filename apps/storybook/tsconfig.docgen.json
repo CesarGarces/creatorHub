@@ -1,0 +1,13 @@
+// Used only by react-docgen-typescript to read the props (types + JSDoc) of
+// every component that has stories, wherever it lives in the monorepo.
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "storybook-env.d.ts",
+    "../../packages/ui/src/**/*.tsx",
+    "../../packages/i18n/src/**/*.tsx",
+    "../web/src/components/**/*.tsx",
+    "../admin/src/components/**/*.tsx"
+  ],
+  "exclude": ["node_modules", "**/__tests__/**"]
+}

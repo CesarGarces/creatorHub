@@ -8,16 +8,16 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20",
+          "bg-primary text-primary-foreground hover:bg-primary-hover shadow-lg shadow-primary/20",
         secondary:
           "bg-surface-elevated text-text border border-border hover:bg-surface-elevated/80 hover:border-border/80",
         ghost:
           "bg-transparent text-text-muted hover:bg-surface-elevated hover:text-text",
         danger:
-          "bg-error text-white hover:bg-error/90 shadow-lg shadow-error/20",
+          "bg-error-solid text-white hover:bg-error-solid/90 shadow-lg shadow-error/20",
         outline:
           "bg-transparent text-text-muted border border-border hover:bg-surface-elevated hover:text-text hover:border-border/80",
-        glow: "bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20 animate-pulse-glow",
+        glow: "bg-primary text-primary-foreground hover:bg-primary-hover shadow-lg shadow-primary/20 animate-pulse-glow",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

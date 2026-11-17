@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import api from "@/lib/api";
+import { readableInk, readableOnDark } from "@/lib/contrast";
 import { toast } from "sonner";
 import { Check, X, Settings } from "lucide-react";
 import type { Mode, ToolWithModes } from "@/types";
@@ -125,7 +126,7 @@ export default function ToolsPage() {
                         className={`px-2 py-0.5 rounded ${
                           tool.status === "active"
                             ? "bg-green-500/10 text-green-500"
-                            : "bg-red-500/10 text-red-500"
+                            : "bg-red-500/10 text-red-400"
                         }`}
                       >
                         {tOptional(`tools.status.${tool.status}`, tool.status)}
@@ -152,7 +153,8 @@ export default function ToolsPage() {
                       className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium"
                       style={{
                         backgroundColor: (mode.color || "#6366f1") + "15",
-                        color: mode.color || "#6366f1",
+                        // Custom colours are lightened until readable.
+                        color: readableOnDark(mode.color || "#6366f1"),
                       }}
                     >
                       {mode.icon && <span>{mode.icon}</span>}
@@ -209,7 +211,9 @@ export default function ToolsPage() {
                       isSelected ? "border-primary bg-primary" : "border-border"
                     }`}
                   >
-                    {isSelected && <Check size={12} className="text-white" />}
+                    {isSelected && (
+                      <Check size={12} className="text-primary-foreground" />
+                    )}
                   </div>
 
                   {mode.icon ? (
@@ -219,7 +223,10 @@ export default function ToolsPage() {
                       className="w-8 h-8 rounded flex items-center justify-center"
                       style={{ backgroundColor: mode.color || "#6366f1" }}
                     >
-                      <span className="text-white text-xs font-bold">
+                      <span
+                        className="text-xs font-bold"
+                        style={{ color: readableInk(mode.color || "#6366f1") }}
+                      >
                         {mode.name.charAt(0)}
                       </span>
                     </div>
@@ -259,7 +266,7 @@ export default function ToolsPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={setModesMutation.isPending}
-                className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50 sm:min-h-0"
+                className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 sm:min-h-0"
               >
                 {setModesMutation.isPending
                   ? t("common.saving")

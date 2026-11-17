@@ -436,6 +436,7 @@ export default function ContentTranslatorPage() {
             </div>
             <div className="flex-1 relative">
               <textarea
+                aria-label={t("translator.sourceText")}
                 value={displayText}
                 onChange={(e) => {
                   if (!isListening) {
@@ -519,6 +520,7 @@ export default function ContentTranslatorPage() {
               )}
 
               <textarea
+                aria-label={t("translator.translation")}
                 value={outputText || ""}
                 readOnly
                 className="absolute inset-0 w-full h-full resize-none bg-transparent px-5 py-4 text-sm text-text outline-none"

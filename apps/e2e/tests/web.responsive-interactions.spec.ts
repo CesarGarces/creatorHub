@@ -286,6 +286,133 @@ test.describe("cards and buttons without hover · phone", () => {
     await snap(page, testInfo, "share modal over preview");
   });
 
+  test("asset preview: Instagram-style pinch lifts the image over a blurred page", async ({
+    page,
+  }, testInfo) => {
+    await page.goto("/assets");
+    await page
+      .locator("div.group")
+      .filter({ hasText: "Gaming thumbnail with neon lights" })
+      .first()
+      .locator("img")
+      .first()
+      .tap();
+    const preview = page.getByRole("dialog", {
+      name: "Gaming thumbnail with neon lights and a shocked face",
+    });
+    await expect(preview).toBeVisible();
+    const viewer = preview.getByRole("group", { name: "Image viewer" });
+    await expect(viewer).toHaveAttribute("data-zoom-scale", "1.00");
+    // No zoom buttons: the gesture is the interface.
+    for (const label of ["Zoom in", "Zoom out", "Reset zoom"]) {
+      await expect(page.getByRole("button", { name: label })).toHaveCount(0);
+    }
+    // One finger still scrolls; a pinch never zooms the page.
+    expect(
+      await viewer.evaluate((el) => getComputedStyle(el).touchAction),
+    ).toBe("pan-x pan-y");
+
+    // Measure once the opening animation has finished.
+    await page.evaluate(() =>
+      Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+          .map((a) => a.finished),
+      ),
+    );
+    const close = preview.getByRole("button", { name: "Close preview" });
+    const closeBefore = (await close.boundingBox())!;
+    const dialogBefore = (await preview.boundingBox())!;
+    const frame = (await viewer.boundingBox())!;
+    const cx = frame.x + frame.width / 2;
+    const cy = frame.y + frame.height / 2;
+
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (
+      type: "touchStart" | "touchMove" | "touchEnd",
+      points: { x: number; y: number }[],
+    ) =>
+      cdp.send("Input.dispatchTouchEvent", {
+        type,
+        touchPoints: points.map((p, id) => ({ ...p, id })),
+      });
+    const fingers = (gap: number) => [
+      { x: cx - gap, y: cy },
+      { x: cx + gap, y: cy },
+    ];
+    const layer = page.locator("[data-zoom-layer]");
+    const zoomed = layer.locator("img");
+    const backdrop = page.locator("[data-zoom-backdrop]");
+
+    // Two fingers spreading apart, still on the screen.
+    await touch("touchStart", fingers(20));
+    for (let gap = 25; gap <= 50; gap += 5) {
+      await touch("touchMove", fingers(gap));
+    }
+    await expect(viewer).toHaveAttribute("data-zooming", "true");
+    await expect
+      .poll(async () => Number(await viewer.getAttribute("data-zoom-scale")))
+      .toBeGreaterThan(2);
+    // The image grows past the dialog, over the whole screen…
+    const grown = (await zoomed.boundingBox())!;
+    expect(grown.width).toBeGreaterThan(dialogBefore.width);
+    expect(grown.x).toBeLessThan(dialogBefore.x);
+    // …above a blurred, dimmed page…
+    expect(await backdrop.evaluate((el) => getComputedStyle(el).opacity)).toBe(
+      "1",
+    );
+    expect(
+      await backdrop.evaluate((el) => getComputedStyle(el).backdropFilter),
+    ).toContain("blur");
+    // …while the original spot is left empty.
+    expect(
+      await viewer
+        .getByRole("img")
+        .evaluate((el) => getComputedStyle(el).opacity),
+    ).toBe("0");
+    // The page itself did not zoom or move.
+    expect(await page.evaluate(() => window.visualViewport?.scale ?? 1)).toBe(
+      1,
+    );
+    expect(await close.boundingBox()).toEqual(closeBefore);
+    expect(await preview.boundingBox()).toEqual(dialogBefore);
+    await snap(page, testInfo, "asset preview pinching");
+
+    // Moving both fingers drags the lifted image along.
+    await touch("touchMove", [
+      { x: cx - 50, y: cy + 60 },
+      { x: cx + 50, y: cy + 60 },
+    ]);
+    await expect
+      .poll(async () => (await zoomed.boundingBox())!.y)
+      .toBeGreaterThan(grown.y + 40);
+
+    // Releasing springs the image back and removes the blur.
+    await touch("touchEnd", []);
+    await expect(layer).toHaveCount(0);
+    await expect(viewer).not.toHaveAttribute("data-zooming");
+    await expect(viewer).toHaveAttribute("data-zoom-scale", "1.00");
+    expect(
+      await viewer
+        .getByRole("img")
+        .evaluate((el) => getComputedStyle(el).opacity),
+    ).toBe("1");
+    expect(await viewer.boundingBox()).toEqual(frame);
+    expect(await page.evaluate(() => window.visualViewport?.scale ?? 1)).toBe(
+      1,
+    );
+    await expect(close).toBeVisible();
+    await snap(page, testInfo, "asset preview released");
+
+    // A one-finger swipe on the image scrolls, it does not zoom.
+    await touch("touchStart", [{ x: cx, y: cy }]);
+    await touch("touchMove", [{ x: cx, y: cy - 30 }]);
+    await touch("touchEnd", []);
+    await expect(layer).toHaveCount(0);
+    await expect(viewer).toHaveAttribute("data-zoom-scale", "1.00");
+  });
+
   test("tool cards: favourites are thumb-sized and cards stay in the column", async ({
     page,
   }) => {

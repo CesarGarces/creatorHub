@@ -203,7 +203,9 @@ export function ChatWidget() {
       {/* Backdrop */}
       {isWidgetOpen && (
         <div
-          className="fixed inset-0 z-[90] bg-black/20 backdrop-blur-[2px] transition-opacity duration-200"
+          // Blur only from `sm` (side sheet): on phones the panel covers the
+          // screen, so a full-screen blur would cost paint time for nothing.
+          className="fixed inset-0 z-[90] bg-black/20 transition-opacity duration-200 sm:backdrop-blur-[2px]"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
         />
@@ -220,7 +222,9 @@ export function ChatWidget() {
         className={cn(
           "fixed right-0 top-[var(--app-vv-top,0px)] z-[95] flex h-[var(--app-vvh,100dvh)] w-full flex-col sm:max-w-[420px]",
           "pt-[env(safe-area-inset-top)] sm:pt-0",
-          "sm:border-l border-border/50 bg-surface/95 backdrop-blur-xl shadow-2xl shadow-black/10",
+          // Opaque full-screen panel on phones (no costly blur behind it);
+          // translucent, blurred side sheet from `sm`.
+          "sm:border-l border-border/50 bg-surface sm:bg-surface/95 sm:backdrop-blur-xl shadow-2xl shadow-black/10",
           "transition-[transform,visibility] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
           isWidgetOpen
             ? "translate-x-0 visible transition-transform"
@@ -437,7 +441,7 @@ export function ChatWidget() {
             }}
             className={cn(
               "group relative flex h-14 w-14 items-center justify-center rounded-full",
-              "bg-primary text-white shadow-lg shadow-primary/25",
+              "bg-primary text-primary-foreground shadow-lg shadow-primary/25",
               "transition-all duration-200 ease-out",
               "hover:scale-105 hover:shadow-xl hover:shadow-primary/30",
               "active:scale-95",
@@ -550,7 +554,7 @@ function ChatInput() {
           disabled={!input.trim() || isStreaming}
           className={cn(
             "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl",
-            "bg-primary text-white",
+            "bg-primary text-primary-foreground",
             "transition-all duration-150",
             "hover:bg-primary-hover",
             "disabled:opacity-40 disabled:cursor-not-allowed",
@@ -740,7 +744,7 @@ function MessageBubble({
         className={cn(
           "max-w-[85%] rounded-2xl px-3.5 py-2.5",
           message.role === "user"
-            ? "bg-primary text-white rounded-br-md"
+            ? "bg-primary text-primary-foreground rounded-br-md"
             : "bg-surface-elevated text-text rounded-bl-md",
         )}
       >
@@ -882,7 +886,7 @@ function ToolActionCard({
           }}
           className={cn(
             "flex w-full items-center justify-center gap-2 rounded-lg",
-            "bg-primary px-3 py-2 text-[12px] font-semibold text-white",
+            "bg-primary px-3 py-2 text-[12px] font-semibold text-primary-foreground",
             "transition-all hover:brightness-110 active:scale-[0.98]",
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
           )}

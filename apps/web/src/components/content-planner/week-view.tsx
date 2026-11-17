@@ -16,7 +16,11 @@ import {
 import { layoutDay } from "@/lib/content-planner/layout";
 import { resizeSession, type ResizeEdge } from "@/lib/content-planner/resize";
 import type { ContentEvent } from "@/lib/content-planner/types";
-import { eventStyle, statusClasses } from "./event-type-meta";
+import {
+  DIMMED_EVENT_CLASSES,
+  eventStyle,
+  statusClasses,
+} from "./event-type-meta";
 import { useEventTooltip } from "./event-tooltip";
 
 const HOUR_HEIGHT = 48; // px
@@ -264,7 +268,9 @@ export function WeekView({
                   <span
                     className={cn(
                       "mt-0.5 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold",
-                      isToday ? "bg-primary text-white" : "text-text",
+                      isToday
+                        ? "bg-primary text-primary-foreground"
+                        : "text-text",
                     )}
                   >
                     {day.getDate()}
@@ -404,7 +410,7 @@ export function WeekView({
                             "group absolute z-10 flex flex-col overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-left text-xs shadow-sm transition-[opacity,background-color] cursor-grab active:cursor-grabbing",
                             style.block,
                             statusClasses(event.status),
-                            dimmed && "opacity-25",
+                            dimmed && DIMMED_EVENT_CLASSES,
                             isResizing &&
                               "z-20 opacity-100 ring-2 ring-primary shadow-lg",
                             p.continuesBefore && "rounded-t-none",
@@ -429,7 +435,7 @@ export function WeekView({
                             <span className="truncate opacity-80">{range}</span>
                           )}
                           {height >= 56 && event.project && (
-                            <span className="truncate opacity-60">
+                            <span className="truncate opacity-80">
                               {event.project.title}
                             </span>
                           )}

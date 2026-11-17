@@ -49,7 +49,7 @@ export function ChatInput() {
           onClick={handleSubmit}
           disabled={!input.trim() || isStreaming}
           aria-label={t("chat.send")}
-          className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isStreaming ? (
             <svg

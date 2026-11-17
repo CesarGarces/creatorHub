@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { LOCALE_META } from "@creator-hub/i18n";
 import { VisualViewportObserver } from "@creator-hub/ui";
 import { Providers } from "./providers";
+import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { getRequestLocale } from "@/i18n/server";
 import { translate } from "@/i18n/translate";
 import "./globals.css";
@@ -39,6 +40,7 @@ export default async function RootLayout({
     <html lang={LOCALE_META[locale].intlLocale} suppressHydrationWarning>
       <body className="antialiased" suppressHydrationWarning>
         <VisualViewportObserver />
+        <WebVitalsReporter />
         <Providers initialLocale={locale}>{children}</Providers>
       </body>
     </html>

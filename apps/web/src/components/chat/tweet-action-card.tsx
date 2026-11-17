@@ -105,7 +105,7 @@ export function TweetActionCard({
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-semibold text-white hover:brightness-110 disabled:opacity-50"
+                  className="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-50"
                   disabled={isSaving || isOverLimit}
                 >
                   {isSaving ? t("chat.tweet.saving") : t("chat.tweet.save")}

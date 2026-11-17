@@ -1,4 +1,5 @@
 export const commandPalette = {
+  label: "Command palette",
   placeholder: "Search tools, agents, pages...",
   empty: "No results found.",
   groups: {

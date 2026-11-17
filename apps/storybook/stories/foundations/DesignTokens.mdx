@@ -1,0 +1,101 @@
+import {
+  Meta,
+  ColorPalette,
+  ColorItem,
+  Typeset,
+} from "@storybook/addon-docs/blocks";
+
+<Meta title="Foundations/Design tokens" />
+
+# Design tokens
+
+Defined once with Tailwind v4's `@theme` in each app's `globals.css`
+(`--color-*`, `--radius-*`, `--font-*`) and used through utilities such as
+`bg-surface`, `text-text-muted`, `border-border`, `rounded-xl`.
+
+<ColorPalette>
+  <ColorItem
+    title="Surfaces"
+    subtitle="bg · surface · surface-elevated · border"
+    colors={{
+      bg: "#0b0f19",
+      surface: "#121826",
+      "surface-elevated": "#1a2236",
+      border: "#1e293b",
+    }}
+  />
+  <ColorItem
+    title="Text"
+    subtitle="text · text-muted · text-dim"
+    colors={{ text: "#f1f5f9", "text-muted": "#94a3b8", "text-dim": "#8391a7" }}
+  />
+  <ColorItem
+    title="Brand & status"
+    subtitle="primary · secondary (success) · accent · warning · error"
+    colors={{
+      primary: "#00bbd9",
+      "primary-hover": "#009fb8",
+      secondary: "#22c55e",
+      accent: "#06b6d4",
+      warning: "#f59e0b",
+      error: "#f87171",
+    }}
+  />
+  <ColorItem
+    title="On filled surfaces"
+    subtitle="primary-foreground (text on bg-primary & bright gradients) · error-solid (bg behind white text)"
+    colors={{ "primary-foreground": "#0b0f19", "error-solid": "#dc2626" }}
+  />
+</ColorPalette>
+
+### Contrast (WCAG 2 AA, enforced)
+
+Every text token meets **4.5:1** on every surface (`bg`, `surface`,
+`surface-elevated` and the 10–20% status tints); axe checks it on every
+story and every app screen (`apps/e2e/fixtures/a11y.ts`).
+
+| Pair                                                   | Ratio           |
+| ------------------------------------------------------ | --------------- |
+| `text-dim` on `surface-elevated` · on the primary tint | 4.96:1 · 4.75:1 |
+| `text-muted` on `surface-elevated`                     | 6.18:1          |
+| `primary-foreground` on `primary`                      | 8.31:1          |
+| white on `error-solid`                                 | 4.83:1          |
+| `error` on its tint (`bg-error-light`)                 | 5.9:1           |
+
+- White text on `bg-primary` (2.3:1) fails — use `text-primary-foreground`.
+- Don't dim readable text with `opacity-*` (cards "coming soon", inactive
+  rows, done sessions): use a quieter token, `grayscale`, dashed borders or
+  line-through instead. Only disabled controls may fade.
+- On dark tints use the `-400` shades (`text-red-400`, `text-blue-400`,
+  `text-purple-400`); `-500` drops under 4.5:1.
+- Links inside text are underlined (colour alone is not enough).
+
+## Typography
+
+Inter (`font-sans`) for the interface, JetBrains Mono (`font-mono`) for ids
+and code.
+
+<Typeset
+  fontFamily="Inter, ui-sans-serif, system-ui, sans-serif"
+  fontSizes={[12, 14, 16, 18, 20, 24, 30]}
+  fontWeight={500}
+  sampleText="Create once, publish everywhere"
+/>
+
+## Radii
+
+| Token         | Value | Typical use            |
+| ------------- | ----- | ---------------------- |
+| `rounded-md`  | 8px   | Small buttons, inputs  |
+| `rounded-lg`  | 12px  | Buttons, fields, menus |
+| `rounded-xl`  | 16px  | Cards, dialogs, tables |
+| `rounded-2xl` | 1rem  | Chat bubbles, previews |
+
+## Layers (z-index)
+
+| Layer                                | z-index       |
+| ------------------------------------ | ------------- |
+| Chat backdrop / panel / button (web) | 90 / 95 / 100 |
+| Navigation drawer backdrop / drawer  | 105 / 110     |
+| Asset preview / share modal (web)    | 120 / 130     |
+| Dialogs, popovers, dropdowns         | 99999         |

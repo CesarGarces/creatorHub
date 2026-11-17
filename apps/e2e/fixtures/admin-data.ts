@@ -196,6 +196,12 @@ export function adminApiRoutes(): Record<string, unknown> {
       ],
     },
     "GET /admin/models": listModels,
+    // The "Configure" dialog loads one model.
+    "GET /admin/models/m-1": {
+      ...ADMIN_MODELS[0],
+      description: "Fast, low-cost general model.",
+      tags: ["chat", "fast"],
+    },
     "/admin/models/stats": {
       total: 45,
       active: 38,

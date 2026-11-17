@@ -120,7 +120,7 @@ export default function HistoryPage() {
                 aria-pressed={timeFilter === f}
                 className={`px-4 py-1.5 pointer-coarse:py-2.5 text-sm font-medium transition-colors max-sm:flex-1 ${
                   timeFilter === f
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "bg-surface-elevated text-text-muted hover:bg-surface-elevated/80"
                 }`}
               >

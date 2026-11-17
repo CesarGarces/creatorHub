@@ -8,6 +8,7 @@ export default [
       "**/node_modules/**",
       "**/dist/**",
       "**/.next/**",
+      "**/storybook-static/**",
       "**/coverage/**",
       "**/*.d.ts",
     ],

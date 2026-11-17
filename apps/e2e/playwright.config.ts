@@ -2,8 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * End-to-end tests for the three Next.js apps, run against their
- * production builds (`pnpm build` first — `pnpm e2e` from the repo root does
- * it through Turbo). The backend is mocked per test (see fixtures/), so no
+ * production builds, plus the static Storybook build (`pnpm build` first —
+ * `pnpm e2e` from the repo root does it through Turbo). The backend is mocked per test (see fixtures/), so no
  * API, database or Redis is needed.
  *
  * Browser: Playwright's bundled Chromium (`pnpm --filter @creator-hub/e2e
@@ -14,17 +14,19 @@ export const PORTS = {
   web: Number(process.env.E2E_WEB_PORT ?? 3100),
   landing: Number(process.env.E2E_LANDING_PORT ?? 3102),
   admin: Number(process.env.E2E_ADMIN_PORT ?? 3103),
+  storybook: Number(process.env.E2E_STORYBOOK_PORT ?? 3106),
 } as const;
 
 export const URLS = {
   web: `http://localhost:${PORTS.web}`,
   landing: `http://localhost:${PORTS.landing}`,
   admin: `http://localhost:${PORTS.admin}`,
+  storybook: `http://localhost:${PORTS.storybook}`,
 } as const;
 
 const executablePath = process.env.E2E_CHROMIUM_PATH || undefined;
 
-const server = (app: keyof typeof PORTS) => ({
+const server = (app: Exclude<keyof typeof PORTS, "storybook">) => ({
   command: `npx next start -p ${PORTS[app]}`,
   cwd: `../${app}`,
   url: URLS[app],
@@ -80,6 +82,22 @@ export default defineConfig({
       name: "cross-app",
       testMatch: /cross-app\..*\.spec\.ts/,
     },
+    {
+      // The static Storybook build (apps/storybook/storybook-static).
+      name: "storybook",
+      testMatch: /storybook\..*\.spec\.ts/,
+      use: { baseURL: URLS.storybook },
+    },
   ],
-  webServer: [server("web"), server("landing"), server("admin")],
+  webServer: [
+    server("web"),
+    server("landing"),
+    server("admin"),
+    {
+      command: `node scripts/serve-static.mjs ../storybook/storybook-static ${PORTS.storybook}`,
+      url: URLS.storybook,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+  ],
 });

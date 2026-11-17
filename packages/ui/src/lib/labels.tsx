@@ -25,6 +25,13 @@ export interface UiLabels {
   formatCreditsShort: (balance: number) => string;
   /** Display name for a tool status badge ("beta", "inactive"...). */
   formatToolStatus: (status: string) => string;
+  /** <ZoomableImage> texts. */
+  imageViewer: {
+    /** Accessible name of the viewer, e.g. "Image viewer". */
+    label: string;
+    /** Instructions for screen readers and the tooltip. */
+    hint: string;
+  };
   cookieConsent: {
     ariaLabel: string;
     message: string;
@@ -44,6 +51,10 @@ export const DEFAULT_UI_LABELS: UiLabels = {
   formatCredits: (balance) => `${balance.toLocaleString()} credits`,
   formatCreditsShort: (balance) => `${balance.toLocaleString()} cr`,
   formatToolStatus: (status) => status,
+  imageViewer: {
+    label: "Image viewer",
+    hint: "Pinch the image to zoom in. Release to go back.",
+  },
   cookieConsent: {
     ariaLabel: "Cookie consent",
     message:

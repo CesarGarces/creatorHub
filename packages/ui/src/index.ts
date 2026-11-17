@@ -107,6 +107,8 @@ export { CreditDisplay } from "./components/credit-display";
 export { EmptyState } from "./components/empty-state";
 export { Tooltip } from "./components/tooltip";
 export { BorderGlow } from "./components/border-glow";
+export { ZoomableImage } from "./components/zoomable-image";
+export type { ZoomableImageProps } from "./components/zoomable-image";
 
 // Tool-specific
 export { ToolCard } from "./components/tool-card";

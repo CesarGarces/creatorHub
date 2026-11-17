@@ -182,7 +182,7 @@ export default function XPostTweetPage() {
             </p>
             <button
               onClick={() => router.push("/credits")}
-              className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white hover:bg-primary-hover transition-colors"
+              className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover transition-colors"
             >
               {t("xPost.upgradePlan")}
             </button>
@@ -436,8 +436,8 @@ export default function XPostTweetPage() {
                             session.status === "PUBLISHED"
                               ? "bg-green-500/10 text-green-500"
                               : session.status === "FAILED"
-                                ? "bg-red-500/10 text-red-500"
-                                : "bg-blue-500/10 text-blue-500",
+                                ? "bg-red-500/10 text-red-400"
+                                : "bg-blue-500/10 text-blue-400",
                           )}
                         >
                           {tOptional(
@@ -457,7 +457,7 @@ export default function XPostTweetPage() {
                       }}
                       aria-label={t("xPost.deleteDraft")}
                       title={t("xPost.deleteDraft")}
-                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 pointer-coarse:p-2.5 text-text-muted hover:text-red-500 transition-all p-1"
+                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 pointer-coarse:p-2.5 text-text-muted hover:text-red-400 transition-all p-1"
                     >
                       <svg
                         width="14"
@@ -529,7 +529,7 @@ export default function XPostTweetPage() {
                   className={cn(
                     "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm",
                     msg.role === "assistant"
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-surface-elevated text-text-muted",
                   )}
                 >
@@ -540,7 +540,7 @@ export default function XPostTweetPage() {
                     "min-w-0 rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 text-sm leading-relaxed max-w-[85%] sm:max-w-[80%]",
                     msg.role === "assistant"
                       ? "bg-surface border border-border text-text"
-                      : "bg-primary text-white ml-auto",
+                      : "bg-primary text-primary-foreground ml-auto",
                   )}
                 >
                   <div
@@ -568,7 +568,7 @@ export default function XPostTweetPage() {
 
             {isStreaming && (
               <div className="flex gap-4 max-w-3xl mx-auto">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white text-sm">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm">
                   🤖
                 </div>
                 <div className="rounded-2xl px-5 py-3.5 bg-surface border border-border">
@@ -673,7 +673,7 @@ export default function XPostTweetPage() {
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isStreaming}
                 aria-label={t("xPost.send")}
-                className="order-first flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary sm:order-none text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="order-first flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary sm:order-none text-primary-foreground hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg
                   width="18"
@@ -731,7 +731,7 @@ function TweetDraftCard({
           <span
             className={cn(
               "text-xs",
-              isOverLimit ? "text-red-500" : "text-text-muted",
+              isOverLimit ? "text-red-400" : "text-text-muted",
             )}
           >
             {charCount}/280
@@ -749,7 +749,7 @@ function TweetDraftCard({
             <button
               onClick={handleSave}
               disabled={isOverLimit}
-              className="rounded-lg bg-primary px-3 py-1.5 pointer-coarse:min-h-10 text-xs text-white hover:bg-primary-hover disabled:opacity-50 transition-colors"
+              className="rounded-lg bg-primary px-3 py-1.5 pointer-coarse:min-h-10 text-xs text-primary-foreground hover:bg-primary-hover disabled:opacity-50 transition-colors"
             >
               {t("xPost.save")}
             </button>
@@ -777,10 +777,10 @@ function TweetDraftCard({
             onClick={onPublish}
             disabled={isPublishing || draft.status === "PUBLISHED"}
             className={cn(
-              "rounded-lg px-3 py-1.5 pointer-coarse:min-h-10 text-xs text-white transition-colors",
+              "rounded-lg px-3 py-1.5 pointer-coarse:min-h-10 text-xs transition-colors",
               draft.status === "PUBLISHED"
-                ? "bg-green-600 cursor-default"
-                : "bg-primary hover:bg-primary-hover disabled:opacity-50",
+                ? "bg-green-700 text-white cursor-default"
+                : "bg-primary text-primary-foreground hover:bg-primary-hover disabled:opacity-50",
             )}
           >
             {draft.status === "PUBLISHED"

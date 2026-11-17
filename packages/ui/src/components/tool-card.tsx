@@ -39,8 +39,10 @@ export function ToolCard({
         "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5",
         "active:scale-[0.98] active:shadow-md",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+        // Inactive: dashed border, faded icon and quieter (still 4.5:1) text
+        // — no whole-card opacity, the text must stay readable.
         isInactive &&
-          "opacity-50 cursor-not-allowed hover:translate-y-0 hover:shadow-none hover:border-border hover:scale-100 active:scale-100",
+          "border-dashed cursor-not-allowed hover:translate-y-0 hover:shadow-none hover:border-border hover:scale-100 active:scale-100",
         !isInactive && "cursor-pointer",
       )}
       onClick={isInactive ? undefined : onClick}
@@ -60,14 +62,31 @@ export function ToolCard({
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 text-lg transition-all duration-200 group-hover:from-primary/25 group-hover:to-primary/10 group-hover:scale-105">
+            <div
+              className={cn(
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 text-lg transition-all duration-200",
+                isInactive
+                  ? "opacity-60 grayscale"
+                  : "group-hover:from-primary/25 group-hover:to-primary/10 group-hover:scale-105",
+              )}
+            >
               {icon || "🔧"}
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-text truncate">
+              <h3
+                className={cn(
+                  "text-sm font-semibold truncate",
+                  isInactive ? "text-text-muted" : "text-text",
+                )}
+              >
                 {name}
               </h3>
-              <p className="text-xs text-text-muted line-clamp-1 mt-0.5">
+              <p
+                className={cn(
+                  "text-xs line-clamp-1 mt-0.5",
+                  isInactive ? "text-text-dim" : "text-text-muted",
+                )}
+              >
                 {description}
               </p>
             </div>

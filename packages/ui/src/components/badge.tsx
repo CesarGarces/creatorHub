@@ -37,9 +37,10 @@ export function Badge({
           "bg-warning-light text-warning": variant === "warning",
           "bg-transparent border border-border text-text-muted":
             variant === "outline",
-          "bg-gradient-to-r from-amber-500 to-orange-500 text-white":
+          // Dark text: white on these bright gradients is under 3:1.
+          "bg-gradient-to-r from-amber-500 to-orange-500 text-primary-foreground":
             variant === "premium",
-          "bg-gradient-to-r from-emerald-500 to-teal-500 text-white":
+          "bg-gradient-to-r from-emerald-500 to-teal-500 text-primary-foreground":
             variant === "free",
         },
         className,

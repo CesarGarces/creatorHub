@@ -39,6 +39,9 @@ export function ActionConfirmDialog({
   icon,
 }: ActionConfirmDialogProps) {
   const labels = useUiLabels();
+  // The dialog is named by its title and described by its description.
+  const titleId = React.useId();
+  const descriptionId = React.useId();
   const mounted = React.useSyncExternalStore(
     () => () => {},
     () => true,
@@ -70,6 +73,8 @@ export function ActionConfirmDialog({
       <div
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
         style={{
           position: "fixed",
           top: "50%",
@@ -116,6 +121,7 @@ export function ActionConfirmDialog({
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <h3
+              id={titleId}
               style={{
                 fontSize: "1.125rem",
                 fontWeight: 600,
@@ -127,6 +133,7 @@ export function ActionConfirmDialog({
             </h3>
             {description && (
               <p
+                id={descriptionId}
                 style={{
                   marginTop: "0.25rem",
                   fontSize: "0.875rem",

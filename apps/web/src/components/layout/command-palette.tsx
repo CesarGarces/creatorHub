@@ -156,7 +156,11 @@ export function CommandPalette({
   };
 
   return (
-    <CommandDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <CommandDialog
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      label={t("commandPalette.label")}
+    >
       {/* Focused on open: ⌘K / Ctrl+K then type. */}
       <CommandInput autoFocus placeholder={t("commandPalette.placeholder")} />
       <CommandList>

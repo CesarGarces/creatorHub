@@ -24,13 +24,16 @@ Command.displayName = CommandPrimitive.displayName;
 interface CommandDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Accessible name of the dialog (it has no visible title), e.g. "Command palette". */
+  label?: string;
   children: React.ReactNode;
 }
 
-const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
+const CommandDialog = ({ children, label, ...props }: CommandDialogProps) => {
   return (
     <Dialog {...props}>
       <DialogContent
+        aria-label={label}
         style={{
           width: "min(640px, calc(100vw - 1.5rem))",
           // Shrinks with the visible viewport (on-screen keyboard open).
@@ -114,6 +117,9 @@ const CommandSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Separator
     ref={ref}
+    // Decorative line. cmdk gives it role="separator", which a listbox may
+    // not contain — hidden from assistive tech (groups already separate).
+    aria-hidden="true"
     className={cn("-mx-1 my-1 h-px bg-border", className)}
     {...props}
   />

@@ -193,7 +193,7 @@ export default function SettingsPage() {
           <CardContent>
             <div className="flex flex-col items-center text-center">
               <div className="relative">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-white text-2xl font-bold">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground text-2xl font-bold">
                   {displayName[0]?.toUpperCase()}
                 </div>
                 <button
@@ -218,9 +218,9 @@ export default function SettingsPage() {
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                     planVariants[plan] === "free"
-                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-primary-foreground"
                       : planVariants[plan] === "premium"
-                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-primary-foreground"
                         : "bg-primary-light text-primary"
                   }`}
                 >

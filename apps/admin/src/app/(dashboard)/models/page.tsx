@@ -304,41 +304,36 @@ export default function ModelsPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      {stats && (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-4">
-          <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-xs font-medium text-text-dim">
-              {t("models.stats.total")}
-            </p>
-            <p className="text-2xl font-bold text-text">{stats.total}</p>
-          </div>
-          <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-xs font-medium text-text-dim">
-              {t("models.stats.active")}
-            </p>
-            <p className="text-2xl font-bold text-emerald-600">
-              {stats.active}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-xs font-medium text-text-dim">
-              {t("models.stats.image")}
-            </p>
-            <p className="text-2xl font-bold text-purple-600">
-              {stats.byTaskType["image-generation"] ?? 0}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-xs font-medium text-text-dim">
-              {t("models.stats.text")}
-            </p>
-            <p className="text-2xl font-bold text-blue-600">
-              {stats.byTaskType["text-generation"] ?? 0}
+      {/* Stats: always laid out ("—" until they load) so the filters and
+          the table below never jump when the numbers arrive (CLS). */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-4">
+        {[
+          [t("models.stats.total"), stats?.total, "text-text"],
+          [t("models.stats.active"), stats?.active, "text-emerald-600"],
+          [
+            t("models.stats.image"),
+            stats ? (stats.byTaskType["image-generation"] ?? 0) : undefined,
+            "text-purple-600",
+          ],
+          [
+            t("models.stats.text"),
+            stats ? (stats.byTaskType["text-generation"] ?? 0) : undefined,
+            "text-blue-600",
+          ],
+        ].map(([label, value, color]) => (
+          <div
+            key={label as string}
+            className="rounded-xl border border-border bg-surface p-4"
+          >
+            <p className="text-xs font-medium text-text-dim">{label}</p>
+            <p
+              className={`text-2xl font-bold ${value === undefined ? "text-text-dim" : color}`}
+            >
+              {value ?? "—"}
             </p>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
       {/* Filters: full-width search, then a 2-column grid on phones. */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:flex lg:flex-wrap lg:items-center">
@@ -518,8 +513,12 @@ export default function ModelsPage() {
                 models.map((model) => (
                   <tr
                     key={model.id}
+                    // Inactive: darker row and quieter names (plus the
+                    // "Inactive" badge) — no opacity, so text keeps 4.5:1.
                     className={`hover:bg-surface-elevated/30 ${
-                      !model.isActive ? "opacity-60" : ""
+                      !model.isActive
+                        ? "bg-bg/60 [&_.text-text]:text-text-muted"
+                        : ""
                     }`}
                   >
                     <td

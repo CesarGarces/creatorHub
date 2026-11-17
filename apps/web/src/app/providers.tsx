@@ -26,6 +26,10 @@ function LocalizedUiLabels({ children }: { children: React.ReactNode }) {
         t("common.credits.short", { count: balance }),
       formatToolStatus: (status: string) =>
         tOptional(`ui.toolStatus.${status}`, status),
+      imageViewer: {
+        label: t("ui.imageViewer.label"),
+        hint: t("ui.imageViewer.hint"),
+      },
       cookieConsent: {
         ariaLabel: t("cookieConsent.ariaLabel"),
         message: t("cookieConsent.message"),

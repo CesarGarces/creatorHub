@@ -7,7 +7,9 @@ const nextConfig = {
     "@creator-hub/ui",
   ],
   experimental: {
-    optimizePackageImports: ["lucide-react"],
+    // Barrel imports of the shared UI resolve to the modules actually used,
+    // so each page ships only its components.
+    optimizePackageImports: ["lucide-react", "@creator-hub/ui"],
   },
 };
 

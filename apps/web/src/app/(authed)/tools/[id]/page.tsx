@@ -391,7 +391,7 @@ export default function ThumbnailGeneratorPage() {
                     onClick={() => setSourceImageUrl(null)}
                     disabled={isProcessing}
                     aria-label={t("toolShared.removeImage")}
-                    className="absolute top-2 right-2 p-1.5 pointer-coarse:p-2.5 rounded-full bg-error/80 text-white opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                    className="absolute top-2 right-2 p-1.5 pointer-coarse:p-2.5 rounded-full bg-error-solid/80 text-white opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
                   >
                     <svg
                       width="14"

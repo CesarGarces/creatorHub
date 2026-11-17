@@ -119,17 +119,19 @@ export default function AgentsPage() {
             {upcomingAgents.map((agent) => (
               <div
                 key={agent.nameKey}
-                className="rounded-xl border border-border bg-surface p-4 sm:p-6 opacity-60"
+                // Not available yet: dashed border, faded icon and quieter
+                // text — which still meets 4.5:1 (no whole-card opacity).
+                className="rounded-xl border border-dashed border-border bg-surface p-4 sm:p-6"
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl bg-surface-elevated text-2xl sm:text-3xl">
+                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl bg-surface-elevated text-2xl sm:text-3xl opacity-60 grayscale">
                     {agent.icon}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-text">
+                    <h3 className="font-semibold text-text-muted">
                       {t(agent.nameKey)}
                     </h3>
-                    <p className="mt-1 text-sm text-text-muted">
+                    <p className="mt-1 text-sm text-text-dim">
                       {t(agent.descriptionKey)}
                     </p>
                     <Badge variant="outline" size="sm" className="mt-3">

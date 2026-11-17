@@ -1,0 +1,40 @@
+{
+  "name": "@creator-hub/storybook",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Storybook for the shared UI (@creator-hub/ui, @creator-hub/i18n) and the web/admin app components. Tailwind CSS v4, dark mode, TypeScript and responsive viewports.",
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build": "storybook build -o storybook-static --quiet",
+    "test": "vitest --run",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.admin.json"
+  },
+  "dependencies": {
+    "@creator-hub/i18n": "workspace:*",
+    "@creator-hub/shared-types": "workspace:*",
+    "@creator-hub/ui": "workspace:*",
+    "lucide-react": "^0.400.0",
+    "next": "^16.2.10",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@storybook/addon-a11y": "10.6.5",
+    "@storybook/addon-docs": "10.6.5",
+    "@storybook/addon-themes": "10.6.5",
+    "@storybook/nextjs-vite": "10.6.5",
+    "@tailwindcss/vite": "4.3.2",
+    "@types/node": "^20.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "storybook": "10.6.5",
+    "tailwindcss": "^4.3.2",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.5.0",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.6"
+  }
+}

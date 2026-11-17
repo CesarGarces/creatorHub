@@ -51,9 +51,12 @@ export function Avatar({
   return (
     <div
       className={cn(
-        "rounded-full flex items-center justify-center font-medium text-white",
+        "rounded-full flex items-center justify-center font-medium",
         sizeClasses[size],
-        name ? stringToColor(name) : "bg-surface-elevated",
+        // Dark initials on the bright primary (8.3:1); light on the fallback.
+        name
+          ? cn(stringToColor(name), "text-primary-foreground")
+          : "bg-surface-elevated text-text",
         className,
       )}
     >

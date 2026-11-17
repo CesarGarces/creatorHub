@@ -6,7 +6,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Trash2, Share2, Globe, Lock } from "lucide-react";
 import api from "@/lib/api";
-import { Button, EmptyState, ActionConfirmDialog } from "@creator-hub/ui";
+import {
+  Button,
+  EmptyState,
+  ActionConfirmDialog,
+  ZoomableImage,
+} from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { AssetLikeButton } from "@/components/asset-like-button";
 import { ShareModal } from "@/components/share-modal";
@@ -152,7 +157,7 @@ export default function AssetsPage() {
               onClick={() => handleFilterChange(tab.id)}
               className={`rounded-full px-4 py-1.5 pointer-coarse:py-2.5 text-sm font-medium transition-all cursor-pointer ${
                 assetFilter === tab.id
-                  ? "bg-primary text-white shadow-lg shadow-primary/20"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                   : "bg-surface-elevated text-text-muted hover:text-text border border-border hover:border-border/80"
               }`}
             >
@@ -236,7 +241,7 @@ export default function AssetsPage() {
                     )}
                     {/* Public indicator */}
                     {asset.isPublic && (
-                      <div className="absolute top-2 right-2 px-2 py-1 bg-green-500/90 text-white text-[10px] font-medium rounded-full flex items-center gap-1">
+                      <div className="absolute top-2 right-2 px-2 py-1 bg-green-700 text-white text-[10px] font-medium rounded-full flex items-center gap-1">
                         <Globe size={10} />
                         {t("assets.public")}
                       </div>
@@ -459,10 +464,12 @@ export default function AssetsPage() {
                   })}
                 />
               ) : (
-                <img
+                // Pinch lifts the image over a blurred page (Instagram-style).
+                <ZoomableImage
                   src={selectedAsset.url}
                   alt={selectedAsset.prompt}
-                  className="max-w-full max-h-[50dvh] sm:max-h-[70vh] object-contain rounded-lg"
+                  containerClassName="rounded-lg"
+                  className="max-w-full max-h-[50dvh] sm:max-h-[70vh] object-contain"
                 />
               )}
             </div>

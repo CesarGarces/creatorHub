@@ -64,7 +64,7 @@ export function AssetLikeButton({
         flex items-center justify-center rounded-xl font-medium transition-all duration-200
         ${
           isLiked
-            ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+            ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
             : "bg-surface-elevated text-text-muted hover:bg-surface-elevated/80 hover:text-text"
         }
         ${sizeClasses[size]}

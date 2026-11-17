@@ -23,13 +23,19 @@
     "NEXT_PUBLIC_SENTRY_DSN",
     "NEXT_PUBLIC_SENTRY_ENVIRONMENT",
     "NEXT_PUBLIC_SENTRY_RELEASE",
+    "NEXT_PUBLIC_WEB_VITALS_ENDPOINT",
     "COMMUNITY_BOT_ENCRYPTION_KEY",
     "COMMUNITY_WORKER_HEALTH_TOKEN"
   ],
   "tasks": {
     "build": {
       "dependsOn": ["db:generate", "^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": [
+        "dist/**",
+        ".next/**",
+        "!.next/cache/**",
+        "storybook-static/**"
+      ]
     },
     "dev": {
       "dependsOn": ["db:generate", "^build"],
@@ -69,7 +75,8 @@
       "dependsOn": [
         "@creator-hub/web#build",
         "@creator-hub/landing#build",
-        "@creator-hub/admin#build"
+        "@creator-hub/admin#build",
+        "@creator-hub/storybook#build"
       ],
       "passThroughEnv": ["CI", "E2E_*"],
       "outputs": ["playwright-report/**", "test-results/**", "artifacts/**"],

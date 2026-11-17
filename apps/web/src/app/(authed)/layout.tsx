@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { useCreditsStore } from "@/store/credits.store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { AppShellSkeleton } from "@/components/layout/app-shell-skeleton";
 import { useSocketEvents } from "@/hooks/use-socket-events";
 import { useBackgroundPolling } from "@/hooks/use-background-polling";
 import { useSessionValidator } from "@/hooks/use-session-validator";
@@ -44,8 +45,11 @@ export default function AuthedLayout({
     }
   }, [isHydrated, user, router]);
 
-  if (!isHydrated || !user) return null;
-  if (!user.emailVerified) return null;
+  // Until the session is restored (and while redirecting away), the server-
+  // rendered shell skeleton keeps the first paint instant and the layout
+  // stable — instead of a blank page.
+  if (!isHydrated || !user) return <AppShellSkeleton />;
+  if (!user.emailVerified) return <AppShellSkeleton />;
 
   return <DashboardLayout>{children}</DashboardLayout>;
 }

@@ -90,7 +90,7 @@ export default function ModesPage() {
             setEditingMode(null);
             setIsCreateMode(true);
           }}
-          className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors sm:min-h-0"
+          className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors sm:min-h-0"
         >
           <Plus size={18} />
           {t("modes.add")}
@@ -122,7 +122,7 @@ export default function ModesPage() {
                   className={`px-2 py-1 rounded text-xs font-medium ${
                     mode.isActive
                       ? "bg-green-500/10 text-green-500"
-                      : "bg-red-500/10 text-red-500"
+                      : "bg-red-500/10 text-red-400"
                   }`}
                 >
                   {mode.isActive ? t("common.active") : t("common.inactive")}
@@ -194,7 +194,7 @@ export default function ModesPage() {
                   onClick={() => setDeleteDialog({ isOpen: true, mode })}
                   aria-label={t("modes.deleteAria", { name: mode.name })}
                   title={t("modes.deleteAria", { name: mode.name })}
-                  className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors sm:min-h-0 sm:min-w-0"
+                  className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors sm:min-h-0 sm:min-w-0"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -400,7 +400,7 @@ function ModeForm({
         <button
           type="submit"
           disabled={isLoading}
-          className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50 sm:min-h-0"
+          className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 sm:min-h-0"
         >
           {isLoading
             ? t("common.saving")

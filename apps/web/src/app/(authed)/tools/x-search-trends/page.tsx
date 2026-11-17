@@ -136,7 +136,7 @@ export default function XSearchTrendsPage() {
             </p>
             <button
               onClick={() => router.push("/credits")}
-              className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white hover:bg-primary-hover transition-colors"
+              className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover transition-colors"
             >
               {t("xResearch.upgradePlan")}
             </button>
@@ -179,7 +179,7 @@ export default function XSearchTrendsPage() {
       case "positive":
         return "text-green-500";
       case "negative":
-        return "text-red-500";
+        return "text-red-400";
       default:
         return "text-text-muted";
     }
@@ -206,7 +206,7 @@ export default function XSearchTrendsPage() {
         );
       case "medium":
         return (
-          <span className="inline-flex items-center gap-0.5 text-[10px] bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded-full">
+          <span className="inline-flex items-center gap-0.5 text-[10px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded-full">
             {t("xResearch.active")}
           </span>
         );
@@ -311,7 +311,7 @@ export default function XSearchTrendsPage() {
                       }}
                       aria-label={t("xResearch.deleteSearch")}
                       title={t("xResearch.deleteSearch")}
-                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 pointer-coarse:p-2.5 text-text-muted hover:text-red-500 transition-all p-1"
+                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 pointer-coarse:p-2.5 text-text-muted hover:text-red-400 transition-all p-1"
                     >
                       <svg
                         width="14"
@@ -381,7 +381,7 @@ export default function XSearchTrendsPage() {
                   className={cn(
                     "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm",
                     msg.role === "assistant"
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-surface-elevated text-text-muted",
                   )}
                 >
@@ -392,7 +392,7 @@ export default function XSearchTrendsPage() {
                     "min-w-0 rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 text-sm leading-relaxed max-w-[85%]",
                     msg.role === "assistant"
                       ? "bg-surface border border-border text-text"
-                      : "bg-primary text-white ml-auto",
+                      : "bg-primary text-primary-foreground ml-auto",
                   )}
                 >
                   <div
@@ -429,7 +429,7 @@ export default function XSearchTrendsPage() {
                                     ? "bg-green-500/10 text-green-500"
                                     : msg.resultData.analysis
                                           .overallSentiment === "negative"
-                                      ? "bg-red-500/10 text-red-500"
+                                      ? "bg-red-500/10 text-red-400"
                                       : "bg-gray-500/10 text-gray-500",
                                 )}
                               >
@@ -469,7 +469,7 @@ export default function XSearchTrendsPage() {
                             </span>
                           )}
                           {msg.resultData.fromCache && (
-                            <span className="text-xs bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full">
+                            <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full">
                               {t("xResearch.fromCache")}
                             </span>
                           )}
@@ -494,7 +494,7 @@ export default function XSearchTrendsPage() {
                                         theme.sentiment === "positive"
                                           ? "bg-green-500/10 text-green-500"
                                           : theme.sentiment === "negative"
-                                            ? "bg-red-500/10 text-red-500"
+                                            ? "bg-red-500/10 text-red-400"
                                             : "bg-surface-elevated text-text-muted",
                                       )}
                                     >
@@ -617,7 +617,7 @@ export default function XSearchTrendsPage() {
 
             {error && (
               <div className="flex gap-4 max-w-4xl mx-auto">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-500 text-sm">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-400 text-sm">
                   ⚠️
                 </div>
                 <div className="rounded-2xl px-5 py-3.5 bg-red-500/5 border border-red-500/20 text-sm text-red-400">
@@ -628,7 +628,7 @@ export default function XSearchTrendsPage() {
 
             {isSearching && (
               <div className="flex gap-4 max-w-4xl mx-auto">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white text-sm">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm">
                   🤖
                 </div>
                 <div className="rounded-2xl px-5 py-3.5 bg-surface border border-border">
@@ -731,7 +731,7 @@ export default function XSearchTrendsPage() {
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isSearching}
                 aria-label={t("xResearch.send")}
-                className="order-first flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary sm:order-none text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="order-first flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary sm:order-none text-primary-foreground hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg
                   width="18"

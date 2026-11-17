@@ -1,0 +1,47 @@
+/*
+ * Storybook styles = the web app's stylesheet (Tailwind v4 + design tokens)
+ * plus the admin's stacked-table rules, scanning every UI source rendered
+ * in stories so all their utilities are generated.
+ */
+@import "../../web/src/app/globals.css";
+@import "../../admin/src/app/responsive-tables.css";
+
+@source "../../web/src";
+@source "../../admin/src";
+@source "../../../packages/ui/src";
+@source "../../../packages/i18n/src";
+@source "../stories";
+
+/*
+ * Dark mode is class-based here (`<html class="dark">`), driven by the theme
+ * toolbar (@storybook/addon-themes), so `dark:` utilities follow it.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * The product ships dark only. "Light (preview)" swaps the surface/text
+ * tokens to check components on a light canvas — it is not a product theme.
+ */
+html.light {
+  color-scheme: light;
+  --color-bg: #f8fafc;
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-subtle: #eef2f7;
+  --color-input: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-text-dim: #64748b;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+/* Stories render on the app background, edge to edge in `fullscreen`. */
+body.sb-show-main {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}

@@ -185,110 +185,108 @@ export default function CreditEmailsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {isLoading
-              ? CREDIT_STATES.map((state) => (
-                  <tr key={state}>
-                    <td colSpan={4} className="px-4 py-3">
-                      <Skeleton className="h-8 w-full" />
-                    </td>
-                  </tr>
-                ))
-              : CREDIT_STATES.map((state) => {
-                  const trigger = triggerFor(state);
-                  return (
-                    <tr key={state} className="hover:bg-surface-elevated/30">
-                      <td className="px-4 py-3" data-primary>
-                        <span className="font-semibold tabular-nums text-text">
-                          {stateLabel(state)}
-                        </span>
-                        <p className="font-mono text-xs text-text-dim">
-                          {state}
-                        </p>
-                      </td>
-                      <td
-                        className="px-4 py-3"
-                        data-label={t("creditEmails.columns.email")}
-                      >
-                        {trigger ? (
-                          <span className="text-text">{trigger.subject}</span>
-                        ) : (
-                          <span className="text-text-dim">
-                            {t("creditEmails.noEmail")}
-                          </span>
-                        )}
-                      </td>
-                      <td
-                        className="px-4 py-3"
-                        data-label={t("creditEmails.columns.active")}
-                      >
-                        {trigger && (
-                          <Switch
-                            checked={trigger.isActive}
-                            aria-label={t("creditEmails.toggleAria", {
+            {/* The rows (one per credit state) are laid out while loading too,
+                with placeholders of the controls' size: nothing moves when
+                the triggers arrive (CLS). */}
+            {CREDIT_STATES.map((state) => {
+              const trigger = triggerFor(state);
+              return (
+                <tr key={state} className="hover:bg-surface-elevated/30">
+                  <td className="px-4 py-3" data-primary>
+                    <span className="font-semibold tabular-nums text-text">
+                      {stateLabel(state)}
+                    </span>
+                    <p className="font-mono text-xs text-text-dim">{state}</p>
+                  </td>
+                  <td
+                    className="px-4 py-3"
+                    data-label={t("creditEmails.columns.email")}
+                  >
+                    {isLoading ? (
+                      <Skeleton className="h-5 w-40 max-w-full" />
+                    ) : trigger ? (
+                      <span className="text-text">{trigger.subject}</span>
+                    ) : (
+                      <span className="text-text-dim">
+                        {t("creditEmails.noEmail")}
+                      </span>
+                    )}
+                  </td>
+                  <td
+                    className="px-4 py-3"
+                    data-label={t("creditEmails.columns.active")}
+                  >
+                    {isLoading && (
+                      <Skeleton className="h-6 w-11 rounded-full" />
+                    )}
+                    {trigger && (
+                      <Switch
+                        checked={trigger.isActive}
+                        aria-label={t("creditEmails.toggleAria", {
+                          state: stateLabel(state),
+                        })}
+                        onCheckedChange={(checked: boolean) =>
+                          updateMutation.mutate({
+                            id: trigger.id,
+                            data: { isActive: checked },
+                          })
+                        }
+                      />
+                    )}
+                  </td>
+                  <td
+                    className="px-4 py-3"
+                    data-label={t("creditEmails.columns.actions")}
+                  >
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {isLoading ? (
+                        <Skeleton className="h-[30px] w-24 pointer-coarse:h-11" />
+                      ) : trigger ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => testMutation.mutate(trigger.id)}
+                            disabled={testMutation.isPending}
+                            title={t("creditEmails.testTitle")}
+                            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 pointer-coarse:min-h-11 text-xs font-medium text-text-muted transition-colors hover:bg-surface-elevated disabled:opacity-50"
+                          >
+                            <Send size={14} />
+                            {t("creditEmails.test")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditing({ state, trigger })}
+                            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 pointer-coarse:min-h-11 text-xs font-medium text-text-muted transition-colors hover:bg-surface-elevated"
+                          >
+                            <Pencil size={14} />
+                            {t("common.edit")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleting(trigger)}
+                            aria-label={t("creditEmails.deleteAria", {
                               state: stateLabel(state),
                             })}
-                            onCheckedChange={(checked: boolean) =>
-                              updateMutation.mutate({
-                                id: trigger.id,
-                                data: { isActive: checked },
-                              })
-                            }
-                          />
-                        )}
-                      </td>
-                      <td
-                        className="px-4 py-3"
-                        data-label={t("creditEmails.columns.actions")}
-                      >
-                        <div className="flex flex-wrap justify-end gap-2">
-                          {trigger ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => testMutation.mutate(trigger.id)}
-                                disabled={testMutation.isPending}
-                                title={t("creditEmails.testTitle")}
-                                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 pointer-coarse:min-h-11 text-xs font-medium text-text-muted transition-colors hover:bg-surface-elevated disabled:opacity-50"
-                              >
-                                <Send size={14} />
-                                {t("creditEmails.test")}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditing({ state, trigger })}
-                                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 pointer-coarse:min-h-11 text-xs font-medium text-text-muted transition-colors hover:bg-surface-elevated"
-                              >
-                                <Pencil size={14} />
-                                {t("common.edit")}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setDeleting(trigger)}
-                                aria-label={t("creditEmails.deleteAria", {
-                                  state: stateLabel(state),
-                                })}
-                                className="flex items-center justify-center rounded-lg border border-border px-2.5 py-1.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-red-500 transition-colors hover:bg-red-500/10"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setEditing({ state, trigger: null })
-                              }
-                              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 pointer-coarse:min-h-11 text-xs font-medium text-white transition-colors hover:bg-primary/90"
-                            >
-                              <Plus size={14} />
-                              {t("creditEmails.createEmail")}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                            className="flex items-center justify-center rounded-lg border border-border px-2.5 py-1.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-red-400 transition-colors hover:bg-red-500/10"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setEditing({ state, trigger: null })}
+                          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 pointer-coarse:min-h-11 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                        >
+                          <Plus size={14} />
+                          {t("creditEmails.createEmail")}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

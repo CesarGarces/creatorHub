@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Stacked (card) tables — shared with Storybook. */
+@import "./responsive-tables.css";
 @plugin "tailwindcss-animate";
 @source "../../../../packages/ui/src/**/*.tsx";
 @source "../../../../packages/i18n/src/**/*.tsx";
@@ -19,6 +21,8 @@
   --color-primary: #00bbd9;
   --color-primary-hover: #009fb8;
   --color-primary-light: #00bbd920;
+  /* Text/icons on filled primary surfaces (8.3:1 on the primary). */
+  --color-primary-foreground: #0b0f19;
 
   --color-secondary: #22c55e;
   --color-secondary-light: #22c55e20;
@@ -26,15 +30,19 @@
   --color-accent: #06b6d4;
   --color-accent-light: #06b6d420;
 
-  --color-error: #ef4444;
+  /* Error text/icons: 5.9:1 even on its own tint (bg-error-light). */
+  --color-error: #f87171;
   --color-error-light: #ef444420;
+  /* Filled error surfaces with white text (4.8:1). */
+  --color-error-solid: #dc2626;
 
   --color-warning: #f59e0b;
   --color-warning-light: #f59e0b20;
 
   --color-text: #f1f5f9;
   --color-text-muted: #94a3b8;
-  --color-text-dim: #475569;
+  /* Quietest text: still 4.5:1 (WCAG AA) on every surface. */
+  --color-text-dim: #8391a7;
 
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -107,119 +115,5 @@ html {
   select,
   textarea {
     font-size: 16px;
-  }
-}
-
-/*
- * Stacked tables (`<table class="table-stack">` inside an `@container`
- * wrapper): when the room *available to the table* is under 48rem (phones,
- * tablets, half-width cards) every row becomes a card and every cell a
- * "label — value" line, the label coming from the cell's `data-label`.
- * Same DOM and table semantics, no sideways scrolling. `data-primary` marks
- * the cell that titles the card; cells with `colspan` (empty/loading
- * states) span it. Unlayered so it beats the cell utilities.
- */
-@container (width < 48rem) {
-  .table-stack thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-  /* A header cell can stay visible as a control (e.g. "select all"). */
-  .table-stack thead:has([data-stack-keep]) {
-    position: static;
-    display: block;
-    width: auto;
-    height: auto;
-    margin: 0;
-    overflow: visible;
-    clip: auto;
-    white-space: normal;
-  }
-  .table-stack thead:has([data-stack-keep]) tr {
-    display: flex;
-    align-items: center;
-    padding: 0.25rem 1rem;
-  }
-  .table-stack thead:has([data-stack-keep]) th:not([data-stack-keep]) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-  .table-stack th[data-stack-keep] {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    width: auto;
-    min-height: 2.75rem;
-    padding: 0;
-  }
-  .table-stack th[data-stack-keep][data-label]::after {
-    content: attr(data-label);
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--color-text-muted);
-  }
-  .table-stack,
-  .table-stack tbody,
-  .table-stack tr {
-    display: block;
-    width: 100%;
-  }
-  .table-stack tbody tr {
-    display: flex;
-    flex-direction: column;
-    padding: 0.75rem 1rem;
-  }
-  /* Tables already inside a padded card. */
-  .table-stack.table-stack-flush tbody tr {
-    padding-inline: 0;
-  }
-  .table-stack td:not(.hidden) {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    min-height: 2.25rem;
-    padding: 0.25rem 0;
-    text-align: right;
-    white-space: normal;
-    max-width: none;
-  }
-  .table-stack td > * {
-    min-width: 0;
-  }
-  .table-stack td[data-label]::before {
-    content: attr(data-label);
-    flex-shrink: 0;
-    text-align: left;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--color-text-dim);
-  }
-  .table-stack td[data-primary],
-  .table-stack td[colspan] {
-    display: block;
-    padding-bottom: 0.5rem;
-  }
-  .table-stack td[data-primary] {
-    order: -1;
-    text-align: left;
-    overflow-wrap: anywhere;
-  }
-  .table-stack td[colspan] {
-    text-align: center;
   }
 }

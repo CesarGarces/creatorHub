@@ -7,6 +7,10 @@ export const ui: Messages["ui"] = {
   removeFromFavorites: "Quitar de favoritos",
   premium: "Premium",
   errorBoundary: "Algo salió mal. Inténtalo de nuevo.",
+  imageViewer: {
+    label: "Visor de imagen",
+    hint: "Pellizca la imagen para ampliarla. Suelta para volver.",
+  },
   toolStatus: {
     active: "Activa",
     inactive: "Inactiva",

@@ -339,7 +339,7 @@ export default function ContentPlannerPage() {
                 className={cn(
                   "flex-1 rounded-md px-3 py-1.5 pointer-coarse:py-2.5 text-sm font-medium transition-colors sm:flex-none",
                   view === v
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-text-muted hover:text-text",
                 )}
               >

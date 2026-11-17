@@ -25,7 +25,10 @@ interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
 const DialogTitleIdContext = React.createContext<string | undefined>(undefined);
 
 const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
-  ({ className, children, onClose, ...props }, ref) => {
+  (
+    { className, children, onClose, "aria-label": ariaLabel, ...props },
+    ref,
+  ) => {
     const labels = useUiLabels();
     const titleId = React.useId();
     const mounted = React.useSyncExternalStore(
@@ -52,9 +55,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
       };
     }, [mounted]);
 
-    if (!mounted) return null;
-
-    return createPortal(
+    const overlay = (
       <div
         className="fixed inset-x-0 top-[var(--app-vv-top,0px)] flex h-[var(--app-vvh,100dvh)] items-center justify-center p-3 sm:p-4"
         style={{ zIndex: 99999 }}
@@ -66,7 +67,9 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
           ref={ref}
           role="dialog"
           aria-modal="true"
-          aria-labelledby={titleId}
+          // Named by its DialogTitle, or by `aria-label` when it has none.
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabel ? undefined : titleId}
           className={cn(
             "relative w-full max-h-full overflow-y-auto overscroll-contain bg-surface rounded-xl shadow-2xl",
             className,
@@ -87,9 +90,14 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
             </button>
           )}
         </div>
-      </div>,
-      document.body,
+      </div>
     );
+
+    // Server render and hydration: in place, so a dialog that is open on
+    // load (e.g. /terms) is in the first paint instead of waiting for
+    // JavaScript. Once mounted it moves to <body>, above everything.
+    if (!mounted) return overlay;
+    return createPortal(overlay, document.body);
   },
 );
 DialogContent.displayName = "DialogContent";

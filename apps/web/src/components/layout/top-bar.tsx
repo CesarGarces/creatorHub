@@ -222,13 +222,14 @@ export function TopBar({
             >
               <Bell className="h-[18px] w-[18px]" />
               {unreadCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 px-0.5 items-center justify-center rounded-full bg-error text-[10px] text-white font-bold">
+                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 px-0.5 items-center justify-center rounded-full bg-error-solid text-[10px] text-white font-bold">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
             </button>
           </PopoverTrigger>
           <PopoverContent
+            aria-label={t("topBar.notifications")}
             className="w-80 max-w-[calc(100vw-1rem)] p-0"
             align="end"
           >

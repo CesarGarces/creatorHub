@@ -124,7 +124,8 @@ function TelegramChannelCard() {
                 href="https://t.me/BotFather"
                 target="_blank"
                 rel="noreferrer"
-                className="text-primary hover:underline"
+                // Underlined: inside text, colour alone is not enough.
+                className="text-primary underline underline-offset-2 hover:no-underline"
               >
                 {chunks}
               </a>
@@ -322,13 +323,15 @@ function ComingSoonChannelCard({
 }) {
   const { t } = useI18n();
   return (
-    <Card className="opacity-70">
+    // Not available yet: dashed border and quieter text that still meets
+    // 4.5:1 (no whole-card opacity).
+    <Card className="border-dashed">
       <CardHeader className="flex flex-row items-center justify-between">
-        <h3 className="font-semibold text-text">{title}</h3>
+        <h3 className="font-semibold text-text-muted">{title}</h3>
         <Badge variant="secondary">{phase}</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-text-muted">{description}</p>
+        <p className="text-sm text-text-dim">{description}</p>
         <Button disabled variant="secondary" className="w-full">
           {t("communityBot.channels.comingSoon")}
         </Button>

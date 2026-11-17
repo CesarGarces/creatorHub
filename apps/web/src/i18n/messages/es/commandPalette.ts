@@ -1,6 +1,7 @@
 import type { Messages } from "../../translate";
 
 export const commandPalette: Messages["commandPalette"] = {
+  label: "Paleta de comandos",
   placeholder: "Busca herramientas, agentes, páginas...",
   empty: "No se encontraron resultados.",
   groups: {

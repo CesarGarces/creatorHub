@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Heart, Share2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
+import { ZoomableImage } from "@creator-hub/ui";
 import { AssetLikeButton } from "@/components/asset-like-button";
 import { ShareModal } from "@/components/share-modal";
 import { useI18n } from "@/i18n/i18n-provider";
@@ -80,7 +81,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
             <button
               type="button"
               onClick={handleRegister}
-              className="whitespace-nowrap px-3 py-2 pointer-coarse:min-h-11 text-sm bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors sm:px-4"
+              className="whitespace-nowrap px-3 py-2 pointer-coarse:min-h-11 text-sm bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors sm:px-4"
             >
               {t("share.page.getStarted")}
             </button>
@@ -105,7 +106,8 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
                 aria-label={asset.prompt}
               />
             ) : (
-              <img
+              // Pinch lifts the image over a blurred page (Instagram-style).
+              <ZoomableImage
                 src={asset.url}
                 alt={asset.prompt}
                 className="max-w-full max-h-[60dvh] sm:max-h-[70vh] object-contain"
@@ -264,7 +266,7 @@ export function ShareClient({ asset, assetId }: ShareClientProps) {
               <button
                 type="button"
                 onClick={handleRegister}
-                className="px-6 py-3.5 sm:px-8 sm:py-4 bg-primary text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+                className="px-6 py-3.5 sm:px-8 sm:py-4 bg-primary text-primary-foreground rounded-xl font-semibold text-base sm:text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
               >
                 {t("share.page.startCreating")}
               </button>

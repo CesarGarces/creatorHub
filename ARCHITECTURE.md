@@ -283,6 +283,7 @@ La UI se construye con componentes estilo **shadcn/ui** en `packages/ui/`. Cada 
 | `ToolCard`            | —                | Tarjeta de herramienta                                                 |
 | `CreditDisplay`       | —                | Visualización de créditos                                              |
 | `EmptyState`          | —                | Estado vacío con ícono y mensaje                                       |
+| `ZoomableImage`       | Touch + portal   | Pinch estilo Instagram: crece sobre la página difuminada y vuelve      |
 
 ### Z-Index Scale
 
@@ -392,6 +393,7 @@ flows are the same on every screen size.
 | Calendar         | Phones open the planner on the agenda; week/month grids scroll sideways inside their card (`data-scroll-x`)  |
 | Admin tables     | `table-stack` inside an `@container`: under 48rem of room each row is a card, cells labelled by `data-label` |
 | Scrollers        | Intentional horizontal scrollers (chip rows, tabs, wide grids) carry `data-scroll-x`                         |
+| Image previews   | `ZoomableImage`: pinch lifts the image over a blurred page and springs back; the page never zooms            |
 
 ### App-shell z-index (web, below dialogs and popovers)
 
@@ -400,6 +402,7 @@ flows are the same on every screen size.
 | Chat backdrop / panel / button      | 90 / 95 / 100 |
 | Navigation drawer backdrop / drawer | 105 / 110     |
 | Asset preview / share modal         | 120 / 130     |
+| Pinch zoom layer (above everything) | 100000        |
 
 ### Testing
 
@@ -408,6 +411,124 @@ flows are the same on every screen size.
 scrolling, drawer behaviour, keyboard shortcuts (⌘/Ctrl+K, `Escape`),
 dialogs and the chat with the keyboard open, card actions without hover and
 touch-target sizes. Screenshots are saved to `apps/e2e/artifacts/responsive/`.
+
+---
+
+## 2d. Storybook — component workshop
+
+`apps/storybook` (`@creator-hub/storybook`) documents and exercises the UI of
+the whole monorepo: the `@creator-hub/ui` primitives, the shared
+`@creator-hub/i18n` language selector and components of the web and admin
+apps.
+
+### Setup
+
+| Concern      | Choice                                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------------------------- |
+| Version      | Storybook 10.6.5 (all `@storybook/*` packages pinned together)                                                |
+| Framework    | `@storybook/nextjs-vite` — `next/link`, `next/navigation` (App Router) and `next/image` work                  |
+| Styling      | Tailwind CSS v4 via `@tailwindcss/vite`; `.storybook/preview.css` imports the web tokens                      |
+| Dark mode    | `@storybook/addon-themes`, class strategy on `<html>` (`dark` default; "Light (preview)" tokens)              |
+| TypeScript   | Prop tables from `react-docgen-typescript` (`tsconfig.docgen.json`); two `tsc` programs (web/admin)           |
+| Viewports    | Built-in viewport addon: Mobile S 360 · Mobile 390 · Tablet 768 · Tablet landscape 1024 · Desktop 1280 · 1440 |
+| Other addons | `@storybook/addon-docs` (autodocs, MDX guides), `@storybook/addon-a11y`                                       |
+
+### Monorepo wiring
+
+- Workspace packages resolve to their **sources** (`.storybook/monorepo-aliases.ts`), so docs read
+  the real props and there is a single copy of every React context.
+- Both apps map `@/*` to their own `src/`: a Vite plugin resolves `@/` per importer
+  (admin files → admin sources, everything else → web); stories import admin components through
+  `@admin/*`.
+- App components are wrapped in the app's own `Providers` (`withWebApp` / `withAdminApp`);
+  stores are seeded per story (`seedWebSession`) and `window.fetch` is mocked
+  (`.storybook/mocks/api.ts`, `parameters.api`) — stories never reach a backend.
+- Toolbar globals: theme, **language** (en/es/pt) and viewport.
+
+### Rules (enforced)
+
+- Every `*.tsx` component under `packages/ui/src/components`, `packages/i18n/src`,
+  `apps/web/src/components` and `apps/admin/src/components` needs a story at the mirrored path in
+  `apps/storybook/stories/` — `tests/story-coverage.spec.ts` (Vitest) fails with the file to create.
+  Non-visual modules are listed in `story-coverage.config.ts` with a reason; pre-existing
+  components without stories are in a pending list that can only shrink.
+- Each story file declares `title`, `component`, a `description` for every `argTypes` entry and at
+  least one story; titles are unique.
+- `apps/e2e/tests/storybook.stories.spec.ts` renders every story and docs page of the static build
+  in Chromium (play functions included), fails on blocking accessibility violations found by the
+  a11y addon (§2e) and checks the viewport, theme and language globals.
+
+## 2e. Accessibility & performance gates (web & admin)
+
+### Accessibility (axe-core)
+
+| Where                                      | What                                                                                                 |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `apps/e2e/tests/{web,admin}.a11y.spec.ts`  | Every page at 390px and 1280px, plus drawers, dialogs, popovers, palette, chat and the cookie banner |
+| `apps/e2e/tests/storybook.stories.spec.ts` | The a11y addon's axe report of every story (`parameters.a11y`, same rule set)                        |
+| `apps/e2e/fixtures/a11y.ts`                | Rule set (WCAG 2.0–2.2 A/AA + best practices) and the gate                                           |
+
+**Gate:** zero colour-contrast violations (`color-contrast`, `link-in-text-block`), zero
+missing names/labels (`label`, `button-name`, `link-name`, `image-alt`, `aria-dialog-name`,
+`aria-*-name`, `document-title`, …) and zero `critical` violations. Other findings are attached
+to the report.
+
+Conventions that keep it green:
+
+- Text tokens meet 4.5:1 on every surface: `text-dim` is `#8391a7`, `error` `#f87171`. Text on
+  `bg-primary` (and the premium/free gradients) uses `text-primary-foreground` (dark ink, 8.3:1);
+  white text sits on `bg-error-solid` (`#dc2626`). On dark tints use `-400` hues.
+- No `opacity-*` on readable text (coming-soon cards, inactive rows, done or unfocused calendar
+  sessions): quieter tokens, `grayscale`, dashed borders or line-through instead.
+- Every dialog has a name: `DialogTitle`, `aria-label` (e.g. `CommandDialog label`), or the
+  title of `ActionConfirmDialog` (wired with `aria-labelledby`). Radix popovers get `aria-label`.
+- Links inside text are underlined. Runtime colours (admin modes) go through
+  `apps/admin/src/lib/contrast.ts` (`readableOnDark`, `readableInk`).
+
+### Performance (Core Web Vitals)
+
+`apps/e2e/tests/{web,admin}.performance.spec.ts` load every page of the production builds on a
+phone (390×844, 4× slower CPU, 4G) and a desktop, with PerformanceObserver (layout shifts, paint,
+LCP, long tasks, event timing) and the apps' own field reporter:
+
+| Metric                                        | Gate                                                                            |
+| --------------------------------------------- | ------------------------------------------------------------------------------- |
+| CLS (lab and field reporter)                  | < 0.1 on every page, both profiles                                              |
+| FCP                                           | < 1.8 s on every page, both profiles                                            |
+| LCP                                           | < 2.5 s on desktop; reported (warning) on the phone                             |
+| INP (drawer, popovers, typing, chat, dialogs) | < 200 ms on desktop; < 500 ms (never "poor") on the phone, warning above 200 ms |
+| TBT                                           | reported (warning above 200 ms)                                                 |
+
+Results per page: `apps/e2e/artifacts/perf/{web,admin}-web-vitals.{jsonl,md}` and `*-inp.jsonl`.
+
+How pages stay stable and paint at once:
+
+- **Server-rendered shells.** The `(authed)` layout renders `AppShellSkeleton` and the admin
+  `AuthGuard` renders `AdminShellSkeleton` until the session is restored on the client (they
+  used to render nothing): the first HTML already paints the shell (logo / app name, menu icon)
+  with the real geometry. `DialogContent` renders in place before hydration, so dialogs open on
+  load (`/terms`, `/privacy`, `/cookies`) are in the first paint.
+- **Reserve space for data.** Lists and grids that fill in after a request keep their size while
+  loading (dashboard tool cards and activity rows, admin model stats with "—", credit-email rows
+  with control-sized placeholders).
+- **Less work on the main thread.** `@creator-hub/ui` is `"sideEffects": false` and listed in
+  `optimizePackageImports` (pages ship only the components they use); the cookie-policy texts
+  and the admin charts (recharts) load on demand (`next/dynamic`, size-matched placeholders);
+  the admin dashboard applies its data in a `startTransition`; the dashboard quick prompt keeps
+  its state local (typing doesn't re-render the page); the full-screen chat on phones is opaque
+  (no full-viewport `backdrop-filter`).
+
+### Field telemetry (real users)
+
+`WebVitalsReporter` (`apps/{web,admin}/src/components/web-vitals-reporter.tsx`, mounted in the
+root layouts) reports CLS, LCP, INP, FCP and TTFB of every page view with Next.js'
+`useReportWebVitals`: as a `creatorhub:web-vital` DOM event (read by the e2e suite) and, when
+`NEXT_PUBLIC_WEB_VITALS_ENDPOINT` is set at build time, as JSON via `navigator.sendBeacon` to
+that collector. Unset, nothing leaves the browser.
+
+> Note: `apps/web/sentry.client.config.ts` is not part of the client bundle with Next.js 16
+> (Turbopack) — `@sentry/nextjs` v10 loads the browser SDK from `instrumentation-client.ts`.
+> Until it is wired, Sentry does not collect client errors or page performance for the web app.
 
 ---
 

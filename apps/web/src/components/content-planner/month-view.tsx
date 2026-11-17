@@ -87,7 +87,7 @@ export function MonthView({
                       className={cn(
                         "flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
                         isToday
-                          ? "bg-primary text-white"
+                          ? "bg-primary text-primary-foreground"
                           : inMonth
                             ? "text-text"
                             : "text-text-dim",
@@ -118,7 +118,8 @@ export function MonthView({
                           className={cn(
                             "flex w-full items-center gap-1.5 rounded px-1 py-0.5 pointer-coarse:py-1 text-left text-[11px] text-text-muted hover:bg-surface-elevated hover:text-text",
                             statusClasses(event.status),
-                            dimmed && "opacity-25",
+                            // Other projects: grey and quieter, still 4.5:1.
+                            dimmed && "grayscale text-text-dim",
                           )}
                         >
                           <span

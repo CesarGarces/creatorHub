@@ -1,0 +1,48 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Foundations/Responsive" />
+
+# Responsive & touch (mobile-first)
+
+Base classes target phones; `sm:` / `md:` / `lg:` add the larger layouts.
+Only layout changes between sizes — data, stores and events are the same.
+
+## Breakpoints and viewport presets
+
+| Viewport preset        | Size        | Tailwind range | Navigation                        |
+| ---------------------- | ----------- | -------------- | --------------------------------- |
+| Mobile S               | 360×740     | base           | Drawer (closed) + top-bar menu    |
+| Mobile                 | 390×844     | base           | Drawer (closed) + top-bar menu    |
+| Tablet                 | 768×1024    | `sm`, `md`     | Drawer (closed) + top-bar menu    |
+| Tablet landscape       | 1024×768    | `lg`           | Docked sidebar                    |
+| Desktop / Desktop wide | 1280 / 1440 | `lg`, `xl`     | Docked sidebar (collapsible, web) |
+
+Pick one in the **Viewport** toolbar, or open a story at a size with
+`globals: viewport("mobile")` (`.storybook/viewports.ts`).
+
+## Utility annotations
+
+Conventions used across the apps — look for them in the stories' source.
+
+| Utility / attribute                         | Meaning                                                                                  |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` | Grids always start with one column so content can't widen the page                       |
+| `pointer-coarse:h-11` / `min-h-11`          | 44px touch targets on touch screens (architecture §2b)                                   |
+| `pointer-coarse:opacity-100`                | Controls revealed on hover are always visible on touch screens (no hover there)          |
+| `max-sm:*` / `sm:*`                         | Phone-only layout (stacked buttons, full width) vs. the row layout from 640px            |
+| `h-[var(--app-vvh,100dvh)]`                 | Height of the **visible** viewport — follows the on-screen keyboard (dialogs, chat)      |
+| `top-[var(--app-vv-top,0px)]`               | Follows iOS visual-viewport panning                                                      |
+| `pb-[env(safe-area-inset-bottom)]`          | Clears the home indicator / notch (`viewport-fit=cover`)                                 |
+| `data-scroll-x`                             | An intentional horizontal scroller (chip rows, tabs, week/month grids)                   |
+| `data-composer`                             | A bottom composer: the shell drops its bottom padding and lifts the chat button above it |
+| `table-stack` + `@container`                | Table → labelled cards when the table has under 48rem (`data-label`, `data-primary`)     |
+| `data-stack-keep`                           | Header cell kept visible in stacked mode (e.g. "select all")                             |
+| 16px fields                                 | Global rule on phones/touch devices so iOS doesn't zoom into focused fields              |
+
+## On-screen keyboard
+
+`VisualViewportObserver` (`@creator-hub/ui`) publishes `--app-vvh`,
+`--app-vv-top` and `--app-keyboard` from `window.visualViewport`; the root
+layouts also set `interactive-widget=resizes-content`. Full-height surfaces
+size themselves with those variables, so titles, fields and actions stay above
+the keyboard.

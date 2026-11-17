@@ -519,15 +519,31 @@ Run a single package tests (example):
 pnpm --filter @creator-hub/api test
 ```
 
+### Storybook
+
+Component workshop for the shared UI and the web/admin components (Storybook 10, Next.js + Vite,
+Tailwind v4, dark theme, responsive viewport presets, language switch). See ARCHITECTURE.md §2d.
+
+```sh
+pnpm storybook          # dev server on http://localhost:6006
+pnpm build-storybook    # static site in apps/storybook/storybook-static
+
+# "every component has a story" + story file rules
+pnpm --filter @creator-hub/storybook test
+```
+
+New components need a story at the mirrored path (e.g. `packages/ui/src/components/foo.tsx` →
+`apps/storybook/stories/ui/foo.stories.tsx`); the test above names the file to create.
+
 ### End-to-end tests (Playwright)
 
-Browser tests live in `apps/e2e` (`@creator-hub/e2e`) and cover the **web app, landing page and admin panel** against their production builds. The backend is mocked at the network layer, so no API, database or Redis is needed.
+Browser tests live in `apps/e2e` (`@creator-hub/e2e`) and cover the **web app, landing page and admin panel** against their production builds, plus the static **Storybook** build. The backend is mocked at the network layer, so no API, database or Redis is needed.
 
 ```sh
 # once: download the browser
 pnpm --filter @creator-hub/e2e exec playwright install chromium
 
-# builds web, landing and admin, starts them on ports 3100/3102/3103 and runs every spec
+# builds web, landing, admin and Storybook, serves them on ports 3100/3102/3103/3106 and runs every spec
 pnpm e2e
 
 # a single project (web | landing | admin | cross-app) or a single file
@@ -538,19 +554,22 @@ pnpm --filter @creator-hub/e2e e2e tests/web.language.spec.ts
 pnpm --filter @creator-hub/e2e e2e:report
 ```
 
-| Spec                                  | What it checks                                                                                                                                        |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `web.language.spec.ts`                | Language selector on sign-in, top bar and Settings → Language; browser language on first visit; cookie + account persistence                          |
-| `landing.language.spec.ts`            | Navbar selector (desktop and mobile) translating every section, kept after reload                                                                     |
-| `admin.language.spec.ts`              | Selector on admin sign-in and sidebar, users table/dialog, account language restored at sign-in                                                       |
-| `cross-app.language.spec.ts`          | Language chosen on the landing page carries over to the app and vice versa                                                                            |
-| `web.checkout.spec.ts`                | Buying a credit plan redirects to the payment gateway                                                                                                 |
-| `web.responsive-pages.spec.ts`        | Every web page (signed-in and public) on a phone and a tablet: no sideways scroll, drawer closed, top bar and chat reachable; desktop regression pass |
-| `web.responsive-navigation.spec.ts`   | Drawer navigation (open, navigate, tap outside, `Escape`, focus), language switcher on phones, docked sidebar from 1024px, ⌘/Ctrl+K command palette   |
-| `web.responsive-interactions.spec.ts` | Chat and dialogs with the on-screen keyboard open, chat button vs. composers, tool history drawers, card actions without hover, calendar views        |
-| `admin.responsive.spec.ts`            | Every admin page on a phone and a tablet, drawer navigation, tables as labelled cards, modals with the keyboard open; desktop regression pass         |
+| Spec                                                    | What it checks                                                                                                                                        |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `web.language.spec.ts`                                  | Language selector on sign-in, top bar and Settings → Language; browser language on first visit; cookie + account persistence                          |
+| `landing.language.spec.ts`                              | Navbar selector (desktop and mobile) translating every section, kept after reload                                                                     |
+| `admin.language.spec.ts`                                | Selector on admin sign-in and sidebar, users table/dialog, account language restored at sign-in                                                       |
+| `cross-app.language.spec.ts`                            | Language chosen on the landing page carries over to the app and vice versa                                                                            |
+| `web.checkout.spec.ts`                                  | Buying a credit plan redirects to the payment gateway                                                                                                 |
+| `web.responsive-pages.spec.ts`                          | Every web page (signed-in and public) on a phone and a tablet: no sideways scroll, drawer closed, top bar and chat reachable; desktop regression pass |
+| `web.responsive-navigation.spec.ts`                     | Drawer navigation (open, navigate, tap outside, `Escape`, focus), language switcher on phones, docked sidebar from 1024px, ⌘/Ctrl+K command palette   |
+| `web.responsive-interactions.spec.ts`                   | Chat and dialogs with the on-screen keyboard open, chat button vs. composers, tool history drawers, card actions without hover, calendar views        |
+| `admin.responsive.spec.ts`                              | Every admin page on a phone and a tablet, drawer navigation, tables as labelled cards, modals with the keyboard open; desktop regression pass         |
+| `storybook.stories.spec.ts`                             | Every Storybook story and docs page renders (play functions pass), no blocking a11y violation, props documented, toolbar globals                      |
+| `web.a11y.spec.ts` / `admin.a11y.spec.ts`               | axe-core audit of every page (phone + desktop) and opened drawers/dialogs/popovers: zero contrast, missing-label or critical violations               |
+| `web.performance.spec.ts` / `admin.performance.spec.ts` | Core Web Vitals of every page (throttled phone + desktop): CLS < 0.1, FCP < 1.8 s, desktop LCP < 2.5 s, INP; TBT reported                             |
 
-Every language test also writes a side-by-side **before → after** image to `apps/e2e/artifacts/a-to-b/<project>/`, and the responsive specs save a screenshot of every screen and state to `apps/e2e/artifacts/responsive/<project>/` (see ARCHITECTURE.md §2c for the mobile-first conventions). Useful variables: `E2E_CHROMIUM_PATH` (use an existing Chromium/Chrome instead of the downloaded one) and `CI` (no server reuse, retries enabled). `web.checkout.spec.ts` is a Playwright port of the older Cypress spec in `apps/web/e2e`.
+Every language test also writes a side-by-side **before → after** image to `apps/e2e/artifacts/a-to-b/<project>/`, and the responsive specs save a screenshot of every screen and state to `apps/e2e/artifacts/responsive/<project>/` (see ARCHITECTURE.md §2c for the mobile-first conventions). The performance specs write a per-page Web Vitals table to `apps/e2e/artifacts/perf/<project>-web-vitals.md` (ARCHITECTURE.md §2e). Useful variables: `E2E_CHROMIUM_PATH` (use an existing Chromium/Chrome instead of the downloaded one) and `CI` (no server reuse, retries enabled). `web.checkout.spec.ts` is a Playwright port of the older Cypress spec in `apps/web/e2e`.
 
 ## Environment Variables
 

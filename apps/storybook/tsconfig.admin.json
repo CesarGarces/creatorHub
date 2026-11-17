@@ -1,0 +1,18 @@
+// Admin stories: the admin app maps `@/*` to its own src, so they are
+// type-checked as a separate program from the web/ui stories.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["../admin/src/*"],
+      "@admin/*": ["../admin/src/*"]
+    }
+  },
+  "include": [
+    "storybook-env.d.ts",
+    ".storybook/decorators/admin.tsx",
+    "stories/admin/**/*.ts",
+    "stories/admin/**/*.tsx"
+  ],
+  "exclude": ["node_modules", "storybook-static"]
+}

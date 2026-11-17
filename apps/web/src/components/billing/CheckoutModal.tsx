@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@creator-hub/ui";
 import { initMercadoPago, Wallet } from "@mercadopago/sdk-react";
+import { Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n/i18n-provider";
 import type { Locale } from "@/i18n/config";
 
@@ -94,7 +95,17 @@ export function CheckoutModal({
               }}
             />
           ) : (
-            <div className="text-center py-4 text-text-dim text-sm animate-pulse">
+            // A spinner shows progress; pulsing text would drop below 4.5:1.
+            <div
+              role="status"
+              className="flex items-center justify-center gap-2 py-4 text-center text-sm text-text-muted"
+            >
+              {MP_KEY && (
+                <Loader2
+                  aria-hidden="true"
+                  className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none"
+                />
+              )}
               {!MP_KEY
                 ? t("credits.checkout.missingConfig")
                 : t("credits.checkout.preparing")}

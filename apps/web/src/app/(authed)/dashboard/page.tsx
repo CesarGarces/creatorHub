@@ -31,6 +31,7 @@ import {
   CreditDisplay,
   EmptyState,
   Badge,
+  Skeleton,
   cn,
 } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
@@ -66,13 +67,16 @@ export default function DashboardPage() {
   const { user } = useAuthStore();
   const { tools, fetchTools } = useToolsStore();
   const { balance, fetchBalance } = useCreditsStore();
-  const { sendMessage, isStreaming, openWidget } = useChatStore();
   const { favoriteIds, fetchFavorites, toggleFavorite, reorderFavorites } =
     useFavoritesStore();
-  const [quickPrompt, setQuickPrompt] = useState("");
   const [cmdOpen, setCmdOpen] = useState(false);
 
-  const { data: transactions } = useQuery({
+  // Layout only: until the tools and the favorites have both loaded,
+  // placeholders of the cards' size hold the grid — no empty state or
+  // "first tools → favorites" swap flashing, and no jump below.
+  const [toolsSettled, setToolsSettled] = useState(tools.length > 0);
+
+  const { data: transactions, isPending: transactionsPending } = useQuery({
     queryKey: ["transactions"],
     queryFn: () => api.get<Transaction[]>("/credits/transactions"),
   });
@@ -94,9 +98,10 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    fetchTools();
+    void Promise.allSettled([fetchTools(), fetchFavorites()]).then(() =>
+      setToolsSettled(true),
+    );
     fetchBalance();
-    fetchFavorites();
   }, [fetchTools, fetchBalance, fetchFavorites]);
 
   useEffect(() => {
@@ -185,90 +190,9 @@ export default function DashboardPage() {
 
         {/* Dashboard Grid: Main Content + Chat */}
         <div className="space-y-6 sm:space-y-8">
-          {/* Quick Prompt */}
-          <div className="relative">
-            <div className="rounded-xl border border-border bg-surface p-1 shadow-lg shadow-primary/5">
-              <div className="flex items-center gap-2 sm:gap-3 rounded-lg bg-surface-elevated px-3 py-2 sm:px-4 sm:py-3">
-                <span className="hidden text-primary min-[400px]:inline">
-                  ✦
-                </span>
-                <input
-                  type="text"
-                  value={quickPrompt}
-                  onChange={(e) => setQuickPrompt(e.target.value)}
-                  placeholder={t("dashboard.quickPrompt.placeholder")}
-                  aria-label={t("dashboard.quickPrompt.ariaLabel")}
-                  className="min-w-0 flex-1 bg-transparent text-sm text-text placeholder:text-text-dim outline-none"
-                  onKeyDown={(e) => {
-                    if (
-                      e.key === "Enter" &&
-                      quickPrompt.trim() &&
-                      !isStreaming
-                    ) {
-                      openWidget();
-                      sendMessage(quickPrompt.trim());
-                      setQuickPrompt("");
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (quickPrompt.trim() && !isStreaming) {
-                      openWidget();
-                      sendMessage(quickPrompt.trim());
-                      setQuickPrompt("");
-                    }
-                  }}
-                  disabled={isStreaming || !quickPrompt.trim()}
-                  className="shrink-0 rounded-lg bg-primary px-3 py-2 pointer-coarse:min-h-11 sm:px-4 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {isStreaming
-                    ? t("dashboard.quickPrompt.making")
-                    : t("dashboard.quickPrompt.generate")}
-                </button>
-              </div>
-            </div>
-            {/* In the flow (wrapping) on phones; tucked under the box from sm. */}
-            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-xs text-text-dim sm:absolute sm:-bottom-6 sm:left-4 sm:mt-0 sm:flex-nowrap sm:px-0">
-              <span>{t("dashboard.quickPrompt.try")}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setQuickPrompt(
-                    t("dashboard.quickPrompt.examples.gamingThumbnail"),
-                  );
-                }}
-                className="text-primary/70 hover:text-primary transition-colors"
-              >
-                {t("dashboard.quickPrompt.examples.gamingThumbnail")}
-              </button>
-              <span>·</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setQuickPrompt(
-                    t("dashboard.quickPrompt.examples.youtubeIntro"),
-                  );
-                }}
-                className="text-primary/70 hover:text-primary transition-colors"
-              >
-                {t("dashboard.quickPrompt.examples.youtubeIntro")}
-              </button>
-              <span>·</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setQuickPrompt(
-                    t("dashboard.quickPrompt.examples.viralTitle"),
-                  );
-                }}
-                className="text-primary/70 hover:text-primary transition-colors"
-              >
-                {t("dashboard.quickPrompt.examples.viralTitle")}
-              </button>
-            </div>
-          </div>
+          {/* Quick Prompt: its own component, so typing re-renders only
+              the prompt, not the whole dashboard (input stays responsive). */}
+          <QuickPrompt />
 
           {/* Quick Access */}
           <div className="sm:mt-8">
@@ -277,7 +201,18 @@ export default function DashboardPage() {
                 ? t("dashboard.favoriteTools")
                 : t("dashboard.quickAccess")}
             </h2>
-            {isDraggable ? (
+            {!toolsSettled && tools.length === 0 ? (
+              // Same size as ToolCard (p-5 + 44px row + mt-4), so the
+              // sections below do not move when the tools arrive.
+              <div
+                className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                aria-hidden="true"
+              >
+                {Array.from({ length: 4 }, (_, i) => (
+                  <Skeleton key={i} className="h-[102px] rounded-xl" />
+                ))}
+              </div>
+            ) : isDraggable ? (
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -406,7 +341,22 @@ export default function DashboardPage() {
                   </div>
                 );
               })}
-              {recentActivity.length === 0 && (
+              {transactionsPending &&
+                // Rows of the activity list's size while it loads.
+                Array.from({ length: 3 }, (_, i) => (
+                  <div
+                    key={i}
+                    aria-hidden="true"
+                    className="flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5"
+                  >
+                    <Skeleton className="h-9 w-9 shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-1/3" />
+                    </div>
+                  </div>
+                ))}
+              {!transactionsPending && recentActivity.length === 0 && (
                 <div className="px-5 py-8 text-center text-sm text-text-dim">
                   {t("dashboard.noActivity")}
                 </div>
@@ -486,6 +436,87 @@ export default function DashboardPage() {
         </div>
       </div>
     </>
+  );
+}
+
+/** The dashboard's quick prompt: sends the text to the assistant chat. */
+function QuickPrompt() {
+  const { t } = useI18n();
+  const { sendMessage, isStreaming, openWidget } = useChatStore();
+  const [quickPrompt, setQuickPrompt] = useState("");
+
+  return (
+    <div className="relative">
+      <div className="rounded-xl border border-border bg-surface p-1 shadow-lg shadow-primary/5">
+        <div className="flex items-center gap-2 sm:gap-3 rounded-lg bg-surface-elevated px-3 py-2 sm:px-4 sm:py-3">
+          <span className="hidden text-primary min-[400px]:inline">✦</span>
+          <input
+            type="text"
+            value={quickPrompt}
+            onChange={(e) => setQuickPrompt(e.target.value)}
+            placeholder={t("dashboard.quickPrompt.placeholder")}
+            aria-label={t("dashboard.quickPrompt.ariaLabel")}
+            className="min-w-0 flex-1 bg-transparent text-sm text-text placeholder:text-text-dim outline-none"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && quickPrompt.trim() && !isStreaming) {
+                openWidget();
+                sendMessage(quickPrompt.trim());
+                setQuickPrompt("");
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (quickPrompt.trim() && !isStreaming) {
+                openWidget();
+                sendMessage(quickPrompt.trim());
+                setQuickPrompt("");
+              }
+            }}
+            disabled={isStreaming || !quickPrompt.trim()}
+            className="shrink-0 rounded-lg bg-primary px-3 py-2 pointer-coarse:min-h-11 sm:px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isStreaming
+              ? t("dashboard.quickPrompt.making")
+              : t("dashboard.quickPrompt.generate")}
+          </button>
+        </div>
+      </div>
+      {/* In the flow (wrapping) on phones; tucked under the box from sm. */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-xs text-text-dim sm:absolute sm:-bottom-6 sm:left-4 sm:mt-0 sm:flex-nowrap sm:px-0">
+        <span>{t("dashboard.quickPrompt.try")}</span>
+        <button
+          type="button"
+          onClick={() => {
+            setQuickPrompt(t("dashboard.quickPrompt.examples.gamingThumbnail"));
+          }}
+          className="text-primary/70 hover:text-primary transition-colors"
+        >
+          {t("dashboard.quickPrompt.examples.gamingThumbnail")}
+        </button>
+        <span>·</span>
+        <button
+          type="button"
+          onClick={() => {
+            setQuickPrompt(t("dashboard.quickPrompt.examples.youtubeIntro"));
+          }}
+          className="text-primary/70 hover:text-primary transition-colors"
+        >
+          {t("dashboard.quickPrompt.examples.youtubeIntro")}
+        </button>
+        <span>·</span>
+        <button
+          type="button"
+          onClick={() => {
+            setQuickPrompt(t("dashboard.quickPrompt.examples.viralTitle"));
+          }}
+          className="text-primary/70 hover:text-primary transition-colors"
+        >
+          {t("dashboard.quickPrompt.examples.viralTitle")}
+        </button>
+      </div>
+    </div>
   );
 }
 

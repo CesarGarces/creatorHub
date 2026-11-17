@@ -37,7 +37,7 @@ export function ChatMessages() {
           <div
             className={`max-w-[80%] rounded-xl px-4 py-3 ${
               message.role === "user"
-                ? "bg-primary text-white"
+                ? "bg-primary text-primary-foreground"
                 : "bg-surface-elevated text-text"
             }`}
           >

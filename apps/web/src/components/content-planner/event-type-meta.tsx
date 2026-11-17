@@ -166,9 +166,21 @@ export function eventStyle(event: Typed): TypeStyle {
   return EVENT_TYPE_STYLES[event.type];
 }
 
-/** Done / cancelled sessions are de-emphasised everywhere. */
+/**
+ * Sessions outside the focused project: grey, quiet but still readable
+ * (4.5:1) — they stay clickable, so no opacity.
+ */
+export const DIMMED_EVENT_CLASSES =
+  "grayscale border-border! bg-surface-elevated/60! text-text-muted! hover:bg-surface-elevated!";
+
+/**
+ * Done / cancelled sessions are de-emphasised everywhere: colours turn grey
+ * and titles quieter, but the text keeps a 4.5:1 contrast (they are still
+ * buttons users read and open, so no opacity on them).
+ */
 export function statusClasses(status: string): string {
-  if (status === "DONE") return "opacity-60";
-  if (status === "CANCELLED") return "opacity-40 line-through";
+  if (status === "DONE") return "grayscale [&_.text-text]:text-text-muted";
+  if (status === "CANCELLED")
+    return "grayscale line-through [&_.text-text]:text-text-dim [&_.text-text-muted]:text-text-dim";
   return "";
 }

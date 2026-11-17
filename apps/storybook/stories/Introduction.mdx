@@ -1,0 +1,50 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Introduction" />
+
+# Creator Hub · UI
+
+Living documentation of the interface shared by the **web app**, the **admin
+panel** and the **landing page**.
+
+| Section                                | What you find                                                                 |
+| -------------------------------------- | ----------------------------------------------------------------------------- |
+| **Foundations**                        | Design tokens, breakpoints, viewports and the responsive utility conventions  |
+| **UI**                                 | `@creator-hub/ui` primitives: buttons, forms, overlays (modals), data display |
+| **i18n**                               | `@creator-hub/i18n` language selector shared by every app                     |
+| **Web** · Navigation / Content Planner | App components: top bar, sidebar & drawer, app shell, calendar views          |
+| **Admin**                              | Admin shell, drawer, modals and stacked (card) tables                         |
+
+## Toolbar
+
+- **Theme** — _Dark_ is the product theme (class `dark` on `<html>`).
+  _Light (preview)_ swaps the surface and text tokens to check contrast; it is
+  not a shipped theme.
+- **Language** — English, Español, Português: app components and the language
+  selector follow it.
+- **Viewport** — Mobile S (360), Mobile (390), Tablet (768), Tablet landscape
+  (1024), Desktop (1280), Desktop wide (1440). See _Foundations / Responsive_.
+- **Accessibility** panel — axe checks of the current story.
+
+## Writing stories
+
+Stories live in `apps/storybook/stories`, mirroring the source tree:
+
+| Component                               | Story                              |
+| --------------------------------------- | ---------------------------------- |
+| `packages/ui/src/components/<name>.tsx` | `stories/ui/<name>.stories.tsx`    |
+| `packages/i18n/src/<name>.tsx`          | `stories/i18n/<name>.stories.tsx`  |
+| `apps/web/src/components/<path>.tsx`    | `stories/web/<path>.stories.tsx`   |
+| `apps/admin/src/components/<path>.tsx`  | `stories/admin/<path>.stories.tsx` |
+
+**Every new component needs a story**: `pnpm --filter @creator-hub/storybook test`
+fails with the exact file to create otherwise. Each story file sets `title`,
+`component`, documented `argTypes` (a `description` for every prop) and at
+least one story; app components use `withWebApp` / `withAdminApp` from
+`.storybook/decorators` and never reach a backend (`parameters.api` mocks it).
+
+```sh
+pnpm storybook                                # dev server, http://localhost:6006
+pnpm build-storybook                          # static site in apps/storybook/storybook-static
+pnpm --filter @creator-hub/storybook test     # story coverage rules
+```

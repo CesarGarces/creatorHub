@@ -19,6 +19,8 @@
   --color-primary: #00bbd9;
   --color-primary-hover: #009fb8;
   --color-primary-light: #00bbd920;
+  /* Text/icons on filled primary surfaces (8.3:1 on the primary). */
+  --color-primary-foreground: #0b0f19;
 
   --color-secondary: #22c55e;
   --color-secondary-light: #22c55e20;
@@ -26,15 +28,19 @@
   --color-accent: #06b6d4;
   --color-accent-light: #06b6d420;
 
-  --color-error: #ef4444;
+  /* Error text/icons: 5.9:1 even on its own tint (bg-error-light). */
+  --color-error: #f87171;
   --color-error-light: #ef444420;
+  /* Filled error surfaces with white text (4.8:1). */
+  --color-error-solid: #dc2626;
 
   --color-warning: #f59e0b;
   --color-warning-light: #f59e0b20;
 
   --color-text: #f1f5f9;
   --color-text-muted: #94a3b8;
-  --color-text-dim: #475569;
+  /* Quietest text: still 4.5:1 (WCAG AA) on every surface. */
+  --color-text-dim: #8391a7;
 
   --radius-sm: 6px;
   --radius-md: 8px;

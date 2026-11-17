@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "./providers";
 import { CookieConsent, VisualViewportObserver } from "@creator-hub/ui";
-import { CookiesModal } from "@/components/legal/legal-modals";
+import { LazyCookiesModal } from "@/components/legal/lazy-cookies-modal";
+import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { getRequestLocale } from "@/i18n/server";
 import { LOCALE_META } from "@/i18n/config";
 import { translate } from "@/i18n/translate";
@@ -55,9 +56,10 @@ export default async function RootLayout({
     >
       <body className={`${inter.variable} font-sans`} suppressHydrationWarning>
         <VisualViewportObserver />
+        <WebVitalsReporter />
         <Providers initialLocale={locale}>
           {children}
-          <CookieConsent CookiesModal={CookiesModal} />
+          <CookieConsent CookiesModal={LazyCookiesModal} />
         </Providers>
       </body>
     </html>

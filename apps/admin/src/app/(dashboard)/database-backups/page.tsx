@@ -126,7 +126,7 @@ export default function DatabaseBackupsPage() {
           type="button"
           onClick={() => setCreateDialog(true)}
           disabled={createMutation.isPending}
-          className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50 sm:min-h-0"
+          className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 sm:min-h-0"
         >
           {createMutation.isPending ? (
             <Loader2 size={18} className="animate-spin" />
@@ -265,8 +265,8 @@ export default function DatabaseBackupsPage() {
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
                         backup.environment === "production"
-                          ? "bg-purple-500/10 text-purple-500"
-                          : "bg-blue-500/10 text-blue-500"
+                          ? "bg-purple-500/10 text-purple-400"
+                          : "bg-blue-500/10 text-blue-400"
                       }`}
                     >
                       {tOptional(
@@ -284,7 +284,7 @@ export default function DatabaseBackupsPage() {
                         backup.status === "completed"
                           ? "bg-green-500/10 text-green-500"
                           : backup.status === "failed"
-                            ? "bg-red-500/10 text-red-500"
+                            ? "bg-red-500/10 text-red-400"
                             : "bg-yellow-500/10 text-yellow-500"
                       }`}
                     >
@@ -327,7 +327,7 @@ export default function DatabaseBackupsPage() {
                         title={t("backups.deleteAria", {
                           name: backup.filename,
                         })}
-                        className="flex items-center justify-center gap-1 rounded-lg border border-border px-3 py-1.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors"
+                        className="flex items-center justify-center gap-1 rounded-lg border border-border px-3 py-1.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
                       >
                         <Trash2 size={12} />
                       </button>
