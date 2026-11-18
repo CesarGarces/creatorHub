@@ -12,6 +12,7 @@ import { markdownToSafeHtml } from "@/lib/sanitize";
 import { ModelSettingsPanel } from "@/components/chat/model-settings-panel";
 import { VoiceButton } from "@/components/voice-button";
 import { RobotinaOrb } from "@/components/voice-assistant/robotina-orb";
+import { AssistantActionCard } from "@/components/voice-assistant/assistant-action-card";
 import { useRobotina } from "@/hooks/use-robotina";
 import {
   useVoiceAssistantStore,
@@ -409,7 +410,7 @@ export default function VoiceAssistantPage() {
                     aria-live="polite"
                     className="text-sm font-medium text-text"
                   >
-                    {t(STATUS_KEYS[state])}
+                    {t(robotina.activity ?? STATUS_KEYS[state])}
                   </p>
                   {robotina.error && (
                     <p role="alert" className="text-xs text-error">
@@ -533,7 +534,12 @@ function MessageBubble({
   const { t } = useI18n();
   const isAssistant = message.role === "assistant";
 
-  if (isAssistant && message.streaming && !message.content) {
+  if (
+    isAssistant &&
+    message.streaming &&
+    !message.content &&
+    !message.actions?.length
+  ) {
     return (
       <div className="flex gap-4 max-w-3xl mx-auto">
         <RobotinaAvatar />
@@ -595,6 +601,13 @@ function MessageBubble({
             }}
           />
         )}
+        {message.actions?.map((action) => (
+          <AssistantActionCard
+            key={action.id}
+            action={action}
+            className={message.content ? "mt-3" : undefined}
+          />
+        ))}
         {message.error && (
           <p role="alert" className="mt-1 text-error">
             {localizeError(message.error, "voiceAssistant.errors.replyFailed")}

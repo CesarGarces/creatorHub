@@ -120,6 +120,8 @@ describe("voice assistant store — sending", () => {
         temperature: 0.7,
         maxTokens: 300,
         languageHint: "es",
+        // The browser's zone, for the dates and times of actions.
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
       expect.any(Function),
       undefined,
@@ -151,6 +153,43 @@ describe("voice assistant store — sending", () => {
       lastMessage: "¡Hola! ¿Qué tal?",
     });
     expect(useCreditsStore.getState().balance).toBe(41);
+  });
+
+  it("tracks her actions on the reply (running → done)", async () => {
+    const record = {
+      id: "a1",
+      name: "calendar.create_event",
+      args: { title: "Grabar" },
+    };
+    stream.impl = async (_r, onEvent) => {
+      onEvent({ type: "delta", content: "Lo agendo. " });
+      onEvent({ type: "action", ...record, status: "running" });
+      expect(state().messages[1]!.actions).toEqual([
+        { ...record, status: "running" },
+      ]);
+      onEvent({
+        type: "action",
+        ...record,
+        status: "done",
+        summary: "Created",
+        data: {
+          kind: "calendar-agenda",
+          from: "2026-11-28",
+          days: 1,
+          events: [],
+          url: "/tools/content-planner",
+        },
+      });
+      onEvent({ type: "delta", content: "¡Listo!" });
+      onEvent(DONE);
+      return DONE;
+    };
+
+    await state().sendMessage("Agenda grabar", { spoken: true });
+
+    expect(state().messages[1]!.actions).toEqual([
+      expect.objectContaining({ id: "a1", status: "done", summary: "Created" }),
+    ]);
   });
 
   it("continues the active conversation", async () => {
@@ -277,7 +316,28 @@ describe("voice assistant store — history and preferences", () => {
             audioMs: 0,
             creditsCharged: 0,
             interrupted: false,
+            actions: [],
             createdAt: "2026-11-27T10:00:00Z",
+          },
+          {
+            id: "m2",
+            role: "assistant",
+            content: "¡Listo!",
+            language: "es",
+            spoken: true,
+            voice: "aura-2-celeste-es",
+            audioMs: 900,
+            creditsCharged: 1,
+            interrupted: false,
+            actions: [
+              {
+                id: "a1",
+                name: "calendar.create_event",
+                status: "done",
+                args: {},
+              },
+            ],
+            createdAt: "2026-11-27T10:00:01Z",
           },
         ],
       },
@@ -295,6 +355,12 @@ describe("voice assistant store — history and preferences", () => {
         credits: 0,
         interrupted: false,
       },
+      expect.objectContaining({
+        id: "m2",
+        actions: [
+          { id: "a1", name: "calendar.create_event", status: "done", args: {} },
+        ],
+      }),
     ]);
   });
 

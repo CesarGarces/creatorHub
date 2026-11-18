@@ -114,6 +114,28 @@ describe("SpeechPlayer", () => {
     expect(player.isActive).toBe(false);
   });
 
+  it("signals when her voice runs out mid-reply (she's working)", async () => {
+    const audio = fakeAudio();
+    const player = new SpeechPlayer(audio.factory);
+    const onDrain = vi.fn();
+    const onEnd = vi.fn();
+    player.onDrain(onDrain);
+    player.onEnd(onEnd);
+    player.begin();
+    player.enqueue(segment(10));
+    await flush();
+    audio.sources[0]!.end(); // reply not finished: drained, not ended
+    expect(onDrain).toHaveBeenCalledTimes(1);
+    expect(onEnd).not.toHaveBeenCalled();
+
+    player.enqueue(segment(10));
+    player.finish();
+    await flush();
+    audio.sources[1]!.end(); // the real end
+    expect(onEnd).toHaveBeenCalledTimes(1);
+    expect(onDrain).toHaveBeenCalledTimes(1);
+  });
+
   it("ends at once when a reply had no audio", () => {
     const player = new SpeechPlayer(fakeAudio().factory);
     const onEnd = vi.fn();

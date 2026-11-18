@@ -85,7 +85,9 @@ vi.mock("@/lib/voice-assistant/stream", async (importOriginal) => ({
   },
 }));
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { VoiceAssistantWidget } from "@/components/dashboard-widgets/widgets/voice-assistant-widget";
+import { AssistantActionCard } from "@/components/voice-assistant/assistant-action-card";
 import VoiceAssistantPage from "@/app/(authed)/tools/voice-assistant/page";
 import { useVoiceAssistantStore } from "@/store/voice-assistant.store";
 import { __resetSttRateCache } from "@/components/voice-button/use-stt-rate";
@@ -519,5 +521,287 @@ describe("Robotina tool page", () => {
           .some((a) => a.textContent?.includes("choose another model")),
       ).toBe(true),
     );
+  });
+});
+
+describe("Robotina actions", () => {
+  const created = {
+    kind: "calendar-event" as const,
+    event: {
+      id: "ev1",
+      title: "Grabar el unboxing",
+      type: "RECORDING",
+      startAt: "2026-11-28T20:00:00.000Z",
+      endAt: "2026-11-28T21:00:00.000Z",
+    },
+    conflicts: [
+      {
+        id: "ev9",
+        title: "Weekly livestream",
+        type: "LIVESTREAM",
+        startAt: "2026-11-28T20:30:00.000Z",
+        endAt: "2026-11-28T22:00:00.000Z",
+      },
+    ],
+    url: "/tools/content-planner?date=2026-11-28T20%3A00%3A00.000Z",
+  };
+
+  /** The server creates an event during the reply. */
+  function createsEvent() {
+    reply.impl = async (_request, onEvent) => {
+      onEvent({
+        type: "start",
+        conversationId: "c1",
+        userMessageId: "m1",
+        language: "es",
+        voice: null,
+        title: "Agenda",
+      });
+      onEvent({ type: "delta", content: "Perfecto, lo agendo. " });
+      const base = {
+        type: "action" as const,
+        id: "a1",
+        name: "calendar.create_event",
+        args: { title: "Grabar el unboxing" },
+      };
+      onEvent({ ...base, status: "running" });
+      onEvent({ ...base, status: "done", summary: "Created", data: created });
+      onEvent({ type: "delta", content: "¡Listo!" });
+      onEvent(done("Perfecto, lo agendo. ¡Listo!"));
+      return done("Perfecto, lo agendo. ¡Listo!");
+    };
+  }
+
+  it("shows the session she created, its overlap and a link to the planner", async () => {
+    createsEvent();
+    render(<VoiceAssistantPage />);
+    const input = screen.getByRole("textbox", {
+      name: "Type a message or tap the mic…",
+    });
+    fireEvent.change(input, {
+      target: { value: "Agenda grabar mañana de 3 a 4" },
+    });
+    await act(async () => {
+      fireEvent.keyDown(input, { key: "Enter" });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText("Added to your calendar")).toBeTruthy(),
+    );
+    expect(screen.getByText("Grabar el unboxing")).toBeTruthy();
+    expect(screen.getByText(/Recording ·/)).toBeTruthy();
+    expect(screen.getByText(/Overlaps with Weekly livestream/)).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "Open in planner →" })
+        .getAttribute("href"),
+    ).toBe(created.url);
+    expect(reply.calls[0]!.request.timeZone).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
+  });
+
+  it("refreshes the planner's data (Plans for today) at once", async () => {
+    createsEvent();
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    useVoiceAssistantStore.setState({
+      handsFree: false,
+      preferencesLoaded: true,
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <VoiceAssistantWidget />
+      </QueryClientProvider>,
+    );
+
+    await talk("Agenda grabar mañana de 3 a 4");
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["content-planner"] });
+    // The widget shows it too, compact, linking to the planner.
+    const link = await screen.findByRole("link", {
+      name: /Grabar el unboxing/,
+    });
+    expect(link.getAttribute("href")).toBe(created.url);
+  });
+});
+
+describe("AssistantActionCard", () => {
+  const base = { id: "a1", args: {} };
+
+  it("shows the action while it runs", () => {
+    render(
+      <AssistantActionCard
+        action={{ ...base, name: "calendar.list_events", status: "running" }}
+      />,
+    );
+    expect(screen.getByRole("status").textContent).toBe(
+      "Checking your calendar…",
+    );
+  });
+
+  it("says when it couldn't be done (she explains why)", () => {
+    render(
+      <AssistantActionCard
+        action={{ ...base, name: "calendar.create_event", status: "failed" }}
+      />,
+    );
+    expect(screen.getByText("Couldn't complete it")).toBeTruthy();
+  });
+
+  it("lists the agenda she read", () => {
+    const event = (id: string, title: string) => ({
+      id,
+      title,
+      type: "SCRIPTING",
+      startAt: "2026-11-28T14:00:00.000Z",
+      endAt: "2026-11-28T15:00:00.000Z",
+    });
+    render(
+      <AssistantActionCard
+        action={{
+          ...base,
+          name: "calendar.list_events",
+          status: "done",
+          data: {
+            kind: "calendar-agenda",
+            from: "2026-11-28",
+            days: 1,
+            events: ["a", "b", "c", "d", "e", "f"].map((id) =>
+              event(id, `Session ${id}`),
+            ),
+            url: "/tools/content-planner",
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("Your calendar")).toBeTruthy();
+    expect(screen.getByText("Session a")).toBeTruthy();
+    expect(screen.queryByText("Session e")).toBeNull();
+    expect(screen.getByText("+2 more")).toBeTruthy();
+  });
+
+  it("says when nothing is planned", () => {
+    render(
+      <AssistantActionCard
+        action={{
+          ...base,
+          name: "calendar.list_events",
+          status: "done",
+          data: {
+            kind: "calendar-agenda",
+            from: "2026-11-28",
+            days: 1,
+            events: [],
+            url: "/tools/content-planner",
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("Nothing planned")).toBeTruthy();
+  });
+});
+
+describe("Conversation mode during an action", () => {
+  it("keeps her turn while she searches: thinking + what she's doing, mic closed", async () => {
+    const sources: Array<{ onended: (() => void) | null }> = [];
+    class FakeAudioContext {
+      state = "running";
+      currentTime = 0;
+      destination = {};
+      resume = async () => undefined;
+      close = async () => undefined;
+      createAnalyser() {
+        return {
+          fftSize: 512,
+          connect() {},
+          getFloatTimeDomainData: (d: Float32Array) => d.fill(0.2),
+        };
+      }
+      async decodeAudioData() {
+        return { duration: 1 };
+      }
+      createBufferSource() {
+        const source = {
+          buffer: null,
+          onended: null as (() => void) | null,
+          connect() {},
+          start() {},
+          stop() {},
+        };
+        sources.push(source);
+        return source;
+      }
+    }
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    let finish!: () => void;
+    reply.impl = (_r, onEvent) =>
+      new Promise((resolve) => {
+        onEvent({ type: "delta", content: "Ok, lo busco ahora." });
+        onEvent({
+          type: "audio",
+          index: 0,
+          mimeType: "audio/mpeg",
+          data: "AAAA",
+          durationMs: 1000,
+          text: "Ok",
+        });
+        onEvent({
+          type: "action",
+          id: "a1",
+          name: "calendar.list_events",
+          args: {},
+          status: "running",
+        });
+        finish = () => {
+          onEvent({
+            type: "action",
+            id: "a1",
+            name: "calendar.list_events",
+            args: {},
+            status: "done",
+            summary: "x",
+          });
+          onEvent({ type: "delta", content: " Tienes dos." });
+          onEvent({
+            type: "audio",
+            index: 1,
+            mimeType: "audio/mpeg",
+            data: "AAAA",
+            durationMs: 1000,
+            text: "Tienes",
+          });
+          onEvent(done("Ok, lo busco ahora. Tienes dos."));
+          resolve(done("Ok, lo busco ahora. Tienes dos."));
+        };
+      });
+    render(<VoiceAssistantWidget />);
+    await talk("¿Tengo planes mañana?");
+    await waitFor(() => expect(sources.length).toBe(1));
+    await act(async () => {
+      sources[0]!.onended?.();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+    // Her first sentence ended; the search is running: still her turn.
+    expect(status().textContent).toBe("Checking your calendar…");
+    expect(
+      document.querySelector("canvas[data-orb-state='thinking']"),
+    ).toBeTruthy();
+    expect(stt.startListening).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      finish();
+    });
+    await waitFor(() => expect(sources.length).toBe(2));
+    await act(async () => {
+      sources[1]!.onended?.();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+    // Only after her last word does the mic reopen (conversation mode).
+    expect(stt.startListening).toHaveBeenCalledTimes(2);
+    expect(status().textContent).toBe("Listening…");
   });
 });

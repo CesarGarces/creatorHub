@@ -52,6 +52,20 @@ export const voiceAssistant = {
     es: "Spanish",
     pt: "Portuguese",
   },
+  actions: {
+    running: {
+      create: "Adding it to your calendar…",
+      list: "Checking your calendar…",
+      other: "Working on it…",
+    },
+    created: "Added to your calendar",
+    agenda: "Your calendar",
+    agendaEmpty: "Nothing planned",
+    overlaps: "Overlaps with {title}",
+    openPlanner: "Open in planner",
+    more: "+{count} more",
+    failed: "Couldn't complete it",
+  },
   widget: {
     hint: "Tap the orb and say anything — she answers out loud.",
   },

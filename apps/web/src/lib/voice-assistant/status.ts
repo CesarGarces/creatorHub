@@ -16,3 +16,14 @@ export const ORB_ACTION_KEYS: Record<OrbState, TranslationKey> = {
   thinking: "voiceAssistant.orb.interrupt",
   speaking: "voiceAssistant.orb.interrupt",
 };
+
+/** What she's doing while an action runs ("Checking your calendar…"). */
+export function actionActivityKey(name: string): TranslationKey {
+  if (name.endsWith(".create_event")) {
+    return "voiceAssistant.actions.running.create";
+  }
+  if (name.endsWith(".list_events")) {
+    return "voiceAssistant.actions.running.list";
+  }
+  return "voiceAssistant.actions.running.other";
+}

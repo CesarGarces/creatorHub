@@ -62,6 +62,15 @@ export class SendMessageDto {
   @IsOptional()
   @IsIn(TTS_LANGUAGES)
   languageHint?: TTSLanguage;
+
+  /**
+   * IANA time zone of the browser ("America/Bogota") for the dates and
+   * times of actions. Unknown zones fall back to UTC in the service.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  timeZone?: string;
 }
 
 export class ListConversationsQueryDto {

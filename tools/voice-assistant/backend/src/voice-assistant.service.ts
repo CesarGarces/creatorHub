@@ -6,13 +6,20 @@ import {
   NotFoundException,
   Optional,
 } from "@nestjs/common";
-import { prisma } from "@creator-hub/database";
+import { randomUUID } from "crypto";
+import { prisma, type Prisma } from "@creator-hub/database";
 import { ProviderRegistry } from "@creator-hub/ai-engine";
 import { CreditService } from "@creator-hub/billing";
 import { PlatformUsageLogger } from "@creator-hub/analytics";
 import { TTSEngineService } from "@creator-hub/tts-engine";
-import { ToolRegistry } from "@creator-hub/tool-sdk";
-import { Logger } from "@creator-hub/shared-utils";
+import { AssistantActionRegistry, ToolRegistry } from "@creator-hub/tool-sdk";
+import { Logger, isValidTimeZone } from "@creator-hub/shared-utils";
+import {
+  ASSISTANT_MAX_ACTIONS_PER_REPLY,
+  type AssistantActionArgs,
+  type AssistantActionContext,
+  type AssistantActionRecord,
+} from "@creator-hub/shared-types";
 import type {
   AIRequest,
   TTSAudio,
@@ -22,7 +29,14 @@ import type {
   VoiceConversationDetail,
   VoiceConversationSummary,
 } from "@creator-hub/shared-types";
-import { resolveReplyLanguage } from "./language";
+import { LANGUAGE_NAMES, resolveReplyLanguage } from "./language";
+import {
+  ACTION_CLOSE,
+  ACTION_OPEN,
+  ActionStreamParser,
+  announcesAction,
+  type ActionCall,
+} from "./action-parser";
 import { buildPersonaPrompt } from "./persona-prompt";
 import { replyCredits } from "./pricing";
 import { SpeechChunker } from "./speech-text";
@@ -46,6 +60,8 @@ export interface ReplyInput {
   temperature?: number;
   maxTokens?: number;
   languageHint?: TTSLanguage;
+  /** IANA time zone of the user's browser (actions' dates and times). */
+  timeZone?: string;
   /** Aborted when the client leaves (closed stream, barge-in). */
   signal?: AbortSignal;
   onEvent: (event: VoiceAssistantEvent) => void;
@@ -58,6 +74,7 @@ interface ResolvedModel {
 }
 
 interface MessageRow {
+  actions?: unknown;
   id: string;
   role: string;
   content: string;
@@ -85,6 +102,11 @@ const MODEL_FAILED = `${VOICE_ASSISTANT_NAME} couldn't answer. Try again or choo
  * the model is still writing: the first sentence is sent to Deepgram as
  * soon as it's complete, later chunks in parallel, emitted in order.
  *
+ * Actions: when the model writes an `<action>` (see action-parser.ts), it
+ * is hidden from text and voice, run through the AssistantActionRegistry
+ * (e.g. the Content Planner's calendar.create_event) and reported as SSE
+ * `action` events; the model then gets the result and tells the user.
+ *
  * Billing (CreditService — atomic debit, thresholds, credit emails):
  * 1 credit per written reply; a spoken reply costs 1 credit per started
  * minute of speech. Voice input is billed apart by the STT gateway. A reply
@@ -100,6 +122,7 @@ export class VoiceAssistantService {
     private readonly usage: PlatformUsageLogger,
     private readonly tts: TTSEngineService,
     @Optional() private readonly tools?: ToolRegistry,
+    @Optional() private readonly actions?: AssistantActionRegistry,
   ) {}
 
   async reply(input: ReplyInput): Promise<void> {
@@ -211,63 +234,160 @@ export class VoiceAssistantService {
       });
     };
 
-    // ── Text: stream the model ───────────────────────────────────────
-    let content = "";
-    let modelError: Error | null = null;
-    const request: AIRequest = {
-      taskType: TEXT_TASK,
-      // DB-driven model id (AIModel is a legacy union of built-in names).
-      model: model.modelId as AIRequest["model"],
-      prompt: input.content,
-      parameters: {
-        systemPrompt: buildPersonaPrompt({
-          language,
-          spoken: speak,
-          userName: await this.firstName(input.userId),
-          tools: this.platformTools(),
-        }),
-        conversationHistory: history,
-        temperature: input.temperature ?? DEFAULT_TEMPERATURE,
-        maxTokens: input.maxTokens ?? DEFAULT_MAX_TOKENS,
-      },
+    // ── Text: stream the model, run the actions it asks for ─────────
+    const timeZone = isValidTimeZone(input.timeZone) ? input.timeZone : "UTC";
+    const actionContext: AssistantActionContext = {
       userId: input.userId,
-      toolId: VOICE_ASSISTANT_TOOL_ID,
+      timeZone,
+      now: new Date(),
+      language,
+    };
+    const systemPrompt = buildPersonaPrompt({
+      language,
+      spoken: speak,
+      userName: await this.firstName(input.userId),
+      tools: this.platformTools(),
+      actions: this.actions?.list() ?? [],
+      timeZone,
+      now: actionContext.now,
+    });
+
+    /** Everything shown and spoken (never the action tags). */
+    let content = "";
+    let spaceBeforeNext = false;
+    const show = (text: string) => {
+      if (!text) return;
+      if (spaceBeforeNext && text.trim()) {
+        text = ` ${text.trimStart()}`;
+        spaceBeforeNext = false;
+      }
+      content += text;
+      emit({ type: "delta", content: text });
+      if (speak) chunker.push(text).forEach(say);
     };
 
-    try {
-      if (provider.generateStream) {
-        for await (const chunk of provider.generateStream(request)) {
-          if (input.signal?.aborted) break;
-          if (chunk.type === "error") throw new Error(chunk.error);
-          if (chunk.type === "done") break;
-          if (chunk.type === "content" && chunk.content) {
-            content += chunk.content;
-            emit({ type: "delta", content: chunk.content });
-            if (speak) chunker.push(chunk.content).forEach(say);
-          }
-        }
-      } else {
-        const response = await provider.generate(request);
-        content = (response.output as { content?: string })?.content ?? "";
-        if (content) {
-          emit({ type: "delta", content });
-          if (speak) chunker.push(content).forEach(say);
-        }
-      }
-    } catch (error) {
-      modelError = error as Error;
-      this.logger.error("Model call failed", {
+    let modelError: Error | null = null;
+    const actions: AssistantActionRecord[] = [];
+    const canAct = (this.actions?.list().length ?? 0) > 0;
+    /** One self-correction per reply (see `nudgeFor`). */
+    let nudged = false;
+    let conversationHistory = history;
+    let prompt = input.content;
+
+    // Round 0 answers the user; after each action, one more round lets her
+    // say what happened (or ask for what's missing).
+    for (let round = 0; ; round++) {
+      const parser = new ActionStreamParser();
+      let written = "";
+      const roundStart = content.length;
+      const request: AIRequest = {
+        taskType: TEXT_TASK,
+        // DB-driven model id (AIModel is a legacy union of built-in names).
+        model: model.modelId as AIRequest["model"],
+        prompt,
+        parameters: {
+          systemPrompt,
+          conversationHistory,
+          temperature: input.temperature ?? DEFAULT_TEMPERATURE,
+          maxTokens: input.maxTokens ?? DEFAULT_MAX_TOKENS,
+        },
         userId: input.userId,
-        model: model.modelId,
-        error: modelError.message,
-      });
+        toolId: VOICE_ASSISTANT_TOOL_ID,
+      };
+
+      try {
+        if (provider.generateStream) {
+          for await (const chunk of provider.generateStream(request)) {
+            if (input.signal?.aborted) break;
+            if (chunk.type === "error") throw new Error(chunk.error);
+            if (chunk.type === "done") break;
+            if (chunk.type === "content" && chunk.content) {
+              written += chunk.content;
+              show(parser.push(chunk.content));
+              // The action is complete: nothing after it is used.
+              if (parser.complete) break;
+            }
+          }
+        } else {
+          const response = await provider.generate(request);
+          written = (response.output as { content?: string })?.content ?? "";
+          show(parser.push(written));
+        }
+      } catch (error) {
+        modelError = error as Error;
+        this.logger.error("Model call failed", {
+          userId: input.userId,
+          model: model.modelId,
+          round,
+          error: modelError.message,
+        });
+      }
+      if (input.signal?.aborted || modelError) break;
+
+      const ending = parser.end();
+      show(ending.text);
+      if (!ending.action) {
+        // She announced an action without writing it (or wrote one that
+        // can't be read): nothing would happen and the turn would pass to
+        // the user. Ask the model once, in the same reply, to do it.
+        const nudge =
+          canAct && !nudged
+            ? nudgeFor(ending, content.slice(roundStart), language)
+            : null;
+        if (nudge) {
+          nudged = true;
+          this.logger.warn("Action announced but not written — nudging", {
+            userId: input.userId,
+            model: model.modelId,
+            malformed: ending.malformed,
+          });
+          if (speak) chunker.flush().forEach(say);
+          conversationHistory = [
+            ...conversationHistory,
+            { role: "user", content: prompt },
+            { role: "assistant", content: written.trim() },
+          ];
+          prompt = nudge;
+          spaceBeforeNext = content.length > 0 && !/\s$/.test(content);
+          continue;
+        }
+        if (ending.malformed) {
+          this.logger.warn("Unreadable action from the model", {
+            userId: input.userId,
+            model: model.modelId,
+          });
+        }
+        break;
+      }
+      if (actions.length >= ASSISTANT_MAX_ACTIONS_PER_REPLY) {
+        this.logger.warn("Too many actions in one reply", {
+          userId: input.userId,
+        });
+        break;
+      }
+
+      // Say what she has said so far while the action runs.
+      if (speak) chunker.flush().forEach(say);
+      const record = await this.runAction(ending.action, actionContext, emit);
+      actions.push(record);
+      if (input.signal?.aborted) break;
+
+      conversationHistory = [
+        ...conversationHistory,
+        { role: "user", content: prompt },
+        { role: "assistant", content: written.trim() },
+      ];
+      prompt = `ACTION RESULT (${record.name}: ${
+        record.status === "done" ? "success" : "failed"
+      }) — ${record.summary}\nNow tell the user what happened, in ${LANGUAGE_NAMES[language]}.`;
+      spaceBeforeNext = content.length > 0 && !/\s$/.test(content);
     }
 
     const interrupted = !!input.signal?.aborted;
     content = content.trim();
     if (speak && !interrupted) chunker.flush().forEach(say);
 
-    if (!content) {
+    if (!content && actions.length === 0) {
       ttsAbort.abort();
       input.signal?.removeEventListener("abort", onAbort);
       await this.usage
@@ -310,6 +430,9 @@ export class VoiceAssistantService {
         creditsCharged: cost,
         interrupted,
         modelId: model.modelId,
+        ...(actions.length > 0
+          ? { actions: actions as unknown as Prisma.InputJsonValue }
+          : {}),
       },
     });
     await prisma.voiceConversation.update({
@@ -317,7 +440,11 @@ export class VoiceAssistantService {
       data: { language, modelId: model.modelId },
     });
 
-    const charged = await this.charge(input.userId, cost, content);
+    const charged = await this.charge(
+      input.userId,
+      cost,
+      content || actions[0]?.summary || "",
+    );
     if (charged !== cost) {
       await prisma.voiceMessage
         .update({
@@ -354,6 +481,7 @@ export class VoiceAssistantService {
           audioMs,
           interrupted,
           chars: content.length,
+          actions: actions.map((a) => `${a.name}:${a.status}`),
         },
       })
       .catch(() => undefined);
@@ -431,6 +559,42 @@ export class VoiceAssistantService {
     if (count === 0) throw new NotFoundException("Conversation not found");
   }
 
+  /** Runs one action the model asked for and reports it as SSE events. */
+  private async runAction(
+    call: ActionCall,
+    context: AssistantActionContext,
+    emit: (event: VoiceAssistantEvent) => void,
+  ): Promise<AssistantActionRecord> {
+    const id = randomUUID();
+    const requested = primitiveArgs(call.args);
+    emit({
+      type: "action",
+      id,
+      name: call.name,
+      status: "running",
+      args: requested,
+    });
+
+    const result = this.actions
+      ? await this.actions.execute(call.name, call.args, context)
+      : { ok: false, summary: `Unknown action "${call.name}"`, args: {} };
+    const record: AssistantActionRecord = {
+      id,
+      name: call.name,
+      args: Object.keys(result.args).length > 0 ? result.args : requested,
+      status: result.ok ? "done" : "failed",
+      summary: result.summary,
+      ...(result.data ? { data: result.data } : {}),
+    };
+    emit({ type: "action", ...record });
+    this.logger.info("Assistant action", {
+      userId: context.userId,
+      action: call.name,
+      status: record.status,
+    });
+    return record;
+  }
+
   /**
    * Debits the reply. If the balance dropped below the price meanwhile
    * (a long spoken reply, another tool in parallel), what is left is taken
@@ -491,15 +655,20 @@ export class VoiceAssistantService {
       where: { conversationId },
       orderBy: { createdAt: "desc" },
       take: VOICE_ASSISTANT_HISTORY_MESSAGES,
-      select: { role: true, content: true },
+      select: { role: true, content: true, actions: true },
     });
     return rows
       .reverse()
-      .filter((m) => m.content.trim())
       .map((m) => ({
-        role: m.role === "assistant" ? "assistant" : "user",
-        content: m.content,
-      }));
+        role: (m.role === "assistant" ? "assistant" : "user") as
+          | "assistant"
+          | "user",
+        // She remembers what she did, not only what she said.
+        content: [m.content, ...actionNotes(m.actions)]
+          .filter((part) => part.trim())
+          .join("\n"),
+      }))
+      .filter((m) => m.content);
   }
 
   private async firstName(userId: string): Promise<string | null> {
@@ -558,6 +727,53 @@ function titleFrom(content: string): string {
     : clean;
 }
 
+/**
+ * The self-correction message for a round that ended without a usable
+ * action although one was meant: a tag that can't be read, or words like
+ * "let me check" with no tag. Null when nothing needs correcting.
+ */
+export function nudgeFor(
+  ending: { malformed: boolean; raw: string },
+  said: string,
+  language: TTSLanguage,
+): string | null {
+  const format = `${ACTION_OPEN}{"name":"<action name>","args":{...}}${ACTION_CLOSE}`;
+  if (ending.malformed) {
+    return `SYSTEM NOTE (not from the user): your action could not be read: ${ending.raw.slice(0, 300)}\nReply with ONLY the action, exactly like ${format} — no other words.`;
+  }
+  if (announcesAction(said)) {
+    return `SYSTEM NOTE (not from the user): you told the user you would do it, but you did not write the action, so nothing happened and the user is still waiting. If you have every required detail, reply with ONLY the action now, exactly like ${format} — no other words. If a detail is missing, ask the user for it in one short sentence in ${LANGUAGE_NAMES[language]}.`;
+  }
+  return null;
+}
+
+/** Only primitive values of model-written arguments (shown to the user). */
+function primitiveArgs(raw: unknown): AssistantActionArgs {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const args: AssistantActionArgs = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      args[key] = value;
+    }
+  }
+  return args;
+}
+
+function actionRecords(value: unknown): AssistantActionRecord[] {
+  return Array.isArray(value) ? (value as AssistantActionRecord[]) : [];
+}
+
+/** "[calendar.create_event done: Created …]" lines for the model's memory. */
+function actionNotes(value: unknown): string[] {
+  return actionRecords(value).map(
+    (a) => `[${a.name} ${a.status}: ${a.summary ?? ""}]`,
+  );
+}
+
 function toMessage(row: MessageRow): VoiceAssistantMessage {
   return {
     id: row.id,
@@ -569,6 +785,7 @@ function toMessage(row: MessageRow): VoiceAssistantMessage {
     audioMs: row.audioMs,
     creditsCharged: row.creditsCharged,
     interrupted: row.interrupted,
+    actions: actionRecords(row.actions),
     createdAt: row.createdAt.toISOString(),
   };
 }

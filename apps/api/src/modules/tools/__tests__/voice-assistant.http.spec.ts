@@ -18,7 +18,9 @@ import * as bodyParser from "body-parser";
 import { Test } from "@nestjs/testing";
 import { ValidationPipe, type INestApplication } from "@nestjs/common";
 import { JwtAuthGuard } from "@creator-hub/auth";
-import { loadTools } from "@creator-hub/tool-sdk";
+import { AssistantActionRegistry, loadTools } from "@creator-hub/tool-sdk";
+import { ContentPlannerModule } from "@creator-hub/content-planner-backend";
+import { ToolSdkModule } from "../../../tool-sdk.module";
 import "@creator-hub/voice-assistant";
 import {
   VoiceAssistantController,
@@ -79,6 +81,7 @@ const body = {
   temperature: 0.7,
   maxTokens: 300,
   languageHint: "es",
+  timeZone: "America/Bogota",
 };
 
 describe("voice-assistant tool", () => {
@@ -93,6 +96,23 @@ describe("voice-assistant tool", () => {
         routes: [{ path: "/tools/voice-assistant", showInNav: true }],
       },
     });
+  });
+});
+
+describe("assistant actions wiring", () => {
+  it("the Content Planner registers its calendar actions in the global registry", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const moduleRef = await Test.createTestingModule({
+      imports: [ToolSdkModule, ContentPlannerModule],
+    }).compile();
+    await moduleRef.init();
+
+    const registry = moduleRef.get(AssistantActionRegistry);
+    expect(registry.list().map((a) => a.name)).toEqual([
+      "calendar.create_event",
+      "calendar.list_events",
+    ]);
+    await moduleRef.close();
   });
 });
 
@@ -136,6 +156,7 @@ describe("POST /api/v1/tools/voice-assistant/messages", () => {
         spoken: true,
         modelId: "deepseek-ai/DeepSeek-V4-Flash",
         languageHint: "es",
+        timeZone: "America/Bogota",
       }),
     );
   });
@@ -149,6 +170,7 @@ describe("POST /api/v1/tools/voice-assistant/messages", () => {
     // The voice is never chosen by the client: always Aura-2 by language.
     [{ ...body, voice: "aura-2-thalia-en" }, "voice"],
     [{ ...body, ttsModel: "aura-1" }, "ttsModel"],
+    [{ ...body, timeZone: "x".repeat(65) }, "timeZone"],
   ])(
     "rejects invalid bodies before streaming (%#: %s)",
     async (invalid, field) => {

@@ -6,6 +6,11 @@
  * body and the prices shown before talking.
  */
 import type { TTSLanguage } from "./tts.types";
+import type {
+  AssistantActionArgs,
+  AssistantActionData,
+  AssistantActionRecord,
+} from "./assistant-action.types";
 
 export const VOICE_ASSISTANT_TOOL_ID = "voice-assistant";
 export const VOICE_ASSISTANT_NAME = "Robotina";
@@ -40,6 +45,8 @@ export interface VoiceAssistantMessage {
   creditsCharged: number;
   /** Assistant: the user interrupted the reply before it ended. */
   interrupted: boolean;
+  /** Assistant: what she did during the reply (e.g. a calendar event). */
+  actions: AssistantActionRecord[];
   createdAt: string;
 }
 
@@ -70,6 +77,11 @@ export interface VoiceAssistantRequest {
   maxTokens?: number;
   /** Interface language — used only when the message's language is unclear. */
   languageHint?: TTSLanguage;
+  /**
+   * IANA time zone of the browser ("America/Bogota"): actions turn "tomorrow
+   * at 3 pm" into the right instant. UTC when absent or unknown.
+   */
+  timeZone?: string;
 }
 
 /** Events of the reply stream (Server-Sent Events, `data: <json>`). */
@@ -97,6 +109,20 @@ export type VoiceAssistantEvent =
     }
   /** Speech failed; the reply continues as text. */
   | { type: "audio_error"; error: string }
+  /**
+   * An action she runs (e.g. creating a calendar event): `running` when it
+   * starts, then `done` or `failed` with its outcome. Her words about it
+   * follow as deltas/audio.
+   */
+  | {
+      type: "action";
+      id: string;
+      name: string;
+      status: "running" | "done" | "failed";
+      args: AssistantActionArgs;
+      summary?: string;
+      data?: AssistantActionData;
+    }
   | {
       type: "done";
       messageId: string;

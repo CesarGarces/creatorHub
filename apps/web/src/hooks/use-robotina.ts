@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { QueryClientContext } from "@tanstack/react-query";
 import {
   isTTSLanguage,
   type VoiceAssistantEvent,
@@ -19,6 +20,8 @@ import {
   type TurnEndReason,
 } from "@/lib/voice-assistant/turn-detector";
 import type { OrbState } from "@/lib/voice-assistant/orb";
+import { actionActivityKey } from "@/lib/voice-assistant/status";
+import type { TranslationKey } from "@/i18n/translate";
 
 export type RobotinaState = OrbState;
 
@@ -35,6 +38,11 @@ export interface UseRobotinaReturn {
   liveTranscript: string;
   /** Localized error of the last turn, if any. */
   error: string | null;
+  /**
+   * What she is doing right now while thinking (e.g. "Checking your
+   * calendar…" during an action), to show instead of "Thinking…".
+   */
+  activity: TranslationKey | null;
   clearError: () => void;
   /** Voice input available (mic + WebSocket STT). */
   isVoiceSupported: boolean;
@@ -60,12 +68,18 @@ export interface UseRobotinaReturn {
 export function useRobotina(): UseRobotinaReturn {
   const { locale, t } = useI18n();
   const sendMessage = useVoiceAssistantStore((s) => s.sendMessage);
+  // Optional: refreshes calendar widgets after she creates a session (no
+  // provider in isolated renders).
+  const queryClient = useContext(QueryClientContext);
+  const queryClientRef = useRef(queryClient);
+  queryClientRef.current = queryClient;
   const handsFree = useVoiceAssistantStore((s) => s.handsFree);
   const loadPreferences = useVoiceAssistantStore((s) => s.loadPreferences);
 
   const [state, setStateValue] = useState<RobotinaState>("idle");
   const [liveTranscript, setLiveTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [activity, setActivity] = useState<TranslationKey | null>(null);
   const [, setCacheVersion] = useState(0);
 
   const stateRef = useRef<RobotinaState>("idle");
@@ -154,6 +168,9 @@ export function useRobotina(): UseRobotinaReturn {
 
       const onEvent = (event: VoiceAssistantEvent) => {
         if (abort.signal.aborted) return;
+        if (event.type === "action" && event.status !== "running") {
+          setActivity(null);
+        }
         if (event.type === "audio") {
           const segment: SpeechSegment = {
             data: base64ToArrayBuffer(event.data),
@@ -162,6 +179,17 @@ export function useRobotina(): UseRobotinaReturn {
           };
           segmentsRef.current.push(segment);
           speech.enqueue(segment);
+        } else if (event.type === "action" && event.status === "running") {
+          setActivity(actionActivityKey(event.name));
+        } else if (
+          event.type === "action" &&
+          event.status === "done" &&
+          event.data?.kind === "calendar-event"
+        ) {
+          // "Plans for today" and the planner show it at once.
+          void queryClientRef.current?.invalidateQueries({
+            queryKey: ["content-planner"],
+          });
         } else if (event.type === "done" && segmentsRef.current.length > 0) {
           const cache = cacheRef.current;
           cache.set(event.messageId, segmentsRef.current);
@@ -174,6 +202,7 @@ export function useRobotina(): UseRobotinaReturn {
 
       try {
         const hint = localeRef.current;
+        setActivity(null);
         const done = await sendMessage(text, {
           spoken,
           languageHint: isTTSLanguage(hint) ? hint : undefined,
@@ -249,6 +278,7 @@ export function useRobotina(): UseRobotinaReturn {
       voiceRef.current.stopListening();
     }
     setLiveTranscript("");
+    setActivity(null);
     setState("idle");
   }, [setState]);
 
@@ -336,8 +366,14 @@ export function useRobotina(): UseRobotinaReturn {
     const offStart = speech.onStart(() => {
       if (stateRef.current === "thinking") setState("speaking");
     });
+    // Her voice ran out mid-reply: she's working (an action, the next
+    // sentence) — show "thinking", it isn't the user's turn yet.
+    const offDrain = speech.onDrain(() => {
+      if (stateRef.current === "speaking") setState("thinking");
+    });
     const offEnd = speech.onEnd(() => {
       if (!mountedRef.current) return;
+      setActivity(null);
       if (loopRef.current && handsFreeRef.current) {
         setState("listening");
         relistenTimerRef.current = setTimeout(() => {
@@ -352,6 +388,7 @@ export function useRobotina(): UseRobotinaReturn {
     });
     return () => {
       offStart();
+      offDrain();
       offEnd();
     };
   }, [player, setState, startListening]);
@@ -402,6 +439,7 @@ export function useRobotina(): UseRobotinaReturn {
     state,
     liveTranscript,
     error,
+    activity: state === "thinking" ? activity : null,
     clearError: () => setError(null),
     isVoiceSupported: voice.isSupported,
     sttCreditsPerMinute: voice.creditsPerMinute,

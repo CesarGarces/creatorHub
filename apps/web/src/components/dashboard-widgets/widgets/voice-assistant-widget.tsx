@@ -7,16 +7,17 @@ import { useI18n } from "@/i18n/i18n-provider";
 import { useRobotina } from "@/hooks/use-robotina";
 import { useVoiceAssistantStore } from "@/store/voice-assistant.store";
 import { RobotinaOrb } from "@/components/voice-assistant/robotina-orb";
+import { AssistantActionCard } from "@/components/voice-assistant/assistant-action-card";
 import { ORB_ACTION_KEYS, STATUS_KEYS } from "@/lib/voice-assistant/status";
 import { WidgetHeader } from "../widget-header";
 
-function lastAssistantText(
-  messages: ReadonlyArray<{ role: string; content: string }>,
-): string {
+function lastAssistant<M extends { role: string }>(
+  messages: readonly M[],
+): M | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i]!.role === "assistant") return messages[i]!.content;
+    if (messages[i]!.role === "assistant") return messages[i];
   }
-  return "";
+  return undefined;
 }
 
 /**
@@ -26,6 +27,7 @@ function lastAssistantText(
  * language) it waves with hers. Conversation mode listens again after each
  * answer. "Open chat" continues the same conversation in the tool.
  *
+ * When she acts (e.g. creates a calendar session), a compact card shows it.
  * Loads no data on mount: voice input uses the STT socket only when tapped.
  */
 export function VoiceAssistantWidget() {
@@ -33,8 +35,12 @@ export function VoiceAssistantWidget() {
   const robotina = useRobotina();
   const handsFree = useVoiceAssistantStore((s) => s.handsFree);
   const setHandsFree = useVoiceAssistantStore((s) => s.setHandsFree);
-  const lastReply = useVoiceAssistantStore((s) =>
-    lastAssistantText(s.messages),
+  const lastReply = useVoiceAssistantStore(
+    (s) => lastAssistant(s.messages)?.content ?? "",
+  );
+  // Her latest action (e.g. the session she just put in the calendar).
+  const lastAction = useVoiceAssistantStore((s) =>
+    lastAssistant(s.messages)?.actions?.at(-1),
   );
   const switchId = useId();
   const { state } = robotina;
@@ -79,11 +85,18 @@ export function VoiceAssistantWidget() {
           aria-live="polite"
           className="relative mt-1 text-sm font-medium text-text"
         >
-          {t(STATUS_KEYS[state])}
+          {t(robotina.activity ?? STATUS_KEYS[state])}
         </p>
         <p className="relative mt-1 line-clamp-2 min-h-10 max-w-sm text-center text-xs text-text-muted">
           {caption}
         </p>
+        {lastAction?.status === "done" && (
+          <AssistantActionCard
+            action={lastAction}
+            compact
+            className="relative mt-2 w-full max-w-sm"
+          />
+        )}
         {robotina.error && (
           <p
             role="alert"

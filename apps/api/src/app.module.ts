@@ -46,7 +46,6 @@ import { SocialModule } from "./modules/social/social.module";
 import { CommunityBotModule } from "./modules/community-bot/community-bot.module";
 import { DashboardLayoutModule } from "./modules/dashboard-layout/dashboard-layout.module";
 import { AssetEngagementModule } from "./modules/asset-engagement/asset-engagement.module";
-import { HealthController } from "./modules/health/health.controller";
 
 // Import tools (registers them via registerTool)
 import "@creator-hub/thumbnail-generator";
@@ -171,7 +170,6 @@ const throttlerStorage = process.env.REDIS_URL
     VoiceAssistantModule,
   ],
   controllers: [
-    HealthController,
     AuthController,
     CreditsController,
     ToolsController,

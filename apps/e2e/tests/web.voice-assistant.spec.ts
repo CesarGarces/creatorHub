@@ -339,6 +339,92 @@ test.describe("Robotina voice assistant", () => {
     });
   });
 
+  test("asks to schedule a plan: she creates the session and shows it", async ({
+    context,
+    page,
+    baseURL,
+  }, testInfo) => {
+    await setup(context, baseURL!);
+    const action = {
+      type: "action",
+      id: "a1",
+      name: "calendar.create_event",
+      args: {
+        title: "Grabar el unboxing",
+        date: "2026-11-28",
+        startTime: "15:00",
+        endTime: "16:00",
+      },
+    };
+    const reply = await replyWith(context, baseURL!, [
+      {
+        type: "start",
+        conversationId: "vc-new",
+        userMessageId: "m1",
+        language: "es",
+        voice: null,
+        title: "Agenda grabar",
+      },
+      { type: "delta", content: "Perfecto, lo agendo ahora. " },
+      { ...action, status: "running" },
+      {
+        ...action,
+        status: "done",
+        summary: "Created",
+        data: {
+          kind: "calendar-event",
+          event: {
+            id: "ev1",
+            title: "Grabar el unboxing",
+            type: "RECORDING",
+            startAt: "2026-11-28T20:00:00.000Z",
+            endAt: "2026-11-28T21:00:00.000Z",
+          },
+          conflicts: [],
+          url: "/tools/content-planner?date=2026-11-28T20%3A00%3A00.000Z",
+        },
+      },
+      { type: "delta", content: "¡Listo! Quedó para mañana de 3 a 4." },
+      {
+        type: "done",
+        messageId: "m2",
+        content:
+          "Perfecto, lo agendo ahora. ¡Listo! Quedó para mañana de 3 a 4.",
+        language: "es",
+        audioMs: 0,
+        credits: 1,
+        balance: 1499,
+      },
+    ]);
+
+    await page.goto("/tools/voice-assistant");
+    const input = page.getByRole("textbox", {
+      name: "Type a message or tap the mic…",
+    });
+    await input.fill("Agenda grabar el unboxing mañana de 3 a 4 de la tarde");
+    await input.press("Enter");
+
+    await expect(page.getByText("Added to your calendar")).toBeVisible();
+    await expect(
+      page.getByText("Grabar el unboxing", { exact: true }),
+    ).toBeVisible();
+    // The browser's time zone travels with the request (dates and times).
+    expect(reply.bodies[0]).toMatchObject({
+      timeZone: await page.evaluate(
+        () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+      ),
+    });
+    await expectAccessible(page, testInfo, "robotina action card");
+
+    // Opens the planner on that week (it reads ?date= then tidies the URL).
+    const opened = page.waitForURL(/\/tools\/content-planner\?date=2026-11-28/);
+    await page.getByRole("link", { name: "Open in planner →" }).click();
+    await opened;
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Content Planner" }),
+    ).toBeVisible();
+  });
+
   test("model settings: only the text model — the voice is fixed", async ({
     context,
     page,

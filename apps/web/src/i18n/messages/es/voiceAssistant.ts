@@ -54,6 +54,20 @@ export const voiceAssistant: Messages["voiceAssistant"] = {
     es: "Español",
     pt: "Portugués",
   },
+  actions: {
+    running: {
+      create: "Agregándolo a tu calendario…",
+      list: "Revisando tu calendario…",
+      other: "Trabajando en ello…",
+    },
+    created: "Agregado a tu calendario",
+    agenda: "Tu calendario",
+    agendaEmpty: "Nada planificado",
+    overlaps: "Se cruza con {title}",
+    openPlanner: "Abrir en el planificador",
+    more: "+{count} más",
+    failed: "No se pudo completar",
+  },
   widget: {
     hint: "Toca la esfera y di lo que quieras: te responde en voz alta.",
   },

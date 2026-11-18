@@ -1216,6 +1216,9 @@ model VoiceMessage {
   creditsCharged Int               @default(0)
   /// Assistant: the user cut the reply short.
   interrupted    Boolean           @default(false)
+  /// Assistant: actions she ran during the reply (AssistantActionRecord[]),
+  /// e.g. a session created in the Content Planner.
+  actions        Json?
   modelId        String?
   createdAt      DateTime          @default(now())
   conversation   VoiceConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)

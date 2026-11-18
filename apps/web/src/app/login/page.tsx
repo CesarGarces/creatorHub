@@ -67,6 +67,12 @@ export default function LoginPage() {
           <p className="text-sm text-text-muted">{t("auth.login.subtitle")}</p>
         </CardHeader>
         <CardContent>
+          <p
+            role="status"
+            className="mb-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning"
+          >
+            {t("auth.login.maintenanceNotice")}
+          </p>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="rounded-lg bg-error/10 border border-error/20 p-3 text-sm text-error">

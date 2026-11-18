@@ -52,6 +52,7 @@ export class SpeechPlayer {
   private endNotified = true;
   private endListeners = new Set<() => void>();
   private startListeners = new Set<() => void>();
+  private drainListeners = new Set<() => void>();
 
   constructor(factory?: AudioContextFactory | null) {
     this.factory = factory === undefined ? defaultFactory() : factory;
@@ -162,6 +163,15 @@ export class SpeechPlayer {
     return () => this.startListeners.delete(listener);
   }
 
+  /**
+   * Called when everything received so far has played but the reply isn't
+   * over (she is working on an action, or the next sentence is on its way).
+   */
+  onDrain(listener: () => void): () => void {
+    this.drainListeners.add(listener);
+    return () => this.drainListeners.delete(listener);
+  }
+
   /** Called when a finished reply has been fully played (or there was nothing to play). */
   onEnd(listener: () => void): () => void {
     this.endListeners.add(listener);
@@ -172,6 +182,7 @@ export class SpeechPlayer {
     this.stop();
     this.endListeners.clear();
     this.startListeners.clear();
+    this.drainListeners.clear();
     void this.context?.close().catch(() => undefined);
     this.context = null;
     this.analyser = null;
@@ -202,6 +213,9 @@ export class SpeechPlayer {
     this.sources.add(source);
     source.onended = () => {
       this.sources.delete(source);
+      if (!this.finished && !this.isActive) {
+        this.drainListeners.forEach((listener) => listener());
+      }
       this.maybeEnd();
     };
     source.start(startAt);

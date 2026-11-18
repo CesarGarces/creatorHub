@@ -17,6 +17,7 @@ vi.mock("@creator-hub/database", async (importOriginal) => ({
   prisma: (await import("./helpers/prisma-mock")).prismaMock,
 }));
 
+import { AssistantActionRegistry } from "@creator-hub/tool-sdk";
 import { prismaMock, resetPrismaMock } from "./helpers/prisma-mock";
 import {
   VoiceAssistantService,
@@ -49,6 +50,9 @@ const text = (...parts: string[]): Chunks => [
 
 interface SetupOptions {
   chunks?: Chunks;
+  /** One stream per model call (rounds around actions). */
+  rounds?: Chunks[];
+  registry?: unknown;
   streaming?: boolean;
   ttsAvailable?: boolean;
   synthesize?: (params: TTSSynthesizeParams) => Promise<unknown>;
@@ -56,12 +60,18 @@ interface SetupOptions {
 }
 
 function setup(options: SetupOptions = {}) {
+  let calls = 0;
   const chunks = options.chunks ?? text("Hola! ", "¿En qué te ayudo hoy?");
   const provider = {
     generateStream:
       options.streaming === false
         ? undefined
-        : vi.fn(streamOf(chunks, options.onYield)),
+        : vi.fn((...args: unknown[]) => {
+            void args;
+            const rounds = options.rounds ?? [chunks];
+            const round = rounds[Math.min(calls++, rounds.length - 1)]!;
+            return streamOf(round, options.onYield)();
+          }),
     generate: vi.fn(async () => ({
       output: {
         type: "text",
@@ -109,6 +119,7 @@ function setup(options: SetupOptions = {}) {
     usage as never,
     tts as never,
     tools as never,
+    options.registry as never,
   );
 
   prismaMock.modelMetadata.findFirst.mockResolvedValue(MODEL);
@@ -779,5 +790,452 @@ describe("VoiceAssistantService — history", () => {
     expect(prismaMock.voiceConversation.deleteMany).toHaveBeenCalledWith({
       where: { id: "c1", userId: "u1" },
     });
+  });
+});
+
+describe("VoiceAssistantService.reply — actions", () => {
+  const CREATE =
+    '<action>{"name":"calendar.create_event","args":{"title":"Grabar el unboxing","date":"2026-11-28","startTime":"15:00","endTime":"16:00"}}</action>';
+  const CREATED = {
+    kind: "calendar-event" as const,
+    event: {
+      id: "ev1",
+      title: "Grabar el unboxing",
+      type: "RECORDING",
+      startAt: "2026-11-28T20:00:00.000Z",
+      endAt: "2026-11-28T21:00:00.000Z",
+    },
+    conflicts: [],
+    url: "/tools/content-planner?date=2026-11-28T20%3A00%3A00.000Z",
+  };
+
+  function registryWith(
+    execute = vi.fn(async () => ({
+      ok: true,
+      summary:
+        'Created "Grabar el unboxing" (RECORDING) on Saturday 2026-11-28 15:00–16:00 (America/Bogota), reminder 15 min before.',
+      data: CREATED,
+    })),
+  ) {
+    const registry = new AssistantActionRegistry();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    registry.register({
+      name: "calendar.create_event",
+      toolId: "content-planner",
+      description: "Create a session",
+      mutates: true,
+      parameters: [
+        { name: "title", type: "string", required: true, description: "" },
+        { name: "date", type: "date", required: true, description: "" },
+        { name: "startTime", type: "time", required: true, description: "" },
+        { name: "endTime", type: "time", required: false, description: "" },
+      ],
+      execute,
+    });
+    return { registry, execute };
+  }
+
+  it("creates the event in real time and then confirms it", async () => {
+    const { registry, execute } = registryWith();
+    const { service, provider, tts, credits } = setup({
+      registry,
+      rounds: [
+        text("Perfecto, lo agendo ahora. ", CREATE),
+        text("¡Listo! Quedó para mañana de tres a cuatro."),
+      ],
+    });
+    const { input: req, events } = input({
+      content: "Agenda grabar el unboxing mañana de 3 a 4 de la tarde",
+      timeZone: "America/Bogota",
+    });
+
+    await service.reply(req);
+
+    expect(events.map((e) => e.type)).toEqual([
+      "start",
+      "delta",
+      "audio", // what she said before acting is spoken at once
+      "action",
+      "action",
+      "delta",
+      "audio",
+      "done",
+    ]);
+    // The action tag is never shown nor spoken.
+    for (const e of ofType(events, "delta"))
+      expect(e.content).not.toContain("<");
+    for (const [p] of tts.synthesize.mock.calls) {
+      expect((p as { text: string }).text).not.toContain("action");
+    }
+    const [running, done] = ofType(events, "action");
+    expect(running).toMatchObject({
+      status: "running",
+      name: "calendar.create_event",
+      args: { title: "Grabar el unboxing", startTime: "15:00" },
+    });
+    expect(done).toMatchObject({
+      id: running!.id,
+      status: "done",
+      data: CREATED,
+    });
+
+    // Run as the user, in their time zone.
+    expect(execute).toHaveBeenCalledWith(
+      {
+        title: "Grabar el unboxing",
+        date: "2026-11-28",
+        startTime: "15:00",
+        endTime: "16:00",
+      },
+      expect.objectContaining({
+        userId: "u1",
+        timeZone: "America/Bogota",
+        language: "es",
+      }),
+    );
+
+    // The model got the result and told the user.
+    const second = provider.generateStream!.mock.calls[1]![0] as {
+      prompt: string;
+      parameters: { conversationHistory: Array<{ content: string }> };
+    };
+    expect(second.prompt).toMatch(
+      /^ACTION RESULT \(calendar\.create_event: success\) — Created "Grabar el unboxing"/,
+    );
+    expect(second.prompt).toContain("in Spanish");
+    expect(second.parameters.conversationHistory.slice(-2)).toEqual([
+      {
+        role: "user",
+        content: "Agenda grabar el unboxing mañana de 3 a 4 de la tarde",
+      },
+      { role: "assistant", content: `Perfecto, lo agendo ahora. ${CREATE}` },
+    ]);
+    const first = provider.generateStream!.mock.calls[0]![0] as {
+      parameters: { systemPrompt: string };
+    };
+    expect(first.parameters.systemPrompt).toContain("calendar.create_event");
+    expect(first.parameters.systemPrompt).toContain(
+      "(America/Bogota, UTC-05:00)",
+    );
+
+    expect(assistantRow()).toMatchObject({
+      content:
+        "Perfecto, lo agendo ahora. ¡Listo! Quedó para mañana de tres a cuatro.",
+      actions: [
+        expect.objectContaining({
+          name: "calendar.create_event",
+          status: "done",
+          data: CREATED,
+        }),
+      ],
+      creditsCharged: 1,
+    });
+    expect(credits.deduct).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets her explain a failed action and ask again", async () => {
+    const { registry } = registryWith(
+      vi.fn(async () => ({
+        ok: false,
+        summary:
+          "Missing the end time or the duration. Ask the user when it ends.",
+      })),
+    );
+    const { service, provider } = setup({
+      registry,
+      rounds: [text(CREATE), text("¿Hasta qué hora sería?")],
+    });
+    const { input: req, events } = input({
+      content: "Agenda grabar mañana a las 3",
+    });
+
+    await service.reply(req);
+
+    expect(ofType(events, "action")[1]).toMatchObject({ status: "failed" });
+    const second = provider.generateStream!.mock.calls[1]![0] as {
+      prompt: string;
+    };
+    expect(second.prompt).toMatch(
+      /^ACTION RESULT \(calendar\.create_event: failed\)/,
+    );
+    expect(assistantRow()).toMatchObject({
+      content: "¿Hasta qué hora sería?",
+      actions: [expect.objectContaining({ status: "failed" })],
+    });
+  });
+
+  it("refuses actions that don't exist (or with no registry)", async () => {
+    const { service } = setup({
+      rounds: [
+        text('<action>{"name":"social.post_tweet","args":{}}</action>'),
+        text("I can't post for you, sorry."),
+      ],
+    });
+    const { input: req, events } = input({ content: "Post this on X" });
+
+    await service.reply(req);
+
+    expect(ofType(events, "action")[1]).toMatchObject({
+      status: "failed",
+      summary: 'Unknown action "social.post_tweet"',
+    });
+  });
+
+  it("runs at most 3 actions in one reply", async () => {
+    const { registry, execute } = registryWith();
+    const { service, provider } = setup({
+      registry,
+      rounds: [text(CREATE)], // the model keeps asking for more
+    });
+    const { input: req } = input({ content: "Agenda cosas" });
+
+    await service.reply(req);
+
+    expect(execute).toHaveBeenCalledTimes(3);
+    expect(provider.generateStream).toHaveBeenCalledTimes(4);
+  });
+
+  it("keeps the reply when the model fails after the event was created", async () => {
+    const { registry } = registryWith();
+    const { service, credits } = setup({
+      registry,
+      rounds: [text(CREATE), [new Error("upstream 500")]],
+    });
+    const { input: req, events } = input({ content: "Agenda grabar" });
+
+    await service.reply(req);
+
+    expect(prismaMock.voiceConversation.delete).not.toHaveBeenCalled();
+    expect(assistantRow()).toMatchObject({
+      content: "",
+      actions: [expect.objectContaining({ status: "done" })],
+    });
+    expect(credits.deduct).toHaveBeenCalledWith(
+      "u1",
+      1,
+      "voice-assistant",
+      expect.stringContaining('Created "Grabar el unboxing"'),
+    );
+    expect(events.at(-1)!.type).toBe("done");
+  });
+
+  it("falls back to UTC for an unknown time zone", async () => {
+    const { registry, execute } = registryWith();
+    const { service } = setup({
+      registry,
+      rounds: [text(CREATE), text("Done.")],
+    });
+    const { input: req } = input({ timeZone: "Mars/Olympus" });
+    await service.reply(req);
+    expect(execute.mock.calls[0]![1]).toMatchObject({ timeZone: "UTC" });
+  });
+
+  it("remembers past actions in the conversation history", async () => {
+    const { service, provider } = setup({ chunks: text("Claro.") });
+    prismaMock.voiceConversation.findFirst.mockResolvedValue({
+      id: "conv9",
+      title: "Old",
+      language: "es",
+    });
+    prismaMock.voiceMessage.findMany.mockResolvedValue([
+      {
+        role: "assistant",
+        content: "¡Listo!",
+        actions: [
+          {
+            id: "a1",
+            name: "calendar.create_event",
+            status: "done",
+            args: {},
+            summary: 'Created "Grabar"',
+          },
+        ],
+      },
+      { role: "user", content: "Agenda grabar", actions: null },
+    ]);
+    const { input: req } = input({
+      conversationId: "conv9",
+      content: "¿y luego?",
+    });
+
+    await service.reply(req);
+
+    const request = provider.generateStream!.mock.calls[0]![0] as {
+      parameters: { conversationHistory: unknown };
+    };
+    expect(request.parameters.conversationHistory).toEqual([
+      { role: "user", content: "Agenda grabar" },
+      {
+        role: "assistant",
+        content: '¡Listo!\n[calendar.create_event done: Created "Grabar"]',
+      },
+    ]);
+  });
+
+  it("returns the actions of past replies with the conversation", async () => {
+    const { service } = setup();
+    const at = new Date("2026-11-27T10:00:00Z");
+    prismaMock.voiceConversation.findFirst.mockResolvedValue({
+      id: "c1",
+      title: "Hi",
+      language: "es",
+      createdAt: at,
+      updatedAt: at,
+      messages: [
+        {
+          id: "m2",
+          role: "assistant",
+          content: "¡Listo!",
+          language: "es",
+          spoken: true,
+          voice: null,
+          audioMs: 0,
+          creditsCharged: 1,
+          interrupted: false,
+          actions: [
+            {
+              id: "a1",
+              name: "calendar.create_event",
+              status: "done",
+              args: {},
+            },
+          ],
+          createdAt: at,
+        },
+      ],
+    });
+    const detail = await service.getConversation("u1", "c1");
+    expect(detail.messages[0]!.actions).toEqual([
+      { id: "a1", name: "calendar.create_event", status: "done", args: {} },
+    ]);
+  });
+});
+
+describe("VoiceAssistantService.reply — she said she'd do it but didn't", () => {
+  const LIST =
+    '<action>{"name":"calendar.list_events","args":{"date":"2026-11-28"}}</action>';
+
+  function agendaRegistry() {
+    const registry = new AssistantActionRegistry();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const execute = vi.fn(async () => ({
+      ok: true,
+      summary: "2 session(s) for 2026-11-28",
+    }));
+    registry.register({
+      name: "calendar.list_events",
+      toolId: "content-planner",
+      description: "Read the agenda",
+      mutates: false,
+      parameters: [
+        { name: "date", type: "date", required: true, description: "" },
+      ],
+      execute,
+    });
+    return { registry, execute };
+  }
+
+  it("nudges the model once in the same reply, so the search really happens", async () => {
+    const { registry, execute } = agendaRegistry();
+    const { service, provider } = setup({
+      registry,
+      rounds: [
+        text("Ok, lo busco en este momento."), // announced, no action
+        text(LIST), // after the nudge
+        text("Mañana tienes dos sesiones."),
+      ],
+    });
+    const { input: req, events } = input({
+      content: "¿Tengo algún plan para mañana?",
+    });
+
+    await service.reply(req);
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    const nudge = provider.generateStream!.mock.calls[1]![0] as {
+      prompt: string;
+      parameters: { conversationHistory: Array<{ content: string }> };
+    };
+    expect(nudge.prompt).toMatch(
+      /^SYSTEM NOTE \(not from the user\): you told the user you would do it, but you did not write the action/,
+    );
+    expect(nudge.prompt).toContain("in Spanish");
+    expect(nudge.parameters.conversationHistory.at(-1)).toEqual({
+      role: "assistant",
+      content: "Ok, lo busco en este momento.",
+    });
+    expect(
+      events
+        .map((e) => (e.type === "action" ? `action:${e.status}` : e.type))
+        .filter((t, i, all) => t !== "delta" || all[i - 1] !== "delta"),
+    ).toEqual([
+      "start",
+      "delta",
+      "audio",
+      "action:running",
+      "action:done",
+      "delta",
+      "audio",
+      "done",
+    ]);
+    expect(assistantRow()).toMatchObject({
+      content: "Ok, lo busco en este momento. Mañana tienes dos sesiones.",
+      actions: [expect.objectContaining({ status: "done" })],
+    });
+  });
+
+  it("asks again for an action it couldn't read", async () => {
+    const { registry, execute } = agendaRegistry();
+    const { service, provider } = setup({
+      registry,
+      rounds: [
+        text("Let me check. <action>list my events for tomorrow</action>"),
+        text(LIST),
+        text("You have two sessions."),
+      ],
+    });
+    const { input: req } = input({ content: "Do I have plans tomorrow?" });
+
+    await service.reply(req);
+
+    const nudge = provider.generateStream!.mock.calls[1]![0] as {
+      prompt: string;
+    };
+    expect(nudge.prompt).toContain("your action could not be read");
+    expect(nudge.prompt).toContain("list my events for tomorrow");
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("nudges only once per reply", async () => {
+    const { registry, execute } = agendaRegistry();
+    const { service, provider } = setup({
+      registry,
+      rounds: [
+        text("Un momento, lo reviso."),
+        text("Un momento, ya lo reviso."),
+      ],
+    });
+    const { input: req } = input({ content: "¿Tengo planes?" });
+
+    await service.reply(req);
+
+    expect(provider.generateStream).toHaveBeenCalledTimes(2);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("doesn't nudge normal answers, nor when she has no actions", async () => {
+    const { registry } = agendaRegistry();
+    const withActions = setup({
+      registry,
+      rounds: [text("¿A qué hora empieza?")],
+    });
+    await withActions.service.reply(
+      input({ content: "Agenda grabar mañana" }).input,
+    );
+    expect(withActions.provider.generateStream).toHaveBeenCalledTimes(1);
+
+    const noActions = setup({ rounds: [text("Un momento, lo busco.")] });
+    await noActions.service.reply(input({ content: "¿Tengo planes?" }).input);
+    expect(noActions.provider.generateStream).toHaveBeenCalledTimes(1);
   });
 });

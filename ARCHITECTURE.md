@@ -1475,14 +1475,15 @@ User taps the orb (widget or tool page)
     └──► her last word → conversation mode? listen again : idle
 ```
 
-| SSE event     | Payload                                                 |
-| ------------- | ------------------------------------------------------- |
-| `start`       | conversationId, userMessageId, language, voice \| null  |
-| `delta`       | text as the model writes it                             |
-| `audio`       | index, mimeType, base64 data, durationMs, text          |
-| `audio_error` | the voice failed — the reply continues as text          |
-| `done`        | messageId, content, language, audioMs, credits, balance |
-| `error`       | status, message (nothing charged)                       |
+| SSE event     | Payload                                                     |
+| ------------- | ----------------------------------------------------------- |
+| `start`       | conversationId, userMessageId, language, voice \| null      |
+| `delta`       | text as the model writes it                                 |
+| `audio`       | index, mimeType, base64 data, durationMs, text              |
+| `audio_error` | the voice failed — the reply continues as text              |
+| `action`      | id, name, status (running/done/failed), args, summary, data |
+| `done`        | messageId, content, language, audioMs, credits, balance     |
+| `error`       | status, message (nothing charged)                           |
 
 ---
 
@@ -3271,6 +3272,10 @@ An invalid reply is an error, not a charge.
 
 ### Tool actions
 
+Robotina (§14g) can also create sessions and read the agenda by voice,
+through the actions the planner registers (`calendar.create_event`,
+`calendar.list_events`).
+
 A step may carry `toolAction = { toolId, intention, prompt }`. It travels to
 the calendar (`ContentEvent.toolAction`, JSON) and is shown in the plan, in
 "Plan a video" (wrench chip) and in the session dialog. "Open tool" links to
@@ -3543,6 +3548,50 @@ Typed messages get a written reply (no audio). Replies of the current visit
 keep their audio in memory for "Play again" (no new charge); audio is never
 stored on the server.
 
+### Actions — she can do things, not just talk
+
+Robotina can act in the user's account: "schedule the recording tomorrow
+from 3 to 4" puts a session in the Content Planner in real time. Tools
+**register** what the assistant may do; the assistant discovers it at
+runtime — a new tool brings new abilities without changing her (Open/Closed,
+like the Tool Registry).
+
+```
+packages/tool-sdk   AssistantActionRegistry (global, ToolSdkModule)
+                      register(handler) · list() · execute(name, args, ctx)
+                      validateActionArgs(): names, required, types, date/time
+                      formats, enums, ranges — model output is never trusted
+        ▲ registers at startup (OnModuleInit)
+tools/content-planner  ContentPlannerAssistantActions
+                      calendar.create_event  title, date, startTime,
+                                             endTime | durationMinutes,
+                                             type?, notes?, reminderMinutes?
+                      calendar.list_events   date, days? (1–14)
+                      → ContentPlannerService (same validation, default
+                        reminder and overlap warnings as the calendar UI)
+        ▼ used by
+tools/voice-assistant  persona prompt lists the actions + rules
+                      ActionStreamParser hides <action>{…}</action>
+                      from text and voice → registry.execute() → SSE
+                      `action` → the model gets "ACTION RESULT …" and
+                      tells the user (≤ 3 actions per reply)
+```
+
+| Concern           | How                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Gathering details | The prompt lists each action's parameters. For actions that change data she needs every required detail **from the user** (never invents a name, date or time) and asks for what's missing, one natural question at a time; optional ones (type) she infers.                                                                                                                                                                                                                                                                                                                               |
+| Real time         | She says one short sentence ("I'm adding it now"), writes the action, and stops. The server runs it at once, streams `action` (`running` → `done`/`failed`) and starts a new model round with the result; she confirms the day and time or explains the error.                                                                                                                                                                                                                                                                                                                             |
+| Time zones        | The browser sends its IANA zone (`timeZone`); the prompt gives her the user's local date, time and UTC offset; `zonedDateTimeToUtc()` (`shared-utils`, `Intl` only) turns "2026-11-28 15:00" into the instant, DST-safe (skipped times are refused).                                                                                                                                                                                                                                                                                                                                       |
+| Safety            | Runs as the authenticated user only (`context.userId`); arguments validated against the declared parameters; unknown actions, bad arguments and handler errors come back as `{ ok: false, summary }` — never thrown; past start times refused.                                                                                                                                                                                                                                                                                                                                             |
+| Feedback          | `AssistantActionCard` in the chat (and compact on the widget): the session with its type, day, time, overlaps and "Open in planner"; the agenda she read; running/failed states. A created session invalidates the `["content-planner"]` queries, so "Plans for today" shows it at once.                                                                                                                                                                                                                                                                                                   |
+| Self-correction   | Models sometimes say "let me check" / "lo busco" and end the reply without the action (or write it in another format), so nothing would happen and the turn would pass to the user. The parser accepts common variants (`<action name="…">`, `name {…}`, top-level arguments, OpenAI-style `function.arguments`); if a round still has no usable action but announces one (`announcesAction()`, en/es/pt) or has an unreadable one, the server sends the model **one** "SYSTEM NOTE" in the same reply to write it. Tools also ship a worked `example` per action, rendered in the prompt. |
+| Her turn          | While an action runs her voice may pause: the player reports `onDrain`, the orb goes back to _thinking_ and the status says what she's doing ("Checking your calendar…"); conversation mode only reopens the mic after her last word of the whole reply.                                                                                                                                                                                                                                                                                                                                   |
+| Memory            | Each reply stores its actions (`VoiceMessage.actions`); the history sent to the model appends `[calendar.create_event done: Created …]`, so she knows what she did.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Price             | Actions are free (the calendar is free); the reply still costs 1 credit (per minute when spoken), even with the extra model round.                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+
+Without registered actions the prompt tells her she can't change anything —
+she never offers what she can't do.
+
 ### Text-to-speech — `packages/tts-engine`
 
 Mirrors `stt-engine`: `TTSProviderInterface`, `TTSProviderBase`,
@@ -3599,12 +3648,15 @@ model VoiceConversation {   // one talk
 }
 model VoiceMessage {        // text only — audio is never stored
   id, conversationId, role ("user"|"assistant"), content, language,
-  spoken, voice?, audioMs, creditsCharged, interrupted, modelId?, createdAt
+  spoken, voice?, audioMs, creditsCharged, interrupted, modelId?,
+  actions Json?,            // AssistantActionRecord[] run during the reply
+  createdAt
   @@index([conversationId, createdAt])
 }
 ```
 
-Migration: `20261127000000_add_voice_assistant`.
+Migrations: `20261127000000_add_voice_assistant`,
+`20261128000000_add_voice_message_actions`.
 
 ### Related changes
 
@@ -3622,6 +3674,15 @@ Migration: `20261127000000_add_voice_assistant`.
 
 ### Tests
 
+- Actions: `AssistantActionRegistry` + `validateActionArgs` (tool-sdk),
+  time-zone helpers incl. DST (shared-utils), the planner's actions
+  (local time → instant, duration past midnight, missing/backwards/past
+  times, DST gap, overlaps, agenda), the stream parser (tags split in any
+  chunk size, fenced/unclosed/malformed), the service loop (event order,
+  tag never shown or spoken, result round, failures, unknown actions, max
+  3, model failure after an action, memory), the API wiring (the real
+  ContentPlannerModule registers into the global registry), the store,
+  cards and planner refresh, and an E2E scheduling flow.
 - tts-engine (vitest): MP3 frame parser (MPEG-2, ID3, junk), WAV helpers,
   Aura-2 requests per language (URL, auth, body), retries, errors, abort,
   factory (no mock in production), billing by started minute.
@@ -3994,6 +4055,7 @@ export class YourToolService {
 | **Sentry for observability**     | Separate projects for API + Web, breadcrumbs for context, PII sanitization, flush on Render shutdown                                              |
 | **TTS fixed, not a setting**     | Always Deepgram Aura-2, voice picked by the reply language: nothing to configure or misconfigure, one price per minute                            |
 | **Sentence-level TTS over SSE**  | First sentence spoken while the model still writes; plain REST + the existing SSE pattern; parallel synthesis, in-order                           |
+| **Assistant actions registry**   | Tools register what the assistant may do and she discovers them at runtime: no tool-to-tool imports, new abilities without changing her           |
 | **Lexical language detection**   | Transcripts and typed text carry no language: a tiny en/es/pt detector is instant, free and testable, with fallbacks                              |
 | **Apify over Crawlee**           | Apify handles authentication and scraping at scale; no cookie management needed. Crawlee was fragile and required manual cookie refresh.          |
 

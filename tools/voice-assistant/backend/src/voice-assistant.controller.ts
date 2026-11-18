@@ -69,6 +69,7 @@ export class VoiceAssistantController {
         temperature: dto.temperature,
         maxTokens: dto.maxTokens,
         languageHint: dto.languageHint,
+        timeZone: dto.timeZone,
         signal: abort.signal,
         onEvent: send,
       });

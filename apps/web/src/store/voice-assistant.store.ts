@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type {
+  AssistantActionRecord,
   TTSLanguage,
   VoiceAssistantEvent,
   VoiceAssistantMessage,
@@ -40,6 +41,8 @@ export interface RobotinaMessage {
   voiceFailed?: boolean;
   /** Failed reply: localized by the UI. */
   error?: string;
+  /** What she did during the reply (e.g. a calendar event), in order. */
+  actions?: AssistantActionRecord[];
 }
 
 export interface SendOptions {
@@ -88,7 +91,17 @@ export function toRobotinaMessage(m: VoiceAssistantMessage): RobotinaMessage {
     audioMs: m.audioMs,
     credits: m.creditsCharged,
     interrupted: m.interrupted,
+    ...(m.actions?.length ? { actions: m.actions } : {}),
   };
+}
+
+/** The browser's IANA time zone (actions' dates and times), if known. */
+export function browserTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function isAbort(error: unknown): boolean {
@@ -281,6 +294,22 @@ export const useVoiceAssistantStore = create<VoiceAssistantState>()((
           case "audio_error":
             patchMessage(assistantId, { voiceFailed: true });
             break;
+          case "action": {
+            const { type: _type, ...record } = event;
+            set((state) => ({
+              messages: state.messages.map((m) => {
+                if (m.id !== assistantId) return m;
+                const actions = m.actions ?? [];
+                return {
+                  ...m,
+                  actions: actions.some((a) => a.id === record.id)
+                    ? actions.map((a) => (a.id === record.id ? record : a))
+                    : [...actions, record],
+                };
+              }),
+            }));
+            break;
+          }
           case "done": {
             patchMessage(assistantId, {
               id: event.messageId,
@@ -324,6 +353,7 @@ export const useVoiceAssistantStore = create<VoiceAssistantState>()((
             temperature: settings.temperature,
             maxTokens: settings.maxTokens,
             languageHint: options.languageHint,
+            timeZone: browserTimeZone(),
           },
           onEvent,
           options.signal,
