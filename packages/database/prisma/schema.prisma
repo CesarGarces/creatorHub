@@ -89,6 +89,7 @@ model User {
   subscriptions        Subscription[]
   toolAccess           ToolAccess[]
   toolFavorites        ToolFavorite[]
+  dashboardLayout      DashboardLayout?
   tweetDrafts          TweetDraft[]
   usageLogs            UsageLog[]
   contentSamples       UserContentSample[]
@@ -236,6 +237,18 @@ model ToolFavorite {
   @@unique([userId, toolId])
   @@index([toolId])
   @@index([userId, sortOrder])
+}
+
+/// Dashboard widgets of a user: order + visibility (ARCHITECTURE.md §2f).
+/// No row = the default layout (DEFAULT_DASHBOARD_WIDGETS).
+model DashboardLayout {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  /// Ordered [{ id, visible }], read through normalizeDashboardWidgets().
+  widgets   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CreditTransaction {

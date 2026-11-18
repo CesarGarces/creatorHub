@@ -19,6 +19,10 @@ Creator Hub is a platform where content creators can access AI-powered tools to 
 - **Content Planner** — Calendar for video production. Plan a video from its publish date and every step (ideation, scripting, recording, editing, thumbnail, publishing) is scheduled backwards, one per day. Week (drag & drop to reschedule), month and agenda views, custom session types (created from the session dialog), overlap warnings, calendar-wide totals, per-video progress. Free (no credits).
   - **Plan with AI** — describe the video (type it, dictate it or attach PDF/DOCX/TXT/JSON/MD files), pick any active text model and the assistant rates its complexity, estimates the steps and their time from your past productions (vector search), suggests a platform tool for each step with its intention (Script Writer, Thumbnail Generator, Video Generator…, one click opens it pre-filled) and fills the calendar. Costs the model's credits (set in Admin → AI Models); voice input is billed per minute.
 
+**Dashboard:**
+
+- **Dashboard widgets** — Quick prompt, favorite tools, plans for today (today's Content Planner sessions with their name, description and a countdown; past ones in red), recent activity, recommendations, likes & views (total likes and views of your assets and the most liked ones as small image previews — videos show their thumbnail, never play), credits and pro tips (100 tips on the calendar, widgets, viral videos and more, kept as JSON in `apps/web/src/content/pro-tips/`, a different one every hour) as widgets. Choose them in Settings → Dashboard (a preview of each widget and a live desktop/phone preview of the layout, up/down ordering), or press and hold a widget on the dashboard to drag it to a new place, iOS-style (wobble, lift and landing bounce; mouse, touch and keyboard). Each widget is its own lazy chunk that loads with its data only when shown. See ARCHITECTURE.md §2f.
+
 **Community Bot:**
 
 - **Community Bot** — AI-powered auto-reply system for creators. Connect Telegram and WhatsApp channels, configure bot behavior, and have the AI reply to fans in the creator's own voice. Includes style profile injection, cost/abuse guards, conversation viewer, and playground for testing.
@@ -562,6 +566,7 @@ pnpm --filter @creator-hub/e2e e2e:report
 | `landing.language.spec.ts`                              | Navbar selector (desktop and mobile) translating every section, kept after reload                                                                     |
 | `admin.language.spec.ts`                                | Selector on admin sign-in and sidebar, users table/dialog, account language restored at sign-in                                                       |
 | `cross-app.language.spec.ts`                            | Language chosen on the landing page carries over to the app and vice versa                                                                            |
+| `web.dashboard-widgets.spec.ts`                         | Press-and-hold rearranging (mouse, touch, keyboard), bounces, no swap loops, hide/undo, lazy data, Settings → Dashboard                               |
 | `web.checkout.spec.ts`                                  | Buying a credit plan redirects to the payment gateway                                                                                                 |
 | `web.responsive-pages.spec.ts`                          | Every web page (signed-in and public) on a phone and a tablet: no sideways scroll, drawer closed, top bar and chat reachable; desktop regression pass |
 | `web.responsive-navigation.spec.ts`                     | Drawer navigation (open, navigate, tap outside, `Escape`, focus), language switcher on phones, docked sidebar from 1024px, ⌘/Ctrl+K command palette   |

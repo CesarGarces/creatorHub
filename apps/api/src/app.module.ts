@@ -43,6 +43,8 @@ import { ChatModule } from "./modules/chat/chat.module";
 import { UserStyleModule } from "./modules/user-style/user-style.module";
 import { SocialModule } from "./modules/social/social.module";
 import { CommunityBotModule } from "./modules/community-bot/community-bot.module";
+import { DashboardLayoutModule } from "./modules/dashboard-layout/dashboard-layout.module";
+import { AssetEngagementModule } from "./modules/asset-engagement/asset-engagement.module";
 
 // Import tools (registers them via registerTool)
 import "@creator-hub/thumbnail-generator";
@@ -139,6 +141,11 @@ const throttlerStorage = process.env.REDIS_URL
 
     // Notifications
     NotificationModule,
+
+    // Dashboard widgets: order + visibility per user
+    DashboardLayoutModule,
+    // Likes & views of the user's assets (dashboard widget)
+    AssetEngagementModule,
 
     // Tools (registered automatically via ToolSdkModule)
     ThumbnailGeneratorModule,

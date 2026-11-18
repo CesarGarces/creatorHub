@@ -32,6 +32,8 @@ export const EXEMPT: Record<string, string> = {
     "route guard (redirects to /login) — no UI beyond a spinner",
   "apps/web/src/components/legal/lazy-cookies-modal.tsx":
     "next/dynamic wrapper of CookiesModal (legal-modals.tsx) — no UI of its own",
+  "apps/web/src/components/dashboard-widgets/widget-loader.tsx":
+    "next/dynamic map of the dashboard widgets (one lazy chunk each) — no UI of its own; every widget has a story",
   "apps/web/src/components/web-vitals-reporter.tsx":
     "field Web Vitals telemetry (useReportWebVitals) — renders nothing",
   "apps/admin/src/components/web-vitals-reporter.tsx":

@@ -1,0 +1,606 @@
+{
+  "version": 1,
+  "locale": "en",
+  "tips": [
+    {
+      "id": "dashboard-press-and-hold",
+      "category": "dashboard",
+      "title": "Rearrange your dashboard",
+      "body": "Press and hold any widget for a moment to pick it up, then drag it where you want it. Your new order is saved automatically."
+    },
+    {
+      "id": "dashboard-keyboard",
+      "category": "dashboard",
+      "title": "No mouse? Use Customize",
+      "body": "Press Customize next to the greeting, focus a widget's grip button and use Space and the arrow keys to move it one place at a time."
+    },
+    {
+      "id": "dashboard-hide-undo",
+      "category": "dashboard",
+      "title": "Hide what you don't use",
+      "body": "While rearranging, tap − on a widget to hide it. Changed your mind? Press Undo in the message that appears."
+    },
+    {
+      "id": "dashboard-settings-preview",
+      "category": "dashboard",
+      "title": "Preview widgets before adding them",
+      "body": "Settings → Dashboard shows a preview of every widget and of your whole layout on a desktop or a phone, so you can decide before switching one on."
+    },
+    {
+      "id": "dashboard-credits-widget",
+      "category": "dashboard",
+      "title": "Keep an eye on your credits",
+      "body": "Switch on the Credits widget in Settings → Dashboard to see your balance and plan at a glance, with a shortcut to top up."
+    },
+    {
+      "id": "dashboard-plans-for-today",
+      "category": "dashboard",
+      "title": "Start your day with Plans for today",
+      "body": "The Plans for today widget lists today's sessions from your calendar with a countdown to each one, so you always know what's next."
+    },
+    {
+      "id": "dashboard-likes-and-views",
+      "category": "dashboard",
+      "title": "See what people love",
+      "body": "The Likes & views widget shows the total likes and views of your shared assets and which ones perform best."
+    },
+    {
+      "id": "dashboard-quick-prompt",
+      "category": "dashboard",
+      "title": "Ask the assistant from the dashboard",
+      "body": "Type an idea in the quick prompt and press Enter: the AI assistant opens with your request already on its way."
+    },
+    {
+      "id": "dashboard-reset",
+      "category": "dashboard",
+      "title": "Start over anytime",
+      "body": "Settings → Dashboard → Reset to default brings back the original widgets and their order in one click."
+    },
+    {
+      "id": "dashboard-command-palette",
+      "category": "dashboard",
+      "title": "Jump anywhere with ⌘K",
+      "body": "Press ⌘K (Ctrl+K on Windows) on the dashboard to search tools, agents and pages without leaving the keyboard."
+    },
+    {
+      "id": "calendar-plan-a-video",
+      "category": "calendar",
+      "title": "Plan a whole video in one go",
+      "body": "Use Plan a video: choose the publish date and every production step, from ideation to publishing, is scheduled backwards for you."
+    },
+    {
+      "id": "calendar-drag-to-move",
+      "category": "calendar",
+      "title": "Reschedule by dragging",
+      "body": "In the week view, drag a session to another day or hour to move it. No forms needed."
+    },
+    {
+      "id": "calendar-resize",
+      "category": "calendar",
+      "title": "Change a session's length",
+      "body": "Drag the top or bottom edge of a session in the week view to make it shorter or longer."
+    },
+    {
+      "id": "calendar-click-empty-slot",
+      "category": "calendar",
+      "title": "Add a session in one click",
+      "body": "Click an empty slot in the week view to create a session right at that time."
+    },
+    {
+      "id": "calendar-custom-types",
+      "category": "calendar",
+      "title": "Create your own session types",
+      "body": "Need a Podcast or Sponsor call type? Create a custom type from the session dialog and give it its own color and icon."
+    },
+    {
+      "id": "calendar-custom-platforms",
+      "category": "calendar",
+      "title": "Add the platforms you use",
+      "body": "Publishing on Kick or somewhere else? Add a custom platform so your video projects show where they go live."
+    },
+    {
+      "id": "calendar-reminders",
+      "category": "calendar",
+      "title": "Never miss a session",
+      "body": "Set a reminder on each session, or for a whole plan, and you'll get a notification before it starts."
+    },
+    {
+      "id": "calendar-overlaps",
+      "category": "calendar",
+      "title": "Watch for overlaps",
+      "body": "The planner warns you when two sessions overlap, so you don't book two recordings at the same time."
+    },
+    {
+      "id": "calendar-mark-done",
+      "category": "calendar",
+      "title": "Tick sessions off",
+      "body": "Mark sessions as done as you finish them: the progress of each video and the calendar totals update at once."
+    },
+    {
+      "id": "calendar-agenda-on-phone",
+      "category": "calendar",
+      "title": "Use the agenda on your phone",
+      "body": "On phones the planner opens on the agenda: a simple list of the next 30 days that's easy to scroll with one thumb."
+    },
+    {
+      "id": "calendar-month-view",
+      "category": "calendar",
+      "title": "See the big picture in Month view",
+      "body": "Switch to Month to spot busy weeks and empty gaps before you commit to a new video."
+    },
+    {
+      "id": "calendar-descriptions",
+      "category": "calendar",
+      "title": "Write a real description",
+      "body": "Use each session's description for shot lists, locations and links: it's what Plans for today shows on your dashboard."
+    },
+    {
+      "id": "calendar-steps-template",
+      "category": "calendar",
+      "title": "Save your production steps",
+      "body": "Set up your own list of production steps once, and Plan a video will use it, in your order, for every new video."
+    },
+    {
+      "id": "calendar-totals",
+      "category": "calendar",
+      "title": "Measure your workload",
+      "body": "The totals at the top of the planner show your sessions, planned hours and completed work. Use them to plan a realistic week."
+    },
+    {
+      "id": "ai-planner-dictate",
+      "category": "ai-planner",
+      "title": "Dictate your idea",
+      "body": "In Plan with AI you can speak instead of typing: use the voice button to dictate your video idea."
+    },
+    {
+      "id": "ai-planner-files",
+      "category": "ai-planner",
+      "title": "Give the AI your notes",
+      "body": "Attach up to 5 files (PDF, DOCX, TXT, JSON or Markdown) with your research or brief; the assistant reads them before planning."
+    },
+    {
+      "id": "ai-planner-history",
+      "category": "ai-planner",
+      "title": "It learns from your past videos",
+      "body": "Plan with AI compares your idea with your past productions to estimate how long each step will really take you."
+    },
+    {
+      "id": "ai-planner-open-tool",
+      "category": "ai-planner",
+      "title": "Open the suggested tool",
+      "body": "Each planned step can suggest a platform tool with a ready prompt. Press Open tool and it opens pre-filled."
+    },
+    {
+      "id": "ai-planner-review",
+      "category": "ai-planner",
+      "title": "Review before you commit",
+      "body": "Not sure about the plan? Choose Review and edit to adjust steps and dates before adding anything to your calendar."
+    },
+    {
+      "id": "ai-planner-cost",
+      "category": "ai-planner",
+      "title": "Know the cost first",
+      "body": "The AI planner shows what an analysis costs before you run it, and cancelling before it finishes charges nothing."
+    },
+    {
+      "id": "viral-first-3-seconds",
+      "category": "viral",
+      "title": "Win the first 3 seconds",
+      "body": "Open with the most surprising moment, question or result. If viewers don't know why to stay within 3 seconds, they scroll."
+    },
+    {
+      "id": "viral-one-idea",
+      "category": "viral",
+      "title": "One video, one idea",
+      "body": "Short videos that chase a single clear idea are easier to watch to the end and easier to share."
+    },
+    {
+      "id": "viral-cut-pauses",
+      "category": "viral",
+      "title": "Cut every pause",
+      "body": "Remove silences, repeated takes and slow intros. A tighter edit keeps retention high, and retention is what platforms reward."
+    },
+    {
+      "id": "viral-pattern-interrupts",
+      "category": "viral",
+      "title": "Change something every few seconds",
+      "body": "Switch angle, zoom, add text or a sound effect regularly. Small pattern interrupts keep attention from drifting."
+    },
+    {
+      "id": "viral-captions",
+      "category": "viral",
+      "title": "Always add captions",
+      "body": "Many people watch without sound. Big, readable captions keep them watching and make your message land."
+    },
+    {
+      "id": "viral-frame-vertical",
+      "category": "viral",
+      "title": "Shoot with vertical in mind",
+      "body": "For Shorts, TikTok and Reels, keep the subject centered so a 9:16 crop never cuts off what matters."
+    },
+    {
+      "id": "viral-loop-ending",
+      "category": "viral",
+      "title": "End where you began",
+      "body": "Endings that flow back into the first second make people watch twice, which boosts replays."
+    },
+    {
+      "id": "viral-curiosity-titles",
+      "category": "viral",
+      "title": "Curiosity, not clickbait",
+      "body": "Promise a clear benefit or an open question in the title, and make sure the video delivers it. Broken promises kill retention."
+    },
+    {
+      "id": "viral-title-and-thumbnail",
+      "category": "viral",
+      "title": "Title and thumbnail work as a team",
+      "body": "Don't repeat the title in the thumbnail. Let the image show the emotion and the title add the context."
+    },
+    {
+      "id": "viral-trends-early",
+      "category": "viral",
+      "title": "Jump on trends early",
+      "body": "Use X Trend Research to spot rising topics and publish your take while the conversation is still growing."
+    },
+    {
+      "id": "viral-series",
+      "category": "viral",
+      "title": "Turn winners into a series",
+      "body": "When a video performs well, make part 2. Series give viewers a reason to follow you for the next one."
+    },
+    {
+      "id": "viral-one-call-to-action",
+      "category": "viral",
+      "title": "Ask for one thing",
+      "body": "End with a single call to action: comment, follow or watch the next video. Several asks at once get ignored."
+    },
+    {
+      "id": "viral-reply-comments",
+      "category": "viral",
+      "title": "Reply to early comments",
+      "body": "Answering comments in the first hour keeps the conversation going and can spark ideas for your next video."
+    },
+    {
+      "id": "viral-consistency",
+      "category": "viral",
+      "title": "Post on a schedule",
+      "body": "Consistency beats bursts. Use the Content Planner to lock in a publishing day and plan the work backwards from it."
+    },
+    {
+      "id": "viral-repurpose",
+      "category": "viral",
+      "title": "One long video, many shorts",
+      "body": "Run your long videos through the AI Video Analyzer & Smart Clipper to find the best moments and export them as vertical clips."
+    },
+    {
+      "id": "viral-story-arc",
+      "category": "viral",
+      "title": "Tell it as a story",
+      "body": "Setup, tension, payoff. Even a 30-second tip feels more watchable when it has a small story arc."
+    },
+    {
+      "id": "thumbnails-negative-prompts",
+      "category": "thumbnails",
+      "title": "Use negative prompts",
+      "body": "List what you don't want, like \"text, watermark, blurry\", in the negative prompt field for cleaner thumbnails."
+    },
+    {
+      "id": "thumbnails-styles",
+      "category": "thumbnails",
+      "title": "Start from a style",
+      "body": "Pick a style such as Bold & Colorful, Cinematic or Reaction Face to steer the look, then refine your prompt."
+    },
+    {
+      "id": "thumbnails-emotion",
+      "category": "thumbnails",
+      "title": "Show a clear emotion",
+      "body": "A close face with a strong, readable emotion draws more clicks than a wide shot where everything is small."
+    },
+    {
+      "id": "thumbnails-contrast",
+      "category": "thumbnails",
+      "title": "Go for high contrast",
+      "body": "Thumbnails are tiny in feeds. Bright subjects on simple, contrasting backgrounds stand out at any size."
+    },
+    {
+      "id": "thumbnails-few-words",
+      "category": "thumbnails",
+      "title": "Three words or fewer",
+      "body": "If you add text to a thumbnail, keep it to a few big words. Long phrases become unreadable on a phone screen."
+    },
+    {
+      "id": "thumbnails-describe-scene",
+      "category": "thumbnails",
+      "title": "Describe the scene, not just the topic",
+      "body": "Instead of \"cooking video\", write who is in the frame, what they do, the lighting and the mood. Specific prompts give better images."
+    },
+    {
+      "id": "thumbnails-variations",
+      "category": "thumbnails",
+      "title": "Generate a few versions",
+      "body": "Create two or three variations of the same idea and pick the strongest one at a small size."
+    },
+    {
+      "id": "thumbnails-from-script",
+      "category": "thumbnails",
+      "title": "Use the script's thumbnail prompt",
+      "body": "Script Writer gives you a thumbnail prompt with every script. Paste it into the Thumbnail Generator as a starting point."
+    },
+    {
+      "id": "thumbnails-reuse-prompt",
+      "category": "thumbnails",
+      "title": "Reuse prompts that worked",
+      "body": "In Assets, open a thumbnail you like and press Use prompt to keep a consistent look across your channel."
+    },
+    {
+      "id": "thumbnails-right-model",
+      "category": "thumbnails",
+      "title": "Choose the model for the job",
+      "body": "Free models are great for drafts and ideas; switch to a pro model for the final thumbnail when detail matters."
+    },
+    {
+      "id": "scripts-hook-styles",
+      "category": "scripts",
+      "title": "Pick a hook style",
+      "body": "Script Writer offers hooks like Direct & Fast, Mystery and Contradiction. Try two and keep the opening that grabs you."
+    },
+    {
+      "id": "scripts-tone",
+      "category": "scripts",
+      "title": "Match the tone to the topic",
+      "body": "Emotional, Analytical, Comedic or Controversial: choose the tone that fits your audience and the story you're telling."
+    },
+    {
+      "id": "scripts-duration",
+      "category": "scripts",
+      "title": "Set the duration first",
+      "body": "Enter the target duration in seconds so the script fits the format: short and punchy for Shorts, deeper for YouTube."
+    },
+    {
+      "id": "scripts-platform",
+      "category": "scripts",
+      "title": "Write for the platform",
+      "body": "Choose YouTube, TikTok or Reels before generating: pacing and structure change with each platform."
+    },
+    {
+      "id": "scripts-specific-topic",
+      "category": "scripts",
+      "title": "Be specific about the topic",
+      "body": "\"5 habits that made me a more productive freelancer\" beats \"productivity\". Specific topics give specific scripts."
+    },
+    {
+      "id": "scripts-visual-cues",
+      "category": "scripts",
+      "title": "Follow the visual cues",
+      "body": "Scripts include visual cues. Use them as your shot list when you record."
+    },
+    {
+      "id": "scripts-read-aloud",
+      "category": "scripts",
+      "title": "Read it out loud",
+      "body": "Read the script aloud before recording and cut any sentence you stumble on. Spoken language is shorter than written."
+    },
+    {
+      "id": "scripts-history",
+      "category": "scripts",
+      "title": "Come back to past scripts",
+      "body": "Every script is saved in Script History, so you can reopen it whenever you're ready to record."
+    },
+    {
+      "id": "scripts-copy-export",
+      "category": "scripts",
+      "title": "Copy or export in one click",
+      "body": "Use Copy or Export on a finished script to move it to your teleprompter or editing notes."
+    },
+    {
+      "id": "scripts-schedule-recording",
+      "category": "scripts",
+      "title": "Schedule the recording right away",
+      "body": "Once the script is ready, add a recording session in the Content Planner so the idea doesn't sit in a drawer."
+    },
+    {
+      "id": "assistant-action-cards",
+      "category": "assistant",
+      "title": "Let the assistant open tools",
+      "body": "Ask the assistant for a thumbnail or a script: it answers with an action card that opens the right tool with your idea."
+    },
+    {
+      "id": "assistant-settings",
+      "category": "assistant",
+      "title": "Tune the assistant",
+      "body": "Open the chat settings to choose the model, temperature and response length. A lower temperature gives more focused answers."
+    },
+    {
+      "id": "assistant-one-topic",
+      "category": "assistant",
+      "title": "One topic per chat",
+      "body": "Start a new chat for each project. Shorter, focused conversations give the assistant clearer context."
+    },
+    {
+      "id": "assistant-title-brainstorm",
+      "category": "assistant",
+      "title": "Brainstorm titles in bulk",
+      "body": "Ask the assistant for 10 title options for the same video, then pick and combine the best parts."
+    },
+    {
+      "id": "assistant-feedback",
+      "category": "assistant",
+      "title": "Ask for feedback, not just content",
+      "body": "Paste your script or title and ask what would make it more engaging. A second opinion in seconds."
+    },
+    {
+      "id": "assistant-context",
+      "category": "assistant",
+      "title": "Give context up front",
+      "body": "Tell the assistant your niche, audience and platform in the first message. Better context, better suggestions."
+    },
+    {
+      "id": "assistant-iterate",
+      "category": "assistant",
+      "title": "Iterate instead of restarting",
+      "body": "If an answer is close but not right, ask the assistant to adjust it (shorter, more energetic) instead of starting over."
+    },
+    {
+      "id": "clipper-stays-on-device",
+      "category": "clipper",
+      "title": "Your video stays on your device",
+      "body": "The AI Video Analyzer & Smart Clipper works in your browser: only small keyframes are sent to the AI, never the video file."
+    },
+    {
+      "id": "clipper-context",
+      "category": "clipper",
+      "title": "Tell it what the video is about",
+      "body": "Add a short description before analyzing. With context, the AI finds better moments, hooks and titles."
+    },
+    {
+      "id": "clipper-platform",
+      "category": "clipper",
+      "title": "Choose the platform first",
+      "body": "Pick where the clips will go: each platform has its own length rules and the suggested clips follow them."
+    },
+    {
+      "id": "clipper-trim",
+      "category": "clipper",
+      "title": "Fine-tune every clip",
+      "body": "Use the ±1 s buttons or drag the clip's edges on the timeline to trim exactly where you want."
+    },
+    {
+      "id": "clipper-move-clip",
+      "category": "clipper",
+      "title": "Move a clip on the timeline",
+      "body": "Press and hold the selected clip on the timeline until it lifts, then drag it to a new spot."
+    },
+    {
+      "id": "clipper-vertical-export",
+      "category": "clipper",
+      "title": "Export vertical in one step",
+      "body": "Export a clip in 9:16 and the clipper centers and crops it for Shorts, TikTok and Reels."
+    },
+    {
+      "id": "clipper-keep-tab-open",
+      "category": "clipper",
+      "title": "Keep the tab open while you work",
+      "body": "The video only lives in your browser tab: leaving the page discards the analysis, so finish exporting first."
+    },
+    {
+      "id": "clipper-hooks-titles",
+      "category": "clipper",
+      "title": "Use the suggested hooks",
+      "body": "Each analysis also suggests hooks, titles and hashtags. Copy them straight into your post."
+    },
+    {
+      "id": "social-x-drafts",
+      "category": "social",
+      "title": "Draft tweets in seconds",
+      "body": "Post to X turns your idea into a draft tweet. Edit it, check the 280-character counter and publish when it sounds right."
+    },
+    {
+      "id": "social-connect-x",
+      "category": "social",
+      "title": "Connect your X account once",
+      "body": "Link your X account in Settings → Integrations to publish drafts directly from Creator Hub."
+    },
+    {
+      "id": "social-trend-sentiment",
+      "category": "social",
+      "title": "Read the mood of a trend",
+      "body": "X Trend Research summarizes key themes and sentiment, so you know if a topic is exciting or controversial before you join in."
+    },
+    {
+      "id": "social-trend-influencers",
+      "category": "social",
+      "title": "Find who drives the conversation",
+      "body": "Trend results flag influential and active accounts. Engage with them to get your take seen."
+    },
+    {
+      "id": "social-bot-channels",
+      "category": "social",
+      "title": "Reply to fans around the clock",
+      "body": "Connect Telegram or WhatsApp to the Community Bot and it answers your community following the behavior you set."
+    },
+    {
+      "id": "social-bot-playground",
+      "category": "social",
+      "title": "Test your bot first",
+      "body": "Use the Community Bot Playground to try replies before your fans see them, and adjust the behavior until it feels right."
+    },
+    {
+      "id": "social-bot-limits",
+      "category": "social",
+      "title": "Set sensible limits",
+      "body": "Give the Community Bot a daily reply limit so you stay in control of your credits."
+    },
+    {
+      "id": "social-share-new-videos",
+      "category": "social",
+      "title": "Announce every new video",
+      "body": "When a video goes live, draft a tweet about it with Post to X and share the link while it's fresh."
+    },
+    {
+      "id": "assets-share-public",
+      "category": "assets",
+      "title": "Share to get likes and views",
+      "body": "Make an asset public and share its link: likes and views come from its public page."
+    },
+    {
+      "id": "assets-filter",
+      "category": "assets",
+      "title": "Filter your library",
+      "body": "In Assets, filter by images or videos to find what you need fast."
+    },
+    {
+      "id": "assets-download",
+      "category": "assets",
+      "title": "Download the originals",
+      "body": "Download any image or video from Assets to edit it or upload it anywhere else."
+    },
+    {
+      "id": "assets-top-performers",
+      "category": "assets",
+      "title": "Learn from your top performers",
+      "body": "Check which assets get the most likes in the Likes & views widget, and make more of what works."
+    },
+    {
+      "id": "assets-tidy",
+      "category": "assets",
+      "title": "Keep your library tidy",
+      "body": "Delete drafts you won't use so your best work is easy to find."
+    },
+    {
+      "id": "credits-check-cost",
+      "category": "credits",
+      "title": "Check the price before you run",
+      "body": "AI tools show what they'll cost before running. If your balance is too low, you'll know before anything is charged."
+    },
+    {
+      "id": "credits-top-up",
+      "category": "credits",
+      "title": "Top up before you run out",
+      "body": "When your balance gets low the platform lets you know. Top up from Credits so a deadline never stops you."
+    },
+    {
+      "id": "credits-free-models",
+      "category": "credits",
+      "title": "Some models cost nothing",
+      "body": "Some analyses are free with certain models. Compare the cost shown in each tool before you choose a model."
+    },
+    {
+      "id": "account-language",
+      "category": "account",
+      "title": "Use Creator Hub in your language",
+      "body": "Switch between English, Spanish and Portuguese from the top bar or Settings. Your choice is saved to your account."
+    },
+    {
+      "id": "account-notifications",
+      "category": "account",
+      "title": "Check your notifications",
+      "body": "The bell in the top bar collects session reminders, likes on your assets and account messages."
+    },
+    {
+      "id": "account-profile",
+      "category": "account",
+      "title": "Keep your profile up to date",
+      "body": "Set your name in Settings → Profile: it's how the dashboard greets you every day."
+    }
+  ]
+}

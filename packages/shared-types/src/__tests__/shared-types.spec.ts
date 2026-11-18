@@ -81,3 +81,104 @@ describe("type contracts", () => {
     expectTypeOf<AIResponse>().toHaveProperty("provider");
   });
 });
+
+describe("dashboard widgets contract", () => {
+  const ids = (list: { id: string }[]) => list.map((w) => w.id);
+
+  it("pins the widget ids stored in user layouts", () => {
+    // Stored in DashboardLayout.widgets — renaming one drops it from layouts.
+    expect(types.DASHBOARD_WIDGET_IDS).toEqual([
+      "quick-prompt",
+      "favorites",
+      "today-plans",
+      "activity",
+      "recommendations",
+      "credits",
+      "tips",
+      "asset-stats",
+    ]);
+  });
+
+  it("the default layout lists every widget exactly once", () => {
+    const defaults = ids([...types.DEFAULT_DASHBOARD_WIDGETS]);
+    expect([...defaults].sort()).toEqual(
+      [...types.DASHBOARD_WIDGET_IDS].sort(),
+    );
+  });
+
+  it("anything that isn't a list normalizes to the default layout", () => {
+    for (const value of [undefined, null, {}, "x", 42]) {
+      expect(types.normalizeDashboardWidgets(value)).toEqual(
+        types.DEFAULT_DASHBOARD_WIDGETS,
+      );
+    }
+  });
+
+  it("keeps the saved order and visibility, appends missing widgets", () => {
+    const result = types.normalizeDashboardWidgets([
+      { id: "tips", visible: false },
+      { id: "credits", visible: true },
+    ]);
+    expect(result.slice(0, 2)).toEqual([
+      { id: "tips", visible: false },
+      { id: "credits", visible: true },
+    ]);
+    expect(ids(result)).toEqual([
+      "tips",
+      "credits",
+      "quick-prompt",
+      "favorites",
+      "today-plans",
+      "activity",
+      "recommendations",
+      "asset-stats",
+    ]);
+    expect(result.every((w) => w.visible !== undefined)).toBe(true);
+  });
+
+  it("drops unknown ids, duplicates and malformed entries", () => {
+    const result = types.normalizeDashboardWidgets([
+      { id: "activity", visible: false },
+      { id: "activity", visible: true },
+      { id: "weather", visible: true },
+      null,
+      "favorites",
+      { id: "favorites", visible: "yes" },
+    ]);
+    expect(result[0]).toEqual({ id: "activity", visible: false });
+    // Non-boolean visibility falls back to the widget's default (shown).
+    expect(result[1]).toEqual({ id: "favorites", visible: true });
+    expect(ids(result)).toHaveLength(types.DASHBOARD_WIDGET_IDS.length);
+    expect(new Set(ids(result)).size).toBe(result.length);
+  });
+
+  it("returns fresh objects (the defaults can't be mutated through it)", () => {
+    const result = types.normalizeDashboardWidgets(undefined);
+    result[0]!.visible = !result[0]!.visible;
+    expect(types.DEFAULT_DASHBOARD_WIDGETS[0]!.visible).toBe(true);
+  });
+
+  it("a widget added after a layout was saved shows up, at the end", () => {
+    const saved = types.DEFAULT_DASHBOARD_WIDGETS.filter(
+      (w) => w.id !== "today-plans",
+    );
+    const result = types.normalizeDashboardWidgets(saved);
+    expect(result.at(-1)).toEqual({ id: "today-plans", visible: true });
+  });
+
+  it("recognizes widget ids", () => {
+    expect(types.isDashboardWidgetId("today-plans")).toBe(true);
+    expect(types.isDashboardWidgetId("favorites")).toBe(true);
+    expect(types.isDashboardWidgetId("weather")).toBe(false);
+    expect(types.isDashboardWidgetId(1)).toBe(false);
+  });
+});
+
+describe("asset engagement contract", () => {
+  it("bounds the top list", () => {
+    expect(types.ASSET_ENGAGEMENT_DEFAULT_TOP).toBe(4);
+    expect(types.ASSET_ENGAGEMENT_MAX_TOP).toBeGreaterThanOrEqual(
+      types.ASSET_ENGAGEMENT_DEFAULT_TOP,
+    );
+  });
+});

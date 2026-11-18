@@ -9,6 +9,7 @@
 
 1. [Architecture Overview](#1-architecture-overview)
 2. [Monorepo Structure](#2-monorepo-structure)
+   2f. [Dashboard widgets](#2f-dashboard-widgets)
 3. [Tool Registry System](#3-tool-registry-system)
 4. [AI Engine Design](#4-ai-engine-design)
 5. [Database Schema](#5-database-schema)
@@ -537,7 +538,8 @@ How pages stay stable and paint at once:
   and the admin charts (recharts) load on demand (`next/dynamic`, size-matched placeholders);
   the admin dashboard applies its data in a `startTransition`; the dashboard quick prompt keeps
   its state local (typing doesn't re-render the page); the full-screen chat on phones is opaque
-  (no full-viewport `backdrop-filter`).
+  (no full-viewport `backdrop-filter`). Dashboard widgets are separate chunks that load, with
+  their data, only when shown and near the viewport (§2f).
 
 ### Field telemetry (real users)
 
@@ -550,6 +552,212 @@ that collector. Unset, nothing leaves the browser.
 > Note: `apps/web/sentry.client.config.ts` is not part of the client bundle with Next.js 16
 > (Turbopack) — `@sentry/nextjs` v10 loads the browser SDK from `instrumentation-client.ts`.
 > Until it is wired, Sentry does not collect client errors or page performance for the web app.
+
+## 2f. Dashboard widgets
+
+The dashboard is a grid of **widgets** — Quick prompt, Favorite tools, Plans
+for today, Recent activity, Recommendations, Pro tip, Likes & views, Credits —
+that each user shows, hides and orders. They choose them in **Settings → Dashboard** (preview of every widget,
+live preview of the layout on a desktop or a phone) and rearrange them on the
+dashboard itself by **pressing and holding** one, iOS home-screen style.
+
+### Layers
+
+```
+packages/shared-types   dashboard.types.ts — the contract
+                        DASHBOARD_WIDGET_IDS · DEFAULT_DASHBOARD_WIDGETS
+                        normalizeDashboardWidgets(unknown) → complete list
+        │
+        ├── apps/api  modules/dashboard-layout/
+        │     GET · PUT · DELETE /user/dashboard-layout  (JwtAuthGuard)
+        │     DTO: known ids, unique, boolean visibility, ≤ one per widget
+        │     DashboardLayoutService → Prisma DashboardLayout (1 row / user)
+        │
+        └── apps/web
+              lib/dashboard-widgets/   pure: catalog (name, icon, span),
+                                       layout ops, drag rules, user cache
+              store/dashboard-layout.store.ts   optimistic + serial saves
+              components/dashboard-widgets/
+                widget-grid.tsx        DndContext, reflow, overlay, modes
+                sortable-widget.tsx    cell: lazy mount, wobble, badges
+                widget-loader.tsx      next/dynamic — one chunk per widget
+                widgets/*.tsx          the widgets (own data fetching)
+                widget-preview.tsx · layout-preview.tsx   (Settings)
+              components/settings/dashboard-widgets-card.tsx
+```
+
+A layout is the **complete, ordered list** `[{ id, visible }]`. Hidden widgets
+keep their place, so showing one again puts it back where it was; a drag
+reorders only the visible ones (`reorderVisible`). Every read and write goes
+through `normalizeDashboardWidgets()` (API and web): unknown ids and
+duplicates are dropped, missing widgets are appended with their default
+visibility — a layout saved by an older or newer app is always valid, and a
+new widget reaches existing users without a migration.
+
+### Plans for today
+
+`today-plans` lists the Content Planner sessions (§14e) of the user's day: name,
+description (the session notes; else the video it belongs to), time and type in
+the calendar's colours (`eventStyle`), with "Now", "In progress" and "Done"
+marks. It reads the planner's own `GET /tools/content-planner/events?from&to`
+— no new endpoint: "today" is the **local** day (midnight → midnight, DST-safe),
+which only the browser knows. The rules live in
+`lib/dashboard-widgets/today-plans.ts` (pure: `dayRange`, `selectTodayPlans` —
+cancelled left out, done kept, sessions crossing midnight kept and labelled
+"From …"/"Until …"). On the right of each row, a live countdown: "in 30 min",
+"in 1 h 30 min", "Now", or how long ago it passed ("1 h 30 min ago"); a
+session whose time is over and isn't marked done is **red** (`overdue`; done
+ones stay quiet). `selectTodayPlans` gives each session its `phase`
+(upcoming/now/past), `minutes` (to the start, rounded up; since the end,
+rounded down) and `overdue`, and **orders them by closeness to now**: the
+sessions happening now, then the others by distance — an upcoming one by the
+time until it starts, a past one by the time since it ended (ties: now,
+upcoming, past, then start time). At 10:30, 11:00 comes before one that ended
+at 9:00, which comes before 15:00; the furthest ones are those left for
+"+N more". `useMinuteClock` moves it all on each minute
+and, after midnight, re-keys the query to the new day. At most five sessions, then
+"+N more"; each one opens the planner on its week (`?date=`). Added after the
+first layouts were saved: existing layouts get it at the end (normalizer).
+
+### Pro tips
+
+`tips` shows one of **100 tips** on using Creator Hub (dashboard, calendar, AI
+planner, scripts, thumbnails, assistant, clipper, social, assets, credits,
+account) and growing a channel (viral videos). They are **JSON content**, not
+dictionary strings: `apps/web/src/content/pro-tips/{en,es,pt}.json` —
+`{ version, locale, tips: [{ id, category, title, body }] }`, the same ids,
+order and categories in every language (category labels are UI strings:
+`dashboard.tips.categories.*`). `lib/dashboard-widgets/pro-tips.ts` loads only
+the user's language (one lazy chunk per locale) and validates it.
+
+- **A new tip every hour**, at :00 on the user's clock (`localHour`): a seeded
+  shuffle per cycle of 100 hours (`tipIndexForHour`) — every tip once per
+  cycle, a new random order each cycle and per user (salted with the user
+  id), never the same tip twice in a row (also across cycles), and the same
+  tip on every reload within the hour. `useMinuteClock` switches it while
+  the dashboard is open.
+- Adding or editing tips: change the three files (same id/category/order);
+  `pro-tips.spec.ts` checks 100 valid tips per language, unique ids, same
+  shape across languages, real translations, lengths and category coverage.
+  Name UI elements exactly as the app shows them in each language.
+
+### Likes & views
+
+`asset-stats` shows the total likes and views of the user's assets and the most
+liked ones (then most viewed) as rows with a small 16:9 **still** and their own
+counts — a half-width card the size of "Plans for today" (same row geometry). Likes
+and views happen on the public share page (`SharingService`: one view per
+visitor per 24 h, one like per fingerprint) and are kept as counters on each
+`GeneratedImage` (`likeCount`, `viewCount`), so no new table is needed.
+
+```
+GET /api/v1/user/assets/engagement?limit=1..12   (default 4, JwtAuthGuard)
+→ { totals: { likes, views, assets, publicAssets },
+    top: [{ id, type, title, previewUrl, likeCount, viewCount, isPublic, createdAt }] }
+```
+
+- `modules/asset-engagement/`: one aggregate (sums), one count (shared) and one
+  `findMany` (likes or views > 0, ordered likes → views → newest, `take`), over
+  the same assets as the Assets page (user + current storage).
+- **Previews are stills, never videos:** an image's own file, a video's
+  first-frame JPEG (`metadata.thumbnailKey`, made by the video worker), else
+  `null` (placeholder). Storage references become 1-hour signed URLs
+  (`resolveStorageRef`; a signing failure gives `null`, not an error).
+- Web: `lib/dashboard-widgets/asset-stats.ts` normalizes any body (zeros, no
+  assets) and decides where an asset opens (`assetLink`): a shared one, its
+  public page `/share/:id` in a **new tab** (`rel="noopener noreferrer"`, an ↗
+  and "(opens in a new tab)" for screen readers) so the dashboard stays open;
+  a private one, `/assets` in the same tab. Images
+  are `loading="lazy"`, low fetch priority, in fixed 64×36 boxes (no layout
+  shift); a preview that fails (e.g. an expired URL) shows the placeholder.
+  Counts are compact on screen (1.2K) and in full for screen readers.
+- Types in `@creator-hub/shared-types` (`AssetEngagement`,
+  `ASSET_ENGAGEMENT_MAX_TOP`).
+
+### Adding a widget
+
+1. Its id in `DASHBOARD_WIDGET_IDS` and `DEFAULT_DASHBOARD_WIDGETS` (shared-types).
+2. Its entry in `lib/dashboard-widgets/catalog.ts` (i18n name/description, icon, `span`).
+3. Its component in `components/dashboard-widgets/widgets/` + `widget-loader.tsx`,
+   its placeholder in `widget-skeleton.tsx`, its miniature in `widget-preview.tsx`.
+4. A story (§2d) and the name/description in the three dictionaries.
+
+### Performance
+
+| Concern | How                                                                                                                                                                                                  |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Code    | Each widget is its own `next/dynamic` chunk; the page ships the grid only. Settings draws miniatures and loads no widget code                                                                        |
+| Data    | Widgets fetch their own data on mount; a cell mounts its widget when the layout is known and it is within 200px of the viewport (`useInView`). Hidden widgets cost nothing                           |
+| CLS     | Until then a `WidgetSkeleton` with the widget's geometry holds the cell; the user's last layout is cached per user (`creator_hub.dashboard.layout`) so returning users paint their own order at once |
+| Drag    | The lifted widget is a static DOM copy (`cloneNode`), not a second mount; cells memoize their widget element so pointer moves skip the widgets' subtrees; animations are transform-only              |
+| Saves   | Optimistic; one request at a time, each sending the latest list (quick toggles collapse, a reset can't be overtaken). A failed save restores the last saved layout and shows a toast                 |
+
+### Rearranging (press and hold)
+
+| Input       | Picks a widget up                                                                                                             | While rearranging                          |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Mouse / pen | Hold ~0.4 s without moving > 8px (`LONG_PRESS_MS`, as the clip timeline §14f)                                                 | Drags after 4px                            |
+| Touch       | Same hold; a swipe scrolls the page (touch sensor, no `touch-action: none` on widgets)                                        | Short hold (150 ms) so swipes still scroll |
+| Keyboard    | "Customize" (greeting row) → grip button → Space/Enter; ← ↑ / → ↓ one place earlier / later; Space/Enter drops; all announced | Escape cancels the move / finishes         |
+| No dragging | Settings → Dashboard: up/down buttons and switches (WCAG 2.5.7)                                                               |                                            |
+
+- Never from a text field or an element marked `NO_WIDGET_DRAG` (the favorites'
+  own card handles), so long presses still select text and reorder favorites.
+- Picking a widget up switches the dashboard to rearranging: a haptic tap
+  (`navigator.vibrate`), every widget wobbles (`widget-jiggle`, per-widget phase
+  and direction; the angle depends on the widget's width so edges move ~2px),
+  content is `inert`, a "−" badge hides a widget (toast with **Undo**), the
+  titles slide aside for the badges, a sticky bar offers **Add widgets**
+  (→ `/settings#dashboard`) and **Done**.
+- The widget lifts with a bounce (`widget-lift`) and follows the pointer; the
+  grid **reflows live** as it moves (neighbours glide — FLIP via dnd-kit layout
+  animations — and widgets of different sizes never overlap). On release it
+  glides with a slight overshoot and lands with a bounce (`widget-land`), then
+  the order is saved. Reduced motion turns all of it off.
+- Pointer swaps follow the pointer only: the widget under it
+  (`pointerWithin`), never the neighbour swapped with until the pointer leaves
+  it, and only after the drag moved ≥ 16px since the last swap — a reflow
+  alone can't trigger another swap (no back-and-forth loops between full- and
+  half-width widgets).
+- Keyboard moves are by **position**, not geometry: each arrow swaps with the
+  previous/next widget in the order (a custom coordinate getter picks it and
+  the collision rule returns exactly that widget) — one swap per key press,
+  whatever the sizes, and "position N of M" is announced.
+
+### Layout
+
+One column below `lg`, two from `lg`: `full` widgets (Quick prompt, Favorites)
+span both, `half` widgets sit side by side. Widgets adapt to their own width
+with container queries (`@container`, e.g. Recommendations goes two-up from
+`@xl`). Touch targets are 44px (badges keep a 28px dot with a 44px hit area).
+
+### Tests
+
+- shared-types: contract ids and `normalizeDashboardWidgets`.
+- API (vitest): service (default, normalization, upsert, reset), DTO through the
+  global `ValidationPipe`, controller path/guard.
+- Web (vitest + RTL): layout ops, catalog/i18n coverage, drag rules, cache,
+  store (cache-first load, server wins, offline, optimistic saves, serial queue,
+  revert, reset), grid (order, lazy gate, empty state, edit mode, hide/undo,
+  keyboard moves by position, long press with fake timers, Space types in
+  widgets), Settings card, widgets; Plans for today (local day range, order,
+  cancelled/done/now, midnight crossing, countdown and overdue, more/empty/error)
+  and the minute clock; Pro tips (content of the three JSON files, parser,
+  hourly rotation: stable within the hour, every tip once per cycle, no
+  repeats across 3,000 cycle boundaries, per-user order, local hours; widget
+  changes at :00);
+  Likes & views (normalization, totals, stills, no `<video>`, broken preview,
+  links, empty/error). API: engagement service (sums, query, image/video
+  previews, no video file signed), `resolveStorageRef`, query DTO, controller.
+- E2E (`web.dashboard-widgets.spec.ts`): mouse press-hold-drag with the lift/land
+  animations and persistence, a drag across mixed sizes with jitter (no loops),
+  keyboard moves with announcements, hide/undo, hidden widgets load no data,
+  reduced motion, touch (hold to drag, swipe scrolls, 44px targets), Settings
+  (switch, preview, order, reset, "Add widgets" anchor), Plans for today (names,
+  descriptions, countdown and red past sessions on a fixed clock, local-day
+  request, planner links), Pro tip (a tip from the JSON, same tip within the
+  hour, another the next hour), Likes & views (lazy load on
+  scroll, totals, stills, no media requests, shared asset in a new tab) and axe.
 
 ---
 
@@ -881,6 +1089,7 @@ The `AIController` exposes DB-driven provider metadata:
 - **`CommunityMessage`** — Individual messages (INBOUND/OUTBOUND, credits used, skip reason)
 - **`Provider` model** — Metadata de proveedores IA (slug, name, model, tier, costPerCredit, isActive, supportedTasks, config)
 - **`GeneratedImage.providerId`** — Relación con `Provider`; `isProModel` se deriva del tier del proveedor
+- **`DashboardLayout`** — One row per user (`userId` unique): `widgets` JSON `[{ id, visible }]` in display order; no row = default dashboard (§2f). Migration `20261126000000_add_dashboard_layout`
 - **Soft delete** — Users use `isActive: false` instead of `DELETE`
 
 ---
@@ -929,6 +1138,14 @@ DELETE /api/v1/community-bot/channels/:type/disconnect   # Disconnect
 GET    /api/v1/community-bot/conversations              # List conversations
 GET    /api/v1/community-bot/conversations/:id/messages  # Message thread
 POST   /api/v1/community-bot/playground                  # Test reply
+
+GET    /api/v1/user/favorites                 # Favorite tool ids, in order
+POST   /api/v1/user/favorites/:toolId/toggle  # Add/remove a favorite
+POST   /api/v1/user/favorites/reorder         # Favorites order
+GET    /api/v1/user/dashboard-layout          # Dashboard widgets {widgets:[{id,visible}], updatedAt} (§2f)
+GET    /api/v1/user/assets/engagement         # Likes & views: totals + most liked assets with still previews (§2f)
+PUT    /api/v1/user/dashboard-layout          # Save order + visibility (normalized)
+DELETE /api/v1/user/dashboard-layout          # Back to the default dashboard
 
 GET    /api/v1/credits/balance       # Get balance (balance = currentCredits, plan)
 GET    /api/v1/credits/marketing-events  # Marketing events for user
@@ -3518,6 +3735,8 @@ export class YourToolService {
 | **Admin bypasses verification**  | `EmailVerifiedGuard` checks `user.role === "ADMIN"` — admins always have full access                                                              |
 | **Dynamic tool routing**         | `ChatRoutingService` queries `ToolRegistry.getActive()` at runtime — zero code changes for new tools                                              |
 | **Chat SSE via POST + Readable** | NestJS `@Sse` creates GET endpoints; frontend sends POST with body. Readable stream for SSE.                                                      |
+| **Dashboard layout: one list**   | Order + visibility always change together and are read together; normalized on every read/write, so new widgets need no migration                 |
+| **Movement-gated widget swaps**  | Widgets of different sizes reflow truthfully while dragging; swaps need pointer movement, so a reflow can't start swap loops                      |
 | **Store-driven widget open**     | `isWidgetOpen` in Zustand store allows any component to open chat via `openWidget()`                                                              |
 | **Sentry for observability**     | Separate projects for API + Web, breadcrumbs for context, PII sanitization, flush on Render shutdown                                              |
 | **Apify over Crawlee**           | Apify handles authentication and scraping at scale; no cookie management needed. Crawlee was fragile and required manual cookie refresh.          |

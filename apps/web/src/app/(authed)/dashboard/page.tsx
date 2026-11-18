@@ -1,44 +1,14 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  rectSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useEffect, useState } from "react";
+import { LayoutGrid } from "lucide-react";
+import { cn } from "@creator-hub/ui";
 import { useAuthStore } from "@/store/auth.store";
-import { useToolsStore } from "@/store/tools.store";
-import type { ToolManifest } from "@creator-hub/shared-types";
 import { useCreditsStore } from "@/store/credits.store";
-import { useChatStore } from "@/store/chat.store";
-import { useFavoritesStore } from "@/store/favorites.store";
-import {
-  ToolCard,
-  CreditDisplay,
-  EmptyState,
-  Badge,
-  Skeleton,
-  cn,
-} from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { CommandPalette } from "@/components/layout/command-palette";
-import api from "@/lib/api";
+import { DashboardWidgets } from "@/components/dashboard-widgets/widget-grid";
 import { useI18n } from "@/i18n/i18n-provider";
-import { useToolText } from "@/i18n/use-tool-text";
 import type { TranslationKey } from "@/i18n/translate";
 
 function getGreetingKey(): TranslationKey {
@@ -48,61 +18,24 @@ function getGreetingKey(): TranslationKey {
   return "dashboard.greeting.evening";
 }
 
-interface Transaction {
-  id: string;
-  amount: number;
-  type: string;
-  description: string;
-  toolName: string | null;
-  toolIcon: string | null;
-  provider: string | null;
-  referenceId: string | null;
-  createdAt: string;
-}
+const toolbarButton =
+  "flex h-9 min-w-9 items-center justify-center gap-2 rounded-lg border text-sm transition-colors pointer-coarse:h-11 pointer-coarse:min-w-11 sm:px-3";
 
+/**
+ * The dashboard: a greeting and the user's widgets (favorites, activity,
+ * recommendations…), which they choose in Settings → Dashboard and
+ * rearrange here by pressing and holding one (ARCHITECTURE.md §2f).
+ */
 export default function DashboardPage() {
-  const router = useRouter();
-  const { t, formatRelativeTime } = useI18n();
-  const { toolName, toolDescription, categoryLabel } = useToolText();
+  const { t } = useI18n();
   const { user } = useAuthStore();
-  const { tools, fetchTools } = useToolsStore();
-  const { balance, fetchBalance } = useCreditsStore();
-  const { favoriteIds, fetchFavorites, toggleFavorite, reorderFavorites } =
-    useFavoritesStore();
+  const { fetchBalance } = useCreditsStore();
   const [cmdOpen, setCmdOpen] = useState(false);
-
-  // Layout only: until the tools and the favorites have both loaded,
-  // placeholders of the cards' size hold the grid — no empty state or
-  // "first tools → favorites" swap flashing, and no jump below.
-  const [toolsSettled, setToolsSettled] = useState(tools.length > 0);
-
-  const { data: transactions, isPending: transactionsPending } = useQuery({
-    queryKey: ["transactions"],
-    queryFn: () => api.get<Transaction[]>("/credits/transactions"),
-  });
-
-  const recentActivity = (transactions || []).slice(0, 5);
-
-  function getPaymentStatusInfo(tx: Transaction) {
-    if (tx.type !== "PURCHASE" || !tx.referenceId) return null;
-    const isPending = tx.description?.toLowerCase().includes("pending");
-    return {
-      isPending,
-      label: isPending
-        ? t("common.status.pending")
-        : t("common.status.completed"),
-      color: isPending
-        ? "bg-warning/10 text-warning border-warning/30"
-        : "bg-success/10 text-success border-success/30",
-    };
-  }
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
-    void Promise.allSettled([fetchTools(), fetchFavorites()]).then(() =>
-      setToolsSettled(true),
-    );
     fetchBalance();
-  }, [fetchTools, fetchBalance, fetchFavorites]);
+  }, [fetchBalance]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -115,36 +48,6 @@ export default function DashboardPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Show favorite tools, or first 4 if no favorites
-  const favoriteTools = useMemo(() => {
-    const favTools = tools.filter((t) => favoriteIds?.includes(t.id));
-    if (favTools.length === 0) return [];
-    // Sort by favoriteIds order
-    return favoriteIds
-      .map((id) => favTools.find((t) => t.id === id))
-      .filter((t): t is ToolManifest => t !== undefined);
-  }, [tools, favoriteIds]);
-  const recentTools =
-    favoriteTools.length > 0 ? favoriteTools : tools.slice(0, 4);
-  const isDraggable = favoriteTools.length > 0;
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = favoriteIds.indexOf(active.id as string);
-    const newIndex = favoriteIds.indexOf(over.id as string);
-    const newOrder = arrayMove(favoriteIds, oldIndex, newIndex);
-    reorderFavorites(newOrder);
-  }
-
   return (
     <>
       <CommandPalette isOpen={cmdOpen} onClose={() => setCmdOpen(false)} />
@@ -156,7 +59,10 @@ export default function DashboardPage() {
             onClick={() => setCmdOpen(true)}
             aria-label={t("dashboard.search")}
             aria-keyshortcuts="Meta+K Control+K"
-            className="flex h-9 min-w-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm text-text-dim hover:text-text-muted transition-colors pointer-coarse:h-11 pointer-coarse:min-w-11 sm:px-3"
+            className={cn(
+              toolbarButton,
+              "border-border bg-surface text-text-dim hover:text-text-muted",
+            )}
           >
             <svg
               width="14"
@@ -165,6 +71,7 @@ export default function DashboardPage() {
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
+              aria-hidden="true"
             >
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
@@ -178,434 +85,38 @@ export default function DashboardPage() {
         }
       />
       <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 animate-fade-in">
-        {/* Greeting */}
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-text">
-            {t(getGreetingKey(), {
-              name: user?.name || user?.email?.split("@")[0] || "",
-            })}
-          </h1>
-          <p className="mt-1 text-text-muted">{t("dashboard.subtitle")}</p>
-        </div>
-
-        {/* Dashboard Grid: Main Content + Chat */}
-        <div className="space-y-6 sm:space-y-8">
-          {/* Quick Prompt: its own component, so typing re-renders only
-              the prompt, not the whole dashboard (input stays responsive). */}
-          <QuickPrompt />
-
-          {/* Quick Access */}
-          <div className="sm:mt-8">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
-              {favoriteTools.length > 0
-                ? t("dashboard.favoriteTools")
-                : t("dashboard.quickAccess")}
-            </h2>
-            {!toolsSettled && tools.length === 0 ? (
-              // Same size as ToolCard (p-5 + 44px row + mt-4), so the
-              // sections below do not move when the tools arrive.
-              <div
-                className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
-                aria-hidden="true"
-              >
-                {Array.from({ length: 4 }, (_, i) => (
-                  <Skeleton key={i} className="h-[102px] rounded-xl" />
-                ))}
-              </div>
-            ) : isDraggable ? (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={favoriteIds}
-                  strategy={rectSortingStrategy}
-                >
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {recentTools.map((tool) => (
-                      <SortableToolCard
-                        key={tool.id}
-                        tool={{
-                          ...tool,
-                          name: toolName(tool),
-                          description: toolDescription(tool),
-                          category: categoryLabel(tool.category),
-                        }}
-                        dragLabel={t("dashboard.dragToReorder", {
-                          name: toolName(tool),
-                        })}
-                        isFavorite={favoriteIds?.includes(tool.id) ?? false}
-                        onToggleFavorite={() => toggleFavorite(tool.id)}
-                        onClick={() => router.push(`/tools/${tool.id}`)}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {recentTools.map((tool) => (
-                  <ToolCard
-                    key={tool.id}
-                    name={toolName(tool)}
-                    description={toolDescription(tool)}
-                    icon={tool.icon}
-                    credits={tool.creditsPerUse}
-                    status={tool.status}
-                    category={categoryLabel(tool.category)}
-                    isFavorite={favoriteIds?.includes(tool.id) ?? false}
-                    onToggleFavorite={() => toggleFavorite(tool.id)}
-                    onClick={() => router.push(`/tools/${tool.id}`)}
-                  />
-                ))}
-                {recentTools.length === 0 && (
-                  <EmptyState
-                    icon="🛠️"
-                    title={t("dashboard.noToolsTitle")}
-                    description={t("dashboard.noToolsDescription")}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Recent History */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim">
-                {t("dashboard.recentActivity")}
-              </h2>
-              <button
-                type="button"
-                onClick={() => router.push("/history")}
-                className="text-xs text-primary hover:text-primary-hover transition-colors"
-              >
-                {t("common.actions.viewAll")}
-              </button>
-            </div>
-            <div className="rounded-xl border border-border bg-surface divide-y divide-border">
-              {recentActivity.map((tx) => {
-                const paymentStatus = getPaymentStatusInfo(tx);
-                return (
-                  <div
-                    key={tx.id}
-                    className="flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5"
-                  >
-                    <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm ${
-                        tx.type === "USAGE"
-                          ? "bg-surface-elevated"
-                          : tx.type === "PURCHASE"
-                            ? "bg-success/10 text-success"
-                            : "bg-primary/10 text-primary"
-                      }`}
-                    >
-                      {tx.type === "USAGE"
-                        ? tx.toolIcon || "🔧"
-                        : tx.type === "PURCHASE"
-                          ? "💰"
-                          : "🎁"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-text truncate">
-                          {tx.description}
-                        </p>
-                        {paymentStatus && (
-                          <span
-                            className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${paymentStatus.color}`}
-                          >
-                            {paymentStatus.label}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-text-dim">
-                        {t("dashboard.activityMeta", {
-                          time: formatRelativeTime(tx.createdAt),
-                          count: Math.abs(tx.amount),
-                        })}
-                      </p>
-                    </div>
-                    <Badge
-                      variant="primary"
-                      size="sm"
-                      className="hidden shrink-0 min-[420px]:inline-flex"
-                    >
-                      {tx.type === "USAGE"
-                        ? tx.toolName || t("dashboard.txType.tool")
-                        : tx.type === "PURCHASE"
-                          ? t("dashboard.txType.purchase")
-                          : t("dashboard.txType.bonus")}
-                    </Badge>
-                  </div>
-                );
+        {/* Greeting + rearranging toggle */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-text">
+              {t(getGreetingKey(), {
+                name: user?.name || user?.email?.split("@")[0] || "",
               })}
-              {transactionsPending &&
-                // Rows of the activity list's size while it loads.
-                Array.from({ length: 3 }, (_, i) => (
-                  <div
-                    key={i}
-                    aria-hidden="true"
-                    className="flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5"
-                  >
-                    <Skeleton className="h-9 w-9 shrink-0" />
-                    <div className="flex-1 space-y-1.5">
-                      <Skeleton className="h-4 w-2/3" />
-                      <Skeleton className="h-3 w-1/3" />
-                    </div>
-                  </div>
-                ))}
-              {!transactionsPending && recentActivity.length === 0 && (
-                <div className="px-5 py-8 text-center text-sm text-text-dim">
-                  {t("dashboard.noActivity")}
-                </div>
-              )}
-            </div>
+            </h1>
+            <p className="mt-1 text-text-muted">{t("dashboard.subtitle")}</p>
           </div>
-
-          {/* Recommended Agents */}
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
-              {t("dashboard.recommendedAgents")}
-            </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div
-                className="group cursor-pointer rounded-xl border border-border bg-surface p-5 transition-all duration-200 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5"
-                onClick={() => router.push("/tools/x-post-tweet")}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-2xl transition-colors group-hover:bg-blue-500/20">
-                    💬
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-text">
-                      {t("agents.items.xPost.name")}
-                    </h3>
-                    <p className="mt-1 text-sm text-text-muted">
-                      {t("agents.items.xPost.shortDescription")}
-                    </p>
-                    <div className="mt-3 flex items-center gap-2">
-                      <Badge variant="primary" size="sm">
-                        {t("agents.badges.social")}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="group cursor-pointer rounded-xl border border-border bg-surface p-5 transition-all duration-200 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/5"
-                onClick={() => router.push("/tools/x-search-trends")}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/10 text-2xl transition-colors group-hover:bg-cyan-500/20">
-                    📡
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-text">
-                      {t("agents.items.xResearch.name")}
-                    </h3>
-                    <p className="mt-1 text-sm text-text-muted">
-                      {t("agents.items.xResearch.shortDescription")}
-                    </p>
-                    <div className="mt-3 flex items-center gap-2">
-                      <Badge variant="accent" size="sm">
-                        {t("agents.badges.research")}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tips */}
-          <div className="rounded-xl border border-border bg-surface p-5">
-            <div className="flex items-start gap-3">
-              <span className="text-lg">💡</span>
-              <div>
-                <h3 className="text-sm font-semibold text-text">
-                  {t("dashboard.proTip.title")}
-                </h3>
-                <p className="mt-1 text-sm text-text-muted">
-                  {t("dashboard.proTip.body")}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-/** The dashboard's quick prompt: sends the text to the assistant chat. */
-function QuickPrompt() {
-  const { t } = useI18n();
-  const { sendMessage, isStreaming, openWidget } = useChatStore();
-  const [quickPrompt, setQuickPrompt] = useState("");
-
-  return (
-    <div className="relative">
-      <div className="rounded-xl border border-border bg-surface p-1 shadow-lg shadow-primary/5">
-        <div className="flex items-center gap-2 sm:gap-3 rounded-lg bg-surface-elevated px-3 py-2 sm:px-4 sm:py-3">
-          <span className="hidden text-primary min-[400px]:inline">✦</span>
-          <input
-            type="text"
-            value={quickPrompt}
-            onChange={(e) => setQuickPrompt(e.target.value)}
-            placeholder={t("dashboard.quickPrompt.placeholder")}
-            aria-label={t("dashboard.quickPrompt.ariaLabel")}
-            className="min-w-0 flex-1 bg-transparent text-sm text-text placeholder:text-text-dim outline-none"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && quickPrompt.trim() && !isStreaming) {
-                openWidget();
-                sendMessage(quickPrompt.trim());
-                setQuickPrompt("");
-              }
-            }}
-          />
           <button
             type="button"
-            onClick={() => {
-              if (quickPrompt.trim() && !isStreaming) {
-                openWidget();
-                sendMessage(quickPrompt.trim());
-                setQuickPrompt("");
-              }
-            }}
-            disabled={isStreaming || !quickPrompt.trim()}
-            className="shrink-0 rounded-lg bg-primary px-3 py-2 pointer-coarse:min-h-11 sm:px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            onClick={() => setEditing((e) => !e)}
+            aria-pressed={editing}
+            aria-label={t("dashboard.layout.customizeLabel")}
+            className={cn(
+              toolbarButton,
+              "mt-0.5 shrink-0",
+              editing
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border bg-surface text-text-dim hover:text-text-muted",
+            )}
           >
-            {isStreaming
-              ? t("dashboard.quickPrompt.making")
-              : t("dashboard.quickPrompt.generate")}
+            <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">
+              {t("dashboard.layout.customize")}
+            </span>
           </button>
         </div>
-      </div>
-      {/* In the flow (wrapping) on phones; tucked under the box from sm. */}
-      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-xs text-text-dim sm:absolute sm:-bottom-6 sm:left-4 sm:mt-0 sm:flex-nowrap sm:px-0">
-        <span>{t("dashboard.quickPrompt.try")}</span>
-        <button
-          type="button"
-          onClick={() => {
-            setQuickPrompt(t("dashboard.quickPrompt.examples.gamingThumbnail"));
-          }}
-          className="text-primary/70 hover:text-primary transition-colors"
-        >
-          {t("dashboard.quickPrompt.examples.gamingThumbnail")}
-        </button>
-        <span>·</span>
-        <button
-          type="button"
-          onClick={() => {
-            setQuickPrompt(t("dashboard.quickPrompt.examples.youtubeIntro"));
-          }}
-          className="text-primary/70 hover:text-primary transition-colors"
-        >
-          {t("dashboard.quickPrompt.examples.youtubeIntro")}
-        </button>
-        <span>·</span>
-        <button
-          type="button"
-          onClick={() => {
-            setQuickPrompt(t("dashboard.quickPrompt.examples.viralTitle"));
-          }}
-          className="text-primary/70 hover:text-primary transition-colors"
-        >
-          {t("dashboard.quickPrompt.examples.viralTitle")}
-        </button>
-      </div>
-    </div>
-  );
-}
 
-function SortableToolCard({
-  tool,
-  dragLabel,
-  isFavorite,
-  onToggleFavorite,
-  onClick,
-}: {
-  tool: any;
-  dragLabel: string;
-  isFavorite: boolean;
-  onToggleFavorite: () => void;
-  onClick: () => void;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: tool.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition: transition || "transform 200ms cubic-bezier(0.25, 1, 0.5, 1)",
-    zIndex: isDragging ? 50 : 0,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "relative min-w-0 transition-all duration-200",
-        isDragging &&
-          "rounded-xl shadow-2xl shadow-primary/20 ring-2 ring-primary/30 scale-[1.03] opacity-90",
-      )}
-    >
-      <div
-        {...listeners}
-        {...attributes}
-        role="button"
-        aria-label={dragLabel}
-        tabIndex={0}
-        className={cn(
-          "absolute -top-2 -left-2 z-20",
-          // touch-none: lets dnd-kit's pointer sensor drag on touch screens.
-          "flex h-8 w-8 pointer-coarse:h-10 pointer-coarse:w-10 touch-none items-center justify-center rounded-lg",
-          "bg-surface border border-border-subtle shadow-sm",
-          "cursor-grab active:cursor-grabbing",
-          "text-text-dim hover:text-text-muted hover:bg-surface-elevated hover:border-border hover:shadow-md",
-          "transition-all duration-150 ease-out",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
-          "active:scale-90",
-          isDragging &&
-            "bg-primary/10 border-primary/30 text-primary shadow-lg",
-        )}
-      >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        >
-          <circle cx="9" cy="5" r="1.5" fill="currentColor" stroke="none" />
-          <circle cx="15" cy="5" r="1.5" fill="currentColor" stroke="none" />
-          <circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none" />
-          <circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none" />
-          <circle cx="9" cy="19" r="1.5" fill="currentColor" stroke="none" />
-          <circle cx="15" cy="19" r="1.5" fill="currentColor" stroke="none" />
-        </svg>
+        <DashboardWidgets editing={editing} onEditingChange={setEditing} />
       </div>
-      <ToolCard
-        name={tool.name}
-        description={tool.description}
-        icon={tool.icon}
-        credits={tool.creditsPerUse}
-        status={tool.status}
-        category={tool.category}
-        isFavorite={isFavorite}
-        onToggleFavorite={onToggleFavorite}
-        onClick={onClick}
-      />
-    </div>
+    </>
   );
 }

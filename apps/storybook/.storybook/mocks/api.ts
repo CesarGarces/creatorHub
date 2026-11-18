@@ -31,6 +31,7 @@ export const DEFAULT_API_ROUTES: ApiRoutes = {
   "/ai/models": [],
   "/tools": [],
   "/user/favorites": [],
+  "/user/dashboard-layout": { widgets: [], updatedAt: null },
   "/credits/transactions": [],
   "/credits/plans": [],
 };

@@ -53,6 +53,14 @@
   --animate-shimmer: shimmer 1.5s ease-in-out infinite;
   --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
   --animate-slide-in-right: slide-in-right 0.3s ease-out;
+
+  /* Dashboard widgets while rearranging (iOS home-screen style). */
+  --animate-widget-jiggle: widget-jiggle 0.3s ease-in-out infinite;
+  --animate-widget-lift: widget-lift 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.2)
+    forwards;
+  --animate-widget-land: widget-land 0.36s cubic-bezier(0.2, 0.9, 0.3, 1.2)
+    forwards;
+  --animate-widget-pop: widget-pop 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.4);
 }
 
 @keyframes fade-in {
@@ -113,6 +121,67 @@
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/*
+ * Dashboard widgets (see ARCHITECTURE.md §2f). While rearranging, every
+ * widget wobbles a little (alternating direction and phase per widget, so
+ * they don't move in lockstep). The angle is set per widget size so the
+ * edges move ~2px whatever the width. The picked-up widget bounces up
+ * ("lift") and bounces into its new place ("land"). All of it stops with
+ * prefers-reduced-motion (rule below).
+ */
+@keyframes widget-jiggle {
+  0%,
+  100% {
+    transform: rotate(calc(var(--widget-jiggle-angle, 0.5deg) * -1));
+  }
+  50% {
+    transform: rotate(var(--widget-jiggle-angle, 0.5deg));
+  }
+}
+
+@keyframes widget-lift {
+  0% {
+    transform: scale(1);
+  }
+  55% {
+    transform: scale(1.06);
+  }
+  80% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1.04);
+  }
+}
+
+@keyframes widget-land {
+  0% {
+    transform: scale(1.04);
+  }
+  55% {
+    transform: scale(0.97);
+  }
+  80% {
+    transform: scale(1.012);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Scale only: the badges are visible (and clickable) from the first frame. */
+@keyframes widget-pop {
+  0% {
+    transform: scale(0.4);
+  }
+  70% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 

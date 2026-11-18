@@ -1,0 +1,606 @@
+{
+  "version": 1,
+  "locale": "es",
+  "tips": [
+    {
+      "id": "dashboard-press-and-hold",
+      "category": "dashboard",
+      "title": "Reordena tu panel",
+      "body": "Mantén pulsado cualquier widget un momento para tomarlo y arrástralo a donde quieras. El nuevo orden se guarda solo."
+    },
+    {
+      "id": "dashboard-keyboard",
+      "category": "dashboard",
+      "title": "¿Sin ratón? Usa Personalizar",
+      "body": "Pulsa Personalizar junto al saludo, enfoca el botón de agarre de un widget y usa Espacio y las flechas para moverlo de a un lugar."
+    },
+    {
+      "id": "dashboard-hide-undo",
+      "category": "dashboard",
+      "title": "Oculta lo que no usas",
+      "body": "Mientras reordenas, toca − en un widget para ocultarlo. ¿Cambiaste de idea? Pulsa Deshacer en el mensaje que aparece."
+    },
+    {
+      "id": "dashboard-settings-preview",
+      "category": "dashboard",
+      "title": "Previsualiza los widgets antes de añadirlos",
+      "body": "Configuración → Panel muestra una vista previa de cada widget y de todo tu diseño en escritorio o móvil, para decidir antes de activarlo."
+    },
+    {
+      "id": "dashboard-credits-widget",
+      "category": "dashboard",
+      "title": "Vigila tus créditos",
+      "body": "Activa el widget Créditos en Configuración → Panel para ver tu saldo y tu plan de un vistazo, con un atajo para recargar."
+    },
+    {
+      "id": "dashboard-plans-for-today",
+      "category": "dashboard",
+      "title": "Empieza el día con Planes para hoy",
+      "body": "El widget Planes para hoy muestra las sesiones de hoy de tu calendario con una cuenta atrás, para que siempre sepas qué sigue."
+    },
+    {
+      "id": "dashboard-likes-and-views",
+      "category": "dashboard",
+      "title": "Mira qué le gusta a tu público",
+      "body": "El widget Me gusta y visualizaciones muestra el total de me gusta y visualizaciones de tus recursos compartidos y cuáles funcionan mejor."
+    },
+    {
+      "id": "dashboard-quick-prompt",
+      "category": "dashboard",
+      "title": "Pregunta al asistente desde el panel",
+      "body": "Escribe una idea en el prompt rápido y pulsa Intro: el asistente de IA se abre con tu petición ya en marcha."
+    },
+    {
+      "id": "dashboard-reset",
+      "category": "dashboard",
+      "title": "Vuelve a empezar cuando quieras",
+      "body": "Configuración → Panel → Restablecer recupera los widgets originales y su orden con un solo clic."
+    },
+    {
+      "id": "dashboard-command-palette",
+      "category": "dashboard",
+      "title": "Ve a cualquier parte con ⌘K",
+      "body": "Pulsa ⌘K (Ctrl+K en Windows) en el panel para buscar herramientas, agentes y páginas sin soltar el teclado."
+    },
+    {
+      "id": "calendar-plan-a-video",
+      "category": "calendar",
+      "title": "Planifica un video entero de una vez",
+      "body": "Usa Planificar un video: elige la fecha de publicación y cada paso de producción, de la idea a la publicación, se agenda hacia atrás."
+    },
+    {
+      "id": "calendar-drag-to-move",
+      "category": "calendar",
+      "title": "Reprograma arrastrando",
+      "body": "En la vista semanal, arrastra una sesión a otro día u hora para moverla. Sin formularios."
+    },
+    {
+      "id": "calendar-resize",
+      "category": "calendar",
+      "title": "Cambia la duración de una sesión",
+      "body": "Arrastra el borde superior o inferior de una sesión en la vista semanal para acortarla o alargarla."
+    },
+    {
+      "id": "calendar-click-empty-slot",
+      "category": "calendar",
+      "title": "Añade una sesión con un clic",
+      "body": "Haz clic en un hueco libre de la vista semanal para crear una sesión justo a esa hora."
+    },
+    {
+      "id": "calendar-custom-types",
+      "category": "calendar",
+      "title": "Crea tus propios tipos de sesión",
+      "body": "¿Necesitas un tipo Podcast o Llamada con patrocinador? Créalo desde el diálogo de la sesión con su propio color e icono."
+    },
+    {
+      "id": "calendar-custom-platforms",
+      "category": "calendar",
+      "title": "Añade las plataformas que usas",
+      "body": "¿Publicas en Kick o en otro sitio? Añade una plataforma personalizada para que tus proyectos muestren dónde se publican."
+    },
+    {
+      "id": "calendar-reminders",
+      "category": "calendar",
+      "title": "No te pierdas ninguna sesión",
+      "body": "Pon un recordatorio en cada sesión, o en todo un plan, y recibirás una notificación antes de que empiece."
+    },
+    {
+      "id": "calendar-overlaps",
+      "category": "calendar",
+      "title": "Atento a los solapamientos",
+      "body": "El planificador te avisa cuando dos sesiones se solapan, para que no reserves dos grabaciones a la vez."
+    },
+    {
+      "id": "calendar-mark-done",
+      "category": "calendar",
+      "title": "Marca las sesiones terminadas",
+      "body": "Marca las sesiones como hechas al terminarlas: el progreso de cada video y los totales del calendario se actualizan al instante."
+    },
+    {
+      "id": "calendar-agenda-on-phone",
+      "category": "calendar",
+      "title": "Usa la agenda en el móvil",
+      "body": "En el móvil el planificador abre la agenda: una lista sencilla de los próximos 30 días, fácil de recorrer con un pulgar."
+    },
+    {
+      "id": "calendar-month-view",
+      "category": "calendar",
+      "title": "Mira el panorama en la vista mensual",
+      "body": "Cambia a Mes para detectar semanas cargadas y huecos libres antes de comprometerte con un nuevo video."
+    },
+    {
+      "id": "calendar-descriptions",
+      "category": "calendar",
+      "title": "Escribe una buena descripción",
+      "body": "Usa la descripción de cada sesión para la lista de planos, lugares y enlaces: es lo que muestra Planes para hoy en tu panel."
+    },
+    {
+      "id": "calendar-steps-template",
+      "category": "calendar",
+      "title": "Guarda tus pasos de producción",
+      "body": "Configura una vez tu lista de pasos de producción y Planificar un video la usará, en tu orden, para cada video nuevo."
+    },
+    {
+      "id": "calendar-totals",
+      "category": "calendar",
+      "title": "Mide tu carga de trabajo",
+      "body": "Los totales en la parte superior del planificador muestran tus sesiones, horas planificadas y trabajo completado. Úsalos para una semana realista."
+    },
+    {
+      "id": "ai-planner-dictate",
+      "category": "ai-planner",
+      "title": "Dicta tu idea",
+      "body": "En Planificar con IA puedes hablar en vez de escribir: usa el botón de voz para dictar la idea de tu video."
+    },
+    {
+      "id": "ai-planner-files",
+      "category": "ai-planner",
+      "title": "Dale tus notas a la IA",
+      "body": "Adjunta hasta 5 archivos (PDF, DOCX, TXT, JSON o Markdown) con tu investigación o briefing; el asistente los lee antes de planificar."
+    },
+    {
+      "id": "ai-planner-history",
+      "category": "ai-planner",
+      "title": "Aprende de tus videos anteriores",
+      "body": "Planificar con IA compara tu idea con tus producciones anteriores para estimar cuánto te llevará de verdad cada paso."
+    },
+    {
+      "id": "ai-planner-open-tool",
+      "category": "ai-planner",
+      "title": "Abre la herramienta sugerida",
+      "body": "Cada paso planificado puede sugerir una herramienta de la plataforma con un prompt listo. Pulsa Abrir herramienta y se abre rellenada."
+    },
+    {
+      "id": "ai-planner-review",
+      "category": "ai-planner",
+      "title": "Revisa antes de decidir",
+      "body": "¿No te convence el plan? Elige Revisar y editar para ajustar pasos y fechas antes de añadir nada a tu calendario."
+    },
+    {
+      "id": "ai-planner-cost",
+      "category": "ai-planner",
+      "title": "Conoce el coste antes",
+      "body": "El planificador con IA muestra cuánto cuesta un análisis antes de ejecutarlo, y si cancelas antes de que termine no se cobra nada."
+    },
+    {
+      "id": "viral-first-3-seconds",
+      "category": "viral",
+      "title": "Gana los primeros 3 segundos",
+      "body": "Empieza con el momento, la pregunta o el resultado más sorprendente. Si en 3 segundos no saben por qué quedarse, siguen de largo."
+    },
+    {
+      "id": "viral-one-idea",
+      "category": "viral",
+      "title": "Un video, una idea",
+      "body": "Los videos cortos que persiguen una sola idea clara se ven más fácilmente hasta el final y se comparten más."
+    },
+    {
+      "id": "viral-cut-pauses",
+      "category": "viral",
+      "title": "Corta cada pausa",
+      "body": "Quita silencios, tomas repetidas e introducciones lentas. Una edición ajustada mantiene la retención, y eso es lo que premian las plataformas."
+    },
+    {
+      "id": "viral-pattern-interrupts",
+      "category": "viral",
+      "title": "Cambia algo cada pocos segundos",
+      "body": "Cambia de ángulo, haz zoom, añade texto o un efecto de sonido con regularidad. Pequeñas interrupciones mantienen la atención."
+    },
+    {
+      "id": "viral-captions",
+      "category": "viral",
+      "title": "Añade siempre subtítulos",
+      "body": "Mucha gente ve los videos sin sonido. Subtítulos grandes y legibles hacen que sigan mirando y entiendan tu mensaje."
+    },
+    {
+      "id": "viral-frame-vertical",
+      "category": "viral",
+      "title": "Graba pensando en vertical",
+      "body": "Para Shorts, TikTok y Reels, mantén al protagonista centrado para que un recorte 9:16 nunca corte lo importante."
+    },
+    {
+      "id": "viral-loop-ending",
+      "category": "viral",
+      "title": "Termina donde empezaste",
+      "body": "Los finales que enlazan con el primer segundo hacen que la gente lo vea dos veces, y eso aumenta las reproducciones."
+    },
+    {
+      "id": "viral-curiosity-titles",
+      "category": "viral",
+      "title": "Curiosidad, no clickbait",
+      "body": "Promete en el título un beneficio claro o una pregunta abierta, y asegúrate de que el video lo cumpla. Las promesas rotas matan la retención."
+    },
+    {
+      "id": "viral-title-and-thumbnail",
+      "category": "viral",
+      "title": "Título y miniatura trabajan en equipo",
+      "body": "No repitas el título en la miniatura. Deja que la imagen muestre la emoción y que el título aporte el contexto."
+    },
+    {
+      "id": "viral-trends-early",
+      "category": "viral",
+      "title": "Súmate pronto a las tendencias",
+      "body": "Usa Investigación de tendencias en X para detectar temas en auge y publica tu versión mientras la conversación sigue creciendo."
+    },
+    {
+      "id": "viral-series",
+      "category": "viral",
+      "title": "Convierte los éxitos en serie",
+      "body": "Cuando un video funciona, haz la parte 2. Las series dan a tu público un motivo para seguirte y no perderse la siguiente."
+    },
+    {
+      "id": "viral-one-call-to-action",
+      "category": "viral",
+      "title": "Pide una sola cosa",
+      "body": "Termina con una única llamada a la acción: comentar, seguirte o ver el siguiente video. Varias peticiones a la vez se ignoran."
+    },
+    {
+      "id": "viral-reply-comments",
+      "category": "viral",
+      "title": "Responde a los primeros comentarios",
+      "body": "Contestar comentarios en la primera hora mantiene viva la conversación y puede darte ideas para tu próximo video."
+    },
+    {
+      "id": "viral-consistency",
+      "category": "viral",
+      "title": "Publica con regularidad",
+      "body": "La constancia gana a las rachas. Usa el Planificador de contenido para fijar un día de publicación y planificar el trabajo hacia atrás."
+    },
+    {
+      "id": "viral-repurpose",
+      "category": "viral",
+      "title": "Un video largo, muchos cortos",
+      "body": "Pasa tus videos largos por el Analizador de video con IA para encontrar los mejores momentos y exportarlos como clips verticales."
+    },
+    {
+      "id": "viral-story-arc",
+      "category": "viral",
+      "title": "Cuéntalo como una historia",
+      "body": "Planteamiento, tensión y desenlace. Hasta un consejo de 30 segundos engancha más con un pequeño arco narrativo."
+    },
+    {
+      "id": "thumbnails-negative-prompts",
+      "category": "thumbnails",
+      "title": "Usa prompts negativos",
+      "body": "Indica lo que no quieres, como \"texto, marca de agua, desenfoque\", en el campo de prompt negativo para miniaturas más limpias."
+    },
+    {
+      "id": "thumbnails-styles",
+      "category": "thumbnails",
+      "title": "Parte de un estilo",
+      "body": "Elige un estilo como Audaz y colorido, Cinemático o Cara de reacción para orientar el resultado y luego afina tu prompt."
+    },
+    {
+      "id": "thumbnails-emotion",
+      "category": "thumbnails",
+      "title": "Muestra una emoción clara",
+      "body": "Un rostro cercano con una emoción fuerte y fácil de leer atrae más clics que un plano amplio donde todo se ve pequeño."
+    },
+    {
+      "id": "thumbnails-contrast",
+      "category": "thumbnails",
+      "title": "Apuesta por el contraste",
+      "body": "Las miniaturas se ven diminutas en el feed. Un protagonista luminoso sobre un fondo simple y contrastado destaca a cualquier tamaño."
+    },
+    {
+      "id": "thumbnails-few-words",
+      "category": "thumbnails",
+      "title": "Tres palabras o menos",
+      "body": "Si añades texto a la miniatura, limítalo a unas pocas palabras grandes. Las frases largas son ilegibles en la pantalla del móvil."
+    },
+    {
+      "id": "thumbnails-describe-scene",
+      "category": "thumbnails",
+      "title": "Describe la escena, no solo el tema",
+      "body": "En vez de \"video de cocina\", escribe quién aparece, qué hace, la luz y el ambiente. Los prompts específicos dan mejores imágenes."
+    },
+    {
+      "id": "thumbnails-variations",
+      "category": "thumbnails",
+      "title": "Genera varias versiones",
+      "body": "Crea dos o tres variaciones de la misma idea y elige la más potente viéndola en tamaño pequeño."
+    },
+    {
+      "id": "thumbnails-from-script",
+      "category": "thumbnails",
+      "title": "Usa el prompt de miniatura del guion",
+      "body": "El Guionista te da un prompt de miniatura con cada guion. Pégalo en el Generador de miniaturas como punto de partida."
+    },
+    {
+      "id": "thumbnails-reuse-prompt",
+      "category": "thumbnails",
+      "title": "Reutiliza los prompts que funcionaron",
+      "body": "En Recursos, abre una miniatura que te guste y pulsa Usar prompt para mantener un estilo coherente en tu canal."
+    },
+    {
+      "id": "thumbnails-right-model",
+      "category": "thumbnails",
+      "title": "Elige el modelo adecuado",
+      "body": "Los modelos gratuitos son ideales para bocetos e ideas; cambia a un modelo pro para la miniatura final cuando importe el detalle."
+    },
+    {
+      "id": "scripts-hook-styles",
+      "category": "scripts",
+      "title": "Elige un estilo de gancho",
+      "body": "El Guionista ofrece ganchos como Directo y rápido, Misterio y Contradicción. Prueba dos y quédate con el que te atrape."
+    },
+    {
+      "id": "scripts-tone",
+      "category": "scripts",
+      "title": "Ajusta el tono al tema",
+      "body": "Emotivo, Analítico, Humorístico o Polémico: elige el tono que encaje con tu público y con la historia que cuentas."
+    },
+    {
+      "id": "scripts-duration",
+      "category": "scripts",
+      "title": "Define primero la duración",
+      "body": "Indica la duración objetivo en segundos para que el guion encaje en el formato: corto y directo para Shorts, más profundo para YouTube."
+    },
+    {
+      "id": "scripts-platform",
+      "category": "scripts",
+      "title": "Escribe para la plataforma",
+      "body": "Elige YouTube, TikTok o Reels antes de generar: el ritmo y la estructura cambian en cada plataforma."
+    },
+    {
+      "id": "scripts-specific-topic",
+      "category": "scripts",
+      "title": "Sé específico con el tema",
+      "body": "\"5 hábitos que me hicieron un freelance más productivo\" gana a \"productividad\". Temas específicos dan guiones específicos."
+    },
+    {
+      "id": "scripts-visual-cues",
+      "category": "scripts",
+      "title": "Sigue las indicaciones visuales",
+      "body": "Los guiones incluyen indicaciones visuales. Úsalas como lista de planos cuando grabes."
+    },
+    {
+      "id": "scripts-read-aloud",
+      "category": "scripts",
+      "title": "Léelo en voz alta",
+      "body": "Lee el guion en voz alta antes de grabar y recorta cualquier frase en la que te trabes. Lo hablado es más corto que lo escrito."
+    },
+    {
+      "id": "scripts-history",
+      "category": "scripts",
+      "title": "Vuelve a guiones anteriores",
+      "body": "Cada guion se guarda en el Historial de guiones, así que puedes reabrirlo cuando estés listo para grabar."
+    },
+    {
+      "id": "scripts-copy-export",
+      "category": "scripts",
+      "title": "Copia o exporta con un clic",
+      "body": "Usa Copiar o Exportar en un guion terminado para llevarlo a tu teleprompter o a tus notas de edición."
+    },
+    {
+      "id": "scripts-schedule-recording",
+      "category": "scripts",
+      "title": "Agenda la grabación enseguida",
+      "body": "Cuando el guion esté listo, añade una sesión de grabación en el Planificador de contenido para que la idea no quede en un cajón."
+    },
+    {
+      "id": "assistant-action-cards",
+      "category": "assistant",
+      "title": "Deja que el asistente abra herramientas",
+      "body": "Pide al asistente una miniatura o un guion: responde con una tarjeta de acción que abre la herramienta adecuada con tu idea."
+    },
+    {
+      "id": "assistant-settings",
+      "category": "assistant",
+      "title": "Ajusta el asistente",
+      "body": "Abre los ajustes del chat para elegir el modelo, la temperatura y la longitud de la respuesta. Menos temperatura da respuestas más precisas."
+    },
+    {
+      "id": "assistant-one-topic",
+      "category": "assistant",
+      "title": "Un tema por chat",
+      "body": "Empieza un chat nuevo para cada proyecto. Las conversaciones cortas y centradas dan al asistente un contexto más claro."
+    },
+    {
+      "id": "assistant-title-brainstorm",
+      "category": "assistant",
+      "title": "Genera títulos en cantidad",
+      "body": "Pide al asistente 10 opciones de título para el mismo video y luego elige y combina las mejores partes."
+    },
+    {
+      "id": "assistant-feedback",
+      "category": "assistant",
+      "title": "Pide opinión, no solo contenido",
+      "body": "Pega tu guion o tu título y pregunta qué lo haría más atractivo. Una segunda opinión en segundos."
+    },
+    {
+      "id": "assistant-context",
+      "category": "assistant",
+      "title": "Da contexto desde el principio",
+      "body": "Cuenta al asistente tu nicho, tu público y tu plataforma en el primer mensaje. Mejor contexto, mejores sugerencias."
+    },
+    {
+      "id": "assistant-iterate",
+      "category": "assistant",
+      "title": "Ajusta en vez de empezar de cero",
+      "body": "Si una respuesta se acerca pero no acierta, pide al asistente que la ajuste (más corta, con más energía) en lugar de empezar de cero."
+    },
+    {
+      "id": "clipper-stays-on-device",
+      "category": "clipper",
+      "title": "Tu video no sale de tu dispositivo",
+      "body": "El Analizador de video con IA trabaja en tu navegador: solo se envían a la IA pequeños fotogramas clave, nunca el archivo."
+    },
+    {
+      "id": "clipper-context",
+      "category": "clipper",
+      "title": "Cuéntale de qué trata el video",
+      "body": "Añade una breve descripción antes de analizar. Con contexto, la IA encuentra mejores momentos, ganchos y títulos."
+    },
+    {
+      "id": "clipper-platform",
+      "category": "clipper",
+      "title": "Elige primero la plataforma",
+      "body": "Elige dónde irán los clips: cada plataforma tiene sus propias reglas de duración y los clips sugeridos las respetan."
+    },
+    {
+      "id": "clipper-trim",
+      "category": "clipper",
+      "title": "Ajusta cada clip al detalle",
+      "body": "Usa los botones de ±1 s o arrastra los bordes del clip en la línea de tiempo para recortar justo donde quieres."
+    },
+    {
+      "id": "clipper-move-clip",
+      "category": "clipper",
+      "title": "Mueve un clip en la línea de tiempo",
+      "body": "Mantén pulsado el clip seleccionado en la línea de tiempo hasta que se levante y arrástralo a su nuevo lugar."
+    },
+    {
+      "id": "clipper-vertical-export",
+      "category": "clipper",
+      "title": "Exporta en vertical en un paso",
+      "body": "Exporta un clip en 9:16 y el analizador lo centra y recorta para Shorts, TikTok y Reels."
+    },
+    {
+      "id": "clipper-keep-tab-open",
+      "category": "clipper",
+      "title": "Mantén la pestaña abierta",
+      "body": "El video solo vive en la pestaña del navegador: si sales de la página se descarta el análisis, así que termina de exportar antes."
+    },
+    {
+      "id": "clipper-hooks-titles",
+      "category": "clipper",
+      "title": "Usa los ganchos sugeridos",
+      "body": "Cada análisis también sugiere ganchos, títulos y hashtags. Cópialos directamente en tu publicación."
+    },
+    {
+      "id": "social-x-drafts",
+      "category": "social",
+      "title": "Redacta tuits en segundos",
+      "body": "Publicar en X convierte tu idea en un borrador de tuit. Edítalo, revisa el contador de 280 caracteres y publícalo cuando te guste."
+    },
+    {
+      "id": "social-connect-x",
+      "category": "social",
+      "title": "Conecta tu cuenta de X una vez",
+      "body": "Vincula tu cuenta de X en Configuración → Integraciones para publicar borradores directamente desde Creator Hub."
+    },
+    {
+      "id": "social-trend-sentiment",
+      "category": "social",
+      "title": "Lee el ánimo de una tendencia",
+      "body": "Investigación de tendencias en X resume los temas clave y el sentimiento, para saber si un tema entusiasma o genera polémica antes de entrar."
+    },
+    {
+      "id": "social-trend-influencers",
+      "category": "social",
+      "title": "Descubre quién lidera la conversación",
+      "body": "Los resultados de tendencias señalan las cuentas influyentes y activas. Interactúa con ellas para que vean tu aporte."
+    },
+    {
+      "id": "social-bot-channels",
+      "category": "social",
+      "title": "Responde a tus fans a toda hora",
+      "body": "Conecta Telegram o WhatsApp al Bot de comunidad y responderá a tu comunidad siguiendo el comportamiento que configures."
+    },
+    {
+      "id": "social-bot-playground",
+      "category": "social",
+      "title": "Prueba tu bot primero",
+      "body": "Usa el Playground del Bot de comunidad para probar respuestas antes de que las vean tus fans y ajusta el comportamiento hasta que te convenza."
+    },
+    {
+      "id": "social-bot-limits",
+      "category": "social",
+      "title": "Pon límites razonables",
+      "body": "Define un límite diario de respuestas para el Bot de comunidad y mantén el control de tus créditos."
+    },
+    {
+      "id": "social-share-new-videos",
+      "category": "social",
+      "title": "Anuncia cada video nuevo",
+      "body": "Cuando publiques un video, redacta un tuit con Publicar en X y comparte el enlace mientras está reciente."
+    },
+    {
+      "id": "assets-share-public",
+      "category": "assets",
+      "title": "Comparte para conseguir me gusta y visualizaciones",
+      "body": "Haz público un recurso y comparte su enlace: los me gusta y las visualizaciones llegan desde su página pública."
+    },
+    {
+      "id": "assets-filter",
+      "category": "assets",
+      "title": "Filtra tu biblioteca",
+      "body": "En Recursos, filtra por imágenes o videos para encontrar rápido lo que necesitas."
+    },
+    {
+      "id": "assets-download",
+      "category": "assets",
+      "title": "Descarga los originales",
+      "body": "Descarga cualquier imagen o video desde Recursos para editarlo o subirlo donde quieras."
+    },
+    {
+      "id": "assets-top-performers",
+      "category": "assets",
+      "title": "Aprende de lo que mejor funciona",
+      "body": "Mira qué recursos reciben más me gusta en el widget Me gusta y visualizaciones y crea más de lo que funciona."
+    },
+    {
+      "id": "assets-tidy",
+      "category": "assets",
+      "title": "Mantén ordenada tu biblioteca",
+      "body": "Elimina los borradores que no vayas a usar para que tu mejor trabajo sea fácil de encontrar."
+    },
+    {
+      "id": "credits-check-cost",
+      "category": "credits",
+      "title": "Mira el precio antes de ejecutar",
+      "body": "Las herramientas de IA muestran lo que costarán antes de ejecutarse. Si tu saldo no alcanza, lo sabrás antes de que se cobre nada."
+    },
+    {
+      "id": "credits-top-up",
+      "category": "credits",
+      "title": "Recarga antes de quedarte sin créditos",
+      "body": "Cuando tu saldo baja, la plataforma te avisa. Recarga desde Créditos para que ninguna fecha de entrega te frene."
+    },
+    {
+      "id": "credits-free-models",
+      "category": "credits",
+      "title": "Algunos modelos no cuestan nada",
+      "body": "Algunos análisis son gratis con ciertos modelos. Compara el coste que muestra cada herramienta antes de elegir modelo."
+    },
+    {
+      "id": "account-language",
+      "category": "account",
+      "title": "Usa Creator Hub en tu idioma",
+      "body": "Cambia entre inglés, español y portugués desde la barra superior o en Configuración. Tu elección se guarda en tu cuenta."
+    },
+    {
+      "id": "account-notifications",
+      "category": "account",
+      "title": "Revisa tus notificaciones",
+      "body": "La campana de la barra superior reúne los recordatorios de sesiones, los me gusta de tus recursos y los mensajes de tu cuenta."
+    },
+    {
+      "id": "account-profile",
+      "category": "account",
+      "title": "Mantén tu perfil al día",
+      "body": "Pon tu nombre en Configuración → Perfil: así te saluda el panel cada día."
+    }
+  ]
+}

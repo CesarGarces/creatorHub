@@ -6,3 +6,5 @@ export * from "./event.types";
 export * from "./api.types";
 export * from "./stt.types";
 export * from "./community-bot.types";
+export * from "./dashboard.types";
+export * from "./asset-engagement.types";
