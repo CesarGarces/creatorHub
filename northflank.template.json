@@ -1,0 +1,215 @@
+{
+  "$schema": "https://api.northflank.com/v1/schemas/template",
+  "apiVersion": "v1.2",
+  "name": "Creator Hub API",
+  "description": "Deploys the Creator Hub NestJS API on Northflank with an external Postgres and Redis.",
+  "arguments": {
+    "PROJECT_NAME": "Creator Hub",
+    "FRONTEND_URL": "",
+    "ADMIN_URL": "",
+    "API_URL": "",
+    "DATABASE_URL": "",
+    "REDIS_URL": "",
+    "JWT_SECRET": "",
+    "R2_ENDPOINT": "",
+    "R2_ACCESS_KEY_ID": "",
+    "R2_SECRET_ACCESS_KEY": "",
+    "SILICONFLOW_API_KEY": "",
+    "DEEPGRAM_API_KEY": "",
+    "COMMUNITY_BOT_ENCRYPTION_KEY": "",
+    "X_CLIENT_ID": "",
+    "X_CLIENT_SECRET": "",
+    "X_SOCIAL_ENCRYPTION_KEY": "",
+    "SENTRY_DSN": "",
+    "SENTRY_RELEASE": "",
+    "RESEND_API_KEY": "",
+    "RESEND_FROM_EMAIL": "",
+    "MERCADO_PAGO_ACCESS_TOKEN": "",
+    "MERCADO_PAGO_WEBHOOK_SECRET": "",
+    "APIFY_API_TOKEN": "",
+    "APIFY_TWITTER_ACTOR_ID": "apidojo/twitter-scraper-lite"
+  },
+  "options": {
+    "autorun": false,
+    "concurrencyPolicy": "allow"
+  },
+  "spec": {
+    "kind": "Workflow",
+    "spec": {
+      "type": "sequential",
+      "steps": [
+        {
+          "kind": "Project",
+          "ref": "project",
+          "spec": {
+            "name": "${args.PROJECT_NAME}",
+            "region": "europe-west",
+            "networking": {
+              "allowedIngressProjects": []
+            }
+          }
+        },
+        {
+          "kind": "Workflow",
+          "spec": {
+            "type": "sequential",
+            "context": {
+              "projectId": "${refs.project.id}"
+            },
+            "steps": [
+              {
+                "kind": "SecretGroup",
+                "ref": "creatorhub-api-secrets",
+                "spec": {
+                  "name": "creatorhub-api-secrets",
+                  "description": "Runtime secrets for the Creator Hub API.",
+                  "type": "secret",
+                  "secretType": "environment",
+                  "priority": 10,
+                  "secrets": {
+                    "variables": {
+                      "DATABASE_URL": "${args.DATABASE_URL}",
+                      "REDIS_URL": "${args.REDIS_URL}",
+                      "JWT_SECRET": "${args.JWT_SECRET}",
+                      "R2_ENDPOINT": "${args.R2_ENDPOINT}",
+                      "R2_ACCESS_KEY_ID": "${args.R2_ACCESS_KEY_ID}",
+                      "R2_SECRET_ACCESS_KEY": "${args.R2_SECRET_ACCESS_KEY}",
+                      "SILICONFLOW_API_KEY": "${args.SILICONFLOW_API_KEY}",
+                      "DEEPGRAM_API_KEY": "${args.DEEPGRAM_API_KEY}",
+                      "COMMUNITY_BOT_ENCRYPTION_KEY": "${args.COMMUNITY_BOT_ENCRYPTION_KEY}",
+                      "X_CLIENT_ID": "${args.X_CLIENT_ID}",
+                      "X_CLIENT_SECRET": "${args.X_CLIENT_SECRET}",
+                      "X_SOCIAL_ENCRYPTION_KEY": "${args.X_SOCIAL_ENCRYPTION_KEY}",
+                      "SENTRY_DSN": "${args.SENTRY_DSN}",
+                      "RESEND_API_KEY": "${args.RESEND_API_KEY}",
+                      "MERCADO_PAGO_ACCESS_TOKEN": "${args.MERCADO_PAGO_ACCESS_TOKEN}",
+                      "MERCADO_PAGO_WEBHOOK_SECRET": "${args.MERCADO_PAGO_WEBHOOK_SECRET}",
+                      "APIFY_API_TOKEN": "${args.APIFY_API_TOKEN}"
+                    },
+                    "files": {}
+                  },
+                  "addonDependencies": [],
+                  "restrictions": {
+                    "restricted": false,
+                    "nfObjects": [],
+                    "tags": []
+                  }
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "creatorhub-api",
+                "spec": {
+                  "name": "creatorhub-api",
+                  "description": "Creator Hub NestJS API",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-100-1",
+                    "buildPlan": "nf-compute-400-16"
+                  },
+                  "vcsData": {
+                    "projectType": "github",
+                    "projectUrl": "https://github.com/CesarGarces/creatorHub",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "buildEngine": "buildkit",
+                      "dockerWorkDir": "/",
+                      "dockerFilePath": "/Dockerfile.api",
+                      "buildkit": {
+                        "useCache": false,
+                        "cacheStorageSize": 16384
+                      }
+                    }
+                  },
+                  "buildConfiguration": {
+                    "pathIgnoreRules": [],
+                    "isAllowList": false,
+                    "ciIgnoreFlags": [
+                      "[skip ci]",
+                      "[ci skip]",
+                      "[no ci]",
+                      "[skip nf]",
+                      "[nf skip]",
+                      "[northflank skip]",
+                      "[skip northflank]"
+                    ],
+                    "ciIgnoreFlagsEnabled": false,
+                    "ignoreEmptyCommits": false
+                  },
+                  "buildArguments": {},
+                  "buildFiles": {},
+                  "runtimeFiles": {},
+                  "runtimeEnvironment": {
+                    "PORT": "3001",
+                    "NODE_ENV": "production",
+                    "NODE_OPTIONS": "--max-old-space-size=768",
+                    "STORAGE_PROVIDER": "r2",
+                    "R2_BUCKET": "creatorhub-assets",
+                    "SENTRY_ENVIRONMENT": "production",
+                    "SENTRY_RELEASE": "${args.SENTRY_RELEASE}",
+                    "FRONTEND_URL": "${args.FRONTEND_URL}",
+                    "ADMIN_URL": "${args.ADMIN_URL}",
+                    "API_URL": "${args.API_URL}",
+                    "X_REDIRECT_URI": "${args.API_URL}/api/v1/social/x/callback",
+                    "RESEND_FROM_EMAIL": "${args.RESEND_FROM_EMAIL}",
+                    "APIFY_TWITTER_ACTOR_ID": "${args.APIFY_TWITTER_ACTOR_ID}"
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "storage": {
+                      "ephemeralStorage": {
+                        "storageSize": 4096
+                      },
+                      "shmSize": 256
+                    },
+                    "docker": {
+                      "configType": "default"
+                    }
+                  },
+                  "ports": [
+                    {
+                      "name": "http",
+                      "internalPort": 3001,
+                      "public": true,
+                      "protocol": "HTTP",
+                      "domains": [],
+                      "security": {
+                        "policies": [],
+                        "credentials": []
+                      },
+                      "disableNfDomain": false
+                    }
+                  ],
+                  "healthChecks": [
+                    {
+                      "protocol": "HTTP",
+                      "type": "livenessProbe",
+                      "port": 3001,
+                      "path": "/api/v1/health",
+                      "initialDelaySeconds": 30,
+                      "periodSeconds": 30,
+                      "timeoutSeconds": 5,
+                      "failureThreshold": 3
+                    },
+                    {
+                      "protocol": "HTTP",
+                      "type": "readinessProbe",
+                      "port": 3001,
+                      "path": "/api/v1/ready",
+                      "initialDelaySeconds": 10,
+                      "periodSeconds": 15,
+                      "timeoutSeconds": 5,
+                      "failureThreshold": 3
+                    }
+                  ],
+                  "disabledCI": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
