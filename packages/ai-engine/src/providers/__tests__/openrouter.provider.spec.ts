@@ -113,6 +113,45 @@ describe("OpenRouterProvider", () => {
         }),
       ).rejects.toThrow("OpenRouter gateway not configured");
     });
+
+    it("sends the conversation history between the system prompt and the message", async () => {
+      const conversationHistory = [
+        { role: "user", content: "Hi, I'm Ana" },
+        { role: "assistant", content: "Hi Ana!" },
+      ];
+      await provider.generate({
+        taskType: "text-generation",
+        prompt: "What's my name?",
+        parameters: { systemPrompt: "Be brief", conversationHistory },
+      });
+
+      expect(mockGateway.chatCompletion).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: [
+            { role: "system", content: "Be brief" },
+            ...conversationHistory,
+            { role: "user", content: "What's my name?" },
+          ],
+        }),
+      );
+    });
+
+    it("still accepts the legacy `history` parameter", async () => {
+      await provider.generate({
+        taskType: "text-generation",
+        prompt: "Again",
+        parameters: { history: [{ role: "assistant", content: "Before" }] },
+      });
+
+      expect(mockGateway.chatCompletion).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: [
+            { role: "assistant", content: "Before" },
+            { role: "user", content: "Again" },
+          ],
+        }),
+      );
+    });
   });
 
   describe("generateImage", () => {

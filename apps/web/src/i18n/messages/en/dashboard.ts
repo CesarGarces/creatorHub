@@ -75,6 +75,11 @@ export const dashboard = {
       description:
         "A new tip every hour on using Creator Hub and growing your channel.",
     },
+    voiceAssistant: {
+      name: "Robotina",
+      description:
+        "Tap the orb and talk with your AI voice assistant, in English, Spanish or Portuguese.",
+    },
   },
   todayPlans: {
     open: "Open planner",

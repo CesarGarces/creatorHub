@@ -18,10 +18,11 @@ Creator Hub is a platform where content creators can access AI-powered tools to 
 - **AI Chat** — AI assistant with streaming, dynamic tool routing and integrated actions (opens tools directly from chat)
 - **Content Planner** — Calendar for video production. Plan a video from its publish date and every step (ideation, scripting, recording, editing, thumbnail, publishing) is scheduled backwards, one per day. Week (drag & drop to reschedule), month and agenda views, custom session types (created from the session dialog), overlap warnings, calendar-wide totals, per-video progress. Free (no credits).
   - **Plan with AI** — describe the video (type it, dictate it or attach PDF/DOCX/TXT/JSON/MD files), pick any active text model and the assistant rates its complexity, estimates the steps and their time from your past productions (vector search), suggests a platform tool for each step with its intention (Script Writer, Thumbnail Generator, Video Generator…, one click opens it pre-filled) and fills the calendar. Costs the model's credits (set in Admin → AI Models); voice input is billed per minute.
+- **Robotina — AI Voice Assistant** — Talk with Robotina about any topic with fluid, real-time voice. Speak in English, Spanish or Portuguese (Deepgram Nova-3 STT, 1 cr/min) and she answers out loud in your language with Deepgram Aura-2 — Andromeda (American), Celeste (Colombian) or Bianca (Brazilian), picked automatically. The voice starts with the first sentence while the model still writes; tap to interrupt her; conversation mode listens again after each answer. Pick any active text model (same settings panel as Post to X); the voice is fixed. 1 credit per reply (1 cr per started minute when spoken). Also on the dashboard as an animated orb widget. See ARCHITECTURE.md §14g.
 
 **Dashboard:**
 
-- **Dashboard widgets** — Quick prompt, favorite tools, plans for today (today's Content Planner sessions with their name, description and a countdown; past ones in red), recent activity, recommendations, likes & views (total likes and views of your assets and the most liked ones as small image previews — videos show their thumbnail, never play), credits and pro tips (100 tips on the calendar, widgets, viral videos and more, kept as JSON in `apps/web/src/content/pro-tips/`, a different one every hour) as widgets. Choose them in Settings → Dashboard (a preview of each widget and a live desktop/phone preview of the layout, up/down ordering), or press and hold a widget on the dashboard to drag it to a new place, iOS-style (wobble, lift and landing bounce; mouse, touch and keyboard). Each widget is its own lazy chunk that loads with its data only when shown. See ARCHITECTURE.md §2f.
+- **Dashboard widgets** — Quick prompt, Robotina (tap the glowing orb and talk — it waves with your voice and hers), favorite tools, plans for today (today's Content Planner sessions with their name, description and a countdown; past ones in red), recent activity, recommendations, likes & views (total likes and views of your assets and the most liked ones as small image previews — videos show their thumbnail, never play), credits and pro tips (100 tips on the calendar, widgets, viral videos and more, kept as JSON in `apps/web/src/content/pro-tips/`, a different one every hour) as widgets. Choose them in Settings → Dashboard (a preview of each widget and a live desktop/phone preview of the layout, up/down ordering), or press and hold a widget on the dashboard to drag it to a new place, iOS-style (wobble, lift and landing bounce; mouse, touch and keyboard). Each widget is its own lazy chunk that loads with its data only when shown. See ARCHITECTURE.md §2f.
 
 **Community Bot:**
 
@@ -66,6 +67,7 @@ creator-hub/
 │   ├── ai-engine/            # Multi-provider AI abstraction (tier-aware) + streaming
 │   ├── email/                # Provider-agnostic email (Resend, Handlebars templates)
 │   ├── stt-engine/           # Speech-to-text streaming (Deepgram, Mock)
+│   ├── tts-engine/           # Text-to-speech (Deepgram Aura-2, Mock) — Robotina's voice
 │   ├── billing/              # Credit system (currentCredits as single source of truth)
 │   ├── storage/              # R2/MinIO abstraction
 │   ├── analytics/            # Usage tracking
@@ -91,8 +93,10 @@ creator-hub/
 │   ├── x-post-tweet/         # Tweet drafting with RAG style
 │   ├── content-planner/      # Video production calendar (sessions + video projects)
 │   │   └── backend/          # NestJS controller + service (CRUD, overlap detection)
-│   └── video-clipper/        # AI Video Analyzer & Smart Clipper (video stays in the browser)
-│       └── backend/          # Vision-model analysis (keyframes → highlights/hooks/titles) + credits
+│   ├── video-clipper/        # AI Video Analyzer & Smart Clipper (video stays in the browser)
+│   │   └── backend/          # Vision-model analysis (keyframes → highlights/hooks/titles) + credits
+│   └── voice-assistant/      # Robotina — AI voice assistant (voice in, Aura-2 voice out)
+│       └── backend/          # SSE reply: text model → sentences → Deepgram Aura-2 + credits
 ├── agents/                   # Specialized agents
 │   └── chat-agent/           # Chat with dynamic tool routing
 └── skills/                   # System skills (see .agents/skills/)
@@ -401,6 +405,7 @@ AI providers are managed from the database (`Provider` table). The runtime regis
 | **SiliconFlow**       | `black-forest-labs/FLUX.2-pro` | 1024x1024 (ignores image_size)      | 1 cr     |
 | **DeepSeek V4 Flash** | `deepseek-ai/DeepSeek-V4`      | Text generation / translation       | 5 cr     |
 | **Deepgram (STT)**    | Nova-3                         | Speech-to-text (streaming)          | 1 cr/min |
+| **Deepgram (TTS)**    | Aura-2                         | Text-to-speech (Robotina's voice)   | 1 cr/min |
 
 ### Paid Providers (tier: pro)
 

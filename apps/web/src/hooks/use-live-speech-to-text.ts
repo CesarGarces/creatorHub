@@ -83,15 +83,38 @@ function downsampleBuffer(
   return result;
 }
 
+/**
+ * Loudness (0–1) of the last audio frame in an analyser: RMS of the
+ * waveform, scaled so normal speech reaches ~0.5–1. Used for visuals (the
+ * Robotina orb's waves), never for recognition.
+ */
+export function analyserLevel(
+  analyser: AnalyserNode | null,
+  buffer?: Float32Array<ArrayBuffer>,
+): number {
+  if (!analyser) return 0;
+  const data = buffer ?? new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(data);
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) sum += data[i]! * data[i]!;
+  const rms = Math.sqrt(sum / data.length);
+  return Math.min(1, rms * 4);
+}
+
 export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const levelBufferRef = useRef<Float32Array<ArrayBuffer> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const listenersAttached = useRef(false);
+  /** This hook's socket handlers: only these are removed on cleanup. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- socket.io listener signature
+  const handlersRef = useRef<Array<[string, (...args: any[]) => void]>>([]);
 
   const pendingResultRef = useRef(false);
 
@@ -106,6 +129,8 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
       sourceRef.current = null;
     }
 
+    analyserRef.current = null;
+
     if (audioContextRef.current) {
       audioContextRef.current.close().catch(() => {});
       audioContextRef.current = null;
@@ -117,11 +142,12 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
     }
 
     if (listenersAttached.current && socketRef.current) {
-      socketRef.current.off("stt:partial");
-      socketRef.current.off("stt:utterance_end");
-      socketRef.current.off("stt:result");
-      socketRef.current.off("stt:error");
-      socketRef.current.off("stt:started");
+      // Other listeners of these events (the app-wide balance refresh in
+      // useSocketEvents) must survive the end of a voice session.
+      for (const [event, handler] of handlersRef.current) {
+        socketRef.current.off(event, handler);
+      }
+      handlersRef.current = [];
       listenersAttached.current = false;
     }
 
@@ -133,8 +159,13 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
     (socket: Socket) => {
       if (listenersAttached.current) return;
       listenersAttached.current = true;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- socket.io listener signature
+      const on = (event: string, handler: (...args: any[]) => void) => {
+        socket.on(event, handler);
+        handlersRef.current.push([event, handler]);
+      };
 
-      socket.on(
+      on(
         "stt:partial",
         (data: { text: string; isFinal: boolean; timestamp: number }) => {
           console.log("[STT] stt:partial:", data.text, data.isFinal);
@@ -142,11 +173,11 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
         },
       );
 
-      socket.on("stt:utterance_end", () => {
+      on("stt:utterance_end", () => {
         options.onUtteranceEnd();
       });
 
-      socket.on(
+      on(
         "stt:result",
         (data: {
           fullTranscript: string;
@@ -160,13 +191,13 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
         },
       );
 
-      socket.on("stt:error", (data: { code: string; message: string }) => {
+      on("stt:error", (data: { code: string; message: string }) => {
         pendingResultRef.current = false;
         options.onError(localizeError(data.message));
         cleanup();
       });
 
-      socket.on("stt:started", () => {});
+      on("stt:started", () => {});
     },
     [options, cleanup],
   );
@@ -211,6 +242,15 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
 
       const source = audioContext.createMediaStreamSource(stream);
       sourceRef.current = source;
+
+      // Side tap for the live input level (visuals only).
+      if (typeof audioContext.createAnalyser === "function") {
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+        analyserRef.current = analyser;
+        levelBufferRef.current = new Float32Array(analyser.fftSize);
+      }
 
       const bufferSize = 4096;
       const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
@@ -277,10 +317,18 @@ export function useLiveSpeechToText(options: UseLiveSpeechToTextOptions) {
     }
   }, [isListening, cleanup]);
 
+  /** Current microphone level (0–1); 0 when not listening. */
+  const getLevel = useCallback(
+    () =>
+      analyserLevel(analyserRef.current, levelBufferRef.current ?? undefined),
+    [],
+  );
+
   return {
     startListening,
     stopListening,
     isListening,
     isSupported,
+    getLevel,
   };
 }

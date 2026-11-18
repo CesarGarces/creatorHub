@@ -8,3 +8,5 @@ export * from "./stt.types";
 export * from "./community-bot.types";
 export * from "./dashboard.types";
 export * from "./asset-engagement.types";
+export * from "./tts.types";
+export * from "./voice-assistant.types";

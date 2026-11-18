@@ -24,6 +24,9 @@ services:
         value: creatorhub-assets
       - key: SILICONFLOW_API_KEY
         sync: false
+      # Deepgram: speech-to-text (Nova-3) and Robotina's voice (Aura-2).
+      - key: DEEPGRAM_API_KEY
+        sync: false
       - key: COMMUNITY_BOT_ENCRYPTION_KEY
         sync: false
       - key: NODE_ENV

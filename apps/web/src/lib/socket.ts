@@ -22,11 +22,10 @@ export function getSocket(): Socket {
     throw new Error("No access token available for WebSocket connection");
   }
 
-  const rawUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!rawUrl) {
-    console.error("[Socket] NEXT_PUBLIC_API_URL is not set");
-    throw new Error("NEXT_PUBLIC_API_URL is not configured");
-  }
+  // Same default as the REST client (lib/api.ts): the socket lives on the
+  // API's origin. Production always sets NEXT_PUBLIC_API_URL.
+  const rawUrl =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
 
   const apiUrl = rawUrl.replace(/\/api\/v1\/?$/, "");
   console.log("[Socket] Creating socket connection to", apiUrl);

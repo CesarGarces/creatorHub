@@ -15,6 +15,7 @@ import { StorageModule } from "@creator-hub/storage";
 import { AnalyticsModule } from "@creator-hub/analytics";
 import { DomainEventsModule } from "@creator-hub/domain-events";
 import { STTEngineModule } from "@creator-hub/stt-engine";
+import { TTSEngineModule } from "@creator-hub/tts-engine";
 import { EmailModule } from "@creator-hub/email";
 import { ToolSdkModule } from "./tool-sdk.module";
 import { PlanGuard } from "@creator-hub/auth";
@@ -67,6 +68,8 @@ import {
 } from "@creator-hub/content-planner-backend";
 import "@creator-hub/video-clipper";
 import { VideoClipperModule } from "@creator-hub/video-clipper-backend";
+import "@creator-hub/voice-assistant";
+import { VoiceAssistantModule } from "@creator-hub/voice-assistant-backend";
 
 // Redis storage for rate limiting: limits stay consistent across replicas
 // and restarts (in-memory storage would multiply the effective limit per
@@ -114,6 +117,7 @@ const throttlerStorage = process.env.REDIS_URL
     AnalyticsModule,
     DomainEventsModule,
     STTEngineModule,
+    TTSEngineModule,
     EmailModule,
     ToolSdkModule,
     AdminModule,
@@ -162,6 +166,8 @@ const throttlerStorage = process.env.REDIS_URL
     ContentPlannerRemindersModule,
     // AI Video Analyzer & Smart Clipper (browser-side video, vision AI)
     VideoClipperModule,
+    // Robotina: AI voice assistant (STT gateway in, Deepgram Aura-2 out)
+    VoiceAssistantModule,
   ],
   controllers: [
     AuthController,

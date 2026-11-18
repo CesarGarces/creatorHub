@@ -1,28 +1,26 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { ProviderSelect } from "@/components/provider-select";
 import { useI18n } from "@/i18n/i18n-provider";
+import type { ModelSettings } from "@/lib/model-settings";
 
-export interface ModelSettings {
-  model: string;
-  temperature: number;
-  maxTokens: number;
-}
-
-export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
-  model: "deepseek-ai/DeepSeek-V4-Flash",
-  temperature: 0.7,
-  maxTokens: 300,
-};
+export {
+  DEFAULT_MODEL_SETTINGS,
+  type ModelSettings,
+} from "@/lib/model-settings";
 
 export function ModelSettingsPanel({
   settings,
   onUpdate,
   onClose,
+  footer,
 }: {
   settings: ModelSettings;
   onUpdate: (data: Partial<ModelSettings>) => void;
   onClose: () => void;
+  /** Extra row under the controls (e.g. Robotina's fixed voice). */
+  footer?: ReactNode;
 }) {
   const { t } = useI18n();
   return (
@@ -142,6 +140,7 @@ export function ModelSettingsPanel({
             />
           </div>
         </div>
+        {footer}
       </div>
     </div>
   );

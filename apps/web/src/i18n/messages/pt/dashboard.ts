@@ -76,6 +76,11 @@ export const dashboard: Messages["dashboard"] = {
       description:
         "Uma dica nova a cada hora para usar o Creator Hub e fazer seu canal crescer.",
     },
+    voiceAssistant: {
+      name: "Robotina",
+      description:
+        "Toque na esfera e converse com sua assistente de voz com IA, em português, inglês ou espanhol.",
+    },
   },
   todayPlans: {
     open: "Abrir planejador",

@@ -33,6 +33,7 @@ import { upgrade } from "./upgrade";
 import { video } from "./video";
 import { videoClipper } from "./videoClipper";
 import { voice } from "./voice";
+import { voiceAssistant } from "./voiceAssistant";
 import { xPost } from "./xPost";
 import { xResearch } from "./xResearch";
 
@@ -70,6 +71,7 @@ export const es: Messages = {
   video,
   videoClipper,
   voice,
+  voiceAssistant,
   xPost,
   xResearch,
 };

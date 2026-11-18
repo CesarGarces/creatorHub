@@ -1,0 +1,66 @@
+import type { Messages } from "../../translate";
+
+export const voiceAssistant: Messages["voiceAssistant"] = {
+  title: "Robotina",
+  titleLong: "Robotina — assistente de voz com IA",
+  emptyDescription:
+    "Converse sobre qualquer assunto, em voz alta. Fale em português, inglês ou espanhol e a Robotina responde com a voz dela, no seu idioma.",
+  tapToTalk: "Toque na esfera para falar",
+  status: {
+    idle: "Toque para falar",
+    listening: "Ouvindo…",
+    thinking: "Pensando…",
+    speaking: "Falando…",
+  },
+  orb: {
+    talk: "Falar com a Robotina",
+    finish: "Terminei de falar — enviar",
+    interrupt: "Interromper a Robotina e falar",
+  },
+  stop: "Encerrar conversa",
+  handsFree: "Modo conversa",
+  handsFreeHint: "Depois de responder, a Robotina volta a ouvir",
+  voiceNote:
+    "A voz dela é Deepgram Aura-2, escolhida pelo idioma em que você fala: Andromeda (inglês), Celeste (espanhol), Bianca (português).",
+  voiceSettings: "Voz",
+  pricing: "Voz {stt} cr/min · Resposta 1 cr (falada: 1 cr/min)",
+  pricingShort: "{stt} cr/min de voz · 1 cr/resposta",
+  openChat: "Abrir chat",
+  hideHistory: "Ocultar histórico",
+  showHistory: "Mostrar histórico",
+  newChat: "Nova conversa",
+  history: "Conversas",
+  noConversations: "Nenhuma conversa ainda",
+  untitled: "Sem título",
+  deleteConversation: "Excluir conversa",
+  modelSettings: "Configurações do modelo",
+  inputPlaceholder: "Digite uma mensagem ou toque no microfone…",
+  send: "Enviar",
+  you: "Você",
+  replay: "Ouvir de novo",
+  spoken: "Falado",
+  interrupted: "Interrompida",
+  voiceFailed: "Voz indisponível — respondeu em texto",
+  credits: "{count} cr",
+  loading: "Carregando conversa…",
+  suggestions: {
+    day: "Oi Robotina! Como está o seu dia?",
+    idea: "Me ajuda a pensar numa ideia para o meu próximo vídeo",
+    explain: "Explique buracos negros com palavras simples",
+    practice: "Can we practice English for a while?",
+  },
+  languages: {
+    en: "Inglês",
+    es: "Espanhol",
+    pt: "Português",
+  },
+  widget: {
+    hint: "Toque na esfera e diga qualquer coisa: ela responde em voz alta.",
+  },
+  errors: {
+    replyFailed: "A Robotina não conseguiu responder. Tente novamente.",
+    modelFailed:
+      "A Robotina não conseguiu responder. Tente novamente ou escolha outro modelo.",
+    voiceUnsupported: "A entrada de voz não está disponível neste navegador.",
+  },
+};

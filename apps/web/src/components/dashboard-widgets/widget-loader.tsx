@@ -54,4 +54,11 @@ export const WIDGET_COMPONENTS: Record<DashboardWidgetId, ComponentType> = {
     () => import("./widgets/tips-widget").then((m) => m.TipsWidget),
     { loading: () => <WidgetSkeleton id="tips" /> },
   ),
+  "voice-assistant": dynamic(
+    () =>
+      import("./widgets/voice-assistant-widget").then(
+        (m) => m.VoiceAssistantWidget,
+      ),
+    { loading: () => <WidgetSkeleton id="voice-assistant" /> },
+  ),
 };

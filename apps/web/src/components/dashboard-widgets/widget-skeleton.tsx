@@ -113,6 +113,17 @@ export function WidgetSkeleton({ id, className }: WidgetSkeletonProps) {
           <Skeleton className="h-[180px] rounded-xl" />
         </>
       )}
+      {id === "voice-assistant" && (
+        <>
+          {title}
+          {/* The card's minimum height, with the orb's place. */}
+          <div className="flex h-[320px] flex-col items-center rounded-xl border border-border bg-surface pt-4">
+            <Skeleton className="h-[168px] w-[168px] rounded-full" />
+            <Skeleton className="mt-3 h-4 w-24" />
+            <Skeleton className="mt-2 h-3 w-2/3" />
+          </div>
+        </>
+      )}
     </div>
   );
 }

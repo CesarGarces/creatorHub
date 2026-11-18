@@ -8,6 +8,17 @@ import type { TranslationKey } from "@/i18n/translate";
 
 const agents = [
   {
+    id: "voice-assistant",
+    nameKey: "agents.items.robotina.name" as TranslationKey,
+    descriptionKey: "agents.items.robotina.description" as TranslationKey,
+    icon: "🤖",
+    color: "bg-fuchsia-500/10",
+    hoverColor: "hover:border-fuchsia-500/30 hover:shadow-fuchsia-500/5",
+    badge: "secondary" as const,
+    badgeKey: "agents.badges.voice" as TranslationKey,
+    toolId: "voice-assistant",
+  },
+  {
     id: "x-post-tweet",
     nameKey: "agents.items.xPost.name" as TranslationKey,
     descriptionKey: "agents.items.xPost.description" as TranslationKey,

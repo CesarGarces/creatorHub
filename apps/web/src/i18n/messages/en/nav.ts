@@ -3,6 +3,7 @@ export const nav = {
   agents: "Agents",
   tools: "Tools",
   planner: "Planner",
+  assistant: "Robotina",
   assets: "Assets",
   history: "History",
   communityBot: "Community Bot",

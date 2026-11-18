@@ -73,6 +73,11 @@ const EXACT_MESSAGES: Record<string, TranslationKey> = {
   "The AI model couldn't analyze this video. Try again or choose another model.":
     "videoClipper.errors.modelFailed",
   "Analysis not found": "errors.notFound",
+  "Conversation not found": "errors.notFound",
+  "Robotina couldn't answer. Try again or choose another model.":
+    "voiceAssistant.errors.modelFailed",
+  "Robotina couldn't answer. Please try again.":
+    "voiceAssistant.errors.replyFailed",
 };
 
 const PATTERNS: Array<{

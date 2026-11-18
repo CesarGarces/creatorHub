@@ -26,6 +26,7 @@
     14d. [Community Bot](#14d-community-bot)
     14e. [Content Planner — AI Planning Assistant](#14e-content-planner--ai-planning-assistant)
     14f. [AI Video Analyzer & Smart Clipper](#14f-ai-video-analyzer--smart-clipper)
+    14g. [Robotina — AI Voice Assistant](#14g-robotina--ai-voice-assistant)
 15. [Testing Strategy](#14-testing-strategy)
 16. [CI/CD Strategy](#14-cicd-strategy)
 17. [Scalability Roadmap](#15-scalability-roadmap)
@@ -192,6 +193,8 @@ creator-hub/
 │   │
 │   ├── auth/                  # JWT + Passport auth
 │   ├── ai-engine/             # Multi-provider AI abstraction
+│   ├── stt-engine/            # Speech-to-text streaming (Deepgram Nova-3, Mock)
+│   ├── tts-engine/            # Text-to-speech (Deepgram Aura-2, Mock) — see §14g
 │   ├── billing/               # Credits, subscriptions, payment gateways (Strategy pattern)
 │   ├── storage/               # S3/MinIO abstraction
 │   ├── analytics/             # Usage tracking
@@ -248,6 +251,20 @@ creator-hub/
 │       │       ├── analysis-prompt.ts   # Prompt + defensive JSON parser
 │       │       ├── pricing.ts
 │       │       └── dto/analyze-video.dto.ts
+│       └── package.json
+
+│   └── voice-assistant/       # Robotina — AI voice assistant (see §14g)
+│       ├── index.ts           # Tool manifest (registerTool)
+│       ├── backend/
+│       │   └── src/
+│       │       ├── voice-assistant.module.ts
+│       │       ├── voice-assistant.controller.ts  # SSE reply + conversations
+│       │       ├── voice-assistant.service.ts     # model → sentences → Aura-2
+│       │       ├── language.ts        # en/es/pt detection → reply language + voice
+│       │       ├── speech-text.ts     # markdown → speech, sentence chunker
+│       │       ├── persona-prompt.ts  # Robotina's system prompt
+│       │       ├── pricing.ts
+│       │       └── dto/send-message.dto.ts
 │       └── package.json
 │
 └── .github/
@@ -556,8 +573,8 @@ that collector. Unset, nothing leaves the browser.
 ## 2f. Dashboard widgets
 
 The dashboard is a grid of **widgets** — Quick prompt, Favorite tools, Plans
-for today, Recent activity, Recommendations, Pro tip, Likes & views, Credits —
-that each user shows, hides and orders. They choose them in **Settings → Dashboard** (preview of every widget,
+for today, Recent activity, Recommendations, Pro tip, Likes & views, Robotina,
+Credits — that each user shows, hides and orders. They choose them in **Settings → Dashboard** (preview of every widget,
 live preview of the layout on a desktop or a phone) and rearrange them on the
 dashboard itself by **pressing and holding** one, iOS home-screen style.
 
@@ -674,6 +691,24 @@ GET /api/v1/user/assets/engagement?limit=1..12   (default 4, JwtAuthGuard)
 - Types in `@creator-hub/shared-types` (`AssetEngagement`,
   `ASSET_ENGAGEMENT_MAX_TOP`).
 
+### Robotina (voice assistant)
+
+`voice-assistant` is the AI voice assistant of §14g on the dashboard: a
+glowing **orb** with particles floating around it (`RobotinaOrb`, canvas
+2D). Tap it and talk: while the user speaks its rim **waves with the
+microphone level**, while Robotina answers out loud (Deepgram Aura-2, in the
+user's language) it waves with **her voice**, and rings spread out on loud
+syllables; thinking swirls light inside. A second tap sends at once; a tap
+while she talks interrupts her (barge-in). **Conversation mode** (switch,
+saved in the browser) listens again after each answer and pauses after 8 s
+of silence. "Open chat" continues the same conversation in the tool (shared
+`voice-assistant.store`). Half width, a fixed-size card (320 px) with the
+orb's place in its skeleton (no layout shift); it loads **no data** on
+mount — the STT socket and the audio context start on the first tap. The
+animation runs only while the orb is on screen and the tab is visible;
+reduced motion freezes the particles (the rim still swells with the voice).
+New for existing users: appended at the end, shown (normalizer).
+
 ### Adding a widget
 
 1. Its id in `DASHBOARD_WIDGET_IDS` and `DEFAULT_DASHBOARD_WIDGETS` (shared-types).
@@ -747,7 +782,9 @@ with container queries (`@container`, e.g. Recommendations goes two-up from
   repeats across 3,000 cycle boundaries, per-user order, local hours; widget
   changes at :00);
   Likes & views (normalization, totals, stills, no `<video>`, broken preview,
-  links, empty/error). API: engagement service (sums, query, image/video
+  links, empty/error); Robotina (orb states, listen → live transcript → end
+  of speech → spoken reply, second tap, barge-in, silence, conversation
+  mode, STT errors, speaking with a fake Web Audio). API: engagement service (sums, query, image/video
   previews, no video file signed), `resolveStorageRef`, query DTO, controller.
 - E2E (`web.dashboard-widgets.spec.ts`): mouse press-hold-drag with the lift/land
   animations and persistence, a drag across mixed sizes with jitter (no loops),
@@ -1090,6 +1127,7 @@ The `AIController` exposes DB-driven provider metadata:
 - **`Provider` model** — Metadata de proveedores IA (slug, name, model, tier, costPerCredit, isActive, supportedTasks, config)
 - **`GeneratedImage.providerId`** — Relación con `Provider`; `isProModel` se deriva del tier del proveedor
 - **`DashboardLayout`** — One row per user (`userId` unique): `widgets` JSON `[{ id, visible }]` in display order; no row = default dashboard (§2f). Migration `20261126000000_add_dashboard_layout`
+- **`VoiceConversation` / `VoiceMessage`** — Robotina's conversations (§14g): title, last language, model; messages with language, `spoken`, Aura-2 `voice`, `audioMs`, `creditsCharged`, `interrupted`. Text only — audio is streamed, never stored. Migration `20261127000000_add_voice_assistant`
 - **Soft delete** — Users use `isActive: false` instead of `DELETE`
 
 ---
@@ -1128,6 +1166,11 @@ POST   /api/v1/tools/video-clipper/analyses           # Keyframes + metadata →
 GET    /api/v1/tools/video-clipper/analyses           # History (paginated)
 GET    /api/v1/tools/video-clipper/analyses/:id       # One analysis
 DELETE /api/v1/tools/video-clipper/analyses/:id       # Delete an analysis
+
+POST   /api/v1/tools/voice-assistant/messages                  # Robotina reply (SSE: text + Aura-2 audio) (§14g)
+GET    /api/v1/tools/voice-assistant/conversations             # History (paginated)
+GET    /api/v1/tools/voice-assistant/conversations/:id         # One conversation with its messages
+DELETE /api/v1/tools/voice-assistant/conversations/:id         # Delete a conversation
 
 GET    /api/v1/community-bot/config                # Get bot config
 PUT    /api/v1/community-bot/config                # Update bot settings
@@ -1401,6 +1444,46 @@ User clicks Mic button in Content Translator
 | `stt:done`       | API Gateway | Frontend    | Final transcript + duration     |
 | `stt:error`      | API Gateway | Frontend    | Session error or credit issue   |
 
+### Event-Driven Flow Example — Robotina voice turn
+
+Voice in reuses the STT flow above unchanged; the reply is a POST that
+streams Server-Sent Events (see §14g).
+
+```
+User taps the orb (widget or tool page)
+    │
+    ├──► SpeechPlayer.unlock()  (audio allowed: inside the gesture)
+    ├──► useVoiceButton → stt:start … stt:chunk …  (Deepgram Nova-3, multi)
+    │       └──► stt:partial → live transcript + TurnDetector
+    │               (final phrase + 3 s pause, UtteranceEnd, or a 2nd tap)
+    ├──► stt:end → gateway bills the minutes → stt:result {fullTranscript}
+    │
+    ├──► POST /tools/voice-assistant/messages {content, spoken: true, model}
+    │       │
+    │       └──► VoiceAssistantService.reply()
+    │               ├──► resolve model (tier) · hasEnoughCredits(1)
+    │               ├──► detect language (en/es/pt) → Aura-2 voice
+    │               ├──► save user message
+    │               ├──► SSE start {conversationId, language, voice}
+    │               ├──► model stream ──► SSE delta …
+    │               │       └──► SpeechChunker: first sentence at once
+    │               │               └──► TTSEngineService.synthesize() ──► SSE audio {index, mp3 base64}
+    │               ├──► save reply → CreditService.deduct(1 cr/min of speech)
+    │               └──► SSE done {messageId, audioMs, credits, balance}
+    │
+    ├──► SpeechPlayer plays segments in order (orb waves with her voice)
+    └──► her last word → conversation mode? listen again : idle
+```
+
+| SSE event     | Payload                                                 |
+| ------------- | ------------------------------------------------------- |
+| `start`       | conversationId, userMessageId, language, voice \| null  |
+| `delta`       | text as the model writes it                             |
+| `audio`       | index, mimeType, base64 data, durationMs, text          |
+| `audio_error` | the voice failed — the reply continues as text          |
+| `done`        | messageId, content, language, audioMs, credits, balance |
+| `error`       | status, message (nothing charged)                       |
+
 ---
 
 ## 8. Credit System
@@ -1521,6 +1604,12 @@ model), voice input (active `speech-to-text` model, **per minute**,
 default 1), and the Video Clipper's analysis (chosen vision model ×
 started batches of 12 keyframes). See [14e](#14e-content-planner--ai-planning-assistant)
 and [14f](#14f-ai-video-analyzer--smart-clipper).
+
+Robotina (§14g) charges **1 credit per reply**, or **1 credit per started
+minute** of Aura-2 speech for spoken replies (`TTS_CREDITS_PER_MINUTE`, a
+platform constant: text-to-speech is not an admin-configurable model). Her
+voice input is the platform's STT, billed per minute like every voice
+button.
 
 ### Provider Selection by Plan
 
@@ -3398,6 +3487,170 @@ worker). The UI shows this as a "Coming soon" note; `GET /limits` exposes
 
 ---
 
+## 14g. Robotina — AI Voice Assistant
+
+**Robotina** is an AI companion to talk with about any topic, out loud, in
+real time. The user speaks (or types) in English, Spanish or Portuguese;
+she answers in the same language — with her **voice** when the user spoke.
+Two entry points share one conversation: the tool page
+(`/tools/voice-assistant`, the same layout as Post to X / X Trend Research:
+history, model settings, voice button, composer) and the dashboard widget
+(§2f, the orb). The sidebar has a "Robotina" button next to "Planner", and
+she appears in Tools, Agents and the command palette.
+
+### Architecture
+
+```
+┌──────────────────────────── apps/web ────────────────────────────────┐
+│ VoiceAssistantPage · VoiceAssistantWidget                            │
+│   RobotinaOrb (canvas: particles, waves from the live audio level)   │
+│   useRobotina ── state machine idle → listening → thinking → speaking │
+│     ├─ useVoiceButton / useLiveSpeechToText  (STT socket, mic level) │
+│     ├─ TurnDetector       (end of speech → send, silence → pause)    │
+│     ├─ voice-assistant.store ── streamAssistantReply (SSE POST)      │
+│     └─ SpeechPlayer       (Web Audio: ordered, gapless, analyser)    │
+└───────────────┬───────────────────────────────────┬──────────────────┘
+      WebSocket stt:* (unchanged)          POST /tools/voice-assistant/messages
+                ▼                                   ▼
+┌─ apps/api AppGateway ─────────┐   ┌─ tools/voice-assistant/backend ─────────────┐
+│ STTEngineService (Nova-3)     │   │ VoiceAssistantController (SSE, abort)       │
+│ bills minutes at stt:end      │   │ VoiceAssistantService.reply()               │
+└───────────────────────────────┘   │  language.ts → reply language + voice       │
+                                    │  persona-prompt.ts → Robotina               │
+                                    │  ProviderRegistry (chosen text model)       │
+                                    │  SpeechChunker → TTSEngineService           │
+                                    │  CreditService · PlatformUsageLogger        │
+                                    └──────────┬─────────────────┬────────────────┘
+                                               ▼                 ▼
+                              packages/tts-engine          PostgreSQL
+                              DeepgramTTSProvider          VoiceConversation
+                              (Aura-2, REST /v1/speak)     VoiceMessage (text only)
+```
+
+### Voice in, voice out
+
+| Step        | How                                                                                                                                                                                                                                                                                                          |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Listen      | The platform's STT, unchanged (WebSocket `stt:*`, Deepgram Nova-3 `language=multi`). `useLiveSpeechToText` also exposes the **mic level** (an `AnalyserNode` tap) for the orb.                                                                                                                               |
+| End of turn | `TurnDetector`: a 3 s pause after the last final phrase (any new word restarts it; room to think), Deepgram's `UtteranceEnd` when no final phrase is pending, or a second tap. No speech for 8 s ends the turn as silence (conversation mode pauses).                                                        |
+| Language    | `detectLanguage()` — function words and letters only one language uses (ñ ¿ ¡ vs ã õ ç ê ô); shared words count for none. Unclear → the conversation's language → the interface language → English. The system prompt pins the reply language.                                                               |
+| Think       | Any active **text** model (same `ModelSettingsPanel` as the X tools: model, temperature, max tokens). PRO models need a paid plan. Last 20 messages as history.                                                                                                                                              |
+| Speak       | `SpeechChunker` sends the **first sentence** to Aura-2 as soon as it is complete (she starts talking while the model still writes); later sentences are grouped (≥ 140 chars, ≤ 400). Markdown, code, URLs and emojis are never read (`toSpeakableText`). Requests run in parallel and are emitted in order. |
+| Play        | `SpeechPlayer` decodes each MP3 segment and schedules it right after the previous one (gapless) through an analyser (the orb's waves). `stop()` silences at once (barge-in).                                                                                                                                 |
+| Loop        | Conversation mode (default on, saved in the browser) reopens the mic 350 ms after her last word.                                                                                                                                                                                                             |
+
+Typed messages get a written reply (no audio). Replies of the current visit
+keep their audio in memory for "Play again" (no new charge); audio is never
+stored on the server.
+
+### Text-to-speech — `packages/tts-engine`
+
+Mirrors `stt-engine`: `TTSProviderInterface`, `TTSProviderBase`,
+`TTSProviderRegistry`, `TTSProviderFactory` (OnModuleInit) and
+`TTSEngineService` (`synthesize`, `calculateCredits`, `isAvailable`).
+
+- **Always Deepgram Aura-2** (`POST https://api.deepgram.com/v1/speak`,
+  MP3 48 kbps), with the same `DEEPGRAM_API_KEY` as speech-to-text. The
+  voice is **not configurable** — not in Admin → AI Models, not in the
+  settings panel (the DTO rejects any voice field); it follows the
+  language of the reply (`TTS_VOICES`, `@creator-hub/shared-types`):
+
+  | Language   | Voice     | Model                 | Accent, gender      |
+  | ---------- | --------- | --------------------- | ------------------- |
+  | English    | Andromeda | `aura-2-andromeda-en` | American, feminine  |
+  | Spanish    | Celeste   | `aura-2-celeste-es`   | Colombian, feminine |
+  | Portuguese | Bianca    | `aura-2-bianca-pt`    | Brazilian, feminine |
+
+- Speech length is measured from the MP3 **frame headers**
+  (`mp3DurationMs`), not estimated — it is what gets billed.
+- One retry on 429/5xx/network errors; 20 s timeout; aborts with the client.
+- `MockTTSProvider` (silent WAV as long as the text) only in
+  development/test. In production without a Deepgram key there is **no
+  voice**: replies come as text (`start.voice = null`) and cost 1 credit —
+  never charged for silence. A failed synthesis mid-reply sends
+  `audio_error` once and the reply continues as text.
+
+### Credits
+
+| What         | Price                                                                   | Where                               |
+| ------------ | ----------------------------------------------------------------------- | ----------------------------------- |
+| Voice input  | `creditCost` of the active speech-to-text model per minute (default 1)  | STT gateway (as every voice button) |
+| Reply        | 1 credit (`VOICE_ASSISTANT_REPLY_CREDITS`)                              | `pricing.ts`                        |
+| Spoken reply | 1 credit per started minute of Aura-2 speech (`TTS_CREDITS_PER_MINUTE`) | `pricing.ts`                        |
+
+- `hasEnoughCredits(1)` before anything is saved. Order: **save → charge**
+  (`CreditService.deduct()`: atomic debit, thresholds, credit emails). If the
+  balance dropped meanwhile (a long spoken reply, another tool), what is
+  left is taken (the reply was already heard) and the message records it.
+- A model failure before any text charges nothing and undoes the turn (a
+  new conversation is deleted, else the user message). A reply interrupted
+  before its first word is free; an interrupted reply is saved as
+  `interrupted` and billed for what was delivered (audio not delivered is
+  not counted).
+- Usage is logged with `PlatformUsageLogger` (language, voice, audioMs,
+  interrupted).
+
+### Data model
+
+```prisma
+model VoiceConversation {   // one talk
+  id, userId, title, language ("en"|"es"|"pt"), modelId?, createdAt, updatedAt
+  @@index([userId, updatedAt])
+}
+model VoiceMessage {        // text only — audio is never stored
+  id, conversationId, role ("user"|"assistant"), content, language,
+  spoken, voice?, audioMs, creditsCharged, interrupted, modelId?, createdAt
+  @@index([conversationId, createdAt])
+}
+```
+
+Migration: `20261127000000_add_voice_assistant`.
+
+### Related changes
+
+- `OpenRouterProvider` now reads `parameters.conversationHistory` (the key
+  every other provider and `ChatService` use; `history` still works) — so
+  OpenRouter models remember the conversation.
+- The web socket client (`lib/socket.ts`) falls back to the same API URL as
+  the REST client (`http://localhost:3001/api/v1`) when
+  `NEXT_PUBLIC_API_URL` is unset, instead of throwing (local dev, e2e
+  builds); production always sets it.
+- `ModelSettings` / `DEFAULT_MODEL_SETTINGS` live in `lib/model-settings.ts`
+  (re-exported by the panel) so stores and widgets don't load the panel;
+  the panel accepts a `footer` (Robotina's fixed-voice note and
+  conversation mode).
+
+### Tests
+
+- tts-engine (vitest): MP3 frame parser (MPEG-2, ID3, junk), WAV helpers,
+  Aura-2 requests per language (URL, auth, body), retries, errors, abort,
+  factory (no mock in production), billing by started minute.
+- Backend (vitest, `tools/voice-assistant/backend`): language detection
+  (en/es/pt sentences, ambiguous text), speakable text and chunking, pricing,
+  persona prompt, DTO, service (event order, voice by language, speech
+  while writing and in order, history, language switch, text-only replies,
+  no-voice fallback, TTS failure, partial model failure, refusals, undo on
+  failure, partial charge, interruptions), controller (SSE, abort, errors).
+- API (`apps/api`, supertest): HTTP contract through the global
+  ValidationPipe (trimmed content, no voice field accepted, paging) and
+  Tool SDK discovery. ai-engine: OpenRouter history.
+- Web (vitest + RTL): SSE client, preferences, turn detector, orb math,
+  speech player (fake Web Audio: order, gapless, end, barge-in, replay, no
+  Web Audio), store, widget and page flows (listen → send → reply,
+  conversation mode, silence, second tap, barge-in, stop, errors, speaking,
+  typed replies, settings without any voice choice), sidebar button.
+- E2E (Playwright, `web.voice-assistant.spec.ts`): a full voice turn in
+  real Chromium — fake microphone, a fake Deepgram STT on the Socket.IO
+  connection, end of speech, the SSE reply whose audio really plays through
+  Web Audio, "Play again", conversation mode reopening the mic, ending the
+  talk; typed replies and history; settings without a voice choice; phone
+  layout and touch targets; the dashboard widget; axe. The page is also in
+  the every-page a11y/responsive/performance gates (`WEB_PAGES`).
+- Storybook: `RobotinaOrb` (every state, synthetic voice) and
+  `VoiceAssistantWidget`.
+
+---
+
 ## 14. Testing Strategy
 
 ### Test Pyramid
@@ -3739,6 +3992,9 @@ export class YourToolService {
 | **Movement-gated widget swaps**  | Widgets of different sizes reflow truthfully while dragging; swaps need pointer movement, so a reflow can't start swap loops                      |
 | **Store-driven widget open**     | `isWidgetOpen` in Zustand store allows any component to open chat via `openWidget()`                                                              |
 | **Sentry for observability**     | Separate projects for API + Web, breadcrumbs for context, PII sanitization, flush on Render shutdown                                              |
+| **TTS fixed, not a setting**     | Always Deepgram Aura-2, voice picked by the reply language: nothing to configure or misconfigure, one price per minute                            |
+| **Sentence-level TTS over SSE**  | First sentence spoken while the model still writes; plain REST + the existing SSE pattern; parallel synthesis, in-order                           |
+| **Lexical language detection**   | Transcripts and typed text carry no language: a tiny en/es/pt detector is instant, free and testable, with fallbacks                              |
 | **Apify over Crawlee**           | Apify handles authentication and scraping at scale; no cookie management needed. Crawlee was fragile and required manual cookie refresh.          |
 
 ---

@@ -32,6 +32,10 @@ export const commandPalette: Messages["commandPalette"] = {
       label: "Cortador de vídeo",
       description: "Encontre destaques e exporte clipes",
     },
+    robotina: {
+      label: "Robotina",
+      description: "Converse com sua assistente de voz com IA",
+    },
     dashboard: { label: "Painel", description: "Ir para o painel" },
     tools: {
       label: "Todas as ferramentas",

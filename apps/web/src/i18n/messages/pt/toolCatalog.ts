@@ -34,6 +34,11 @@ export const toolCatalog: Messages["toolCatalog"] = {
     description:
       "Encontre destaques, ganchos e títulos com IA e exporte clipes curtos pelo seu navegador",
   },
+  "voice-assistant": {
+    name: "Robotina — Assistente de voz com IA",
+    description:
+      "Converse com a Robotina sobre qualquer assunto com voz fluida e em tempo real: ela responde em voz alta no seu idioma",
+  },
   categories: {
     image: "Imagem",
     thumbnail: "Thumbnail",
@@ -46,6 +51,7 @@ export const toolCatalog: Messages["toolCatalog"] = {
     writing: "Escrita",
     translator: "Tradutor",
     planning: "Planejamento",
+    assistant: "Assistente",
     other: "Outro",
   },
 };

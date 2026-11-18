@@ -21,6 +21,7 @@ export const DASHBOARD_WIDGET_IDS = [
   "credits",
   "tips",
   "asset-stats",
+  "voice-assistant",
 ] as const;
 
 export type DashboardWidgetId = (typeof DASHBOARD_WIDGET_IDS)[number];
@@ -54,6 +55,8 @@ export const DEFAULT_DASHBOARD_WIDGETS: readonly Readonly<DashboardWidgetState>[
     { id: "tips", visible: true },
     // Likes and views of the user's assets, with previews.
     { id: "asset-stats", visible: true },
+    // Robotina: tap the orb and talk (voice in, Aura-2 voice out).
+    { id: "voice-assistant", visible: true },
     { id: "credits", visible: false },
   ];
 

@@ -96,6 +96,7 @@ describe("dashboard widgets contract", () => {
       "credits",
       "tips",
       "asset-stats",
+      "voice-assistant",
     ]);
   });
 
@@ -132,6 +133,7 @@ describe("dashboard widgets contract", () => {
       "activity",
       "recommendations",
       "asset-stats",
+      "voice-assistant",
     ]);
     expect(result.every((w) => w.visible !== undefined)).toBe(true);
   });
@@ -180,5 +182,48 @@ describe("asset engagement contract", () => {
     expect(types.ASSET_ENGAGEMENT_MAX_TOP).toBeGreaterThanOrEqual(
       types.ASSET_ENGAGEMENT_DEFAULT_TOP,
     );
+  });
+});
+
+describe("text-to-speech contract (Deepgram Aura-2)", () => {
+  it("speaks every assistant language with its Aura-2 feminine voice", () => {
+    expect(types.TTS_LANGUAGES).toEqual(["en", "es", "pt"]);
+    expect(types.TTS_VOICES.en).toMatchObject({
+      model: "aura-2-andromeda-en",
+      name: "Andromeda",
+      accent: "American",
+      gender: "feminine",
+    });
+    expect(types.TTS_VOICES.es).toMatchObject({
+      model: "aura-2-celeste-es",
+      name: "Celeste",
+      accent: "Colombian",
+      gender: "feminine",
+    });
+    expect(types.TTS_VOICES.pt).toMatchObject({
+      model: "aura-2-bianca-pt",
+      name: "Bianca",
+      accent: "Brazilian",
+      gender: "feminine",
+    });
+    for (const [language, voice] of Object.entries(types.TTS_VOICES)) {
+      expect(voice.language).toBe(language);
+      expect(voice.model.startsWith(`${types.TTS_MODEL_FAMILY}-`)).toBe(true);
+    }
+  });
+
+  it("falls back to the English voice for unknown languages", () => {
+    expect(types.ttsVoiceFor("es").name).toBe("Celeste");
+    expect(types.ttsVoiceFor("fr").name).toBe("Andromeda");
+    expect(types.ttsVoiceFor(undefined).name).toBe("Andromeda");
+    expect(types.isTTSLanguage("pt")).toBe(true);
+    expect(types.isTTSLanguage("PT")).toBe(false);
+  });
+
+  it("pins the prices: 1 credit per reply, 1 credit per minute of speech", () => {
+    expect(types.TTS_CREDITS_PER_MINUTE).toBe(1);
+    expect(types.VOICE_ASSISTANT_REPLY_CREDITS).toBe(1);
+    expect(types.VOICE_ASSISTANT_TOOL_ID).toBe("voice-assistant");
+    expect(types.VOICE_ASSISTANT_NAME).toBe("Robotina");
   });
 });

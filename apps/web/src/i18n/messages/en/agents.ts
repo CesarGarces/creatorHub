@@ -7,6 +7,7 @@ export const agents = {
   badges: {
     social: "Social",
     research: "Research",
+    voice: "Voice",
   },
   items: {
     xPost: {
@@ -19,6 +20,12 @@ export const agents = {
       name: "X Research Agent",
       description: "Search and analyze trending topics on X (Twitter)",
       shortDescription: "Search and analyze trending topics on X",
+    },
+    robotina: {
+      name: "Robotina",
+      description:
+        "Your AI voice assistant: talk about anything, out loud, in English, Spanish or Portuguese",
+      shortDescription: "Talk about anything, out loud",
     },
     youtube: {
       name: "YouTube Agent",

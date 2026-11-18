@@ -39,6 +39,7 @@ export type ToolCategory =
   | "writing"
   | "translator"
   | "planning"
+  | "assistant"
   | "other";
 
 export interface ToolRoute {

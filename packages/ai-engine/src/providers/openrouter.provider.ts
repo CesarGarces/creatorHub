@@ -275,12 +275,14 @@ export class OpenRouterProvider extends AIProviderBase {
       });
     }
 
-    // Add conversation history if provided
-    if (request.parameters?.history) {
-      const history = request.parameters.history as Array<{
-        role: string;
-        content: string;
-      }>;
+    // Add conversation history if provided. `conversationHistory` is the
+    // key every other provider (and ChatService) uses; `history` is kept for
+    // existing callers.
+    const history = (request.parameters?.conversationHistory ??
+      request.parameters?.history) as
+      | Array<{ role: string; content: string }>
+      | undefined;
+    if (Array.isArray(history)) {
       messages.push(...history);
     }
 

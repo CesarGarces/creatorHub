@@ -25,6 +25,7 @@ const HEIGHT: Record<DashboardWidgetId, string> = {
   credits: "h-12",
   "asset-stats": "h-14",
   tips: "h-10",
+  "voice-assistant": "h-16",
 };
 
 /**

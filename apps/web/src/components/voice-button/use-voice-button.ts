@@ -34,6 +34,8 @@ interface UseVoiceButtonReturn {
   startListening: () => Promise<void>;
   stopListening: () => void;
   creditsPerMinute: number;
+  /** Live microphone level (0–1) while listening — for visuals. */
+  getLevel: () => number;
 }
 
 function playSound(src: string) {
@@ -95,6 +97,7 @@ export function useVoiceButton(
     stopListening: sttStop,
     isListening: sttIsListening,
     isSupported,
+    getLevel,
   } = useLiveSpeechToText({
     language,
     onPartialTranscript: handlePartialTranscript,
@@ -140,5 +143,6 @@ export function useVoiceButton(
     startListening,
     stopListening,
     creditsPerMinute,
+    getLevel,
   };
 }

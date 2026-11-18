@@ -1,0 +1,68 @@
+import { Injectable } from "@nestjs/common";
+import { Logger } from "@creator-hub/shared-utils";
+import {
+  TTS_CREDITS_PER_MINUTE,
+  ttsVoiceFor,
+  type TTSAudio,
+  type TTSProviderName,
+  type TTSSynthesizeParams,
+  type TTSVoice,
+} from "@creator-hub/shared-types";
+import { TTSProviderRegistry } from "./providers/tts-provider.registry";
+
+/**
+ * Text-to-speech for the platform (the Robotina voice assistant today).
+ *
+ * Always Deepgram Aura-2 — the voice is picked from the language of the
+ * text (`TTS_VOICES`), never from a setting. Tools call `synthesize()` per
+ * chunk of text and add up `durationMs` to bill with `calculateCredits()`.
+ */
+@Injectable()
+export class TTSEngineService {
+  private logger = new Logger("TTSEngineService");
+
+  constructor(private providerRegistry: TTSProviderRegistry) {}
+
+  /** Whether speech can be produced (Deepgram configured, or the dev mock). */
+  isAvailable(): boolean {
+    return this.providerRegistry.getAvailableProvider() !== undefined;
+  }
+
+  /** Name of the provider that would speak, if any. */
+  activeProvider(): TTSProviderName | null {
+    return this.providerRegistry.getAvailableProvider()?.name ?? null;
+  }
+
+  voiceFor(language: unknown): TTSVoice {
+    return ttsVoiceFor(language);
+  }
+
+  async synthesize(params: TTSSynthesizeParams): Promise<TTSAudio> {
+    const provider = this.providerRegistry.getAvailableProvider();
+    if (!provider) {
+      throw new Error("No TTS provider available");
+    }
+    const started = Date.now();
+    const audio = await provider.synthesize(params);
+    this.logger.debug("Speech synthesized", {
+      provider: provider.name,
+      voice: audio.voice,
+      chars: params.text.length,
+      durationMs: audio.durationMs,
+      latencyMs: Date.now() - started,
+    });
+    return audio;
+  }
+
+  /**
+   * Credits for `durationMs` of speech: started minutes × rate (1 credit for
+   * up to a minute, 2 for up to two…). No speech, no charge.
+   */
+  calculateCredits(
+    durationMs: number,
+    creditsPerMinute: number = TTS_CREDITS_PER_MINUTE,
+  ): number {
+    if (durationMs <= 0 || creditsPerMinute <= 0) return 0;
+    return Math.max(1, Math.ceil(durationMs / 60_000)) * creditsPerMinute;
+  }
+}

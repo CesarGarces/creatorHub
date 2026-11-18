@@ -74,6 +74,22 @@ describe("Sidebar", () => {
     );
   });
 
+  it("has a Robotina button next to Planner that opens the voice assistant", () => {
+    navigationState.pathname = "/tools/voice-assistant";
+    render(<Sidebar />);
+
+    const link = screen.getByRole("link", { name: "Robotina" });
+    expect(link.getAttribute("href")).toBe("/tools/voice-assistant");
+    expect(link.className).toContain("text-primary");
+    expect(screen.getByRole("link", { name: "Tools" }).className).not.toContain(
+      "text-primary",
+    );
+    const labels = screen
+      .getAllByRole("link")
+      .map((l) => l.textContent?.trim());
+    expect(labels.indexOf("Robotina")).toBe(labels.indexOf("Planner") + 1);
+  });
+
   it("does not treat a route prefix as active", () => {
     navigationState.pathname = "/toolsettings";
     render(<Sidebar />);

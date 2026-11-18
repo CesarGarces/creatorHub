@@ -5,6 +5,7 @@ import {
   Compass,
   Heart,
   Lightbulb,
+  Mic,
   Sparkles,
   Star,
   type LucideIcon,
@@ -96,6 +97,14 @@ export const WIDGET_CATALOG: Readonly<
     nameKey: "dashboard.widgets.tips.name",
     descriptionKey: "dashboard.widgets.tips.description",
     icon: Lightbulb,
+    span: "half",
+  },
+  "voice-assistant": {
+    id: "voice-assistant",
+    nameKey: "dashboard.widgets.voiceAssistant.name",
+    descriptionKey: "dashboard.widgets.voiceAssistant.description",
+    icon: Mic,
+    // The orb with its status and controls: a card next to another half.
     span: "half",
   },
 };

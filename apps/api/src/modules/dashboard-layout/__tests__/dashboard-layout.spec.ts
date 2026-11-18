@@ -88,6 +88,7 @@ describe("DashboardLayoutService", () => {
       "activity",
       "recommendations",
       "asset-stats",
+      "voice-assistant",
     ]);
     expect(layout.updatedAt).toBe(SAVED_AT.toISOString());
   });

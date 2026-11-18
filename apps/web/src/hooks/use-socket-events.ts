@@ -37,6 +37,10 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
 
   const fetchBalance = useCreditsStore((s) => s.fetchBalance);
   const attachedRef = useRef(false);
+  // Read through a ref: callers pass inline callbacks (TopBar), which must
+  // not re-run the effect on every render.
+  const onNotificationNewRef = useRef(options.onNotificationNew);
+  onNotificationNewRef.current = options.onNotificationNew;
   // Handlers outlive renders: read the router through a ref.
   const router = useRouter();
   const routerRef = useRef(router);
@@ -46,11 +50,21 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
     const socket = connectSocket();
     if (!socket) return;
 
+    // Only this hook's own handlers are removed on cleanup: other listeners
+    // of the same events (e.g. useLiveSpeechToText's "stt:result") stay.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- socket.io listener signature
+    type Listener = (...args: any[]) => void;
+    const subscriptions: Array<[string, Listener]> = [];
+    const on = (event: string, handler: Listener) => {
+      socket!.on(event, handler);
+      subscriptions.push([event, handler]);
+    };
+
     function attach() {
       if (attachedRef.current || !socket) return;
       attachedRef.current = true;
 
-      socket.on("tool_job_updated", (data: ToolJobUpdatePayload) => {
+      on("tool_job_updated", (data: ToolJobUpdatePayload) => {
         if (data.status === "completed") {
           const payload = data.payload as {
             url?: string;
@@ -120,18 +134,18 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
         }
       });
 
-      socket.on("stt:result", () => {
+      on("stt:result", () => {
         fetchBalance();
       });
 
-      socket.on("stt:error", (data: { code: string; message: string }) => {
+      on("stt:error", (data: { code: string; message: string }) => {
         if (data.code === "INSUFFICIENT_CREDITS") {
           toast.error(localizeError(data.message));
           useTranslatorStore.getState().setListening(false);
         }
       });
 
-      socket.on("notification:new", (notification: any) => {
+      on("notification:new", (notification: any) => {
         const reminder = parseSessionReminder(notification);
         if (reminder) {
           // "You have “Record intro” at 10:00 AM" in the user's language.
@@ -159,9 +173,7 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
         }
 
         // Call callback if provided
-        if (options.onNotificationNew) {
-          options.onNotificationNew(notification);
-        }
+        onNotificationNewRef.current?.(notification);
       });
     }
 
@@ -174,10 +186,7 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
 
     return () => {
       socket.off("connect", attach);
-      socket.off("tool_job_updated");
-      socket.off("stt:result");
-      socket.off("stt:error");
-      socket.off("notification:new");
+      for (const [event, handler] of subscriptions) socket.off(event, handler);
       attachedRef.current = false;
     };
   }, [
@@ -192,6 +201,5 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
     videoSetFailed,
     videoAddVariation,
     fetchBalance,
-    options.onNotificationNew,
   ]);
 }

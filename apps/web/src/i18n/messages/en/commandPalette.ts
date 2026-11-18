@@ -27,6 +27,10 @@ export const commandPalette = {
       label: "Video Clipper",
       description: "Find highlights and export clips",
     },
+    robotina: {
+      label: "Robotina",
+      description: "Talk with your AI voice assistant",
+    },
     dashboard: { label: "Dashboard", description: "Go to dashboard" },
     tools: { label: "All Tools", description: "Browse all tools" },
     agents: { label: "All Agents", description: "Browse all agents" },

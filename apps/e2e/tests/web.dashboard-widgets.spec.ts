@@ -28,6 +28,7 @@ const DEFAULT_LAYOUT: Widget[] = [
   { id: "tips", visible: true },
   { id: "asset-stats", visible: true },
   { id: "credits", visible: false },
+  { id: "voice-assistant", visible: false },
 ];
 
 /** A backend that remembers the layout (survives reloads). */
@@ -154,6 +155,7 @@ test.describe("dashboard widgets · desktop", () => {
       "tips",
       "asset-stats",
       "credits",
+      "voice-assistant",
     ]);
 
     // Still rearranging until Done; the order survives a reload.

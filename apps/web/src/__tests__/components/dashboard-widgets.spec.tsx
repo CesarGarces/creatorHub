@@ -54,6 +54,7 @@ const LAYOUT: DashboardWidgetState[] = [
   { id: "credits", visible: false },
   { id: "today-plans", visible: false },
   { id: "asset-stats", visible: false },
+  { id: "voice-assistant", visible: false },
 ];
 
 function seed(widgets = LAYOUT, isHydrated = true) {

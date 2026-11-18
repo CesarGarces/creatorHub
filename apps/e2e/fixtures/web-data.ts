@@ -58,6 +58,16 @@ export const webApiRoutes: Record<string, unknown> = {
       creditsPerUse: 0,
       status: "active",
     },
+    {
+      id: "voice-assistant",
+      name: "Robotina — AI Voice Assistant",
+      description:
+        "Talk with Robotina about any topic with fluid, real-time voice: she answers out loud in your language",
+      icon: "🤖",
+      category: "assistant",
+      creditsPerUse: 1,
+      status: "active",
+    },
   ],
   "/user/favorites": [],
   "/credits/transactions": [

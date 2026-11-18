@@ -280,6 +280,31 @@ export const webPageRoutes: Record<string, unknown> = {
       },
     };
   },
+  "/tools/voice-assistant/conversations": {
+    success: true,
+    data: [
+      {
+        id: "vc-1",
+        title: "¿Qué opinas de grabar en exteriores?",
+        language: "es",
+        lastMessage:
+          "¡Me encanta la idea! La luz natural da un look muy cálido.",
+        messageCount: 4,
+        createdAt: hoursAgo(3),
+        updatedAt: hoursAgo(2),
+      },
+      {
+        id: "vc-2",
+        title: "Tell me a fun fact about octopuses",
+        language: "en",
+        lastMessage: "They have three hearts and blue blood!",
+        messageCount: 2,
+        createdAt: hoursAgo(30),
+        updatedAt: hoursAgo(30),
+      },
+    ],
+    meta: { page: 1, limit: 50, total: 2, totalPages: 1 },
+  },
   "/tools/script-writer/scripts": {
     success: true,
     data: [
@@ -418,6 +443,10 @@ export const WEB_PAGES: PageSpec[] = [
   {
     path: "/tools/video-clipper",
     ready: h1("AI Video Analyzer & Smart Clipper"),
+  },
+  {
+    path: "/tools/voice-assistant",
+    ready: heading("Robotina — AI voice assistant"),
   },
   { path: "/assets", ready: h1("Assets") },
   { path: "/history", ready: h1("History") },

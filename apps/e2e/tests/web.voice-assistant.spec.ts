@@ -1,0 +1,400 @@
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Page,
+  type WebSocketRoute,
+} from "@playwright/test";
+import { mockApi, type ApiMock } from "../fixtures/api-mock";
+import { signInWeb } from "../fixtures/web-data";
+import { webPageRoutes } from "../fixtures/web-pages";
+import { expectAccessible } from "../fixtures/a11y";
+import {
+  VIEWPORTS,
+  expectNoHorizontalOverflow,
+  expectTouchTarget,
+} from "../fixtures/responsive";
+
+/**
+ * Robotina — AI voice assistant (ARCHITECTURE.md §14g) in real Chromium:
+ * a fake microphone (Chromium's fake capture device), a fake Deepgram STT
+ * on the Socket.IO connection (`stt:*` events), the SSE reply with an audio
+ * segment that really plays through Web Audio, and conversation mode
+ * reopening the mic. Only the backend is mocked.
+ */
+
+test.use({
+  launchOptions: {
+    executablePath: process.env.E2E_CHROMIUM_PATH || undefined,
+    args: [
+      "--use-fake-ui-for-media-stream",
+      "--use-fake-device-for-media-stream",
+      "--autoplay-policy=no-user-gesture-required",
+      "--no-sandbox",
+      "--disable-gpu",
+      "--disable-dev-shm-usage",
+    ],
+  },
+});
+
+/** 0.6 s of a quiet 220 Hz tone, 16-bit mono WAV (the "voice" segment). */
+function toneWav(ms = 600, rate = 16000): string {
+  const samples = Math.round((ms / 1000) * rate);
+  const buf = Buffer.alloc(44 + samples * 2);
+  buf.write("RIFF", 0, "ascii");
+  buf.writeUInt32LE(36 + samples * 2, 4);
+  buf.write("WAVEfmt ", 8, "ascii");
+  buf.writeUInt32LE(16, 16);
+  buf.writeUInt16LE(1, 20);
+  buf.writeUInt16LE(1, 22);
+  buf.writeUInt32LE(rate, 24);
+  buf.writeUInt32LE(rate * 2, 28);
+  buf.writeUInt16LE(2, 32);
+  buf.writeUInt16LE(16, 34);
+  buf.write("data", 36, "ascii");
+  buf.writeUInt32LE(samples * 2, 40);
+  for (let i = 0; i < samples; i++) {
+    const v = Math.sin((2 * Math.PI * 220 * i) / rate) * 0.3;
+    buf.writeInt16LE(Math.round(v * 0x7fff), 44 + i * 2);
+  }
+  return buf.toString("base64");
+}
+
+const sse = (...events: object[]) =>
+  events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("");
+
+interface SttFake {
+  starts: number;
+  ends: number;
+}
+
+/**
+ * A fake Deepgram STT on the app's Socket.IO connection: on `stt:start` it
+ * "hears" `phrase` (partial, then final); on `stt:end` it sends the result.
+ */
+async function fakeStt(
+  context: BrowserContext,
+  appOrigin: string,
+  phrase: string,
+): Promise<SttFake> {
+  const stats: SttFake = { starts: 0, ends: 0 };
+  const appHost = new URL(appOrigin).host;
+  const send = (ws: WebSocketRoute, event: string, data: unknown) =>
+    ws.send(`42${JSON.stringify([event, data])}`);
+
+  await context.routeWebSocket(
+    (url) => url.host !== appHost && url.pathname.startsWith("/socket.io"),
+    (ws) => {
+      ws.send(
+        '0{"sid":"mock","upgrades":[],"pingInterval":25000,"pingTimeout":20000}',
+      );
+      ws.onMessage((message) => {
+        if (typeof message !== "string") return; // audio chunks (binary)
+        if (message.startsWith("40")) ws.send('40{"sid":"mock"}');
+        else if (message === "2") ws.send("3");
+        else if (message.startsWith('42["stt:start"')) {
+          stats.starts += 1;
+          send(ws, "stt:started", { sessionId: `s${stats.starts}` });
+          if (stats.starts === 1) {
+            setTimeout(
+              () =>
+                send(ws, "stt:partial", {
+                  text: phrase.split(" ").slice(0, 2).join(" "),
+                  isFinal: false,
+                }),
+              400,
+            );
+            setTimeout(
+              () => send(ws, "stt:partial", { text: phrase, isFinal: true }),
+              900,
+            );
+          }
+        } else if (message.startsWith('42["stt:end"')) {
+          stats.ends += 1;
+          send(ws, "stt:result", {
+            fullTranscript: stats.ends === 1 ? phrase : "",
+            durationMs: 2000,
+            wordCount: 4,
+            credits: 1,
+          });
+        }
+      });
+    },
+  );
+  return stats;
+}
+
+async function setup(
+  context: BrowserContext,
+  baseURL: string,
+  routes: Record<string, unknown> = {},
+): Promise<ApiMock> {
+  const api = await mockApi(context, { ...webPageRoutes, ...routes }, baseURL);
+  await signInWeb(context, baseURL);
+  return api;
+}
+
+/** The reply stream (registered after mockApi, so it wins for this path). */
+async function replyWith(
+  context: BrowserContext,
+  baseURL: string,
+  events: object[],
+): Promise<{ bodies: unknown[] }> {
+  const bodies: unknown[] = [];
+  const headers = {
+    "access-control-allow-origin": baseURL,
+    "access-control-allow-credentials": "true",
+    "access-control-allow-headers": "*",
+    "access-control-allow-methods": "POST,OPTIONS",
+  };
+  await context.route("**/api/v1/tools/voice-assistant/messages", (route) => {
+    const request = route.request();
+    if (request.method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers });
+    }
+    bodies.push(JSON.parse(request.postData() ?? "{}"));
+    return route.fulfill({
+      status: 201,
+      headers: { ...headers, "content-type": "text/event-stream" },
+      body: sse(...events),
+    });
+  });
+  return { bodies };
+}
+
+const orbButton = (page: Page) => page.locator("[data-robotina-orb]").first();
+const orbState = (page: Page) =>
+  page.locator("canvas[data-orb-state]").first().getAttribute("data-orb-state");
+
+test.describe("Robotina voice assistant", () => {
+  test("a full voice turn: fake mic → STT → spoken reply → listens again", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    await context.grantPermissions(["microphone"]);
+    const phrase = "Hola Robotina, ¿cómo estás?";
+    await setup(context, baseURL!);
+    const stt = await fakeStt(context, baseURL!, phrase);
+    const reply = await replyWith(context, baseURL!, [
+      {
+        type: "start",
+        conversationId: "vc-new",
+        userMessageId: "m1",
+        language: "es",
+        voice: { model: "aura-2-celeste-es", name: "Celeste" },
+        title: phrase,
+      },
+      { type: "delta", content: "¡Hola! Estoy muy bien, " },
+      { type: "delta", content: "¿y tú?" },
+      {
+        type: "audio",
+        index: 0,
+        mimeType: "audio/wav",
+        data: toneWav(),
+        durationMs: 600,
+        text: "¡Hola! Estoy muy bien, ¿y tú?",
+      },
+      {
+        type: "done",
+        messageId: "m2",
+        content: "¡Hola! Estoy muy bien, ¿y tú?",
+        language: "es",
+        audioMs: 600,
+        credits: 1,
+        balance: 1499,
+      },
+    ]);
+
+    await page.goto("/tools/voice-assistant");
+    await expect(
+      page.getByRole("heading", { name: "Robotina — AI voice assistant" }),
+    ).toBeVisible();
+
+    await orbButton(page).click();
+    // The fake STT "hears" the phrase: shown live while listening.
+    await expect(page.getByText(phrase).first()).toBeVisible();
+    await expect.poll(() => orbState(page)).toBe("listening");
+
+    // End of speech (3 s after the final phrase) → sent as a spoken message.
+    await expect.poll(() => stt.ends).toBe(1);
+    await expect.poll(() => reply.bodies.length).toBe(1);
+    expect(reply.bodies[0]).toMatchObject({
+      content: phrase,
+      spoken: true,
+      model: "deepseek-ai/DeepSeek-V4-Flash",
+    });
+
+    // Her answer, in text and out loud (the WAV really plays, ~0.6 s).
+    await expect(
+      page.getByText("¡Hola! Estoy muy bien, ¿y tú?").first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Play again" }),
+    ).toBeVisible();
+    await expect(page.getByText("1 cr", { exact: true })).toBeVisible();
+
+    // Conversation mode: after her last word the mic opens again.
+    await expect.poll(() => stt.starts, { timeout: 8000 }).toBe(2);
+
+    // End the conversation: the live voice bar goes away, nothing else is sent.
+    await page.getByRole("button", { name: "End conversation" }).click();
+    await expect(
+      page.getByRole("button", { name: "End conversation" }),
+    ).toHaveCount(0);
+    await expect(page.locator("canvas[data-orb-state]")).toHaveCount(0);
+    expect(reply.bodies).toHaveLength(1);
+  });
+
+  test("typed messages get a written reply; the history opens past talks", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    const api = await setup(context, baseURL!, {
+      "/tools/voice-assistant/conversations/vc-2": {
+        success: true,
+        data: {
+          id: "vc-2",
+          title: "Tell me a fun fact about octopuses",
+          language: "en",
+          lastMessage: "They have three hearts and blue blood!",
+          messageCount: 2,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          messages: [
+            {
+              id: "m1",
+              role: "user",
+              content: "Tell me a fun fact about octopuses",
+              language: "en",
+              spoken: true,
+              voice: null,
+              audioMs: 0,
+              creditsCharged: 0,
+              interrupted: false,
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: "m2",
+              role: "assistant",
+              content: "They have three hearts and blue blood!",
+              language: "en",
+              spoken: true,
+              voice: "aura-2-andromeda-en",
+              audioMs: 2400,
+              creditsCharged: 1,
+              interrupted: false,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        },
+      },
+    });
+    const reply = await replyWith(context, baseURL!, [
+      {
+        type: "start",
+        conversationId: "vc-2",
+        userMessageId: "m3",
+        language: "en",
+        voice: null,
+        title: "Tell me a fun fact about octopuses",
+      },
+      { type: "delta", content: "They can also taste with their arms." },
+      {
+        type: "done",
+        messageId: "m4",
+        content: "They can also taste with their arms.",
+        language: "en",
+        audioMs: 0,
+        credits: 1,
+        balance: 1498,
+      },
+    ]);
+
+    await page.goto("/tools/voice-assistant");
+    await page
+      .getByRole("button", { name: /Tell me a fun fact about octopuses/ })
+      .click();
+    await expect(
+      page.getByText("They have three hearts and blue blood!").first(),
+    ).toBeVisible();
+    expect(
+      api.calls("GET", "/tools/voice-assistant/conversations/vc-2"),
+    ).toHaveLength(1);
+
+    const input = page.getByRole("textbox", {
+      name: "Type a message or tap the mic…",
+    });
+    await input.fill("Another one?");
+    await input.press("Enter");
+    // In the thread (the history row shows it as its last message too).
+    await expect(
+      page.getByText("They can also taste with their arms.").last(),
+    ).toBeVisible();
+    expect(reply.bodies[0]).toMatchObject({
+      conversationId: "vc-2",
+      content: "Another one?",
+      spoken: false,
+    });
+  });
+
+  test("model settings: only the text model — the voice is fixed", async ({
+    context,
+    page,
+    baseURL,
+  }, testInfo) => {
+    await setup(context, baseURL!);
+    await page.goto("/tools/voice-assistant");
+    await page.getByRole("button", { name: "Model settings" }).click();
+    await expect(page.getByText(/Her voice is Deepgram Aura-2/)).toBeVisible();
+    await expect(
+      page.getByRole("switch", { name: "Conversation mode" }),
+    ).toBeVisible();
+    await expectAccessible(page, testInfo, "robotina settings");
+  });
+
+  test("dashboard widget: the orb with its status and a link to the chat", async ({
+    context,
+    page,
+    baseURL,
+  }, testInfo) => {
+    await setup(context, baseURL!, {
+      "GET /user/dashboard-layout": {
+        widgets: [{ id: "voice-assistant", visible: true }],
+        updatedAt: null,
+      },
+    });
+    await page.goto("/dashboard");
+    const widget = page.locator('[data-widget-id="voice-assistant"]');
+    await widget.scrollIntoViewIfNeeded();
+    await expect(
+      widget.getByRole("button", { name: "Talk to Robotina" }),
+    ).toBeVisible();
+    await expect(widget.getByRole("status")).toHaveText("Tap to talk");
+    await expect(
+      widget.getByRole("link", { name: "Open chat" }),
+    ).toHaveAttribute("href", "/tools/voice-assistant");
+    await expectAccessible(page, testInfo, "robotina widget");
+  });
+});
+
+test.describe("Robotina on a small phone", () => {
+  test.use(VIEWPORTS.phoneSmall.use);
+
+  test("no sideways scroll, thumb-sized controls", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    await setup(context, baseURL!);
+    await page.goto("/tools/voice-assistant");
+    await expect(orbButton(page)).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await expectTouchTarget(
+      page.getByRole("button", { name: "Start voice input" }),
+    );
+    await expectTouchTarget(page.getByRole("button", { name: "Send" }));
+    await expectTouchTarget(orbButton(page));
+  });
+});

@@ -20,6 +20,7 @@ import {
   Settings,
   CalendarDays,
   Scissors,
+  AudioLines,
 } from "lucide-react";
 import { useI18n } from "@/i18n/i18n-provider";
 
@@ -45,6 +46,7 @@ type DefaultItemId =
   | "xResearchAgent"
   | "planner"
   | "clipper"
+  | "robotina"
   | "dashboard"
   | "tools"
   | "agents"
@@ -77,6 +79,12 @@ const defaultItemDefs: {
     icon: <Scissors className="h-4 w-4 text-text-dim" />,
     href: "/tools/video-clipper",
     group: "tools",
+  },
+  {
+    id: "robotina",
+    icon: <AudioLines className="h-4 w-4 text-text-dim" />,
+    href: "/tools/voice-assistant",
+    group: "agents",
   },
   {
     id: "xPostAgent",

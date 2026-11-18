@@ -38,6 +38,11 @@ export const toolCatalog = {
     description:
       "Find highlights, hooks and titles with AI and export short clips from your browser",
   },
+  "voice-assistant": {
+    name: "Robotina — AI Voice Assistant",
+    description:
+      "Talk with Robotina about any topic with fluid, real-time voice: she answers out loud in your language",
+  },
   categories: {
     image: "Image",
     thumbnail: "Thumbnail",
@@ -50,6 +55,7 @@ export const toolCatalog = {
     writing: "Writing",
     translator: "Translator",
     planning: "Planning",
+    assistant: "Assistant",
     other: "Other",
   },
 };

@@ -130,6 +130,17 @@ export function WidgetPreview({ id, muted, className }: WidgetPreviewProps) {
           </div>
         </>
       )}
+      {id === "voice-assistant" && (
+        <div className="flex flex-col items-center gap-1">
+          <span className="relative flex h-6 w-6 items-center justify-center">
+            <span className="absolute inset-0 rounded-full bg-gradient-to-br from-sky-300 via-indigo-500 to-fuchsia-500 opacity-90" />
+            <span className="absolute -inset-1 rounded-full border border-fuchsia-400/40" />
+            <span className="absolute -right-1 top-0 h-0.5 w-0.5 rounded-full bg-violet-200" />
+            <span className="absolute -left-1 bottom-1 h-0.5 w-0.5 rounded-full bg-sky-200" />
+          </span>
+          <span className={cn(line, "w-1/3")} />
+        </div>
+      )}
       {id === "tips" && (
         <div className="flex items-start gap-1">
           <span className="text-[8px] leading-none">💡</span>
