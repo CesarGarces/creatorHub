@@ -34,7 +34,7 @@ FROM deps AS build
 COPY . .
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prefer-offline
+    pnpm install --no-frozen-lockfile
 
 # Prisma only needs a syntactically valid URL for `generate`.
 ARG DATABASE_URL=postgresql://build:build@localhost:5432/build
