@@ -151,7 +151,7 @@ test.describe("admin panel · AI models", () => {
     });
   });
 
-  test("embedding and speech-to-text models get the right provider and price", async ({
+  test("embedding models get the right provider and price; voice models live in Admin → Voice", async ({
     page,
     context,
     baseURL,
@@ -167,20 +167,20 @@ test.describe("admin panel · AI models", () => {
     await expect(dialog.getByLabel("Credit cost")).toHaveValue("0");
     await expect(dialog.getByText(/similarity search/)).toBeVisible();
 
-    await dialog.getByLabel("Task type").selectOption("speech-to-text");
-    await expect(dialog.getByLabel("Provider")).toHaveValue("deepgram");
-    await expect(dialog.getByText(/price per minute/)).toBeVisible();
+    // Speech-to-text is configured in Admin → Voice, not added here.
+    await expect(
+      dialog.getByLabel("Task type").locator('option[value="speech-to-text"]'),
+    ).toHaveCount(0);
 
-    await dialog.getByLabel("Model ID").fill("nova-3-general");
-    await dialog.getByLabel("Display name").fill("Nova 3 general");
-    await dialog.getByLabel("Credit cost").fill("2");
+    await dialog.getByLabel("Model ID").fill("BAAI/bge-m3");
+    await dialog.getByLabel("Display name").fill("BGE M3");
     await dialog.getByRole("button", { name: "Add model" }).click();
     await expect(dialog).toBeHidden();
 
     expect(api.calls("POST", "/admin/models")[0]?.body).toMatchObject({
-      providerSlug: "deepgram",
-      taskType: "speech-to-text",
-      creditCost: 2,
+      providerSlug: "siliconflow",
+      taskType: "embedding",
+      creditCost: 0,
     });
   });
 

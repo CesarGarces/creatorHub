@@ -13,7 +13,7 @@ const stt = vi.hoisted(() => ({
     onPartialTranscript: (text: string, isFinal: boolean) => void;
     onUtteranceEnd: () => void;
     onResult: (t: string, d: number, c: number) => void;
-    onError: (e: string) => void;
+    onError: (e: string, code?: string) => void;
   },
   startListening: vi.fn(async () => {}),
   stopListening: vi.fn(),
@@ -55,7 +55,7 @@ describe("VoiceButton", () => {
 
     const button = screen.getByTitle("Stop recording");
     expect(button.textContent).toContain("Listening...");
-    expect(button.textContent).toContain("+1 cr/min");
+    expect(button.textContent).toContain("+1 cr/s");
   });
 
   it("hides text and credits in the icon-only variant", () => {
@@ -68,7 +68,7 @@ describe("VoiceButton", () => {
   it("can hide the credit badge", () => {
     render(<VoiceButton isListening showCredits={false} />);
     expect(screen.getByTitle("Stop recording").textContent).not.toContain(
-      "cr/min",
+      "cr/s",
     );
   });
 
@@ -106,7 +106,7 @@ describe("useVoiceButton", () => {
     expect(stt.startListening).toHaveBeenCalled();
     expect(Audio).toHaveBeenCalledWith("/Voice_record_start.mp3");
     expect(result.current.isListening).toBe(true);
-    expect(result.current.creditsPerMinute).toBe(1);
+    expect(result.current.creditsPerSecond).toBe(1);
   });
 
   it("stops listening on the second toggle", async () => {
@@ -151,9 +151,14 @@ describe("useVoiceButton", () => {
     const { result } = renderHook(() => useVoiceButton({ onError }));
 
     await act(() => result.current.startListening());
-    act(() => stt.options!.onError("Microphone permission denied"));
+    act(() =>
+      stt.options!.onError("Microphone permission denied", "MIC_ERROR"),
+    );
 
-    expect(onError).toHaveBeenCalledWith("Microphone permission denied");
+    expect(onError).toHaveBeenCalledWith(
+      "Microphone permission denied",
+      "MIC_ERROR",
+    );
     expect(result.current.isListening).toBe(false);
   });
 

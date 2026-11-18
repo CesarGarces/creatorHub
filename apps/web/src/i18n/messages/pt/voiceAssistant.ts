@@ -21,10 +21,10 @@ export const voiceAssistant: Messages["voiceAssistant"] = {
   handsFree: "Modo conversa",
   handsFreeHint: "Depois de responder, a Robotina volta a ouvir",
   voiceNote:
-    "A voz dela é Deepgram Aura-2, escolhida pelo idioma em que você fala: Andromeda (inglês), Celeste (espanhol), Bianca (português).",
+    "A voz dela é Deepgram Aura, escolhida pelo idioma em que você fala — uma voz por idioma:",
   voiceSettings: "Voz",
-  pricing: "Voz {stt} cr/min · Resposta 1 cr (falada: 1 cr/min)",
-  pricingShort: "{stt} cr/min de voz · 1 cr/resposta",
+  pricing: "Voz {stt} cr/s · Resposta 1 cr (falada: {tts} cr/s)",
+  pricingShort: "{stt} cr/s de voz · {tts} cr/s resposta falada",
   openChat: "Abrir chat",
   hideHistory: "Ocultar histórico",
   showHistory: "Mostrar histórico",
@@ -41,6 +41,28 @@ export const voiceAssistant: Messages["voiceAssistant"] = {
   spoken: "Falado",
   interrupted: "Interrompida",
   voiceFailed: "Voz indisponível — respondeu em texto",
+  voiceOutOfCredits:
+    "Créditos insuficientes para a voz dela — o resto vai em texto",
+  voiceOutOfFreeMinutes: "Seus minutos grátis acabaram — o resto vai em texto",
+  freeTier: {
+    remainingMonthly_one:
+      "Plano Free: resta {count} de {total} minutos com a Robotina este mês",
+    remainingMonthly_other:
+      "Plano Free: restam {count} de {total} minutos com a Robotina este mês",
+    remainingTotal_one:
+      "Plano Free: resta {count} de {total} minutos com a Robotina",
+    remainingTotal_other:
+      "Plano Free: restam {count} de {total} minutos com a Robotina",
+    exhaustedTitle: "Você usou seus {total} minutos grátis com a Robotina",
+    exhaustedTitleNoTotal: "Você usou seus minutos grátis com a Robotina",
+    exhaustedMonthly:
+      "Eles voltam em {date}. Melhore seu plano para falar com ela sem limites.",
+    exhaustedLifetime:
+      "Melhore seu plano para continuar falando com ela sem limites.",
+    upgrade: "Melhorar plano para uso ilimitado",
+    limitError:
+      "Você usou todos os seus minutos grátis com a Robotina. Melhore seu plano para uso ilimitado.",
+  },
   credits: "{count} cr",
   loading: "Carregando conversa…",
   suggestions: {
@@ -58,9 +80,25 @@ export const voiceAssistant: Messages["voiceAssistant"] = {
     running: {
       create: "Adicionando à sua agenda…",
       list: "Verificando sua agenda…",
+      update: "Atualizando sua agenda…",
+      delete: "Preparando a exclusão…",
       other: "Trabalhando nisso…",
     },
     created: "Adicionado à sua agenda",
+    updated: "Atualizado na sua agenda",
+    moved: "Antes: {time}",
+    deleted: "Excluído da sua agenda",
+    confirm: "Aguardando sua confirmação para excluir",
+    confirmHint: "Diga “sim” para confirmar",
+    projectCreated: "Projeto de vídeo criado",
+    projectUpdated: "Projeto de vídeo atualizado",
+    projectDeleted: "Projeto de vídeo excluído",
+    projectSessions: "{done}/{total} sessões feitas",
+    projectWithSessions: "Com suas {count} sessões",
+    noPublishDate: "Sem data de publicação",
+    publishOn: "Publica em {date}",
+    projects: "Seus projetos de vídeo",
+    noProjects: "Nenhum projeto de vídeo ainda",
     agenda: "Sua agenda",
     agendaEmpty: "Nada planejado",
     overlaps: "Conflita com {title}",

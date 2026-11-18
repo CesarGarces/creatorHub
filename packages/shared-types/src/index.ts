@@ -9,5 +9,6 @@ export * from "./community-bot.types";
 export * from "./dashboard.types";
 export * from "./asset-engagement.types";
 export * from "./tts.types";
+export * from "./voice-settings.types";
 export * from "./voice-assistant.types";
 export * from "./assistant-action.types";

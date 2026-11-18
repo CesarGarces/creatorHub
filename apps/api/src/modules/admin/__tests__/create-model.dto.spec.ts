@@ -22,17 +22,8 @@ const valid = {
 };
 
 describe("CreateModelDto", () => {
-  it("accepts embedding, speech-to-text and generation models", async () => {
+  it("accepts embedding and generation models", async () => {
     expect(await errorsFor(valid)).toEqual([]);
-    expect(
-      await errorsFor({
-        ...valid,
-        providerSlug: "deepgram",
-        modelId: "nova-3",
-        taskType: "speech-to-text",
-        creditCost: 1,
-      }),
-    ).toEqual([]);
     expect(
       await errorsFor({
         ...valid,
@@ -44,6 +35,18 @@ describe("CreateModelDto", () => {
         isActive: true,
       }),
     ).toEqual([]);
+  });
+
+  it("leaves voice models to Admin → Voice (no speech-to-text here)", async () => {
+    expect(
+      await errorsFor({
+        ...valid,
+        providerSlug: "deepgram",
+        modelId: "nova-3",
+        taskType: "speech-to-text",
+        creditCost: 1,
+      }),
+    ).toEqual(["taskType"]);
   });
 
   it("rejects unknown providers and task types, bad ids and costs, and extra fields", async () => {

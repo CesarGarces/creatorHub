@@ -13,6 +13,7 @@ import {
   Database,
   BrainCircuit,
   Mail,
+  AudioLines,
   X,
 } from "lucide-react";
 import { cn } from "@creator-hub/ui";
@@ -30,6 +31,7 @@ const navItems: {
 }[] = [
   { href: "/", labelKey: "nav.dashboard", icon: LayoutDashboard },
   { href: "/models", labelKey: "nav.models", icon: BrainCircuit },
+  { href: "/voice", labelKey: "nav.voice", icon: AudioLines },
   { href: "/tools", labelKey: "nav.tools", icon: Wrench },
   { href: "/modes", labelKey: "nav.modes", icon: Layers },
   { href: "/users", labelKey: "nav.users", icon: Users },

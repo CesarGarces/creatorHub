@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CREATABLE_TASK_TYPES,
   MODEL_PROVIDERS,
   MODEL_TASK_TYPES,
   PROVIDERS_BY_TASK,
@@ -22,13 +23,14 @@ const valid = (over: Partial<ModelFormValues> = {}): ModelFormValues => ({
 
 describe("model form options", () => {
   it("offers the same task types and providers as the API", () => {
-    expect(MODEL_TASK_TYPES).toEqual([
+    expect(CREATABLE_TASK_TYPES).toEqual([
       "text-generation",
       "image-generation",
       "video-generation",
       "embedding",
-      "speech-to-text",
     ]);
+    // Speech-to-text models added before Admin → Voice still show up.
+    expect(MODEL_TASK_TYPES).toContain("speech-to-text");
     expect(MODEL_PROVIDERS.map((p) => p.value)).toEqual([
       "openrouter",
       "siliconflow",
@@ -48,7 +50,6 @@ describe("model form options", () => {
 
   it("defaults embeddings to free and everything else to 1 credit", () => {
     expect(defaultCreditCost("embedding")).toBe(0);
-    expect(defaultCreditCost("speech-to-text")).toBe(1);
     expect(defaultCreditCost("text-generation")).toBe(1);
   });
 });
@@ -64,13 +65,6 @@ describe("emptyModelForm / withTaskType", () => {
       supportsStreaming: true,
       isActive: false,
     });
-  });
-
-  it("switching to speech-to-text picks Deepgram", () => {
-    const form = withTaskType(emptyModelForm(), "speech-to-text");
-    expect(form.providerSlug).toBe("deepgram");
-    expect(form.creditCost).toBe("1");
-    expect(form.supportsStreaming).toBe(false);
   });
 
   it("switching to embedding picks SiliconFlow and a free price", () => {
@@ -215,13 +209,13 @@ describe("toCreateModelPayload", () => {
 
   it("omits empty optional fields", () => {
     const payload = toCreateModelPayload(
-      valid({ ...withTaskType(valid(), "speech-to-text"), creditCost: "2" }),
+      valid({ ...withTaskType(valid(), "video-generation"), creditCost: "2" }),
     );
     expect(payload).toEqual({
-      providerSlug: "deepgram",
+      providerSlug: "siliconflow",
       modelId: "openai/gpt-4o-mini",
       displayName: "GPT-4o mini",
-      taskType: "speech-to-text",
+      taskType: "video-generation",
       tier: "FREE",
       creditCost: 2,
       supportsStreaming: false,

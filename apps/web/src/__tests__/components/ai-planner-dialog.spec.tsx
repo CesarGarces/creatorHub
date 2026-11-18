@@ -63,8 +63,8 @@ vi.mock("@/components/voice-button", () => ({
     };
   },
 }));
-vi.mock("@/components/voice-button/use-stt-rate", () => ({
-  useSttCreditsPerMinute: () => 2,
+vi.mock("@/components/voice-button/use-voice-pricing", () => ({
+  useSttCreditsPerSecond: () => 2,
 }));
 vi.mock("@/lib/content-planner/ai-plan", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/content-planner/ai-plan")>()),
@@ -253,7 +253,7 @@ describe("AI planner · form", () => {
     expect(cost.textContent).toContain(
       "Model One: 3 · Knowledge search: 0 · Your balance: 50 credits",
     );
-    expect(screen.getByText("Voice input: 2 credits per minute")).toBeTruthy();
+    expect(screen.getByText("Voice input: 2 credits per second")).toBeTruthy();
   });
 
   it("blocks the analysis when the balance is too low", async () => {

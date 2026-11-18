@@ -2,10 +2,10 @@
  * Text-to-speech (TTS) contract — `@creator-hub/tts-engine`.
  *
  * Mirrors the speech-to-text contract (`stt.types.ts`): providers behind an
- * interface, a registry and a factory. Unlike STT, the voice is not
- * configurable (not in Admin → AI Models, not in any settings panel): the
- * platform always speaks with **Deepgram Aura-2**, and the voice follows the
- * language of the reply (see `TTS_VOICES`).
+ * interface, a registry and a factory. The platform speaks with **Deepgram
+ * Aura**; the voice ("actor") of each language and the price per second
+ * are set in Admin → Voice (STT & TTS) — see `voice-settings.types.ts`.
+ * `TTS_VOICES` are the defaults (and the fallback when nothing is saved).
  */
 
 export type TTSProviderName = "deepgram" | "mock";
@@ -25,11 +25,11 @@ export interface TTSVoice {
   language: TTSLanguage;
 }
 
-/** Deepgram TTS model family. Always Aura-2. */
+/** Deepgram TTS model family of the default voices. */
 export const TTS_MODEL_FAMILY = "aura-2";
 
 /**
- * One Aura-2 voice per language:
+ * Default Aura-2 voice per language (Admin → Voice can change them):
  * - English → Andromeda (American, feminine)
  * - Spanish → Celeste (Colombian, feminine)
  * - Portuguese → Bianca (Brazilian, feminine)
@@ -65,7 +65,7 @@ export function isTTSLanguage(value: unknown): value is TTSLanguage {
   );
 }
 
-/** The Aura-2 voice for a language (English for anything unknown). */
+/** The default voice for a language (English for anything unknown). */
 export function ttsVoiceFor(language: unknown): TTSVoice {
   return TTS_VOICES[isTTSLanguage(language) ? language : "en"];
 }
@@ -73,16 +73,14 @@ export function ttsVoiceFor(language: unknown): TTSVoice {
 /** Deepgram `/v1/speak` accepts at most 2,000 characters per request. */
 export const TTS_MAX_CHARS_PER_REQUEST = 2000;
 
-/**
- * Credits per started minute of synthesized speech (1 credit per reply of up
- * to a minute, 2 for up to two minutes…). A platform constant on purpose:
- * TTS is not an admin-configurable model.
- */
-export const TTS_CREDITS_PER_MINUTE = 1;
-
 export interface TTSSynthesizeParams {
   text: string;
   language: TTSLanguage;
+  /**
+   * Deepgram voice id to speak with (Admin → Voice); the language's default
+   * voice (`TTS_VOICES`) when omitted.
+   */
+  voice?: string;
   /** Aborts the request (client gone, reply interrupted). */
   signal?: AbortSignal;
 }

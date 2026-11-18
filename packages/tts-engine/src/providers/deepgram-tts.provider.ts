@@ -29,10 +29,11 @@ export class DeepgramTTSError extends Error {
 }
 
 /**
- * Deepgram Aura-2 text-to-speech (REST `POST /v1/speak`).
+ * Deepgram Aura text-to-speech (REST `POST /v1/speak`).
  *
- * The voice is chosen by language — Andromeda (en), Celeste (es), Bianca
- * (pt), see `TTS_VOICES` — and is not configurable. One request per chunk
+ * Speaks with `params.voice` — the voice set for the language in Admin →
+ * Voice — or the language's default (Andromeda, Celeste, Bianca on Aura-2,
+ * see `TTS_VOICES`). One request per chunk
  * of text (≤ 2,000 characters); the caller sends sentences as the model
  * writes them, so the first words are heard while the rest is generated.
  * Uses the same `DEEPGRAM_API_KEY` as speech-to-text.
@@ -68,7 +69,8 @@ export class DeepgramTTSProvider extends TTSProviderBase {
       );
     }
 
-    const voice = ttsVoiceFor(params.language);
+    // The admin's voice for the language (Admin → Voice), else the default.
+    const voice = { model: params.voice || ttsVoiceFor(params.language).model };
     const apiKey = this.getApiKey();
 
     let lastError: unknown;

@@ -140,6 +140,19 @@ describe("DeepgramTTSProvider (Aura-2)", () => {
     expect(audio.audio.length).toBe(125 * 144);
   });
 
+  it("speaks with the voice set in Admin → Voice when given", async () => {
+    const fetchMock = vi.fn(async () => response(mp3(25)));
+    const provider = new DeepgramTTSProvider(fetchMock as never);
+    const audio = await provider.synthesize({
+      text: "Hola",
+      language: "es",
+      voice: "aura-2-javier-es",
+    });
+    const [url] = fetchMock.mock.calls[0]! as unknown as [string];
+    expect(new URL(url).searchParams.get("model")).toBe("aura-2-javier-es");
+    expect(audio.voice).toBe("aura-2-javier-es");
+  });
+
   it("is configured only with DEEPGRAM_API_KEY", () => {
     expect(new DeepgramTTSProvider().validateConfig()).toBe(true);
     delete process.env.DEEPGRAM_API_KEY;
@@ -280,13 +293,12 @@ describe("TTSEngineService", () => {
     expect(engine.voiceFor("xx").name).toBe("Andromeda");
   });
 
-  it("bills started minutes of speech, nothing without speech", () => {
+  it("bills every started second of speech, nothing without speech", () => {
     const engine = new TTSEngineService(new TTSProviderRegistry());
-    expect(engine.calculateCredits(0)).toBe(0);
-    expect(engine.calculateCredits(1)).toBe(1);
-    expect(engine.calculateCredits(60_000)).toBe(1);
-    expect(engine.calculateCredits(60_001)).toBe(2);
-    expect(engine.calculateCredits(150_000, 2)).toBe(6);
+    expect(engine.calculateCredits(0, 2)).toBe(0);
+    expect(engine.calculateCredits(1, 2)).toBe(2);
+    expect(engine.calculateCredits(4200, 2)).toBe(10);
+    expect(engine.calculateCredits(60_000, 0.5)).toBe(30);
     expect(engine.calculateCredits(30_000, 0)).toBe(0);
   });
 });

@@ -94,6 +94,7 @@ test.describe("admin navigation · phone", () => {
     for (const label of [
       "Dashboard",
       "AI Models",
+      "Voice (STT & TTS)",
       "Tools",
       "Modes",
       "Users",

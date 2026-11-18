@@ -20,6 +20,7 @@
     "@creator-hub/shared-utils": "workspace:*",
     "@creator-hub/tool-sdk": "workspace:*",
     "@creator-hub/tts-engine": "workspace:*",
+    "@creator-hub/voice-settings": "workspace:*",
     "@nestjs/common": "^11.1.27",
     "class-transformer": "^0.5.0",
     "class-validator": "^0.14.0",

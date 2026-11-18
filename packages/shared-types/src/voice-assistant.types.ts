@@ -10,16 +10,17 @@ import type {
   AssistantActionArgs,
   AssistantActionData,
   AssistantActionRecord,
+  AssistantActionStatus,
 } from "./assistant-action.types";
 
 export const VOICE_ASSISTANT_TOOL_ID = "voice-assistant";
 export const VOICE_ASSISTANT_NAME = "Robotina";
 
 /**
- * Every reply costs 1 credit ("one shot"). A spoken reply costs 1 credit per
- * started minute of speech instead (`TTS_CREDITS_PER_MINUTE`) — so a reply
- * of up to a minute is 1 credit either way. Voice input is billed apart by
- * the STT gateway, like every voice button of the platform (1 credit/min).
+ * A written reply costs 1 credit ("one shot"). A spoken reply costs the
+ * seconds of speech at the TTS price instead (Admin → Voice, credits per
+ * second — see `voiceCredits`). Voice input is billed apart by the STT
+ * gateway, per second, like every voice button of the platform.
  */
 export const VOICE_ASSISTANT_REPLY_CREDITS = 1;
 
@@ -107,18 +108,27 @@ export type VoiceAssistantEvent =
       durationMs: number;
       text: string;
     }
-  /** Speech failed; the reply continues as text. */
-  | { type: "audio_error"; error: string }
+  /**
+   * Speech stopped; the reply continues as text. `reason`: the balance
+   * paid for no more seconds of her voice (`credits`), or the Free plan's
+   * minutes ran out (`free-limit`).
+   */
+  | {
+      type: "audio_error";
+      error: string;
+      reason?: "credits" | "free-limit";
+    }
   /**
    * An action she runs (e.g. creating a calendar event): `running` when it
-   * starts, then `done` or `failed` with its outcome. Her words about it
-   * follow as deltas/audio.
+   * starts, then `done` or `failed` with its outcome — or
+   * `needs_confirmation` (a delete waiting for the user's "yes"). Her words
+   * about it follow as deltas/audio.
    */
   | {
       type: "action";
       id: string;
       name: string;
-      status: "running" | "done" | "failed";
+      status: AssistantActionStatus;
       args: AssistantActionArgs;
       summary?: string;
       data?: AssistantActionData;
@@ -132,6 +142,10 @@ export type VoiceAssistantEvent =
       credits: number;
       balance: number;
     }
-  | { type: "error"; status?: number; error: string };
+  /**
+   * The reply failed. `code: "FREE_LIMIT_REACHED"`: the Free plan's minutes
+   * with Robotina are used up (the app invites the user to upgrade).
+   */
+  | { type: "error"; status?: number; error: string; code?: string };
 
 export type VoiceAssistantEventType = VoiceAssistantEvent["type"];

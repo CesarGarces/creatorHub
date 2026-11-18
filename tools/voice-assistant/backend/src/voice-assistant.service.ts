@@ -12,10 +12,19 @@ import { ProviderRegistry } from "@creator-hub/ai-engine";
 import { CreditService } from "@creator-hub/billing";
 import { PlatformUsageLogger } from "@creator-hub/analytics";
 import { TTSEngineService } from "@creator-hub/tts-engine";
+import {
+  VoiceAllowanceService,
+  VoiceSettingsService,
+} from "@creator-hub/voice-settings";
 import { AssistantActionRegistry, ToolRegistry } from "@creator-hub/tool-sdk";
 import { Logger, isValidTimeZone } from "@creator-hub/shared-utils";
 import {
+  ASSISTANT_CONFIRMATION_TTL_MS,
   ASSISTANT_MAX_ACTIONS_PER_REPLY,
+  FREE_VOICE_LIMIT_CODE,
+  FREE_VOICE_LIMIT_MESSAGE,
+  ttsVoiceInfo,
+  voiceSecondsAffordable,
   type AssistantActionArgs,
   type AssistantActionContext,
   type AssistantActionRecord,
@@ -98,7 +107,7 @@ const MODEL_FAILED = `${VOICE_ASSISTANT_NAME} couldn't answer. Try again or choo
  *   sentence by sentence, in order) → done (credits, balance).
  *
  * The reply language follows the user's message (en/es/pt, see
- * `language.ts`) and picks the Aura-2 voice. Speech is synthesized while
+ * `language.ts`) and picks its voice (Admin → Voice). Speech is synthesized while
  * the model is still writing: the first sentence is sent to Deepgram as
  * soon as it's complete, later chunks in parallel, emitted in order.
  *
@@ -107,10 +116,18 @@ const MODEL_FAILED = `${VOICE_ASSISTANT_NAME} couldn't answer. Try again or choo
  * (e.g. the Content Planner's calendar.create_event) and reported as SSE
  * `action` events; the model then gets the result and tells the user.
  *
+ * Voice and prices come from Admin → Voice (VoiceSettingsService): the
+ * Aura voice set for the reply language, and the TTS price per second.
+ *
  * Billing (CreditService — atomic debit, thresholds, credit emails):
- * 1 credit per written reply; a spoken reply costs 1 credit per started
- * minute of speech. Voice input is billed apart by the STT gateway. A reply
- * that fails before any text, or is cancelled before the first word, is free.
+ * 1 credit per written reply; a spoken reply costs its seconds of speech
+ * at the TTS price (never less than a written one). She only speaks what
+ * the balance pays for — then the reply goes on in text. Free plan users
+ * get the minutes set in Admin → Voice (their voice + hers): her speech is
+ * counted, and once they are used up replies are refused with
+ * FREE_LIMIT_REACHED (the app invites them to upgrade). Voice input is
+ * billed apart by the STT gateway. A reply that fails before any text, or
+ * is cancelled before the first word, is free.
  */
 @Injectable()
 export class VoiceAssistantService {
@@ -121,6 +138,8 @@ export class VoiceAssistantService {
     private readonly credits: CreditService,
     private readonly usage: PlatformUsageLogger,
     private readonly tts: TTSEngineService,
+    private readonly voiceSettings: VoiceSettingsService,
+    private readonly voiceAllowance: VoiceAllowanceService,
     @Optional() private readonly tools?: ToolRegistry,
     @Optional() private readonly actions?: AssistantActionRegistry,
   ) {}
@@ -146,6 +165,16 @@ export class VoiceAssistantService {
     ) {
       throw new BadRequestException(INSUFFICIENT);
     }
+    // Free plan: minutes of voice with her (Admin → Voice). Used up → the
+    // app invites the user to upgrade for unlimited use.
+    const allowance = await this.voiceAllowance.get(input.userId);
+    if (allowance.exhausted) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: FREE_VOICE_LIMIT_CODE,
+        message: FREE_VOICE_LIMIT_MESSAGE,
+      });
+    }
 
     const conversation = input.conversationId
       ? await this.findConversation(input.userId, input.conversationId)
@@ -158,6 +187,11 @@ export class VoiceAssistantService {
         });
     const history = input.conversationId
       ? await this.history(conversation.id)
+      : [];
+
+    // Destructive actions she asked to confirm in her previous reply.
+    const pending = input.conversationId
+      ? await this.pendingConfirmations(conversation.id)
       : [];
 
     const language = resolveReplyLanguage({
@@ -176,7 +210,27 @@ export class VoiceAssistantService {
     });
 
     const speak = input.spoken && this.tts.isAvailable();
-    const voice = speak ? this.tts.voiceFor(language) : null;
+    // The voice set for this language and the price per second of speech.
+    const settings = await this.voiceSettings.get();
+    const ttsRate = settings.tts.creditsPerSecond;
+    const voice = speak
+      ? ttsVoiceInfo(settings.tts.voices[language].voice, language)
+      : null;
+    // She speaks only what the balance — and a Free user's minutes left —
+    // pay for; the rest stays in text.
+    const creditBudgetMs = speak
+      ? voiceSecondsAffordable(
+          await this.credits.getBalance(input.userId).catch(() => 0),
+          ttsRate,
+        ) * 1000
+      : 0;
+    const freeBudgetMs =
+      allowance.remainingSeconds === null
+        ? Infinity
+        : allowance.remainingSeconds * 1000;
+    const speechBudgetMs = Math.min(creditBudgetMs, freeBudgetMs);
+    const budgetLimit: "credits" | "free-limit" =
+      freeBudgetMs < creditBudgetMs ? "free-limit" : "credits";
     emit({
       type: "start",
       conversationId: conversation.id,
@@ -200,7 +254,12 @@ export class VoiceAssistantService {
     const say = (text: string) => {
       if (!speechOk) return;
       const pending = this.tts
-        .synthesize({ text, language, signal: ttsAbort.signal })
+        .synthesize({
+          text,
+          language,
+          voice: voice?.model,
+          signal: ttsAbort.signal,
+        })
         .then(
           (audio): TTSAudio | null => audio,
           (error: Error): null => {
@@ -221,6 +280,24 @@ export class VoiceAssistantService {
       speechChain = speechChain.then(async () => {
         const audio = await pending;
         if (!audio || !speechOk || ttsAbort.signal.aborted) return;
+        if (audioMs + audio.durationMs > speechBudgetMs) {
+          speechOk = false;
+          ttsAbort.abort(); // later sentences are not synthesized
+          this.logger.warn(`Speech stopped: ${budgetLimit}`, {
+            userId: input.userId,
+            audioMs,
+            speechBudgetMs,
+          });
+          emit({
+            type: "audio_error",
+            reason: budgetLimit,
+            error:
+              budgetLimit === "free-limit"
+                ? "Your free minutes with Robotina ran out — the rest is in text."
+                : "Not enough credits for her voice — the rest is in text.",
+          });
+          return;
+        }
         audioMs += audio.durationMs;
         voiceModel = audio.voice;
         emit({
@@ -368,7 +445,12 @@ export class VoiceAssistantService {
 
       // Say what she has said so far while the action runs.
       if (speak) chunker.flush().forEach(say);
-      const record = await this.runAction(ending.action, actionContext, emit);
+      const record = await this.runAction(
+        ending.action,
+        actionContext,
+        emit,
+        pending,
+      );
       actions.push(record);
       if (input.signal?.aborted) break;
 
@@ -377,9 +459,11 @@ export class VoiceAssistantService {
         { role: "user", content: prompt },
         { role: "assistant", content: written.trim() },
       ];
-      prompt = `ACTION RESULT (${record.name}: ${
-        record.status === "done" ? "success" : "failed"
-      }) — ${record.summary}\nNow tell the user what happened, in ${LANGUAGE_NAMES[language]}.`;
+      prompt = `ACTION RESULT (${record.name}: ${RESULT_LABELS[record.status]}) — ${record.summary}\n${
+        record.status === "needs_confirmation"
+          ? "Now ask the user to confirm"
+          : "Now tell the user what happened"
+      }, in ${LANGUAGE_NAMES[language]}.`;
       spaceBeforeNext = content.length > 0 && !/\s$/.test(content);
     }
 
@@ -417,7 +501,11 @@ export class VoiceAssistantService {
     input.signal?.removeEventListener("abort", onAbort);
 
     // ── Save, then charge ────────────────────────────────────────────
-    const cost = replyCredits({ hasContent: true, audioMs });
+    const cost = replyCredits({
+      hasContent: true,
+      audioMs,
+      ttsCreditsPerSecond: ttsRate,
+    });
     const assistant = await prisma.voiceMessage.create({
       data: {
         conversationId: conversation.id,
@@ -454,6 +542,10 @@ export class VoiceAssistantService {
         .catch(() => undefined);
     }
     const balance = await this.credits.getBalance(input.userId);
+    // Her voice counts towards a Free user's minutes.
+    if (allowance.limited && audioMs > 0) {
+      await this.voiceAllowance.record(input.userId, audioMs);
+    }
 
     emit({
       type: "done",
@@ -559,11 +651,17 @@ export class VoiceAssistantService {
     if (count === 0) throw new NotFoundException("Conversation not found");
   }
 
-  /** Runs one action the model asked for and reports it as SSE events. */
+  /**
+   * Runs one action the model asked for and reports it as SSE events.
+   * Actions that require confirmation (deletes) only run when the previous
+   * reply asked for the very same one and the user has answered since;
+   * otherwise they are previewed and wait (`needs_confirmation`).
+   */
   private async runAction(
     call: ActionCall,
     context: AssistantActionContext,
     emit: (event: VoiceAssistantEvent) => void,
+    pending: AssistantActionRecord[],
   ): Promise<AssistantActionRecord> {
     const id = randomUUID();
     const requested = primitiveArgs(call.args);
@@ -575,10 +673,38 @@ export class VoiceAssistantService {
       args: requested,
     });
 
+    let record: AssistantActionRecord;
+    const definition = this.actions?.get(call.name);
+    if (this.actions && definition?.requiresConfirmation) {
+      const preview = await this.actions.preview(call.name, call.args, context);
+      const confirmed =
+        preview.ok &&
+        takeConfirmation(pending, call.name, preview.args) !== null;
+      if (!preview.ok || !confirmed) {
+        record = {
+          id,
+          name: call.name,
+          args: Object.keys(preview.args).length > 0 ? preview.args : requested,
+          status: preview.ok ? "needs_confirmation" : "failed",
+          summary: preview.ok
+            ? `NOT DONE YET — it needs the user's confirmation. ${preview.summary} Ask the user to confirm it clearly (what and when) and stop there. Only if they say yes in their next message, call ${call.name} again with exactly the same arguments.`
+            : preview.summary,
+          ...(preview.data ? { data: preview.data } : {}),
+        };
+        emit({ type: "action", ...record });
+        this.logger.info("Assistant action awaiting confirmation", {
+          userId: context.userId,
+          action: call.name,
+          status: record.status,
+        });
+        return record;
+      }
+    }
+
     const result = this.actions
       ? await this.actions.execute(call.name, call.args, context)
       : { ok: false, summary: `Unknown action "${call.name}"`, args: {} };
-    const record: AssistantActionRecord = {
+    record = {
       id,
       name: call.name,
       args: Object.keys(result.args).length > 0 ? result.args : requested,
@@ -593,6 +719,29 @@ export class VoiceAssistantService {
       status: record.status,
     });
     return record;
+  }
+
+  /**
+   * `needs_confirmation` actions of her last reply in this conversation,
+   * if it is recent: the user's current message may confirm them.
+   */
+  private async pendingConfirmations(
+    conversationId: string,
+  ): Promise<AssistantActionRecord[]> {
+    const last = await prisma.voiceMessage.findFirst({
+      where: { conversationId, role: "assistant" },
+      orderBy: { createdAt: "desc" },
+      select: { actions: true, createdAt: true },
+    });
+    if (
+      !last ||
+      Date.now() - last.createdAt.getTime() > ASSISTANT_CONFIRMATION_TTL_MS
+    ) {
+      return [];
+    }
+    return actionRecords(last.actions).filter(
+      (a) => a.status === "needs_confirmation",
+    );
   }
 
   /**
@@ -745,6 +894,35 @@ export function nudgeFor(
     return `SYSTEM NOTE (not from the user): you told the user you would do it, but you did not write the action, so nothing happened and the user is still waiting. If you have every required detail, reply with ONLY the action now, exactly like ${format} — no other words. If a detail is missing, ask the user for it in one short sentence in ${LANGUAGE_NAMES[language]}.`;
   }
   return null;
+}
+
+const RESULT_LABELS: Record<AssistantActionRecord["status"], string> = {
+  done: "success",
+  failed: "failed",
+  needs_confirmation: "needs confirmation",
+  running: "running",
+};
+
+function sameArgs(a: AssistantActionArgs, b: AssistantActionArgs): boolean {
+  const canonical = (args: AssistantActionArgs) =>
+    JSON.stringify(Object.entries(args).sort(([x], [y]) => x.localeCompare(y)));
+  return canonical(a) === canonical(b);
+}
+
+/**
+ * Removes and returns the pending confirmation for this exact call (each
+ * "yes" confirms one action once), or null.
+ */
+function takeConfirmation(
+  pending: AssistantActionRecord[],
+  name: string,
+  args: AssistantActionArgs,
+): AssistantActionRecord | null {
+  const index = pending.findIndex(
+    (p) => p.name === name && sameArgs(p.args, args),
+  );
+  if (index === -1) return null;
+  return pending.splice(index, 1)[0]!;
 }
 
 /** Only primitive values of model-written arguments (shown to the user). */

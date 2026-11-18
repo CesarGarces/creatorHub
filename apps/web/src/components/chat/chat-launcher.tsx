@@ -74,7 +74,7 @@ export function ChatLauncher({
   return (
     <div
       data-testid="chat-launcher"
-      className="pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-0 z-[100] sm:bottom-6 max-sm:group-has-[[data-composer]]/shell:bottom-[calc(9rem+env(safe-area-inset-bottom))] sm:max-lg:group-has-[[data-composer]]/shell:bottom-[6rem]"
+      className="pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-0 z-[100] sm:bottom-6 max-sm:group-has-[[data-composer]]/shell:bottom-[calc(9rem+env(safe-area-inset-bottom))] sm:group-has-[[data-composer]]/shell:bottom-[6rem]"
     >
       {tooltipVisible && !collapsed && (
         <div

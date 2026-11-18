@@ -4,7 +4,7 @@
  * The lists mirror apps/api/src/modules/admin/dto/model.dto.ts.
  */
 
-/** Task types a model can have. */
+/** Task types a model can have (filters, labels, existing models). */
 export const MODEL_TASK_TYPES = [
   "text-generation",
   "image-generation",
@@ -13,6 +13,14 @@ export const MODEL_TASK_TYPES = [
   "speech-to-text",
 ] as const;
 export type ModelTaskType = (typeof MODEL_TASK_TYPES)[number];
+
+/**
+ * Task types "Add model" offers. Speech-to-text is not one of them: the
+ * voice model and its price per second live in Admin → Voice (STT & TTS);
+ * speech-to-text rows added before are kept but no longer price anything.
+ */
+export const CREATABLE_TASK_TYPES: readonly ModelTaskType[] =
+  MODEL_TASK_TYPES.filter((type) => type !== "speech-to-text");
 
 /** Providers with a runtime implementation. Brand names stay untranslated. */
 export const MODEL_PROVIDERS = [
@@ -106,8 +114,7 @@ export function emptyModelForm(
 
 /**
  * Suggested starting price. Embeddings run on every plan/project save, so
- * they default to free; voice input is priced per minute (1 = the old fixed
- * rate); generations default to 1 credit per use.
+ * they default to free; generations default to 1 credit per use.
  */
 export function defaultCreditCost(taskType: ModelTaskType): number {
   return taskType === "embedding" ? 0 : 1;

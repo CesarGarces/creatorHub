@@ -2,11 +2,13 @@
 
 import { useCallback, useRef, useState, useEffect } from "react";
 import { useLiveSpeechToText } from "@/hooks/use-live-speech-to-text";
-import { useSttCreditsPerMinute } from "./use-stt-rate";
+import { useSttCreditsPerSecond } from "./use-voice-pricing";
 
 interface UseVoiceButtonOptions {
   /** Language code for speech recognition (e.g., "en", "es") */
   language?: string;
+  /** What the voice is for ("voice-assistant": Robotina's ears). */
+  purpose?: string;
   /** Called with partial transcript text */
   onPartialTranscript?: (text: string, isFinal: boolean) => void;
   /** Called when an utterance ends */
@@ -17,8 +19,8 @@ interface UseVoiceButtonOptions {
     durationMs: number,
     credits: number,
   ) => void;
-  /** Called on error */
-  onError?: (error: string) => void;
+  /** Called on error (`code`: the STT error code, e.g. PROVIDER_CLOSED). */
+  onError?: (error: string, code?: string) => void;
   /** Whether to play sounds on start/stop (default: true) */
   playSounds?: boolean;
   /** Optional external isListening state to sync with */
@@ -33,7 +35,8 @@ interface UseVoiceButtonReturn {
   toggleMic: () => Promise<void>;
   startListening: () => Promise<void>;
   stopListening: () => void;
-  creditsPerMinute: number;
+  /** Credits per second of voice input (Admin → Voice). */
+  creditsPerSecond: number;
   /** Live microphone level (0–1) while listening — for visuals. */
   getLevel: () => number;
 }
@@ -48,6 +51,7 @@ export function useVoiceButton(
 ): UseVoiceButtonReturn {
   const {
     language = "en",
+    purpose,
     onPartialTranscript,
     onUtteranceEnd,
     onResult,
@@ -57,7 +61,7 @@ export function useVoiceButton(
     setExternalListening,
   } = options;
 
-  const creditsPerMinute = useSttCreditsPerMinute();
+  const creditsPerSecond = useSttCreditsPerSecond();
 
   // Internal state that updates immediately on user action
   const [internalListening, setInternalListening] = useState(false);
@@ -84,10 +88,10 @@ export function useVoiceButton(
   );
 
   const handleError = useCallback(
-    (error: string) => {
+    (error: string, code?: string) => {
       setInternalListening(false);
       setExternalListening?.(false);
-      onError?.(error);
+      onError?.(error, code);
     },
     [onError, setExternalListening],
   );
@@ -100,6 +104,7 @@ export function useVoiceButton(
     getLevel,
   } = useLiveSpeechToText({
     language,
+    purpose,
     onPartialTranscript: handlePartialTranscript,
     onUtteranceEnd: handleUtteranceEnd,
     onResult: handleResult,
@@ -142,7 +147,7 @@ export function useVoiceButton(
     toggleMic,
     startListening,
     stopListening,
-    creditsPerMinute,
+    creditsPerSecond,
     getLevel,
   };
 }

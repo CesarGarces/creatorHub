@@ -3,19 +3,41 @@ import { replyCredits } from "../pricing";
 import { buildPersonaPrompt } from "../persona-prompt";
 
 describe("replyCredits", () => {
+  const rate = 2; // credits per second (Admin → Voice)
+
   it("charges 1 credit for a written reply", () => {
-    expect(replyCredits({ hasContent: true, audioMs: 0 })).toBe(1);
+    expect(
+      replyCredits({ hasContent: true, audioMs: 0, ttsCreditsPerSecond: rate }),
+    ).toBe(1);
   });
 
-  it("charges 1 credit per started minute of speech", () => {
-    expect(replyCredits({ hasContent: true, audioMs: 4_000 })).toBe(1);
-    expect(replyCredits({ hasContent: true, audioMs: 60_000 })).toBe(1);
-    expect(replyCredits({ hasContent: true, audioMs: 60_001 })).toBe(2);
-    expect(replyCredits({ hasContent: true, audioMs: 150_000 })).toBe(3);
+  it("charges every started second of speech at the TTS price", () => {
+    const spoken = (audioMs: number, ttsCreditsPerSecond = rate) =>
+      replyCredits({ hasContent: true, audioMs, ttsCreditsPerSecond });
+    expect(spoken(4_000)).toBe(8);
+    expect(spoken(4_200)).toBe(10);
+    expect(spoken(20_000)).toBe(40);
+    expect(spoken(30_000, 0.02)).toBe(1);
+  });
+
+  it("never charges a spoken reply less than a written one", () => {
+    expect(
+      replyCredits({
+        hasContent: true,
+        audioMs: 5_000,
+        ttsCreditsPerSecond: 0,
+      }),
+    ).toBe(1);
   });
 
   it("is free when nothing was written or said", () => {
-    expect(replyCredits({ hasContent: false, audioMs: 0 })).toBe(0);
+    expect(
+      replyCredits({
+        hasContent: false,
+        audioMs: 0,
+        ttsCreditsPerSecond: rate,
+      }),
+    ).toBe(0);
   });
 });
 

@@ -106,6 +106,7 @@ model User {
   contentKnowledgeChunks ContentKnowledgeChunk[]
   videoAnalyses          VideoAnalysis[]
   voiceConversations     VoiceConversation[]
+  voiceUsage             VoiceUsage[]
 }
 
 model Account {
@@ -1224,4 +1225,44 @@ model VoiceMessage {
   conversation   VoiceConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+}
+
+// ─── Voice settings (Admin → Voice: STT & TTS) ────────────────────────────
+// One row ("global"): the Deepgram models, voices and prices of the
+// platform's voice. Read through @creator-hub/voice-settings (cached);
+// while the row doesn't exist the defaults of voice-settings.types.ts apply.
+
+model VoiceSettings {
+  id                  String   @id @default("global")
+  /// Deepgram speech-to-text model ("nova-3", "nova-2"…).
+  sttModel            String   @default("nova-3")
+  /// Credits per second of voice input (every started second counts).
+  sttCreditsPerSecond Float    @default(1)
+  /// Credits per second of synthesized speech (Robotina's spoken replies).
+  ttsCreditsPerSecond Float    @default(2)
+  /// Voice per language: { en|es|pt: { model: "aura-2", voice: "aura-2-…" } }.
+  ttsVoices           Json
+  /// Free plan minutes with Robotina (her voice + the user's); null = no limit.
+  freeTierMinutes     Int?
+  /// "monthly" (back on the 1st, UTC) or "lifetime" (once).
+  freeTierPeriod      String   @default("monthly")
+  /// Admin who saved it last.
+  updatedById         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+/// Seconds of voice with Robotina (the user's voice + hers) used by a Free
+/// plan user, per UTC month ("2026-11") and in total ("all") — checked
+/// against VoiceSettings.freeTierMinutes.
+model VoiceUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  period    String
+  seconds   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, period])
 }

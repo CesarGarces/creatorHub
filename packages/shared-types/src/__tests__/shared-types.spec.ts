@@ -48,14 +48,9 @@ describe("community-bot wire contract", () => {
 });
 
 describe("speech-to-text limits", () => {
-  it("keeps sessions to 3 minutes at 1 credit per minute, requiring 5 credits", () => {
+  it("keeps sessions to 3 minutes, requiring 5 credits to start", () => {
     expect(types.MAX_STT_SESSION_MS).toBe(180_000);
-    expect(types.STT_CREDITS_PER_MINUTE).toBe(1);
     expect(types.MIN_CREDITS_FOR_STT).toBe(5);
-    // A full-length session must be affordable with the minimum balance.
-    expect(
-      (types.MAX_STT_SESSION_MS / 60_000) * types.STT_CREDITS_PER_MINUTE,
-    ).toBeLessThanOrEqual(types.MIN_CREDITS_FOR_STT);
   });
 });
 
@@ -220,10 +215,270 @@ describe("text-to-speech contract (Deepgram Aura-2)", () => {
     expect(types.isTTSLanguage("PT")).toBe(false);
   });
 
-  it("pins the prices: 1 credit per reply, 1 credit per minute of speech", () => {
-    expect(types.TTS_CREDITS_PER_MINUTE).toBe(1);
+  it("pins the reply price and the assistant's identity", () => {
     expect(types.VOICE_ASSISTANT_REPLY_CREDITS).toBe(1);
     expect(types.VOICE_ASSISTANT_TOOL_ID).toBe("voice-assistant");
     expect(types.VOICE_ASSISTANT_NAME).toBe("Robotina");
+  });
+});
+
+describe("voice settings (Admin → Voice: STT & TTS)", () => {
+  it("defaults: Nova-3, the Aura-2 voices by language, 1 cr/s in, 2 cr/s out", () => {
+    const d = types.DEFAULT_VOICE_SETTINGS;
+    expect(d.stt).toEqual({
+      provider: "deepgram",
+      model: "nova-3",
+      creditsPerSecond: 1,
+    });
+    expect(d.tts.creditsPerSecond).toBe(2);
+    expect(d.tts.voices).toEqual({
+      en: { model: "aura-2", voice: "aura-2-andromeda-en" },
+      es: { model: "aura-2", voice: "aura-2-celeste-es" },
+      pt: { model: "aura-2", voice: "aura-2-bianca-pt" },
+    });
+    expect(d.updatedAt).toBeNull();
+  });
+
+  it("bills every started second, rounded up to whole credits", () => {
+    expect(types.voiceCredits(0, 1)).toBe(0);
+    expect(types.voiceCredits(5000, 0)).toBe(0);
+    expect(types.voiceCredits(1, 1)).toBe(1);
+    expect(types.voiceCredits(2300, 1)).toBe(3);
+    expect(types.voiceCredits(4200, 2)).toBe(10);
+    expect(types.voiceCredits(30_000, 0.02)).toBe(1);
+    expect(types.voiceCredits(3000, 0.1)).toBe(1); // not 2 (float noise)
+    expect(types.voiceCredits(60_000, 1.5)).toBe(90);
+  });
+
+  it("knows how many seconds a balance pays for", () => {
+    expect(types.voiceSecondsAffordable(10, 2)).toBe(5);
+    expect(types.voiceSecondsAffordable(5, 1)).toBe(5);
+    expect(types.voiceSecondsAffordable(1, 0.3)).toBe(3);
+    expect(types.voiceSecondsAffordable(-4, 1)).toBe(0);
+    expect(types.voiceSecondsAffordable(0, 0)).toBe(Infinity);
+  });
+
+  it("accepts prices from 0 to 100 credits per second, in cents", () => {
+    for (const ok of [0, 0.01, 1, 2, 2.5, 100]) {
+      expect(types.isVoiceCreditRate(ok)).toBe(true);
+    }
+    for (const bad of [-1, 100.01, 0.001, Number.NaN, "1", null]) {
+      expect(types.isVoiceCreditRate(bad)).toBe(false);
+    }
+  });
+
+  it("lists Deepgram voices per model and language", () => {
+    const es = types.ttsVoicesFor("aura-2", "es");
+    expect(es[0]).toMatchObject({ name: "Celeste", accent: "Colombian" });
+    expect(es.every((v) => v.model.endsWith("-es"))).toBe(true);
+    expect(types.ttsVoicesFor("aura-2", "pt").map((v) => v.name)).toContain(
+      "Bianca",
+    );
+    expect(types.ttsVoicesFor("aura", "es")).toEqual([]);
+    expect(types.ttsVoicesFor("aura", "en").length).toBeGreaterThan(5);
+    const ids = types.TTS_VOICE_CATALOG.map((v) => v.model);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const v of types.TTS_VOICE_CATALOG) {
+      expect(types.isTTSVoiceId(v.family, v.model, v.language)).toBe(true);
+    }
+  });
+
+  it("validates typed voice ids against model and language", () => {
+    expect(types.isTTSVoiceId("aura-2", "aura-2-nuevo-pt", "pt")).toBe(true);
+    expect(types.isTTSVoiceId("aura-2", "aura-2-celeste-es", "pt")).toBe(false);
+    expect(types.isTTSVoiceId("aura", "aura-2-celeste-es", "es")).toBe(false);
+    expect(types.isTTSVoiceId("aura", "aura-2-thalia-en", "en")).toBe(false);
+    expect(types.isTTSVoiceId("aura-3", "aura-3-x-en", "en")).toBe(false);
+    expect(types.isTTSVoiceId("aura-2", "aura-2-<script>-en", "en")).toBe(
+      false,
+    );
+    expect(types.ttsVoiceInfo("aura-2-nuevo-pt", "pt")).toMatchObject({
+      family: "aura-2",
+      name: "Nuevo",
+      language: "pt",
+    });
+  });
+
+  it("listens in every language with a multilingual model only", () => {
+    expect(types.sttListenLanguage("nova-3", "es")).toBe("multi");
+    expect(types.sttListenLanguage("nova-2", "es")).toBe("es");
+    expect(types.sttListenLanguage("base")).toBe("en");
+    expect(types.isSTTModel("nova-3")).toBe(true);
+    expect(types.isSTTModel("whisper")).toBe(false);
+  });
+
+  it("publishes prices and who speaks each language", () => {
+    const pricing = types.voicePricingFrom({
+      ...types.DEFAULT_VOICE_SETTINGS,
+      tts: {
+        ...types.DEFAULT_VOICE_SETTINGS.tts,
+        voices: {
+          ...types.DEFAULT_VOICE_SETTINGS.tts.voices,
+          es: { model: "aura-2", voice: "aura-2-javier-es" },
+        },
+      },
+    });
+    expect(pricing.stt).toEqual({ model: "nova-3", creditsPerSecond: 1 });
+    expect(pricing.tts.creditsPerSecond).toBe(2);
+    expect(pricing.tts.voices.es).toEqual({
+      model: "aura-2-javier-es",
+      name: "Javier",
+      accent: "Mexican",
+      gender: "masculine",
+    });
+  });
+});
+
+describe("voice settings validation", () => {
+  const valid = {
+    sttModel: "nova-3",
+    sttCreditsPerSecond: 1,
+    ttsCreditsPerSecond: 2,
+    ttsVoices: { ...types.DEFAULT_TTS_LANGUAGE_VOICES },
+    freeTierMinutes: null,
+    freeTierPeriod: "monthly",
+  };
+
+  it("accepts the defaults and catalog choices", () => {
+    expect(types.voiceSettingsErrors(valid)).toEqual([]);
+    expect(
+      types.voiceSettingsErrors({
+        ...valid,
+        sttModel: "nova-2",
+        ttsVoices: {
+          en: { model: "aura", voice: "aura-asteria-en" },
+          es: { model: "aura-2", voice: "aura-2-javier-es" },
+          pt: { model: "aura-2", voice: "aura-2-bianca-pt" },
+        },
+      }),
+    ).toEqual([]);
+  });
+
+  it("points at each wrong field", () => {
+    expect(
+      types.voiceSettingsErrors({
+        sttModel: "whisper",
+        sttCreditsPerSecond: -1,
+        ttsCreditsPerSecond: "2",
+        ttsVoices: {
+          en: { model: "aura-2", voice: "aura-2-celeste-es" },
+          es: { model: "aura", voice: "aura-luna-es" },
+        },
+        freeTierMinutes: null,
+        freeTierPeriod: "monthly",
+      }),
+    ).toEqual([
+      { field: "sttModel", code: "invalidModel" },
+      { field: "sttCreditsPerSecond", code: "invalidRate" },
+      { field: "ttsCreditsPerSecond", code: "invalidRate" },
+      { field: "ttsVoices.en", code: "invalidVoice" },
+      { field: "ttsVoices.es", code: "invalidModel" },
+      { field: "ttsVoices.pt", code: "invalidModel" },
+    ]);
+    expect(types.voiceSettingsErrors(null)).toHaveLength(8);
+  });
+});
+
+describe("Free plan minutes with Robotina", () => {
+  const now = new Date("2026-11-29T10:00:00Z");
+
+  it("has no limit until the admin sets one", () => {
+    expect(types.DEFAULT_VOICE_SETTINGS.freeTier).toEqual({
+      minutes: null,
+      period: "monthly",
+    });
+    expect(
+      types.voicePricingFrom(types.DEFAULT_VOICE_SETTINGS).freeTier,
+    ).toBeNull();
+    expect(
+      types.voicePricingFrom({
+        ...types.DEFAULT_VOICE_SETTINGS,
+        freeTier: { minutes: 10, period: "lifetime" },
+      }).freeTier,
+    ).toEqual({ minutes: 10, period: "lifetime" });
+  });
+
+  it("validates whole minutes from 1 to 10,000 and the period", () => {
+    const base = {
+      sttModel: "nova-3",
+      sttCreditsPerSecond: 1,
+      ttsCreditsPerSecond: 2,
+      ttsVoices: { ...types.DEFAULT_TTS_LANGUAGE_VOICES },
+    };
+    for (const minutes of [null, 1, 10, 20, 10_000]) {
+      expect(
+        types.voiceSettingsErrors({
+          ...base,
+          freeTierMinutes: minutes,
+          freeTierPeriod: "monthly",
+        }),
+      ).toEqual([]);
+    }
+    expect(
+      types.voiceSettingsErrors({
+        ...base,
+        freeTierMinutes: 0,
+        freeTierPeriod: "weekly",
+      }),
+    ).toEqual([
+      { field: "freeTierMinutes", code: "invalidMinutes" },
+      { field: "freeTierPeriod", code: "invalidPeriod" },
+    ]);
+    for (const bad of [1.5, -3, 10_001, "10"]) {
+      expect(types.isFreeTierMinutes(bad)).toBe(false);
+    }
+  });
+
+  it("keeps usage per UTC month, or once for a lifetime limit", () => {
+    expect(types.voiceUsagePeriodKey("monthly", now)).toBe("2026-11");
+    expect(
+      types.voiceUsagePeriodKey("monthly", new Date("2027-01-01T00:00:00Z")),
+    ).toBe("2027-01");
+    expect(types.voiceUsagePeriodKey("lifetime", now)).toBe("all");
+    expect(types.nextMonthStart(new Date("2026-12-31T23:59:59Z"))).toEqual(
+      new Date("2027-01-01T00:00:00Z"),
+    );
+  });
+
+  it("computes what is left for Free users only", () => {
+    const limit = { minutes: 10, period: "monthly" as const };
+    expect(types.voiceAllowanceFrom(limit, 420, true, now)).toEqual({
+      limited: true,
+      period: "monthly",
+      limitSeconds: 600,
+      usedSeconds: 420,
+      remainingSeconds: 180,
+      exhausted: false,
+      resetsAt: "2026-12-01T00:00:00.000Z",
+    });
+    expect(types.voiceAllowanceFrom(limit, 700, true, now)).toMatchObject({
+      remainingSeconds: 0,
+      exhausted: true,
+    });
+    // Paid plans and "no limit": unlimited.
+    for (const allowance of [
+      types.voiceAllowanceFrom(limit, 9999, false, now),
+      types.voiceAllowanceFrom(
+        { minutes: null, period: "monthly" },
+        9999,
+        true,
+        now,
+      ),
+    ]) {
+      expect(allowance).toMatchObject({
+        limited: false,
+        remainingSeconds: null,
+        exhausted: false,
+        resetsAt: null,
+      });
+    }
+    expect(
+      types.voiceAllowanceFrom(
+        { minutes: 20, period: "lifetime" },
+        0,
+        true,
+        now,
+      ).resetsAt,
+    ).toBeNull();
   });
 });

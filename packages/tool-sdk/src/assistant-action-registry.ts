@@ -20,6 +20,15 @@ export interface AssistantActionHandler extends AssistantActionDefinition {
     args: AssistantActionArgs,
     context: AssistantActionContext,
   ): Promise<AssistantActionResult>;
+  /**
+   * For `requiresConfirmation` actions: what *would* happen, without doing
+   * it ("Will delete "Edit" on Saturday 15:00–16:00") — or `ok: false` when
+   * it can't (unknown id). Shown to the user while asking for their OK.
+   */
+  describe?(
+    args: AssistantActionArgs,
+    context: AssistantActionContext,
+  ): Promise<AssistantActionResult>;
 }
 
 export class ActionArgsError extends Error {
@@ -112,6 +121,29 @@ export function validateActionArgs(
   return args;
 }
 
+function definitionOf(
+  action: AssistantActionHandler,
+): AssistantActionDefinition {
+  const {
+    name,
+    toolId,
+    description,
+    parameters,
+    mutates,
+    requiresConfirmation,
+    example,
+  } = action;
+  return {
+    name,
+    toolId,
+    description,
+    parameters,
+    mutates,
+    ...(requiresConfirmation ? { requiresConfirmation } : {}),
+    ...(example ? { example } : {}),
+  };
+}
+
 /**
  * Registry of the actions the AI assistant can perform (ARCHITECTURE.md
  * §14g "Actions"). Tools register their handlers at startup (a provider
@@ -145,16 +177,50 @@ export class AssistantActionRegistry {
 
   /** Definitions only (what the model is told), in registration order. */
   list(): AssistantActionDefinition[] {
-    return [...this.actions.values()].map(
-      ({ name, toolId, description, parameters, mutates, example }) => ({
-        name,
-        toolId,
-        description,
-        parameters,
-        mutates,
-        ...(example ? { example } : {}),
-      }),
-    );
+    return [...this.actions.values()].map(definitionOf);
+  }
+
+  get(name: string): AssistantActionDefinition | undefined {
+    const action = this.actions.get(name);
+    return action ? definitionOf(action) : undefined;
+  }
+
+  /**
+   * Validates the arguments and describes what the action would do,
+   * without running it (confirmation step of destructive actions). Never
+   * throws, like `execute()`.
+   */
+  async preview(
+    name: string,
+    rawArgs: unknown,
+    context: AssistantActionContext,
+  ): Promise<AssistantActionResult & { args: AssistantActionArgs }> {
+    const action = this.actions.get(name);
+    if (!action) {
+      return { ok: false, summary: `Unknown action "${name}"`, args: {} };
+    }
+    let args: AssistantActionArgs;
+    try {
+      args = validateActionArgs(action.parameters, rawArgs);
+    } catch (error) {
+      return {
+        ok: false,
+        summary: `Invalid arguments: ${(error as Error).message}`,
+        args: {},
+      };
+    }
+    if (!action.describe) {
+      return { ok: true, summary: `Will run ${name}`, args };
+    }
+    try {
+      return { ...(await action.describe(args, context)), args };
+    } catch (error) {
+      return {
+        ok: false,
+        summary: `The action failed: ${(error as Error).message}`,
+        args,
+      };
+    }
   }
 
   /**

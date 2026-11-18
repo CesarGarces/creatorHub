@@ -13,14 +13,6 @@ import { AppModule } from "./app.module";
 import { SentryExceptionFilter } from "./common/filters/sentry-exception.filter";
 import { SentryInterceptor } from "./common/interceptors/sentry.interceptor";
 
-interface CorsCallback {
-  (error: Error | null, allow?: boolean): void;
-}
-
-interface CorsOriginHandler {
-  (origin: string | undefined, callback: CorsCallback): void;
-}
-
 async function bootstrap() {
   // Disable built-in body parser so we can capture raw body for webhook verification
   const app = await NestFactory.create(AppModule, { bodyParser: false as any });
@@ -77,33 +69,11 @@ async function bootstrap() {
     "http://localhost:3003",
     "http://127.0.0.1:3003",
   ];
-  const allowedOrigins = [
-    "https://app.creatorhubplatform.com",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:3002",
-    "http://127.0.0.1:3002",
-    "http://localhost:3003",
-    "http://127.0.0.1:3003",
-    frontendUrl,
-    adminUrl,
-  ]
-    .filter(Boolean)
-    .map((url) => url.replace(/\/$/, "")); // Elimina barras al final si las hay
-
+  const allowedOrigins = [...new Set([frontendUrl, adminUrl, ...devOrigins])];
+  console.log(`[CORS] Allowed origins: ${allowedOrigins.join(", ")}`);
   app.enableCors({
-    origin: ((origin: string | undefined, callback: CorsCallback): void => {
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    }) satisfies CorsOriginHandler,
+    origin: allowedOrigins,
     credentials: true,
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-    allowedHeaders: "Content-Type, Accept, Authorization",
   });
 
   app.useGlobalPipes(

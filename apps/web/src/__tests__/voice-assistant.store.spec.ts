@@ -36,7 +36,10 @@ vi.mock("@/lib/voice-assistant/stream", async (importOriginal) => ({
 }));
 
 import api from "@/lib/api";
-import { streamAssistantReply } from "@/lib/voice-assistant/stream";
+import {
+  AssistantStreamError,
+  streamAssistantReply,
+} from "@/lib/voice-assistant/stream";
 import { useVoiceAssistantStore } from "@/store/voice-assistant.store";
 import { useCreditsStore } from "@/store/credits.store";
 
@@ -91,6 +94,7 @@ beforeEach(() => {
     isLoadingConversation: false,
     preferencesLoaded: false,
     handsFree: true,
+    allowance: null,
     settings: {
       model: "deepseek-ai/DeepSeek-V4-Flash",
       temperature: 0.7,
@@ -220,6 +224,35 @@ describe("voice assistant store — sending", () => {
     expect(state().messages[1]).toMatchObject({
       voiceFailed: true,
       spoken: false,
+    });
+  });
+
+  it("marks when her voice stopped for the Free plan's minutes", async () => {
+    stream.impl = async (_r, onEvent) => {
+      onEvent({ type: "audio_error", error: "x", reason: "free-limit" });
+      onEvent({ ...DONE, audioMs: 0 });
+      return DONE;
+    };
+    await state().sendMessage("hi", { spoken: true });
+    expect(state().messages[1]).toMatchObject({ voiceFailed: "free-limit" });
+  });
+
+  it("a refused reply (Free minutes used up) leaves no turn and marks the limit", async () => {
+    stream.impl = async () => {
+      throw new AssistantStreamError(
+        "You've used all your free minutes with Robotina.",
+        403,
+        "FREE_LIMIT_REACHED",
+      );
+    };
+    await expect(state().sendMessage("hola", { spoken: true })).rejects.toThrow(
+      /free minutes/,
+    );
+    expect(state().messages).toEqual([]);
+    expect(state().allowance).toMatchObject({
+      limited: true,
+      exhausted: true,
+      remainingSeconds: 0,
     });
   });
 
@@ -388,5 +421,42 @@ describe("voice assistant store — history and preferences", () => {
     state().loadPreferences();
     expect(state().handsFree).toBe(false);
     expect(state().settings.temperature).toBe(0.2);
+  });
+});
+
+describe("voice assistant store — Free plan minutes", () => {
+  const ALLOWANCE = {
+    limited: true,
+    period: "monthly",
+    limitSeconds: 600,
+    usedSeconds: 200,
+    remainingSeconds: 400,
+    exhausted: false,
+    resetsAt: "2026-12-01T00:00:00.000Z",
+  };
+
+  it("loads what the user has left", async () => {
+    apiMock.get.mockResolvedValueOnce(ALLOWANCE);
+    await state().loadAllowance();
+    expect(apiMock.get).toHaveBeenCalledWith("/voice/allowance");
+    expect(state().allowance).toEqual(ALLOWANCE);
+  });
+
+  it("ignores bad answers and errors", async () => {
+    apiMock.get.mockResolvedValueOnce({ nope: true });
+    await state().loadAllowance();
+    apiMock.get.mockRejectedValueOnce(new Error("offline"));
+    await state().loadAllowance();
+    expect(state().allowance).toBeNull();
+  });
+
+  it("refreshes it after a reply when the user is limited", async () => {
+    useVoiceAssistantStore.setState({ allowance: ALLOWANCE as never });
+    apiMock.get.mockResolvedValue({ ...ALLOWANCE, remainingSeconds: 390 });
+    reply();
+    await state().sendMessage("hola", { spoken: true });
+    await vi.waitFor(() =>
+      expect(state().allowance?.remainingSeconds).toBe(390),
+    );
   });
 });

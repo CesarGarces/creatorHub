@@ -2,11 +2,13 @@ import WebSocket from "ws";
 import { randomUUID } from "crypto";
 import { STTProviderBase } from "./stt-provider.base";
 import { Logger } from "@creator-hub/shared-utils";
-import type {
-  STTProviderName,
-  STTStreamParams,
-  STTStream,
-  STTFinalResult,
+import {
+  DEFAULT_STT_MODEL,
+  sttListenLanguage,
+  type STTProviderName,
+  type STTStreamParams,
+  type STTStream,
+  type STTFinalResult,
 } from "@creator-hub/shared-types";
 
 interface DeepgramTranscriptMessage {
@@ -30,6 +32,11 @@ interface DeepgramTranscriptMessage {
   utterance_id?: number;
   last_word_end?: number;
 }
+
+/** Send a KeepAlive when no audio was sent for this long. */
+const KEEPALIVE_MS = 5_000;
+/** Longest wait for Deepgram's last results after CloseStream. */
+const FINALIZE_TIMEOUT_MS = 3_000;
 
 export class DeepgramProvider extends STTProviderBase {
   private logger = new Logger("DeepgramProvider");
@@ -72,8 +79,10 @@ export class DeepgramProvider extends STTProviderBase {
     url.searchParams.set("encoding", "linear16");
     url.searchParams.set("sample_rate", "16000");
     url.searchParams.set("channels", "1");
-    url.searchParams.set("model", "nova-3");
-    url.searchParams.set("language", "multi");
+    // Model from Admin → Voice; multilingual models hear en/es/pt… at once.
+    const model = params.model || DEFAULT_STT_MODEL;
+    url.searchParams.set("model", model);
+    url.searchParams.set("language", sttListenLanguage(model, lang));
     url.searchParams.set("smart_format", "true");
     url.searchParams.set("interim_results", String(interimResults));
     url.searchParams.set("endpointing", String(endpointing));
@@ -84,8 +93,42 @@ export class DeepgramProvider extends STTProviderBase {
     });
 
     let closed = false;
+    /** end()/close() asked for it: a close then is not "unexpected". */
+    let closeRequested = false;
     const startTime = Date.now();
     let fullTranscript = "";
+    /** Latest interim text not yet confirmed by a final result. */
+    let pendingInterim = "";
+    let lastAudioAt = Date.now();
+    /** When the client stopped: finalizing afterwards isn't billed. */
+    let endedAt: number | null = null;
+    const logger = this.logger;
+
+    // Deepgram closes an idle stream after ~10 s without data: keep it open
+    // through pauses (the browser may throttle audio, the user may think).
+    const keepAlive = setInterval(() => {
+      if (
+        ws.readyState === WebSocket.OPEN &&
+        Date.now() - lastAudioAt >= KEEPALIVE_MS
+      ) {
+        ws.send(JSON.stringify({ type: "KeepAlive" }));
+      }
+    }, KEEPALIVE_MS);
+    keepAlive.unref?.();
+
+    const result = (): STTFinalResult => {
+      // Words Deepgram never finalized (stopped mid-phrase) still count.
+      const text = [fullTranscript, pendingInterim]
+        .filter((part) => part.trim())
+        .join(" ")
+        .trim();
+      return {
+        fullTranscript: text,
+        language: lang,
+        durationMs: (endedAt ?? Date.now()) - startTime,
+        wordCount: text.split(/\s+/).filter((w) => w.length > 0).length,
+      };
+    };
 
     const stream: STTStream = {
       id: streamId,
@@ -93,47 +136,58 @@ export class DeepgramProvider extends STTProviderBase {
       writeAudioChunk(chunk: Buffer | ArrayBuffer) {
         if (closed || ws.readyState !== WebSocket.OPEN) return;
         const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        lastAudioAt = Date.now();
         ws.send(buf);
       },
 
+      /**
+       * Graceful end: `CloseStream` makes Deepgram transcribe the audio it
+       * still holds and send the final results before closing — closing the
+       * socket directly would throw away the words in progress. Waits for
+       * the close (at most FINALIZE_TIMEOUT_MS).
+       */
       end(): Promise<STTFinalResult> {
+        closeRequested = true;
+        endedAt ??= Date.now();
+        clearInterval(keepAlive);
         return new Promise((resolve) => {
-          if (closed) {
-            resolve({
-              fullTranscript,
-              language: lang,
-              durationMs: Date.now() - startTime,
-              wordCount: fullTranscript.split(/\s+/).filter((w) => w.length > 0)
-                .length,
-            });
+          if (closed || ws.readyState !== WebSocket.OPEN) {
+            closed = true;
+            resolve(result());
             return;
           }
-
-          const onClose = () => {
-            ws.removeListener("close", onClose);
-            resolve({
-              fullTranscript,
-              language: lang,
-              durationMs: Date.now() - startTime,
-              wordCount: fullTranscript.split(/\s+/).filter((w) => w.length > 0)
-                .length,
-            });
+          let settled = false;
+          const finish = () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            ws.removeListener("close", finish);
+            closed = true;
+            resolve(result());
           };
-
-          ws.on("close", onClose);
-
-          try {
-            if (ws.readyState === WebSocket.OPEN) {
+          const timer = setTimeout(() => {
+            logger.warn("Deepgram did not close after CloseStream", {
+              streamId,
+            });
+            try {
               ws.close(1000, "stream ended");
+            } catch {
+              /* ignore */
             }
+            finish();
+          }, FINALIZE_TIMEOUT_MS);
+          ws.on("close", finish);
+          try {
+            ws.send(JSON.stringify({ type: "CloseStream" }));
           } catch {
-            ws.removeListener("close", onClose);
-            onClose();
+            finish();
           }
         });
       },
 
       close() {
+        closeRequested = true;
+        clearInterval(keepAlive);
         if (closed) return;
         closed = true;
         try {
@@ -156,12 +210,14 @@ export class DeepgramProvider extends STTProviderBase {
 
         if (msg.type === "Results" && msg.channel) {
           const transcript = msg.channel.alternatives[0]?.transcript || "";
-          if (!transcript) return;
-
           const isFinal = msg.is_final === true || msg.speech_final === true;
+          if (isFinal) pendingInterim = "";
+          if (!transcript) return;
 
           if (isFinal) {
             fullTranscript += (fullTranscript ? " " : "") + transcript;
+          } else {
+            pendingInterim = transcript;
           }
 
           params.onPartialTranscript(transcript, isFinal);
@@ -183,12 +239,24 @@ export class DeepgramProvider extends STTProviderBase {
 
     ws.on("error", (err: Error) => {
       this.logger.error("WebSocket error", { error: err.message, streamId });
+      clearInterval(keepAlive);
       params.onError(err);
       closed = true;
     });
 
-    ws.on("close", () => {
+    ws.on("close", (code: number, reasonBuffer: Buffer) => {
+      clearInterval(keepAlive);
+      const reason = reasonBuffer?.toString() || "";
+      const wasClosed = closed;
       closed = true;
+      if (closeRequested || wasClosed) return;
+      // Deepgram (or the network) ended the stream on its own.
+      this.logger.warn("Deepgram closed the stream unexpectedly", {
+        streamId,
+        code,
+        reason,
+      });
+      params.onUnexpectedClose?.({ code, reason });
     });
 
     return stream;

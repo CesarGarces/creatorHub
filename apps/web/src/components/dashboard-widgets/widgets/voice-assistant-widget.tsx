@@ -8,6 +8,7 @@ import { useRobotina } from "@/hooks/use-robotina";
 import { useVoiceAssistantStore } from "@/store/voice-assistant.store";
 import { RobotinaOrb } from "@/components/voice-assistant/robotina-orb";
 import { AssistantActionCard } from "@/components/voice-assistant/assistant-action-card";
+import { FreeMinutesNotice } from "@/components/voice-assistant/free-minutes-notice";
 import { ORB_ACTION_KEYS, STATUS_KEYS } from "@/lib/voice-assistant/status";
 import { WidgetHeader } from "../widget-header";
 
@@ -75,7 +76,8 @@ export function VoiceAssistantWidget() {
           onClick={() => void robotina.toggle()}
           aria-label={t(ORB_ACTION_KEYS[state])}
           data-robotina-orb
-          className="relative rounded-full outline-none transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface motion-reduce:transform-none"
+          disabled={robotina.limitReached && state === "idle"}
+          className="relative rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-60 transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface motion-reduce:transform-none"
         >
           <RobotinaOrb state={state} getLevel={robotina.getLevel} size={168} />
         </button>
@@ -90,7 +92,8 @@ export function VoiceAssistantWidget() {
         <p className="relative mt-1 line-clamp-2 min-h-10 max-w-sm text-center text-xs text-text-muted">
           {caption}
         </p>
-        {lastAction?.status === "done" && (
+        {(lastAction?.status === "done" ||
+          lastAction?.status === "needs_confirmation") && (
           <AssistantActionCard
             action={lastAction}
             compact
@@ -105,6 +108,12 @@ export function VoiceAssistantWidget() {
             {robotina.error}
           </p>
         )}
+        {/* Free plan: minutes left, or the invitation to upgrade. */}
+        <FreeMinutesNotice
+          allowance={robotina.allowance}
+          compact
+          className="relative mt-2 w-full max-w-sm"
+        />
 
         <div className="relative mt-auto flex w-full flex-wrap items-center justify-between gap-2 pt-3">
           <div className="flex min-h-11 items-center gap-2">
@@ -135,7 +144,8 @@ export function VoiceAssistantWidget() {
           ) : (
             <span className="text-[11px] text-text-dim">
               {t("voiceAssistant.pricingShort", {
-                stt: robotina.sttCreditsPerMinute,
+                stt: robotina.sttCreditsPerSecond,
+                tts: robotina.ttsCreditsPerSecond,
               })}
             </span>
           )}

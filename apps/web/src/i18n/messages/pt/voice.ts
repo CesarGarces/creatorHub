@@ -5,12 +5,15 @@ export const voice: Messages["voice"] = {
   listening: "Ouvindo...",
   startRecording: "Iniciar ditado por voz",
   stopRecording: "Parar gravação",
-  creditsPerMinute: "+{count} cr/min",
+  creditsPerSecond: "+{count} cr/s",
   errors: {
     notSupported: "O ditado por voz não é compatível com este navegador",
     connectionFailed: "Não foi possível conectar ao servidor",
     permissionDenied: "Permissão do microfone negada",
     noMicrophone: "Nenhum microfone encontrado",
     micFailed: "Não foi possível acessar o microfone",
+    connectionLost: "A conexão de voz foi interrompida. Tente novamente.",
+    timeLimit: "Limite de gravação atingido (máximo de 3 minutos)",
+    outOfCredits: "Seus créditos acabaram — a gravação parou",
   },
 };

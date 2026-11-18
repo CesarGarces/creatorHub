@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { Logger } from "@creator-hub/shared-utils";
 import {
-  TTS_CREDITS_PER_MINUTE,
   ttsVoiceFor,
+  voiceCredits,
   type TTSAudio,
   type TTSProviderName,
   type TTSSynthesizeParams,
@@ -13,9 +13,10 @@ import { TTSProviderRegistry } from "./providers/tts-provider.registry";
 /**
  * Text-to-speech for the platform (the Robotina voice assistant today).
  *
- * Always Deepgram Aura-2 — the voice is picked from the language of the
- * text (`TTS_VOICES`), never from a setting. Tools call `synthesize()` per
- * chunk of text and add up `durationMs` to bill with `calculateCredits()`.
+ * Deepgram Aura. Callers pass the voice set for the language in Admin →
+ * Voice (`@creator-hub/voice-settings`); without one the language's
+ * default speaks (`TTS_VOICES`). Tools call `synthesize()` per chunk of
+ * text and add up `durationMs` to bill with `calculateCredits()`.
  */
 @Injectable()
 export class TTSEngineService {
@@ -33,6 +34,7 @@ export class TTSEngineService {
     return this.providerRegistry.getAvailableProvider()?.name ?? null;
   }
 
+  /** The language's default voice (without Admin → Voice settings). */
   voiceFor(language: unknown): TTSVoice {
     return ttsVoiceFor(language);
   }
@@ -55,14 +57,11 @@ export class TTSEngineService {
   }
 
   /**
-   * Credits for `durationMs` of speech: started minutes × rate (1 credit for
-   * up to a minute, 2 for up to two…). No speech, no charge.
+   * Credits for `durationMs` of speech at the price per second (Admin →
+   * Voice): every started second, rounded up to whole credits. No speech,
+   * no charge.
    */
-  calculateCredits(
-    durationMs: number,
-    creditsPerMinute: number = TTS_CREDITS_PER_MINUTE,
-  ): number {
-    if (durationMs <= 0 || creditsPerMinute <= 0) return 0;
-    return Math.max(1, Math.ceil(durationMs / 60_000)) * creditsPerMinute;
+  calculateCredits(durationMs: number, creditsPerSecond: number): number {
+    return voiceCredits(durationMs, creditsPerSecond);
   }
 }

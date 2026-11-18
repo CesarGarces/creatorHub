@@ -7,27 +7,35 @@
  * is heard — long enough to pause and think mid-sentence; any new word
  * restarts the wait. Deepgram's UtteranceEnd only ends the turn when no
  * final phrase is pending (it would otherwise cut that pause short). If
- * nothing at all is said for `noSpeechMs`, the turn ends as "silence" (the
- * mic closes instead of listening forever). A tap always sends at once.
+ * the words heard never become final and neither an UtteranceEnd nor new
+ * words arrive for `stalledMs`, the turn ends as "stalled" (the words are
+ * still sent). If nothing at all is said for `noSpeechMs`, the turn ends as
+ * "silence" (the mic closes instead of listening forever). A tap always
+ * sends at once.
  */
 
-export type TurnEndReason = "speech" | "silence";
+export type TurnEndReason = "speech" | "stalled" | "silence";
 
 export interface TurnDetectorOptions {
   afterFinalMs?: number;
+  stalledMs?: number;
   noSpeechMs?: number;
 }
 
 /** Pause after the last phrase before the message is sent. */
 export const TURN_AFTER_FINAL_MS = 3000;
+/** Interim words with no final, no UtteranceEnd and nothing new. */
+export const TURN_STALLED_MS = 5000;
 export const TURN_NO_SPEECH_MS = 8000;
 
 export class TurnDetector {
   private finalTimer: ReturnType<typeof setTimeout> | null = null;
+  private stallTimer: ReturnType<typeof setTimeout> | null = null;
   private silenceTimer: ReturnType<typeof setTimeout> | null = null;
   private heard = false;
   private active = false;
   private readonly afterFinalMs: number;
+  private readonly stalledMs: number;
   private readonly noSpeechMs: number;
 
   constructor(
@@ -35,6 +43,7 @@ export class TurnDetector {
     options: TurnDetectorOptions = {},
   ) {
     this.afterFinalMs = options.afterFinalMs ?? TURN_AFTER_FINAL_MS;
+    this.stalledMs = options.stalledMs ?? TURN_STALLED_MS;
     this.noSpeechMs = options.noSpeechMs ?? TURN_NO_SPEECH_MS;
   }
 
@@ -58,6 +67,8 @@ export class TurnDetector {
     this.clear();
     if (isFinal) {
       this.finalTimer = setTimeout(() => this.end("speech"), this.afterFinalMs);
+    } else {
+      this.stallTimer = setTimeout(() => this.end("stalled"), this.stalledMs);
     }
   }
 
@@ -83,8 +94,10 @@ export class TurnDetector {
 
   private clear(): void {
     if (this.finalTimer) clearTimeout(this.finalTimer);
+    if (this.stallTimer) clearTimeout(this.stallTimer);
     if (this.silenceTimer) clearTimeout(this.silenceTimer);
     this.finalTimer = null;
+    this.stallTimer = null;
     this.silenceTimer = null;
   }
 }

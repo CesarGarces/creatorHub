@@ -41,6 +41,13 @@ export interface AssistantActionDefinition {
   /** Changes the user's data (the model must have every detail first). */
   mutates: boolean;
   /**
+   * Destructive (e.g. delete): never runs on the first call. The assistant
+   * gets a preview, must ask the user, and only a call repeated in a later
+   * reply — after the user answered — runs it. Enforced by the assistant
+   * service, not left to the model.
+   */
+  requiresConfirmation?: boolean;
+  /**
    * A sample request and the arguments it maps to — shown to the model as
    * a worked example (models follow the format far more reliably).
    */
@@ -77,13 +84,40 @@ export interface AssistantCalendarEvent {
   status?: string;
 }
 
+/** A video project (a plan grouping sessions) as shown on action cards. */
+export interface AssistantCalendarProject {
+  id: string;
+  title: string;
+  platform: string | null;
+  publishAt: string | null;
+  /** Sessions of the project (cancelled excluded) and how many are done. */
+  sessions?: { total: number; done: number };
+}
+
+export type AssistantActionChange = "created" | "updated" | "deleted";
+
 export type AssistantActionData =
   | {
       kind: "calendar-event";
+      /** What happened (or, while awaiting confirmation, what would). */
+      change: AssistantActionChange;
       event: AssistantCalendarEvent;
+      /** Its times before a move. */
+      previous?: { startAt: string; endAt: string };
       /** Sessions it overlaps (a warning, never a block). */
       conflicts: AssistantCalendarEvent[];
       /** Planner page on the event's week. */
+      url: string;
+    }
+  | {
+      kind: "calendar-project";
+      change: AssistantActionChange;
+      project: AssistantCalendarProject;
+      url: string;
+    }
+  | {
+      kind: "calendar-projects";
+      projects: AssistantCalendarProject[];
       url: string;
     }
   | {
@@ -100,10 +134,23 @@ export interface AssistantActionRecord {
   id: string;
   name: string;
   args: AssistantActionArgs;
-  status: "running" | "done" | "failed";
+  status: AssistantActionStatus;
   summary?: string;
   data?: AssistantActionData;
 }
 
+/**
+ * `needs_confirmation`: a destructive action was asked for; it did not run
+ * and waits for the user's "yes" in their next message.
+ */
+export type AssistantActionStatus =
+  | "running"
+  | "done"
+  | "failed"
+  | "needs_confirmation";
+
+/** A pending confirmation is valid for the user's next message within this time. */
+export const ASSISTANT_CONFIRMATION_TTL_MS = 15 * 60_000;
+
 /** Most actions the assistant may run in a single reply. */
-export const ASSISTANT_MAX_ACTIONS_PER_REPLY = 3;
+export const ASSISTANT_MAX_ACTIONS_PER_REPLY = 4;

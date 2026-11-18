@@ -20,8 +20,8 @@ import type { ModelMetadata } from "@/types";
 import { useI18n } from "@/i18n/i18n-provider";
 import { localizeError } from "@/i18n/errors";
 import {
+  CREATABLE_TASK_TYPES,
   MODEL_PROVIDERS,
-  MODEL_TASK_TYPES,
   PROVIDERS_BY_TASK,
   MAX_CREDIT_COST,
   emptyModelForm,
@@ -170,7 +170,7 @@ export function CreateModelModal({
                   className={SELECT_CLASS}
                   aria-describedby="model-taskType-hint"
                 >
-                  {MODEL_TASK_TYPES.map((type) => (
+                  {CREATABLE_TASK_TYPES.map((type) => (
                     <option key={type} value={type}>
                       {t(`models.detail.taskTypes.${type}`)}
                     </option>

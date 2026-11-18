@@ -1,11 +1,13 @@
 import { create } from "zustand";
-import type {
-  AssistantActionRecord,
-  TTSLanguage,
-  VoiceAssistantEvent,
-  VoiceAssistantMessage,
-  VoiceConversationDetail,
-  VoiceConversationSummary,
+import {
+  FREE_VOICE_LIMIT_CODE,
+  type AssistantActionRecord,
+  type TTSLanguage,
+  type VoiceAllowance,
+  type VoiceAssistantEvent,
+  type VoiceAssistantMessage,
+  type VoiceConversationDetail,
+  type VoiceConversationSummary,
 } from "@creator-hub/shared-types";
 import api from "@/lib/api";
 import type { ModelSettings } from "@/lib/model-settings";
@@ -15,6 +17,7 @@ import {
   DEFAULT_PREFERENCES,
 } from "@/lib/voice-assistant/preferences";
 import {
+  AssistantStreamError,
   streamAssistantReply,
   type DoneEvent,
 } from "@/lib/voice-assistant/stream";
@@ -37,8 +40,12 @@ export interface RobotinaMessage {
   interrupted: boolean;
   /** The reply is still arriving. */
   streaming?: boolean;
-  /** Robotina's voice failed for this reply (it came as text). */
-  voiceFailed?: boolean;
+  /**
+   * Robotina's voice stopped for this reply (the rest came as text):
+   * `true` on a failure, `"credits"` when the balance ran out,
+   * `"free-limit"` when the Free plan's minutes did.
+   */
+  voiceFailed?: boolean | "credits" | "free-limit";
   /** Failed reply: localized by the UI. */
   error?: string;
   /** What she did during the reply (e.g. a calendar event), in order. */
@@ -63,6 +70,11 @@ interface VoiceAssistantState {
   settings: ModelSettings;
   handsFree: boolean;
   preferencesLoaded: boolean;
+  /**
+   * Free plan minutes with Robotina (Admin → Voice); null until loaded or
+   * when there is nothing to limit.
+   */
+  allowance: VoiceAllowance | null;
 
   loadPreferences: () => void;
   updateSettings: (partial: Partial<ModelSettings>) => void;
@@ -71,6 +83,10 @@ interface VoiceAssistantState {
   openConversation: (id: string) => Promise<void>;
   newConversation: () => void;
   deleteConversation: (id: string) => Promise<void>;
+  /** Reads what the user has left of the Free plan's minutes. */
+  loadAllowance: () => Promise<void>;
+  /** The server said the minutes are used up (reply or voice refused). */
+  markAllowanceExhausted: () => void;
   /** Sends a message; resolves with the reply (null if interrupted). */
   sendMessage: (
     content: string,
@@ -102,6 +118,16 @@ export function browserTimeZone(): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function isAllowance(value: unknown): value is VoiceAllowance {
+  const v = value as Partial<VoiceAllowance> | null;
+  return (
+    !!v &&
+    typeof v.limited === "boolean" &&
+    typeof v.exhausted === "boolean" &&
+    typeof v.usedSeconds === "number"
+  );
 }
 
 function isAbort(error: unknown): boolean {
@@ -136,6 +162,35 @@ export const useVoiceAssistantStore = create<VoiceAssistantState>()((
     settings: DEFAULT_PREFERENCES.settings,
     handsFree: DEFAULT_PREFERENCES.handsFree,
     preferencesLoaded: false,
+    allowance: null,
+
+    loadAllowance: async () => {
+      try {
+        const allowance = await api.get<VoiceAllowance>("/voice/allowance");
+        if (isAllowance(allowance)) set({ allowance });
+      } catch {
+        // Optional: the server still enforces the limit.
+      }
+    },
+
+    markAllowanceExhausted: () => {
+      set((state) => ({
+        allowance: {
+          ...(state.allowance ?? {
+            limited: true,
+            period: "monthly",
+            limitSeconds: null,
+            usedSeconds: 0,
+            resetsAt: null,
+          }),
+          limited: true,
+          remainingSeconds: 0,
+          exhausted: true,
+        },
+      }));
+      // The details (total minutes, when they come back) from the server.
+      void get().loadAllowance();
+    },
 
     loadPreferences: () => {
       if (get().preferencesLoaded) return;
@@ -292,7 +347,7 @@ export const useVoiceAssistantStore = create<VoiceAssistantState>()((
             patchMessage(assistantId, { spoken: true });
             break;
           case "audio_error":
-            patchMessage(assistantId, { voiceFailed: true });
+            patchMessage(assistantId, { voiceFailed: event.reason ?? true });
             break;
           case "action": {
             const { type: _type, ...record } = event;
@@ -322,6 +377,8 @@ export const useVoiceAssistantStore = create<VoiceAssistantState>()((
             });
             assistantId = event.messageId;
             useCreditsStore.getState().setBalance(event.balance);
+            // Her voice counted towards a Free user's minutes.
+            if (get().allowance?.limited) void get().loadAllowance();
             const conversationId = get().activeConversationId;
             set((state) => ({
               conversations: [
@@ -373,6 +430,19 @@ export const useVoiceAssistantStore = create<VoiceAssistantState>()((
             });
           }
           return null;
+        }
+        if (
+          error instanceof AssistantStreamError &&
+          error.code === FREE_VOICE_LIMIT_CODE
+        ) {
+          // Nothing was saved: the upgrade invitation replaces the turn.
+          set((state) => ({
+            messages: state.messages.filter(
+              (m) => m.id !== userId && m.id !== assistantId,
+            ),
+          }));
+          get().markAllowanceExhausted();
+          throw error;
         }
         patchMessage(assistantId, {
           streaming: false,

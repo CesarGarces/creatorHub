@@ -208,6 +208,9 @@ importers:
       '@creator-hub/voice-assistant-backend':
         specifier: workspace:*
         version: link:../../tools/voice-assistant/backend
+      '@creator-hub/voice-settings':
+        specifier: workspace:*
+        version: link:../../packages/voice-settings
       '@creator-hub/x-post-tweet':
         specifier: workspace:*
         version: link:../../tools/x-post-tweet
@@ -1215,6 +1218,34 @@ importers:
         specifier: ^3.2.6
         version: 3.2.6(@types/node@20.19.42)(jsdom@22.1.0)(lightningcss@1.32.0)(terser@5.48.0)
 
+  packages/voice-settings:
+    dependencies:
+      '@creator-hub/database':
+        specifier: workspace:*
+        version: link:../database
+      '@creator-hub/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@creator-hub/shared-utils':
+        specifier: workspace:*
+        version: link:../shared-utils
+      '@nestjs/common':
+        specifier: ^11.1.27
+        version: 11.1.27(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.42
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.6
+        version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.48.0)
+
   tools/content-planner:
     dependencies:
       '@creator-hub/shared-types':
@@ -1770,6 +1801,9 @@ importers:
       '@creator-hub/tts-engine':
         specifier: workspace:*
         version: link:../../../packages/tts-engine
+      '@creator-hub/voice-settings':
+        specifier: workspace:*
+        version: link:../../../packages/voice-settings
       '@nestjs/common':
         specifier: ^11.1.27
         version: 11.1.27(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)

@@ -59,7 +59,6 @@
     "@nestjs/swagger": "^11.4.5",
     "@nestjs/throttler": "^6.0.0",
     "@nestjs/websockets": "^11.1.27",
-    "@nestjs/mapped-types": "^2.1.1",
     "@sentry/nestjs": "^10.63.0",
     "@sentry/node": "^10.63.0",
     "@sentry/profiling-node": "^10.63.0",
@@ -78,6 +77,7 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
+    "@nestjs/mapped-types": "^2.1.1",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.1.27",
     "@repo/typescript-config": "workspace:*",

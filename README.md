@@ -17,8 +17,8 @@ Creator Hub is a platform where content creators can access AI-powered tools to 
 - **Script Writer** — AI-powered structured video scripts for YouTube, TikTok, Instagram Reels. Multi-platform, multi-tone, with visual cues and streaming generation.
 - **AI Chat** — AI assistant with streaming, dynamic tool routing and integrated actions (opens tools directly from chat)
 - **Content Planner** — Calendar for video production. Plan a video from its publish date and every step (ideation, scripting, recording, editing, thumbnail, publishing) is scheduled backwards, one per day. Week (drag & drop to reschedule), month and agenda views, custom session types (created from the session dialog), overlap warnings, calendar-wide totals, per-video progress. Free (no credits).
-  - **Plan with AI** — describe the video (type it, dictate it or attach PDF/DOCX/TXT/JSON/MD files), pick any active text model and the assistant rates its complexity, estimates the steps and their time from your past productions (vector search), suggests a platform tool for each step with its intention (Script Writer, Thumbnail Generator, Video Generator…, one click opens it pre-filled) and fills the calendar. Costs the model's credits (set in Admin → AI Models); voice input is billed per minute.
-- **Robotina — AI Voice Assistant** — Talk with Robotina about any topic with fluid, real-time voice. Speak in English, Spanish or Portuguese (Deepgram Nova-3 STT, 1 cr/min) and she answers out loud in your language with Deepgram Aura-2 — Andromeda (American), Celeste (Colombian) or Bianca (Brazilian), picked automatically. The voice starts with the first sentence while the model still writes; tap to interrupt her; conversation mode listens again after each answer. Pick any active text model (same settings panel as Post to X); the voice is fixed. 1 credit per reply (1 cr per started minute when spoken). She can also act for you: ask her to schedule a plan ("record the unboxing tomorrow from 3 to 4") and she asks for any missing detail (name, date, start, end), creates the session in your Content Planner in real time and confirms it — or tells you what's already on your agenda. Also on the dashboard as an animated orb widget. See ARCHITECTURE.md §14g.
+  - **Plan with AI** — describe the video (type it, dictate it or attach PDF/DOCX/TXT/JSON/MD files), pick any active text model and the assistant rates its complexity, estimates the steps and their time from your past productions (vector search), suggests a platform tool for each step with its intention (Script Writer, Thumbnail Generator, Video Generator…, one click opens it pre-filled) and fills the calendar. Costs the model's credits (set in Admin → AI Models); voice input is billed per second (Admin → Voice).
+- **Robotina — AI Voice Assistant** — Talk with Robotina about any topic with fluid, real-time voice. Speak in English, Spanish or Portuguese (Deepgram Nova-3 STT, 1 cr/s by default) and she answers out loud in your language with Deepgram Aura — by default Andromeda (American), Celeste (Colombian) or Bianca (Brazilian), picked automatically; the voice of each language is set in Admin → Voice. The voice starts with the first sentence while the model still writes; tap to interrupt her; conversation mode listens again after each answer. Pick any active text model (same settings panel as Post to X); users don't pick the voice. 1 credit per written reply; spoken replies cost their seconds of speech (2 cr/s by default, Admin → Voice). Admins can limit the Free plan to some minutes with her (monthly or in total); then Free users are invited to upgrade for unlimited use. She can also act for you, with full control of your Content Planner: see your agenda and video projects, schedule a plan ("record the unboxing tomorrow from 3 to 4" — she asks for any missing detail), move or edit sessions ("move it to 5 pm", "mark it done"), create and edit video projects, and delete sessions or projects (always after asking you to confirm). Also on the dashboard as an animated orb widget. See ARCHITECTURE.md §14g.
 
 **Dashboard:**
 
@@ -67,7 +67,8 @@ creator-hub/
 │   ├── ai-engine/            # Multi-provider AI abstraction (tier-aware) + streaming
 │   ├── email/                # Provider-agnostic email (Resend, Handlebars templates)
 │   ├── stt-engine/           # Speech-to-text streaming (Deepgram, Mock)
-│   ├── tts-engine/           # Text-to-speech (Deepgram Aura-2, Mock) — Robotina's voice
+│   ├── tts-engine/           # Text-to-speech (Deepgram Aura, Mock) — Robotina's voice
+│   ├── voice-settings/       # Admin → Voice: STT model, TTS voice per language, prices per second
 │   ├── billing/              # Credit system (currentCredits as single source of truth)
 │   ├── storage/              # R2/MinIO abstraction
 │   ├── analytics/            # Usage tracking
@@ -404,8 +405,8 @@ AI providers are managed from the database (`Provider` table). The runtime regis
 | **Z-Image-Turbo**     | `Tongyi-MAI/Z-Image-Turbo`     | 1024x1024, 1280x720, 720x1280, etc. | 1 cr     |
 | **SiliconFlow**       | `black-forest-labs/FLUX.2-pro` | 1024x1024 (ignores image_size)      | 1 cr     |
 | **DeepSeek V4 Flash** | `deepseek-ai/DeepSeek-V4`      | Text generation / translation       | 5 cr     |
-| **Deepgram (STT)**    | Nova-3                         | Speech-to-text (streaming)          | 1 cr/min |
-| **Deepgram (TTS)**    | Aura-2                         | Text-to-speech (Robotina's voice)   | 1 cr/min |
+| **Deepgram (STT)**    | Nova-3                         | Speech-to-text (streaming)          | 1 cr/sec |
+| **Deepgram (TTS)**    | Aura-2                         | Text-to-speech (Robotina's voice)   | 2 cr/sec |
 
 ### Paid Providers (tier: pro)
 
@@ -663,13 +664,20 @@ POST   /api/v1/admin/models                   # "Add model" by hand (isCustom; s
 PUT    /api/v1/admin/models/:id/config        # Active, credit cost, margin, tier, task type
 DELETE /api/v1/admin/models/:id               # Delete a hand-added model (synced ones can only be deactivated)
 POST   /api/v1/admin/models/sync              # Sync models from OpenRouter / SiliconFlow
+
+GET    /api/v1/admin/voice-settings           # Voice: Deepgram STT model, voice per language, prices per second
+PUT    /api/v1/admin/voice-settings           # Save them (validated like the admin form)
+POST   /api/v1/admin/voice-settings/preview   # Hear a voice ({ language, voice } → base64 audio, not billed)
+GET    /api/v1/voice/pricing                  # (users) prices per second + voice of each language + Free plan minutes
+GET    /api/v1/voice/allowance                # (users) Free plan minutes with Robotina left / used up
 ```
 
 **Features:**
 
 - Dashboard with metrics and charts
 - AI provider management (tier, cost, model, tasks)
-- AI models: sync from providers or **add a model by hand** (text, image, video, embedding, speech-to-text). The credit cost is what users pay: per use for text/image/video (e.g. the AI Planner's analysis), per run for the embedding model of the AI Planner's knowledge search (0 = free), per minute of voice input for the active speech-to-text model (default 1)
+- AI models: sync from providers or **add a model by hand** (text, image, video, embedding). The credit cost is what users pay: per use for text/image/video (e.g. the AI Planner's analysis), per run for the embedding model of the AI Planner's knowledge search (0 = free)
+- **Voice (STT & TTS)**: the Deepgram speech-to-text model (Nova-3 multilingual by default), the Aura voice ("actor") of English, Spanish and Portuguese — from the catalog or typed as a Deepgram id, with a Play button to hear it — and the prices in **credits per second**: voice input (default 1 cr/s) and Robotina's speech (default 2 cr/s). Every started second counts; a recording or a spoken reply never goes beyond the user's balance. Optional **Free plan limit**: minutes with Robotina (their voice + hers, e.g. 10 or 20) every month or once in total — when they're used up, Free users see an invitation to upgrade for unlimited use
 - User management with soft delete (`isActive`)
 - User credits are read-only in the admin panel
 - Protection: cannot deactivate the last admin or oneself
@@ -1104,6 +1112,12 @@ Emit    stt:end → { sessionId }                          # End session and bil
 On      stt:transcript → { transcript, isFinal }         # Partial/final transcript
 On      stt:done → { sessionId, transcript, durationMs } # Session completed
 On      stt:error → { code, message }                    # Error or insufficient credits
+# Current payloads: stt:start/stt:end carry { requestId } and every stt:*
+# event of that session echoes it (stt:started, stt:partial {text, isFinal},
+# stt:utterance_end, stt:result {fullTranscript, credits}, stt:error codes
+# incl. PROVIDER_CLOSED, STREAM_ERROR, SESSION_LOST) — ARCHITECTURE.md §7
+# Billed per second (Admin → Voice); when the balance runs out the server
+# ends the recording: stt:result {…, endedBy: "credit-limit"}
 
 GET    /api/v1/credits/balance        # Balance (balance = currentCredits, plan)
 GET    /api/v1/credits/marketing-events  # User marketing events

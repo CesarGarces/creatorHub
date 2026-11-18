@@ -1,10 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 import type {
+  STTCloseReason,
   STTSessionInfo,
   STTFinalResult,
   STTProviderName,
 } from "@creator-hub/shared-types";
-import { STT_CREDITS_PER_MINUTE } from "@creator-hub/shared-types";
+import { voiceCredits } from "@creator-hub/shared-types";
 import { STTSessionManager } from "./stt-session.manager";
 import { STTProviderRegistry } from "./providers/stt-provider.registry";
 
@@ -27,47 +28,59 @@ export class STTEngineService {
     client: MinimalSocket,
     provider?: STTProviderName,
     language?: string,
+    requestId?: string,
+    model?: string,
   ): STTSessionInfo {
     return this.sessionManager.createSession(
       userId,
       client,
       provider,
       language,
+      requestId,
+      model,
     );
   }
 
-  async endSession(clientId: string): Promise<STTFinalResult | null> {
-    const session = this.sessionManager.getSession(clientId);
+  /**
+   * Ends the socket's session gracefully: the provider transcribes what it
+   * still holds and the full transcript is returned (with the session's
+   * `requestId`). The session is detached first, so a new one can start
+   * meanwhile without being closed by this one.
+   */
+  async endSession(
+    clientId: string,
+  ): Promise<(STTFinalResult & { requestId?: string }) | null> {
+    const session = this.sessionManager.takeSession(clientId);
     if (!session) return null;
 
     try {
       const result = await session.stream.end();
-      await this.sessionManager.closeSession(clientId);
-      return result;
+      return { ...result, requestId: session.requestId };
     } catch (error) {
       this.logger.error("Error ending STT session", {
         error: (error as Error).message,
       });
-      await this.sessionManager.closeSession(clientId);
       return null;
+    } finally {
+      try {
+        session.stream.close();
+      } catch {
+        /* ignore */
+      }
+      this.sessionManager.logClosed(session, "ended-by-client");
     }
   }
 
-  async closeSession(clientId: string): Promise<void> {
-    await this.sessionManager.closeSession(clientId);
+  async closeSession(clientId: string, reason?: STTCloseReason): Promise<void> {
+    await this.sessionManager.closeSession(clientId, reason);
   }
 
   /**
-   * Credits for a session: started minutes × rate. The rate is admin
-   * configurable (an active "speech-to-text" model in Admin → AI Models);
-   * callers pass it in, the default is STT_CREDITS_PER_MINUTE.
+   * Credits for a session: every started second × the price per second
+   * (Admin → Voice), rounded up to whole credits. See `voiceCredits`.
    */
-  calculateCredits(
-    durationMs: number,
-    creditsPerMinute: number = STT_CREDITS_PER_MINUTE,
-  ): number {
-    if (creditsPerMinute <= 0) return 0;
-    return Math.max(1, Math.ceil(durationMs / 60_000) * creditsPerMinute);
+  calculateCredits(durationMs: number, creditsPerSecond: number): number {
+    return voiceCredits(durationMs, creditsPerSecond);
   }
 
   hasActiveSession(clientId: string): boolean {

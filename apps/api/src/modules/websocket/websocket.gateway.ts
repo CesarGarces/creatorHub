@@ -15,11 +15,18 @@ import { STTEngineService } from "@creator-hub/stt-engine";
 import { CreditService } from "@creator-hub/billing";
 import { PlatformUsageLogger } from "@creator-hub/analytics";
 import {
+  VoiceAllowanceService,
+  VoiceSettingsService,
+} from "@creator-hub/voice-settings";
+import {
+  FREE_VOICE_LIMIT_CODE,
+  FREE_VOICE_LIMIT_MESSAGE,
+  MAX_STT_SESSION_MS,
   MIN_CREDITS_FOR_STT,
+  voiceSecondsAffordable,
   type STTProviderName,
 } from "@creator-hub/shared-types";
 import * as Sentry from "@sentry/nestjs";
-import { getSttCreditsPerMinute } from "./stt-pricing";
 
 const allowedOrigins = [
   process.env.FRONTEND_URL || "http://localhost:3000",
@@ -36,12 +43,28 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server!: Server;
 
   private logger = new Logger("AppGateway");
+  /**
+   * Price of each socket's live STT session, locked at start, and the
+   * timer that ends it when the balance runs out.
+   */
+  private billing = new Map<
+    string,
+    {
+      rate: number;
+      maxMs: number;
+      timer: ReturnType<typeof setTimeout> | null;
+      /** Robotina session of a limited Free user: its time is counted. */
+      countFreeTime: boolean;
+    }
+  >();
 
   constructor(
     private jwtService: JwtService,
     private sttEngine: STTEngineService,
     private creditService: CreditService,
     private usageLogger: PlatformUsageLogger,
+    private voiceSettings: VoiceSettingsService,
+    private voiceAllowance: VoiceAllowanceService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -167,12 +190,13 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = client.data?.userId;
     this.logger.log(`Client disconnected`, { userId, socketId: client.id });
 
+    this.clearBilling(client.id);
     if (this.sttEngine.hasActiveSession(client.id)) {
       this.logger.log("Cleaning up STT session on disconnect", {
         userId,
         clientId: client.id,
       });
-      await this.sttEngine.closeSession(client.id);
+      await this.sttEngine.closeSession(client.id, "client-disconnected");
     }
   }
 
@@ -180,14 +204,27 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleSTTStart(
     @ConnectedSocket() client: Socket,
     @MessageBody()
-    data: { language?: string; provider?: STTProviderName },
+    data: {
+      language?: string;
+      provider?: STTProviderName;
+      requestId?: string;
+      /** "voice-assistant": Robotina's ears (Free plan minutes apply). */
+      purpose?: string;
+    },
   ) {
+    // Echoed in every stt:* event of this session (see STTSessionManager).
+    const requestId =
+      typeof data?.requestId === "string" && data.requestId.length <= 64
+        ? data.requestId
+        : undefined;
+    const withId = (payload: Record<string, unknown>) =>
+      requestId ? { ...payload, requestId } : payload;
     const userId = client.data?.userId;
     if (!userId) {
-      client.emit("stt:error", {
-        code: "UNAUTHORIZED",
-        message: "Not authenticated",
-      });
+      client.emit(
+        "stt:error",
+        withId({ code: "UNAUTHORIZED", message: "Not authenticated" }),
+      );
       return;
     }
 
@@ -196,20 +233,45 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         userId,
         clientId: client.id,
       });
-      await this.sttEngine.closeSession(client.id);
+      this.clearBilling(client.id);
+      await this.sttEngine.closeSession(client.id, "replaced-by-new-session");
     }
 
-    const user = client.data?.user;
-    if (user) {
-      const totalCredits = user.currentCredits || 0;
-      if (totalCredits < MIN_CREDITS_FOR_STT) {
-        client.emit("stt:error", {
+    // Model and price per second: Admin → Voice (STT & TTS).
+    const settings = await this.voiceSettings.get();
+    const rate = settings.stt.creditsPerSecond;
+    const balance = await this.currentBalance(client, userId);
+    const affordableMs = voiceSecondsAffordable(balance, rate) * 1000;
+    if (balance < MIN_CREDITS_FOR_STT || affordableMs < 1000) {
+      client.emit(
+        "stt:error",
+        withId({
           code: "INSUFFICIENT_CREDITS",
           message: `You need at least ${MIN_CREDITS_FOR_STT} credits to use voice recording`,
-        });
-        return;
-      }
+        }),
+      );
+      return;
     }
+
+    // Robotina: the Free plan's minutes with her (Admin → Voice).
+    const forAssistant = data?.purpose === "voice-assistant";
+    const allowance = forAssistant
+      ? await this.voiceAllowance.get(userId)
+      : null;
+    if (allowance?.exhausted) {
+      client.emit(
+        "stt:error",
+        withId({
+          code: FREE_VOICE_LIMIT_CODE,
+          message: FREE_VOICE_LIMIT_MESSAGE,
+        }),
+      );
+      return;
+    }
+    const freeMs =
+      allowance?.remainingSeconds != null
+        ? allowance.remainingSeconds * 1000
+        : Infinity;
 
     try {
       const session = this.sttEngine.startSession(
@@ -217,17 +279,47 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client,
         data?.provider,
         data?.language,
+        requestId,
+        settings.stt.model,
       );
 
-      client.emit("stt:started", {
-        sessionId: session.sessionId,
-        language: session.language,
+      // The balance (or the Free plan's minutes left) pays for fewer
+      // seconds than the 3-minute limit: the recording ends (and is billed)
+      // when they run out.
+      const limitMs = Math.min(affordableMs, freeMs);
+      const limitedBy = freeMs < affordableMs ? "free-limit" : "credit-limit";
+      const maxMs = Math.min(limitMs, MAX_STT_SESSION_MS);
+      const timer =
+        limitMs < MAX_STT_SESSION_MS
+          ? setTimeout(() => {
+              this.logger.log(`STT session reached the ${limitedBy}`, {
+                userId,
+                clientId: client.id,
+                maxMs,
+              });
+              void this.finishSession(client, requestId, limitedBy);
+            }, limitMs)
+          : null;
+      timer?.unref?.();
+      this.billing.set(client.id, {
+        rate,
+        maxMs,
+        timer,
+        countFreeTime: !!allowance?.limited,
       });
+
+      client.emit(
+        "stt:started",
+        withId({ sessionId: session.sessionId, language: session.language }),
+      );
 
       this.logger.log("STT session started via gateway", {
         userId,
         sessionId: session.sessionId,
         clientId: client.id,
+        model: settings.stt.model,
+        creditsPerSecond: rate,
+        maxMs,
       });
 
       // Breadcrumb: STT session started
@@ -242,13 +334,17 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
           clientId: client.id,
           language: session.language,
           provider: data?.provider,
+          model: settings.stt.model,
         },
       });
     } catch (error) {
-      client.emit("stt:error", {
-        code: "START_FAILED",
-        message: (error as Error).message || "Failed to start recording",
-      });
+      client.emit(
+        "stt:error",
+        withId({
+          code: "START_FAILED",
+          message: (error as Error).message || "Failed to start recording",
+        }),
+      );
 
       // Breadcrumb: STT session failed to start
       Sentry.addBreadcrumb({
@@ -275,19 +371,56 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage("stt:end")
-  async handleSTTEnd(@ConnectedSocket() client: Socket) {
+  async handleSTTEnd(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data?: { requestId?: string },
+  ) {
+    const requestId =
+      typeof data?.requestId === "string" ? data.requestId : undefined;
+    await this.finishSession(client, requestId);
+  }
+
+  /**
+   * Ends the socket's session gracefully — the user stopped, or the balance
+   * ran out (`endedBy: "credit-limit"`) — then bills the seconds recorded
+   * and sends the transcript.
+   */
+  private async finishSession(
+    client: Socket,
+    requestId?: string,
+    endedBy?: "credit-limit" | "free-limit",
+  ) {
     const userId = client.data?.userId;
+    const billing = this.billing.get(client.id);
+    this.clearBilling(client.id);
     if (!this.sttEngine.hasActiveSession(client.id)) {
+      // Already gone (provider closed it, the socket reconnected…): say so
+      // instead of leaving the client waiting for a result.
+      this.logger.warn("stt:end without an active session", {
+        userId,
+        clientId: client.id,
+        requestId,
+      });
+      client.emit("stt:error", {
+        code: "SESSION_LOST",
+        message: "The voice session was lost",
+        ...(requestId ? { requestId } : {}),
+      });
       return;
     }
 
     const result = await this.sttEngine.endSession(client.id);
 
     if (result) {
-      const credits = this.sttEngine.calculateCredits(
+      // Price locked when the session started; never beyond what the
+      // balance paid for (the credit-limit timer fires a few ms late).
+      const rate =
+        billing?.rate ?? (await this.voiceSettings.get()).stt.creditsPerSecond;
+      const billedMs = Math.min(
         result.durationMs,
-        await getSttCreditsPerMinute(),
+        billing?.maxMs ?? MAX_STT_SESSION_MS,
       );
+      const credits = this.sttEngine.calculateCredits(billedMs, rate);
 
       // Breadcrumb: STT session ended
       Sentry.addBreadcrumb({
@@ -301,6 +434,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
           durationMs: result.durationMs,
           wordCount: result.wordCount,
           credits,
+          endedBy,
         },
       });
 
@@ -310,7 +444,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
             userId,
             credits,
             "speech-to-text",
-            `STT session (${result.wordCount} words, ${(result.durationMs / 1000).toFixed(1)}s)`,
+            `STT session (${result.wordCount} words, ${(billedMs / 1000).toFixed(1)}s)`,
           );
 
           if (deducted) {
@@ -342,11 +476,18 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
 
+      // Time with Robotina counts towards the Free plan's minutes.
+      if (userId && billing?.countFreeTime) {
+        await this.voiceAllowance.record(userId, billedMs);
+      }
+
       client.emit("stt:result", {
         fullTranscript: result.fullTranscript,
         durationMs: result.durationMs,
         wordCount: result.wordCount,
         credits,
+        ...(endedBy ? { endedBy } : {}),
+        ...(result.requestId ? { requestId: result.requestId } : {}),
       });
 
       this.logger.log("STT session ended", {
@@ -355,6 +496,8 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         durationMs: result.durationMs,
         wordCount: result.wordCount,
         credits,
+        creditsPerSecond: rate,
+        endedBy: endedBy ?? "client",
       });
 
       // Platform usage log
@@ -364,9 +507,34 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         duration: result.durationMs,
         success: true,
         credits,
-        metadata: { wordCount: result.wordCount, provider: "deepgram" },
+        metadata: {
+          wordCount: result.wordCount,
+          provider: "deepgram",
+          endedBy,
+        },
+      });
+    } else {
+      client.emit("stt:error", {
+        code: "SESSION_LOST",
+        message: "The voice session was lost",
+        ...(requestId ? { requestId } : {}),
       });
     }
+  }
+
+  /** Fresh balance (the one cached on the socket is from connect time). */
+  private async currentBalance(client: Socket, userId: string) {
+    try {
+      return await this.creditService.getBalance(userId);
+    } catch {
+      return Number(client.data?.user?.currentCredits ?? 0);
+    }
+  }
+
+  private clearBilling(clientId: string) {
+    const billing = this.billing.get(clientId);
+    if (billing?.timer) clearTimeout(billing.timer);
+    this.billing.delete(clientId);
   }
 
   emitToUser(userId: string, event: string, data: unknown) {

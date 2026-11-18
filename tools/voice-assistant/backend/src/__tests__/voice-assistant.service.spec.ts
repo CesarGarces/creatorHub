@@ -6,7 +6,9 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import {
+  DEFAULT_VOICE_SETTINGS,
   ttsVoiceFor,
+  type VoiceSettings,
   type AIStreamChunk,
   type TTSSynthesizeParams,
   type VoiceAssistantEvent,
@@ -57,6 +59,11 @@ interface SetupOptions {
   ttsAvailable?: boolean;
   synthesize?: (params: TTSSynthesizeParams) => Promise<unknown>;
   onYield?: (i: number) => void;
+  /** Admin → Voice settings (defaults: Aura-2 voices, 2 credits/s). */
+  settings?: VoiceSettings;
+  balance?: number;
+  /** Free plan seconds left with Robotina (null: unlimited). */
+  freeSecondsLeft?: number | null;
 }
 
 function setup(options: SetupOptions = {}) {
@@ -90,7 +97,7 @@ function setup(options: SetupOptions = {}) {
   const credits = {
     hasEnoughCredits: vi.fn(async () => true),
     deduct: vi.fn(async () => true),
-    getBalance: vi.fn(async () => 41),
+    getBalance: vi.fn(async () => options.balance ?? 41),
   };
   const usage = { logUsage: vi.fn(async () => undefined) };
   const tts = {
@@ -98,11 +105,11 @@ function setup(options: SetupOptions = {}) {
     voiceFor: vi.fn((language: string) => ttsVoiceFor(language)),
     synthesize: vi.fn(
       options.synthesize ??
-        (async ({ text: said, language }: TTSSynthesizeParams) => ({
+        (async ({ text: said, language, voice }: TTSSynthesizeParams) => ({
           audio: Buffer.from(said),
           mimeType: "audio/mpeg",
           durationMs: said.length * 50,
-          voice: ttsVoiceFor(language).model,
+          voice: voice ?? ttsVoiceFor(language).model,
           provider: "deepgram",
         })),
     ),
@@ -113,11 +120,30 @@ function setup(options: SetupOptions = {}) {
       { id: "voice-assistant", name: "Robotina", description: "Me" },
     ]),
   };
+  const voiceSettings = {
+    get: vi.fn(async () => options.settings ?? DEFAULT_VOICE_SETTINGS),
+  };
+  // Free plan minutes with Robotina (default: unlimited).
+  const freeLeft = options.freeSecondsLeft ?? null;
+  const allowance = {
+    get: vi.fn(async () => ({
+      limited: freeLeft !== null,
+      period: "monthly",
+      limitSeconds: freeLeft === null ? null : 600,
+      usedSeconds: freeLeft === null ? 0 : 600 - freeLeft,
+      remainingSeconds: freeLeft,
+      exhausted: freeLeft === 0,
+      resetsAt: null,
+    })),
+    record: vi.fn(async () => undefined),
+  };
   const service = new VoiceAssistantService(
     providers as never,
     credits as never,
     usage as never,
     tts as never,
+    voiceSettings as never,
+    allowance as never,
     tools as never,
     options.registry as never,
   );
@@ -143,7 +169,17 @@ function setup(options: SetupOptions = {}) {
   prismaMock.voiceMessage.delete.mockResolvedValue({});
   prismaMock.voiceMessage.findMany.mockResolvedValue([]);
 
-  return { service, provider, providers, credits, usage, tts, tools };
+  return {
+    service,
+    provider,
+    providers,
+    credits,
+    usage,
+    tts,
+    tools,
+    voiceSettings,
+    allowance,
+  };
 }
 
 function input(overrides: Partial<ReplyInput> = {}) {
@@ -235,7 +271,7 @@ describe("VoiceAssistantService.reply — spoken", () => {
     });
   });
 
-  it("saves both messages and charges 1 credit for up to a minute of speech", async () => {
+  it("saves both messages and charges its seconds of speech (2 cr/s)", async () => {
     const { service, credits } = setup();
     const { input: req, events } = input();
 
@@ -255,7 +291,7 @@ describe("VoiceAssistantService.reply — spoken", () => {
       spoken: true,
       voice: "aura-2-celeste-es",
       audioMs: 27 * 50,
-      creditsCharged: 1,
+      creditsCharged: 4, // 1.35 s → 2 started seconds × 2 credits
       interrupted: false,
       modelId: MODEL.modelId,
     });
@@ -265,7 +301,7 @@ describe("VoiceAssistantService.reply — spoken", () => {
     });
     expect(credits.deduct).toHaveBeenCalledWith(
       "u1",
-      1,
+      4,
       "voice-assistant",
       "Robotina: Hola! ¿En qué te ayudo hoy?",
     );
@@ -275,36 +311,89 @@ describe("VoiceAssistantService.reply — spoken", () => {
       content: "Hola! ¿En qué te ayudo hoy?",
       language: "es",
       audioMs: 1350,
-      credits: 1,
+      credits: 4,
       balance: 41,
     });
   });
 
-  it("charges 1 credit per started minute of speech", async () => {
-    const { service, credits } = setup({
-      synthesize: async ({ text: said }) => ({
+  it("speaks with the voice and price set in Admin → Voice", async () => {
+    const { service, credits, tts } = setup({
+      settings: {
+        ...DEFAULT_VOICE_SETTINGS,
+        tts: {
+          ...DEFAULT_VOICE_SETTINGS.tts,
+          creditsPerSecond: 0.5,
+          voices: {
+            ...DEFAULT_VOICE_SETTINGS.tts.voices,
+            en: { model: "aura-2", voice: "aura-2-orion-en" },
+          },
+        },
+      },
+      balance: 1000,
+      synthesize: async ({ text: said, voice }) => ({
         audio: Buffer.from(said),
         mimeType: "audio/mpeg",
         durationMs: 95_000,
-        voice: "aura-2-andromeda-en",
+        voice: voice!,
         provider: "deepgram",
       }),
       chunks: text("Hello there, how are you doing today?"),
     });
-    const { input: req } = input({ content: "Hello, how are you?" });
+    const { input: req, events } = input({ content: "Hello, how are you?" });
 
     await service.reply(req);
 
+    expect(tts.synthesize).toHaveBeenCalledWith(
+      expect.objectContaining({ language: "en", voice: "aura-2-orion-en" }),
+    );
+    expect(ofType(events, "start")[0]!.voice).toEqual({
+      model: "aura-2-orion-en",
+      name: "Orion",
+    });
+    // 95 s × 0.5 credits per second = 47.5 → 48.
     expect(credits.deduct).toHaveBeenCalledWith(
       "u1",
-      2,
+      48,
       "voice-assistant",
       expect.any(String),
     );
     expect(assistantRow()).toMatchObject({
-      voice: "aura-2-andromeda-en",
-      creditsCharged: 2,
+      voice: "aura-2-orion-en",
+      creditsCharged: 48,
     });
+  });
+
+  it("only speaks what the balance pays for, then goes on in text", async () => {
+    const { service, credits } = setup({
+      balance: 5, // 2 s of speech at 2 credits per second
+      chunks: text("First sentence here. ", "Second sentence there."),
+      synthesize: async ({ text: said, voice }) => ({
+        audio: Buffer.from(said),
+        mimeType: "audio/mpeg",
+        durationMs: 1_500,
+        voice: voice!,
+        provider: "deepgram",
+      }),
+    });
+    const { input: req, events } = input({ content: "Tell me two things" });
+
+    await service.reply(req);
+
+    expect(ofType(events, "audio")).toHaveLength(1);
+    expect(ofType(events, "audio_error")[0]).toMatchObject({
+      reason: "credits",
+    });
+    expect(assistantRow()).toMatchObject({
+      content: "First sentence here. Second sentence there.",
+      audioMs: 1_500,
+      creditsCharged: 4,
+    });
+    expect(credits.deduct).toHaveBeenCalledWith(
+      "u1",
+      4,
+      "voice-assistant",
+      expect.any(String),
+    );
   });
 
   it("speaks while the model is still writing, segments in order", async () => {
@@ -624,8 +713,57 @@ describe("VoiceAssistantService.reply — refusals and failures", () => {
     expect(prismaMock.voiceConversation.delete).not.toHaveBeenCalled();
   });
 
+  it("refuses a Free user whose minutes with her are used up (upgrade)", async () => {
+    const { service, provider, credits } = setup({ freeSecondsLeft: 0 });
+    const { input: req } = input();
+    const error = await service.reply(req).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ForbiddenException);
+    expect((error as ForbiddenException).getResponse()).toMatchObject({
+      code: "FREE_LIMIT_REACHED",
+    });
+    expect((error as Error).message).toMatch(/free minutes/);
+    expect(prismaMock.voiceMessage.create).not.toHaveBeenCalled();
+    expect(provider.generateStream).not.toHaveBeenCalled();
+    expect(credits.deduct).not.toHaveBeenCalled();
+  });
+
+  it("speaks only the Free minutes left, then text; her voice is counted", async () => {
+    const { service, allowance } = setup({
+      freeSecondsLeft: 2,
+      balance: 1000,
+      chunks: text("First sentence here. ", "Second sentence there."),
+      synthesize: async ({ text: said, voice }) => ({
+        audio: Buffer.from(said),
+        mimeType: "audio/mpeg",
+        durationMs: 1_500,
+        voice: voice!,
+        provider: "deepgram",
+      }),
+    });
+    const { input: req, events } = input({ content: "Tell me two things" });
+
+    await service.reply(req);
+
+    expect(ofType(events, "audio")).toHaveLength(1);
+    expect(ofType(events, "audio_error")[0]).toMatchObject({
+      reason: "free-limit",
+    });
+    expect(allowance.record).toHaveBeenCalledWith("u1", 1_500);
+  });
+
+  it("doesn't count the time of unlimited users", async () => {
+    const { service, allowance } = setup();
+    const { input: req } = input();
+    await service.reply(req);
+    expect(allowance.record).not.toHaveBeenCalled();
+  });
+
   it("takes what is left when the balance no longer covers the reply", async () => {
     const { service, credits } = setup({
+      settings: {
+        ...DEFAULT_VOICE_SETTINGS,
+        tts: { ...DEFAULT_VOICE_SETTINGS.tts, creditsPerSecond: 0.02 },
+      },
       synthesize: async () => ({
         audio: Buffer.from("x"),
         mimeType: "audio/mpeg",
@@ -635,7 +773,12 @@ describe("VoiceAssistantService.reply — refusals and failures", () => {
       }),
     });
     credits.deduct.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
-    credits.getBalance.mockResolvedValueOnce(2).mockResolvedValue(0);
+    // 100 when she starts talking (enough), 2 by the time she is charged
+    // (spent elsewhere meanwhile), 0 after.
+    credits.getBalance
+      .mockResolvedValueOnce(100)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValue(0);
     const { input: req, events } = input();
 
     await service.reply(req);
@@ -928,7 +1071,7 @@ describe("VoiceAssistantService.reply — actions", () => {
           data: CREATED,
         }),
       ],
-      creditsCharged: 1,
+      creditsCharged: 8, // spoken: 3.45 s → 4 started seconds × 2 cr/s
     });
     expect(credits.deduct).toHaveBeenCalledTimes(1);
   });
@@ -981,7 +1124,7 @@ describe("VoiceAssistantService.reply — actions", () => {
     });
   });
 
-  it("runs at most 3 actions in one reply", async () => {
+  it("runs at most 4 actions in one reply", async () => {
     const { registry, execute } = registryWith();
     const { service, provider } = setup({
       registry,
@@ -991,8 +1134,8 @@ describe("VoiceAssistantService.reply — actions", () => {
 
     await service.reply(req);
 
-    expect(execute).toHaveBeenCalledTimes(3);
-    expect(provider.generateStream).toHaveBeenCalledTimes(4);
+    expect(execute).toHaveBeenCalledTimes(4);
+    expect(provider.generateStream).toHaveBeenCalledTimes(5);
   });
 
   it("keeps the reply when the model fails after the event was created", async () => {
@@ -1237,5 +1380,210 @@ describe("VoiceAssistantService.reply — she said she'd do it but didn't", () =
     const noActions = setup({ rounds: [text("Un momento, lo busco.")] });
     await noActions.service.reply(input({ content: "¿Tengo planes?" }).input);
     expect(noActions.provider.generateStream).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("VoiceAssistantService.reply — deleting needs the user's confirmation", () => {
+  const DELETE =
+    '<action>{"name":"calendar.delete_event","args":{"eventId":"ev1"}}</action>';
+  const PREVIEW = {
+    kind: "calendar-event" as const,
+    change: "deleted" as const,
+    event: {
+      id: "ev1",
+      title: "Grabar",
+      type: "RECORDING",
+      startAt: "2026-11-28T20:00:00.000Z",
+      endAt: "2026-11-28T21:00:00.000Z",
+    },
+    conflicts: [],
+    url: "/tools/content-planner",
+  };
+
+  function deleteRegistry() {
+    const registry = new AssistantActionRegistry();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const execute = vi.fn(async () => ({
+      ok: true,
+      summary: 'Deleted "Grabar" Saturday 15:00–16:00.',
+      data: PREVIEW,
+    }));
+    const describe_ = vi.fn(async () => ({
+      ok: true,
+      summary: 'Would delete "Grabar" Saturday 15:00–16:00 for good.',
+      data: PREVIEW,
+    }));
+    registry.register({
+      name: "calendar.delete_event",
+      toolId: "content-planner",
+      description: "Delete a session",
+      mutates: true,
+      requiresConfirmation: true,
+      parameters: [
+        { name: "eventId", type: "string", required: true, description: "" },
+      ],
+      describe: describe_,
+      execute,
+    });
+    return { registry, execute, describe: describe_ };
+  }
+
+  const pendingRecord = (args = { eventId: "ev1" }) => ({
+    id: "a0",
+    name: "calendar.delete_event",
+    args,
+    status: "needs_confirmation",
+    summary: "NOT DONE YET",
+  });
+
+  function previousReply(actions: unknown[], minutesAgo = 1) {
+    prismaMock.voiceConversation.findFirst.mockResolvedValue({
+      id: "conv9",
+      title: "Old",
+      language: "es",
+    });
+    prismaMock.voiceMessage.findFirst.mockResolvedValue({
+      actions,
+      createdAt: new Date(Date.now() - minutesAgo * 60_000),
+    });
+  }
+
+  it("the first request only previews and asks the user", async () => {
+    const { registry, execute, describe: describe_ } = deleteRegistry();
+    const { service, provider } = setup({
+      registry,
+      rounds: [
+        text(DELETE),
+        text('¿Seguro que borro "Grabar" del sábado a las tres?'),
+      ],
+    });
+    const { input: req, events } = input({
+      content: "Borra la grabación del sábado",
+    });
+
+    await service.reply(req);
+
+    expect(describe_).toHaveBeenCalledTimes(1);
+    expect(execute).not.toHaveBeenCalled();
+    expect(ofType(events, "action")[1]).toMatchObject({
+      status: "needs_confirmation",
+      data: PREVIEW,
+    });
+    const second = provider.generateStream!.mock.calls[1]![0] as {
+      prompt: string;
+    };
+    expect(second.prompt).toMatch(
+      /^ACTION RESULT \(calendar\.delete_event: needs confirmation\) — NOT DONE YET/,
+    );
+    expect(second.prompt).toContain("Now ask the user to confirm");
+    expect(assistantRow()).toMatchObject({
+      actions: [expect.objectContaining({ status: "needs_confirmation" })],
+    });
+  });
+
+  it("she can't confirm it herself in the same reply", async () => {
+    const { registry, execute } = deleteRegistry();
+    const { service } = setup({
+      registry,
+      rounds: [text(DELETE)], // keeps asking for the delete
+    });
+    const { input: req, events } = input({ content: "Borra la grabación" });
+
+    await service.reply(req);
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(
+      ofType(events, "action")
+        .filter((e) => e.status !== "running")
+        .map((e) => e.status),
+    ).toEqual([
+      "needs_confirmation",
+      "needs_confirmation",
+      "needs_confirmation",
+      "needs_confirmation",
+    ]);
+  });
+
+  it("runs after the user's yes in the next message", async () => {
+    const { registry, execute } = deleteRegistry();
+    previousReply([pendingRecord()]);
+    const { service } = setup({
+      registry,
+      rounds: [text(DELETE), text("Listo, la borré.")],
+    });
+    const { input: req, events } = input({
+      conversationId: "conv9",
+      content: "Sí",
+    });
+
+    await service.reply(req);
+
+    expect(prismaMock.voiceMessage.findFirst).toHaveBeenCalledWith({
+      where: { conversationId: "conv9", role: "assistant" },
+      orderBy: { createdAt: "desc" },
+      select: { actions: true, createdAt: true },
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(ofType(events, "action")[1]).toMatchObject({ status: "done" });
+  });
+
+  it("a yes confirms that exact action once", async () => {
+    const { registry, execute } = deleteRegistry();
+    previousReply([pendingRecord()]);
+    const { service } = setup({
+      registry,
+      rounds: [
+        text(DELETE),
+        text(DELETE), // again in the same reply: not confirmed twice
+        text("Listo."),
+      ],
+    });
+    await service.reply(
+      input({ conversationId: "conv9", content: "Sí" }).input,
+    );
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't accept a yes for something else, or an old one", async () => {
+    const other = deleteRegistry();
+    previousReply([pendingRecord({ eventId: "ev2" })]);
+    const a = setup({
+      registry: other.registry,
+      rounds: [text(DELETE), text("¿Seguro?")],
+    });
+    await a.service.reply(
+      input({ conversationId: "conv9", content: "Sí" }).input,
+    );
+    expect(other.execute).not.toHaveBeenCalled();
+
+    const stale = deleteRegistry();
+    previousReply([pendingRecord()], 20);
+    const b = setup({
+      registry: stale.registry,
+      rounds: [text(DELETE), text("¿Seguro?")],
+    });
+    await b.service.reply(
+      input({ conversationId: "conv9", content: "Sí" }).input,
+    );
+    expect(stale.execute).not.toHaveBeenCalled();
+  });
+
+  it("reports a preview that can't be made (unknown id) as failed", async () => {
+    const { registry, describe: describe_, execute } = deleteRegistry();
+    describe_.mockResolvedValueOnce({
+      ok: false,
+      summary: "No session with id ev1.",
+    });
+    const { service } = setup({
+      registry,
+      rounds: [text(DELETE), text("No la encuentro.")],
+    });
+    const { input: req, events } = input({ content: "Borra la grabación" });
+    await service.reply(req);
+    expect(ofType(events, "action")[1]).toMatchObject({
+      status: "failed",
+      summary: "No session with id ev1.",
+    });
+    expect(execute).not.toHaveBeenCalled();
   });
 });

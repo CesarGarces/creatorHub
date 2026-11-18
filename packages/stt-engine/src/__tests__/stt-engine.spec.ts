@@ -9,8 +9,9 @@ const ws = vi.hoisted(() => ({
     headers: Record<string, string>;
     readyState: number;
     sent: Buffer[];
-    send: (data: Buffer) => void;
+    send: (data: Buffer | string) => void;
     close: ReturnType<typeof vi.fn>;
+    holdCloseStream: boolean;
     emit: (event: string, ...args: unknown[]) => boolean;
   }>,
 }));
@@ -23,7 +24,7 @@ vi.mock("ws", async () => {
     readyState = 1;
     sent: Buffer[] = [];
     headers: Record<string, string>;
-    close = vi.fn(() => {
+    close = vi.fn((_code?: number, _reason?: string) => {
       this.readyState = 3;
       this.emit("close");
     });
@@ -35,8 +36,18 @@ vi.mock("ws", async () => {
       this.headers = options.headers;
       ws.sockets.push(this as never);
     }
-    send(data: Buffer) {
-      this.sent.push(data);
+    /** Like Deepgram: "hold" to delay the close that follows CloseStream. */
+    holdCloseStream = false;
+    send(data: Buffer | string) {
+      this.sent.push(data as Buffer);
+      if (
+        typeof data === "string" &&
+        data.includes('"CloseStream"') &&
+        !this.holdCloseStream
+      ) {
+        // Deepgram flushes its last results, then closes.
+        setTimeout(() => this.close(1000, ""), 0);
+      }
     }
   }
   return { default: FakeWebSocket };
@@ -55,6 +66,7 @@ function params(overrides: Partial<STTStreamParams> = {}): STTStreamParams {
     onPartialTranscript: vi.fn(),
     onUtteranceEnd: vi.fn(),
     onError: vi.fn(),
+    onUnexpectedClose: vi.fn(),
     ...overrides,
   };
 }
@@ -110,11 +122,25 @@ describe("DeepgramProvider", () => {
       sample_rate: "16000",
       channels: "1",
       model: "nova-3",
+      language: "multi",
       interim_results: "false",
       endpointing: "500",
       utterance_end_ms: "3000",
     });
     expect(socket!.headers.Authorization).toBe("Token dg-test-key");
+  });
+
+  it("uses the model set in Admin → Voice (one language unless multilingual)", () => {
+    new DeepgramProvider().createStream(
+      params({ model: "nova-2", language: "es" }),
+    );
+    new DeepgramProvider().createStream(
+      params({ model: "nova-3", language: "es" }),
+    );
+    const query = (i: number) =>
+      Object.fromEntries(new URL(ws.sockets[i]!.url).searchParams);
+    expect(query(0)).toMatchObject({ model: "nova-2", language: "es" });
+    expect(query(1)).toMatchObject({ model: "nova-3", language: "multi" });
   });
 
   it("forwards interim and final transcripts, accumulating only finals", async () => {
@@ -148,7 +174,115 @@ describe("DeepgramProvider", () => {
       language: "es",
       wordCount: 4,
     });
-    expect(socket.close).toHaveBeenCalledWith(1000, "stream ended");
+    // Graceful end: Deepgram is asked to flush, not hung up on.
+    expect(socket.sent.at(-1)).toBe('{"type":"CloseStream"}');
+  });
+
+  it("keeps the words Deepgram sends after CloseStream", async () => {
+    const p = params();
+    const stream = new DeepgramProvider().createStream(p);
+    const socket = ws.sockets[0]!;
+    socket.holdCloseStream = true;
+    const result = (text: string, isFinal: boolean) =>
+      socket.emit(
+        "message",
+        Buffer.from(
+          JSON.stringify({
+            type: "Results",
+            is_final: isFinal,
+            channel: { alternatives: [{ transcript: text }] },
+          }),
+        ),
+      );
+    result("tengo algún", false);
+
+    const ending = stream.end();
+    result("tengo algún plan mañana", true); // flushed by CloseStream
+    socket.close(1000, "");
+
+    expect((await ending).fullTranscript).toBe("tengo algún plan mañana");
+  });
+
+  it("keeps interim words that were never finalized", async () => {
+    const p = params();
+    const stream = new DeepgramProvider().createStream(p);
+    const socket = ws.sockets[0]!;
+    socket.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "Results",
+          is_final: true,
+          channel: { alternatives: [{ transcript: "hola" }] },
+        }),
+      ),
+    );
+    socket.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "Results",
+          is_final: false,
+          channel: { alternatives: [{ transcript: "qué planes tengo" }] },
+        }),
+      ),
+    );
+
+    expect((await stream.end()).fullTranscript).toBe("hola qué planes tengo");
+  });
+
+  it("closes anyway if Deepgram doesn't answer CloseStream", async () => {
+    vi.useFakeTimers();
+    try {
+      const stream = new DeepgramProvider().createStream(params());
+      const socket = ws.sockets[0]!;
+      socket.holdCloseStream = true;
+      const ending = stream.end();
+      await vi.advanceTimersByTimeAsync(3000);
+      // The wait for Deepgram is not part of the (billed) duration.
+      await expect(ending).resolves.toMatchObject({
+        fullTranscript: "",
+        durationMs: 0,
+      });
+      expect(socket.close).toHaveBeenCalledWith(1000, "stream ended");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the stream alive during pauses (KeepAlive without audio)", () => {
+    vi.useFakeTimers();
+    try {
+      const stream = new DeepgramProvider().createStream(params());
+      const socket = ws.sockets[0]!;
+      vi.advanceTimersByTime(5000);
+      expect(socket.sent).toContain('{"type":"KeepAlive"}');
+
+      socket.sent.length = 0;
+      vi.advanceTimersByTime(4000);
+      stream.writeAudioChunk(Buffer.from([1])); // speaking again
+      vi.advanceTimersByTime(1000);
+      expect(socket.sent).not.toContain('{"type":"KeepAlive"}');
+      stream.close();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reports a close it didn't ask for, and only that one", async () => {
+    const unexpected = params();
+    new DeepgramProvider().createStream(unexpected);
+    ws.sockets[0]!.emit("close", 1011, Buffer.from("NET-0001"));
+    expect(unexpected.onUnexpectedClose).toHaveBeenCalledWith({
+      code: 1011,
+      reason: "NET-0001",
+    });
+
+    const requested = params();
+    const stream = new DeepgramProvider().createStream(requested);
+    await stream.end();
+    stream.close();
+    expect(requested.onUnexpectedClose).not.toHaveBeenCalled();
   });
 
   it("reports utterance ends and provider errors, ignoring malformed frames", () => {
@@ -348,6 +482,11 @@ describe("STTSessionManager / STTEngineService", () => {
     expect(engine.hasActiveSession("socket-1")).toBe(true);
   });
 
+  it("passes the configured model to the provider", () => {
+    engine.startSession("u1", fakeClient(), undefined, "es", "r1", "nova-2");
+    expect(streamParams).toMatchObject({ model: "nova-2", language: "es" });
+  });
+
   it("forwards transcript events to the client socket", () => {
     const client = fakeClient();
     engine.startSession("u1", client);
@@ -428,6 +567,79 @@ describe("STTSessionManager / STTEngineService", () => {
     expect(engine.hasActiveSession("socket-1")).toBe(false);
   });
 
+  it("tags every event with the client's requestId", () => {
+    const client = fakeClient();
+    engine.startSession("u1", client, undefined, "es", "req-7");
+    streamParams.onPartialTranscript("hola", false);
+    streamParams.onUtteranceEnd();
+    streamParams.onError(new Error("boom"));
+    const calls = (client.emit as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls.map(([event]) => event)).toEqual([
+      "stt:partial",
+      "stt:utterance_end",
+      "stt:error",
+    ]);
+    for (const [, payload] of calls) {
+      expect(payload).toMatchObject({ requestId: "req-7" });
+    }
+  });
+
+  it("tells the client when the provider closes the stream on its own", () => {
+    const client = fakeClient();
+    engine.startSession("u1", client, undefined, "es", "req-8");
+    streamParams.onUnexpectedClose!({ code: 1011, reason: "NET-0001" });
+    expect(client.emit).toHaveBeenCalledWith("stt:error", {
+      code: "PROVIDER_CLOSED",
+      message: "The voice connection was interrupted",
+      requestId: "req-8",
+    });
+    expect(engine.hasActiveSession("socket-1")).toBe(false);
+  });
+
+  it("logs why every session closed", async () => {
+    const log = vi.spyOn(Logger.prototype, "log").mockImplementation(() => {});
+    engine.startSession("u1", fakeClient());
+    await engine.closeSession("socket-1", "client-disconnected");
+    engine.startSession("u1", fakeClient());
+    await engine.endSession("socket-1");
+    const closes = log.mock.calls.filter(([m]) => m === "STT session closed");
+    expect(
+      closes.map(([, meta]) => (meta as { reason: string }).reason),
+    ).toEqual(["client-disconnected", "ended-by-client"]);
+  });
+
+  it("a late error of an old session can't close the new one", () => {
+    const client = fakeClient();
+    engine.startSession("u1", client);
+    const oldParams = streamParams;
+    engine.startSession("u1", client); // replaces it
+    oldParams.onError(new Error("old stream died"));
+    expect(engine.hasActiveSession("socket-1")).toBe(true);
+  });
+
+  it("finishing a session never closes a new one started meanwhile", async () => {
+    let finish!: (value: unknown) => void;
+    stream.end.mockImplementationOnce(
+      () => new Promise((resolve) => (finish = resolve)),
+    );
+    const client = fakeClient();
+    engine.startSession("u1", client, undefined, "es", "req-1");
+    const ending = engine.endSession("socket-1"); // Deepgram flushing…
+    engine.startSession("u1", client, undefined, "es", "req-2"); // next turn
+    finish({
+      fullTranscript: "hola",
+      language: "es",
+      durationMs: 900,
+      wordCount: 1,
+    });
+
+    expect(await ending).toMatchObject({
+      fullTranscript: "hola",
+      requestId: "req-1",
+    });
+    expect(engine.hasActiveSession("socket-1")).toBe(true);
+  });
+
   it("fails clearly when no provider is available", () => {
     const empty = new STTEngineService(
       new STTSessionManager(new STTProviderRegistry()),
@@ -439,19 +651,22 @@ describe("STTSessionManager / STTEngineService", () => {
   });
 
   it.each([
-    [1, 1],
-    [60_000, 1],
-    [60_001, 2],
-    [179_000, 3],
-  ])("bills %d ms of audio as %d credit(s)", (ms, credits) => {
-    expect(engine.calculateCredits(ms)).toBe(credits);
-  });
+    [1, 1, 1],
+    [1000, 1, 1],
+    [2300, 1, 3],
+    [4200, 2, 10],
+    [30_000, 0.02, 1],
+    [179_000, 1, 179],
+  ])(
+    "bills %d ms at %d cr/s as %d credit(s) (every started second)",
+    (ms, rate, credits) => {
+      expect(engine.calculateCredits(ms, rate)).toBe(credits);
+    },
+  );
 
-  it("bills with the admin-configured rate per started minute", () => {
-    expect(engine.calculateCredits(60_000, 3)).toBe(3);
-    expect(engine.calculateCredits(90_000, 2)).toBe(4);
-    // A free rate (0) never charges, not even the 1-credit minimum.
+  it("never charges at a free rate (0) or for no audio", () => {
     expect(engine.calculateCredits(90_000, 0)).toBe(0);
+    expect(engine.calculateCredits(0, 1)).toBe(0);
   });
 
   it("reports availability from the registry", () => {

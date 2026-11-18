@@ -22,15 +22,15 @@ export const MODEL_PROVIDER_SLUGS = [
 ] as const;
 
 /**
- * Task types of models. "embedding" powers the vector RAG layer and
- * "speech-to-text" prices voice input (credits per minute).
+ * Task types a model can be added with. "embedding" powers the vector RAG
+ * layer. Voice models are not added here: the speech-to-text model and its
+ * price per second are set in Admin → Voice (STT & TTS).
  */
 export const MODEL_TASK_TYPES = [
   "text-generation",
   "image-generation",
   "video-generation",
   "embedding",
-  "speech-to-text",
 ] as const;
 
 /** Task types that generate content and get a matching Provider row. */

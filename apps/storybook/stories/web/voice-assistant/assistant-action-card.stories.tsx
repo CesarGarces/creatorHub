@@ -25,6 +25,7 @@ const CREATED = {
   summary: "Created",
   data: {
     kind: "calendar-event" as const,
+    change: "created" as const,
     event: event("ev1", "Record the unboxing", "RECORDING", "20:00", "21:30"),
     conflicts: [],
     url: "/tools/content-planner?date=2026-11-28T20%3A00%3A00.000Z",
@@ -47,7 +48,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "What Robotina **did** during a reply (ARCHITECTURE.md §14g “Actions”): a session she added to the Content Planner (with its type, day and time, overlap warnings and a link to the planner on that week), the agenda she read, an action in progress, or one that failed (she explains why out loud). Shown in the chat bubbles and, compact, on the dashboard widget. Times are in the user's language and time zone.",
+          "What Robotina **did** during a reply (ARCHITECTURE.md §14g “Actions”): a session she added, moved or deleted in the Content Planner (with its type, day and time, its previous time, overlap warnings and a link to the planner on that week), a video project she created, changed or deleted, the agenda or projects she read, a deletion waiting for the user's “yes”, an action in progress, or one that failed (she explains why out loud). Shown in the chat bubbles and, compact, on the dashboard widget. Times are in the user's language and time zone.",
       },
     },
   },
@@ -90,6 +91,102 @@ export const WithOverlap: Story = {
 };
 
 export const Compact: Story = { args: { compact: true } };
+
+/** "Move the recording to 5 pm": the new time and the previous one. */
+export const Moved: Story = {
+  args: {
+    action: {
+      ...CREATED,
+      name: "calendar.update_event",
+      data: {
+        ...CREATED.data,
+        change: "updated",
+        event: event(
+          "ev1",
+          "Record the unboxing",
+          "RECORDING",
+          "22:00",
+          "23:30",
+        ),
+        previous: {
+          startAt: "2026-11-28T20:00:00.000Z",
+          endAt: "2026-11-28T21:30:00.000Z",
+        },
+      },
+    },
+  },
+};
+
+/** A delete never runs at once: she asks, the user says "yes" next. */
+export const AwaitingConfirmation: Story = {
+  args: {
+    action: {
+      ...CREATED,
+      name: "calendar.delete_event",
+      status: "needs_confirmation",
+      data: { ...CREATED.data, change: "deleted" },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText("Waiting for your OK to delete"),
+    ).toBeVisible();
+  },
+};
+
+export const Deleted: Story = {
+  args: {
+    action: {
+      ...CREATED,
+      name: "calendar.delete_event",
+      data: { ...CREATED.data, change: "deleted" },
+    },
+  },
+};
+
+const PROJECT = {
+  id: "p1",
+  title: "Phone review",
+  platform: "youtube-long",
+  publishAt: "2026-12-10T23:00:00.000Z",
+  sessions: { total: 5, done: 2 },
+};
+
+export const ProjectCreated: Story = {
+  args: {
+    action: {
+      id: "a5",
+      name: "calendar.create_project",
+      args: {},
+      status: "done",
+      data: {
+        kind: "calendar-project",
+        change: "created",
+        project: PROJECT,
+        url: "/tools/content-planner",
+      },
+    },
+  },
+};
+
+export const Projects: Story = {
+  args: {
+    action: {
+      id: "a6",
+      name: "calendar.list_projects",
+      args: {},
+      status: "done",
+      data: {
+        kind: "calendar-projects",
+        projects: [
+          PROJECT,
+          { ...PROJECT, id: "p2", title: "Weekly vlog", publishAt: null },
+        ],
+        url: "/tools/content-planner",
+      },
+    },
+  },
+};
 
 export const Agenda: Story = {
   args: {

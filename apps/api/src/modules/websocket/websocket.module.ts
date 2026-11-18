@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { STTEngineModule } from "@creator-hub/stt-engine";
 import { BillingModule } from "@creator-hub/billing";
 import { AnalyticsModule } from "@creator-hub/analytics";
+import { VoiceSettingsModule } from "@creator-hub/voice-settings";
 import { AppGateway } from "./websocket.gateway";
 
 @Module({
@@ -18,6 +19,7 @@ import { AppGateway } from "./websocket.gateway";
     STTEngineModule,
     BillingModule,
     AnalyticsModule,
+    VoiceSettingsModule,
   ],
   providers: [AppGateway],
   exports: [AppGateway],

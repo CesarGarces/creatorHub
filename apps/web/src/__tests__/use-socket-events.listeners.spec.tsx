@@ -88,4 +88,19 @@ describe("useSocketEvents listeners", () => {
     fakeSocket.emit("stt:result", {});
     expect(fetchBalance).toHaveBeenCalledTimes(1);
   });
+
+  it("says why the mic went off when the credits ran out mid-recording", async () => {
+    const { toast } = await import("sonner");
+    render(<Harness />);
+    fakeSocket.emit("stt:result", { fullTranscript: "hola", credits: 3 });
+    expect(toast.error).not.toHaveBeenCalled();
+    fakeSocket.emit("stt:result", {
+      fullTranscript: "hola",
+      credits: 10,
+      endedBy: "credit-limit",
+    });
+    expect(toast.error).toHaveBeenCalledWith(
+      "You ran out of credits — the recording stopped",
+    );
+  });
 });

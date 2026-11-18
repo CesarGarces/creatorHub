@@ -8,10 +8,24 @@ import { CreditEmailsModule } from "../credit-emails/credit-emails.module";
 import { AuthModule } from "@creator-hub/auth";
 import { StorageModule } from "@creator-hub/storage";
 import { AIEngineModule } from "@creator-hub/ai-engine";
+import { TTSEngineModule } from "@creator-hub/tts-engine";
+import { VoiceSettingsModule } from "@creator-hub/voice-settings";
+import { AdminVoiceSettingsController } from "./admin-voice-settings.controller";
 
 @Module({
-  imports: [AuthModule, StorageModule, AIEngineModule, CreditEmailsModule],
-  controllers: [AdminController, AdminAuthController],
+  imports: [
+    AuthModule,
+    StorageModule,
+    AIEngineModule,
+    CreditEmailsModule,
+    TTSEngineModule,
+    VoiceSettingsModule,
+  ],
+  controllers: [
+    AdminController,
+    AdminAuthController,
+    AdminVoiceSettingsController,
+  ],
   providers: [AdminService, DatabaseBackupService, CreditEmailTriggerService],
   exports: [AdminService, DatabaseBackupService],
 })

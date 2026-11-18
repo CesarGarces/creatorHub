@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { History, Plus, Mic, Volume2, Square } from "lucide-react";
 import { Switch, cn } from "@creator-hub/ui";
-import { TTS_VOICES, type TTSLanguage } from "@creator-hub/shared-types";
+import { TTS_LANGUAGES } from "@creator-hub/shared-types";
 import { useIsDesktop } from "@/hooks/use-media-query";
 import { TopBar } from "@/components/layout/top-bar";
 import { useCreditsStore } from "@/store/credits.store";
@@ -11,6 +11,7 @@ import { useToolQueryParams } from "@/hooks/use-tool-query-params";
 import { markdownToSafeHtml } from "@/lib/sanitize";
 import { ModelSettingsPanel } from "@/components/chat/model-settings-panel";
 import { VoiceButton } from "@/components/voice-button";
+import { FreeMinutesNotice } from "@/components/voice-assistant/free-minutes-notice";
 import { RobotinaOrb } from "@/components/voice-assistant/robotina-orb";
 import { AssistantActionCard } from "@/components/voice-assistant/assistant-action-card";
 import { useRobotina } from "@/hooks/use-robotina";
@@ -72,7 +73,7 @@ export default function VoiceAssistantPage() {
   } = useVoiceAssistantStore();
 
   const robotina = useRobotina();
-  const { state } = robotina;
+  const { state, limitReached } = robotina;
   const voiceActive = state !== "idle";
 
   useEffect(() => {
@@ -126,12 +127,12 @@ export default function VoiceAssistantPage() {
           {t("voiceAssistant.voiceNote")}
         </p>
         <ul className="mt-2 flex flex-wrap gap-1.5" aria-hidden="true">
-          {(Object.keys(TTS_VOICES) as TTSLanguage[]).map((language) => (
+          {TTS_LANGUAGES.map((language) => (
             <li
               key={language}
               className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] text-text-muted"
             >
-              {TTS_VOICES[language].name} ·{" "}
+              {robotina.voices[language].name} ·{" "}
               {t(`voiceAssistant.languages.${language}`)}
             </li>
           ))}
@@ -319,7 +320,8 @@ export default function VoiceAssistantPage() {
                   onClick={() => void robotina.toggle()}
                   aria-label={t(ORB_ACTION_KEYS[state])}
                   data-robotina-orb
-                  className="rounded-full outline-none transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg motion-reduce:transform-none"
+                  disabled={limitReached}
+                  className="rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-60 transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg motion-reduce:transform-none"
                 >
                   <RobotinaOrb
                     state={state}
@@ -335,9 +337,16 @@ export default function VoiceAssistantPage() {
                 </p>
                 <p className="mt-3 text-xs text-text-dim">
                   {t("voiceAssistant.pricing", {
-                    stt: robotina.sttCreditsPerMinute,
+                    stt: robotina.sttCreditsPerSecond,
+                    tts: robotina.ttsCreditsPerSecond,
                   })}
                 </p>
+                {!limitReached && (
+                  <FreeMinutesNotice
+                    allowance={robotina.allowance}
+                    className="mt-1"
+                  />
+                )}
               </div>
             )}
 
@@ -440,6 +449,16 @@ export default function VoiceAssistantPage() {
             </p>
           )}
 
+          {/* Free plan minutes used up: invite to upgrade. */}
+          {limitReached && (
+            <div className="px-4 pb-3 sm:px-6">
+              <FreeMinutesNotice
+                allowance={robotina.allowance}
+                className="mx-auto max-w-3xl"
+              />
+            </div>
+          )}
+
           {/* Input */}
           <div
             data-composer
@@ -478,6 +497,7 @@ export default function VoiceAssistantPage() {
                   isListening={state === "listening"}
                   isSupported={robotina.isVoiceSupported}
                   onToggle={() => void robotina.toggle()}
+                  disabled={limitReached && state === "idle"}
                   className={cn(
                     state === "speaking" &&
                       "border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-300",
@@ -492,12 +512,12 @@ export default function VoiceAssistantPage() {
                 }
                 placeholder={t("voiceAssistant.inputPlaceholder")}
                 aria-label={t("voiceAssistant.inputPlaceholder")}
-                disabled={isReplying}
+                disabled={isReplying || limitReached}
                 className="order-first min-w-0 flex-1 basis-[calc(100%-3.25rem)] rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-text placeholder:text-text-dim outline-none focus:border-primary transition-colors disabled:opacity-50 sm:order-none sm:basis-auto"
               />
               <button
                 onClick={() => void handleSend()}
-                disabled={!input.trim() || isReplying}
+                disabled={!input.trim() || isReplying || limitReached}
                 aria-label={t("voiceAssistant.send")}
                 className="order-first flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary sm:order-none text-primary-foreground hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -635,7 +655,13 @@ function MessageBubble({
               <span>{t("voiceAssistant.interrupted")}</span>
             )}
             {message.voiceFailed && (
-              <span>{t("voiceAssistant.voiceFailed")}</span>
+              <span>
+                {message.voiceFailed === "credits"
+                  ? t("voiceAssistant.voiceOutOfCredits")
+                  : message.voiceFailed === "free-limit"
+                    ? t("voiceAssistant.voiceOutOfFreeMinutes")
+                    : t("voiceAssistant.voiceFailed")}
+              </span>
             )}
             {message.credits > 0 && (
               <span>

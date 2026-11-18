@@ -27,6 +27,7 @@
     14e. [Content Planner — AI Planning Assistant](#14e-content-planner--ai-planning-assistant)
     14f. [AI Video Analyzer & Smart Clipper](#14f-ai-video-analyzer--smart-clipper)
     14g. [Robotina — AI Voice Assistant](#14g-robotina--ai-voice-assistant)
+    14h. [Voice Settings — Admin → Voice (STT & TTS)](#14h-voice-settings--admin--voice-stt--tts)
 15. [Testing Strategy](#14-testing-strategy)
 16. [CI/CD Strategy](#14-cicd-strategy)
 17. [Scalability Roadmap](#15-scalability-roadmap)
@@ -114,6 +115,7 @@ creator-hub/
 │   │   │   │   ├── providers/         # Provider CRUD
 │   │   │   │   ├── users/             # User CRUD
 │   │   │   │   ├── credit-emails/     # Emails per credit state (50, 0, ...)
+│   │   │   │   ├── voice/             # Voice (STT & TTS): Deepgram models, voices, prices/second
 │   │   │   │   └── login/             # Admin login
 │   │   │   ├── components/
 │   │   │   ├── lib/
@@ -131,7 +133,8 @@ creator-hub/
 │       │       ├── tools/
 │       │       ├── images/
 │       │       ├── ai/             # DB-driven provider metadata
-│       │       ├── admin/
+│       │       ├── admin/          # incl. Voice settings (admin-voice-settings.controller)
+│       │       ├── voice/          # GET /voice/pricing (prices/second, voice per language)
 │       │       ├── webhooks/       # Payment gateway webhooks
 │       │       ├── credit-emails/  # Credit state email listener (credit.state_reached)
 │       │       ├── websocket/      # WebSocket gateway + payment listener
@@ -194,7 +197,8 @@ creator-hub/
 │   ├── auth/                  # JWT + Passport auth
 │   ├── ai-engine/             # Multi-provider AI abstraction
 │   ├── stt-engine/            # Speech-to-text streaming (Deepgram Nova-3, Mock)
-│   ├── tts-engine/            # Text-to-speech (Deepgram Aura-2, Mock) — see §14g
+│   ├── tts-engine/            # Text-to-speech (Deepgram Aura, Mock) — see §14g
+│   ├── voice-settings/        # Admin → Voice: STT model, TTS voice per language, prices/second (§14h)
 │   ├── billing/               # Credits, subscriptions, payment gateways (Strategy pattern)
 │   ├── storage/               # S3/MinIO abstraction
 │   ├── analytics/             # Usage tracking
@@ -397,7 +401,9 @@ flows are the same on every screen size.
 - `<main>` keeps bottom room on every screen so the assistant button never
   covers the last row of content. Pages with their own bottom composer mark it
   with `data-composer`; the shell then drops that padding and lifts the button
-  above the composer (CSS `:has()`, no JS). Desktop split layouts sized to the
+  above the composer on every screen size — on desktop too, where a narrow
+  chat column (history panel open) would put its Send button under the tab
+  (CSS `:has()`, no JS). Desktop split layouts sized to the
   viewport mark their root `data-full-height` and keep no room from `lg`.
 - The assistant launcher (`ChatLauncher` + `useAutoCollapse`) is expanded on
   load, then after 5 s without interaction or as soon as anything scrolls it
@@ -1128,6 +1134,8 @@ The `AIController` exposes DB-driven provider metadata:
 - **`GeneratedImage.providerId`** — Relación con `Provider`; `isProModel` se deriva del tier del proveedor
 - **`DashboardLayout`** — One row per user (`userId` unique): `widgets` JSON `[{ id, visible }]` in display order; no row = default dashboard (§2f). Migration `20261126000000_add_dashboard_layout`
 - **`VoiceConversation` / `VoiceMessage`** — Robotina's conversations (§14g): title, last language, model; messages with language, `spoken`, Aura-2 `voice`, `audioMs`, `creditsCharged`, `interrupted`. Text only — audio is streamed, never stored. Migration `20261127000000_add_voice_assistant`
+- **`VoiceSettings`** — One `global` row (Admin → Voice, §14h): Deepgram STT model, `sttCreditsPerSecond`, `ttsCreditsPerSecond`, `ttsVoices` JSON `{ en|es|pt: { model, voice } }`, `updatedById`. Created with the defaults (Nova-3, 1 cr/s; Andromeda, Celeste, Bianca on Aura-2, 2 cr/s). Migration `20261129000000_add_voice_settings`; `freeTierMinutes` (null = no limit) and `freeTierPeriod` (`monthly` | `lifetime`) in `20261130000000_add_voice_free_tier`
+- **`VoiceUsage`** — Seconds of voice with Robotina per Free user (`userId` + `period` unique: the UTC month `"2026-11"` and `"all"`), checked against the Free plan limit (§14h). Migration `20261130000000_add_voice_free_tier`
 - **Soft delete** — Users use `isActive: false` instead of `DELETE`
 
 ---
@@ -1228,6 +1236,14 @@ GET    /api/v1/admin/credit-email-logs               # Recent credit state email
 
 GET    /api/v1/admin/tools           # List all tools (admin)
 POST   /api/v1/admin/tools/toggle    # Enable/disable tool
+
+GET    /api/v1/admin/voice-settings          # STT model, TTS voices, prices/second + who speaks (§14h)
+PUT    /api/v1/admin/voice-settings          # Save them (validated: voiceSettingsErrors)
+POST   /api/v1/admin/voice-settings/preview  # Hear a voice: { language, voice } → base64 audio (not billed)
+
+# Voice (signed-in users)
+GET    /api/v1/voice/pricing         # Credits/second of voice input and speech, voice of each language, Free plan minutes
+GET    /api/v1/voice/allowance       # The user's Free plan minutes with Robotina (left, used up, resets at)
 ```
 
 ### API Response Format
@@ -1444,6 +1460,28 @@ User clicks Mic button in Content Translator
 | `stt:done`       | API Gateway | Frontend    | Final transcript + duration     |
 | `stt:error`      | API Gateway | Frontend    | Session error or credit issue   |
 
+### STT session lifecycle & robustness
+
+The events actually emitted by `AppGateway` / `STTSessionManager` today are
+`stt:started`, `stt:partial {text, isFinal}`, `stt:utterance_end`,
+`stt:result {fullTranscript, durationMs, wordCount, credits}` and
+`stt:error {code, message}`. Rules that keep a recording from closing early
+or being closed by another one:
+
+| Concern              | Behaviour                                                                                                                                                                                                        |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Session identity     | The client sends a `requestId` in `stt:start` (and `stt:end`); every `stt:*` event of that session echoes it. `useLiveSpeechToText` ignores events of any other session (payloads without it: older servers).    |
+| Graceful end         | `stt:end` detaches the session, then `DeepgramProvider.end()` sends `{"type":"CloseStream"}` and waits (≤ 3 s) for Deepgram's last finals before closing; an unfinalized interim phrase is kept in the result.   |
+| Silence              | A `KeepAlive` is sent every 5 s without audio, so Deepgram's ~10 s no-audio timeout never closes a paused session.                                                                                               |
+| Provider drops       | An unexpected Deepgram close → `stt:error {code: "PROVIDER_CLOSED"}`; stream errors → `STREAM_ERROR`; `stt:end` with no live session → `SESSION_LOST` (the client is never left waiting).                        |
+| Stale events         | Errors/closes are guarded by `sessionId`: a late event of an old session can't close the new one.                                                                                                                |
+| Close reasons (logs) | `STT session closed {reason, durationMs}`: `ended-by-client`, `replaced-by-new-session`, `client-disconnected`, `provider-closed`, `stream-error`, `time-limit`.                                                 |
+| Client recovery      | On `PROVIDER_CLOSED`/`STREAM_ERROR`/`SESSION_LOST` or a socket reconnect mid-speech, a new session is opened on the same mic (≤ 2 times), keeping the words heard.                                               |
+| Mic ownership        | The mic stops only on the user's stop or a definitive end; stop → mic off at once → `stt:end` → result (6 s timeout → the words heard locally). Words heard are never dropped. Logs: `[STT] recording ended: …`. |
+| Model & price        | `stt:start` reads Admin → Voice (§14h): the Deepgram model (`language=multi` only for multilingual Nova-3) and the price per second, locked for the session. Billed seconds exclude the CloseStream wait.        |
+| Credit limit         | A balance that pays for less than 3 min ends the session gracefully when it runs out: billed up to there, `stt:result {endedBy: "credit-limit"}` (the web explains why the mic went off).                        |
+| Free plan minutes    | `stt:start {purpose: "voice-assistant"}` (Robotina) applies the Free plan's minutes: used up → `FREE_LIMIT_REACHED`; else capped at what is left (`endedBy: "free-limit"`) and counted (§14h).                   |
+
 ### Event-Driven Flow Example — Robotina voice turn
 
 Voice in reuses the STT flow above unchanged; the reply is a POST that
@@ -1453,22 +1491,22 @@ streams Server-Sent Events (see §14g).
 User taps the orb (widget or tool page)
     │
     ├──► SpeechPlayer.unlock()  (audio allowed: inside the gesture)
-    ├──► useVoiceButton → stt:start … stt:chunk …  (Deepgram Nova-3, multi)
+    ├──► useVoiceButton → stt:start … stt:chunk …  (Admin → Voice model, Nova-3 multi)
     │       └──► stt:partial → live transcript + TurnDetector
     │               (final phrase + 3 s pause, UtteranceEnd, or a 2nd tap)
-    ├──► stt:end → gateway bills the minutes → stt:result {fullTranscript}
+    ├──► stt:end → gateway bills the seconds → stt:result {fullTranscript}
     │
     ├──► POST /tools/voice-assistant/messages {content, spoken: true, model}
     │       │
     │       └──► VoiceAssistantService.reply()
     │               ├──► resolve model (tier) · hasEnoughCredits(1)
-    │               ├──► detect language (en/es/pt) → Aura-2 voice
+    │               ├──► detect language (en/es/pt) → its voice (Admin → Voice)
     │               ├──► save user message
     │               ├──► SSE start {conversationId, language, voice}
     │               ├──► model stream ──► SSE delta …
     │               │       └──► SpeechChunker: first sentence at once
     │               │               └──► TTSEngineService.synthesize() ──► SSE audio {index, mp3 base64}
-    │               ├──► save reply → CreditService.deduct(1 cr/min of speech)
+    │               ├──► save reply → CreditService.deduct(seconds of speech × cr/s)
     │               └──► SSE done {messageId, audioMs, credits, balance}
     │
     ├──► SpeechPlayer plays segments in order (orb waves with her voice)
@@ -1601,15 +1639,22 @@ Provider-specific cost: each `Provider` row defines `costPerCredit`. ThumbnailSe
 
 Model-priced features read `ModelMetadata.creditCost` (Admin → AI Models):
 the Content Planner's AI analysis (chosen text model + active embedding
-model), voice input (active `speech-to-text` model, **per minute**,
-default 1), and the Video Clipper's analysis (chosen vision model ×
-started batches of 12 keyframes). See [14e](#14e-content-planner--ai-planning-assistant)
+model) and the Video Clipper's analysis (chosen vision model × started
+batches of 12 keyframes). See [14e](#14e-content-planner--ai-planning-assistant)
 and [14f](#14f-ai-video-analyzer--smart-clipper).
 
-Robotina (§14g) charges **1 credit per reply**, or **1 credit per started
-minute** of Aura-2 speech for spoken replies (`TTS_CREDITS_PER_MINUTE`, a
-platform constant: text-to-speech is not an admin-configurable model). Her
-voice input is the platform's STT, billed per minute like every voice
+Voice is priced **per second** in Admin → Voice (STT & TTS), §14h: voice
+input (every voice button, Robotina's ears) at `sttCreditsPerSecond`
+(default 1) and Robotina's speech at `ttsCreditsPerSecond` (default 2).
+Every started second counts and the total is rounded up to whole credits
+(`voiceCredits`: 2.3 s at 1 cr/s → 3; 4.2 s at 2 cr/s → 10). A recording or
+a spoken reply never goes beyond what the balance pays for. The Free plan
+can also be limited to some minutes with Robotina (monthly or in total);
+once used up, Free users are invited to upgrade for unlimited use (§14h).
+
+Robotina (§14g) charges **1 credit per written reply**; a spoken reply costs
+its seconds of speech at the TTS price instead (never less than 1 credit).
+Her voice input is the platform's STT, billed per second like every voice
 button.
 
 ### Provider Selection by Plan
@@ -1636,6 +1681,7 @@ AdminController
   ├── Providers CRUD
   ├── Users CRUD (soft delete via isActive)
   ├── AI Models (sync, config, "Add model" by hand, delete custom ones)
+  ├── Voice (STT & TTS): Deepgram STT model, voice per language, prices/second, Free plan minutes (§14h)
   └── Credit Emails CRUD (email per credit state, preview, test send, delivery log)
 ```
 
@@ -3292,7 +3338,7 @@ conditional debit, `CreditTransaction`, threshold events, credit emails):
 | ---------------- | -------------------------------------------------------------------------- | ----------------- |
 | Analysis         | `creditCost` of the chosen text model                                      | Admin → AI Models |
 | Knowledge search | `creditCost` of the active embedding model (0 with the local embedder)     | Admin → AI Models |
-| Voice input      | `creditCost` of the active speech-to-text model **per minute** (default 1) | Admin → AI Models |
+| Voice input      | `sttCreditsPerSecond` — credits **per second** of voice input (default: 1) | Admin → Voice     |
 
 - `GET …/ai-plans/estimate` shows the total before running; the web disables
   "Analyze" when the balance is lower.
@@ -3301,17 +3347,19 @@ conditional debit, `CreditTransaction`, threshold events, credit emails):
   stream) before the end, nothing is charged. PRO models are refused for FREE
   users (same rule as other tools). Usage is logged with `PlatformUsageLogger`.
 - Voice input is billed by the STT gateway at the end of each session:
-  `calculateCredits(durationMs, creditsPerMinute)` with the rate read from the
-  active `speech-to-text` model (`getSttCreditsPerMinute`, cached 60 s,
-  fallback `STT_CREDITS_PER_MINUTE` = 1). The web voice buttons show the same
-  rate (`useSttCreditsPerMinute`). Keep one speech-to-text model active.
+  `calculateCredits(durationMs, creditsPerSecond)` with the price per second
+  of Admin → Voice (`VoiceSettingsService`, cached 30 s, defaults when
+  unset), locked when the session starts. The web voice buttons show the
+  same price (`useSttCreditsPerSecond`, `GET /voice/pricing`).
 
 ### Admin — AI Models
 
-- **Add model** (`POST /admin/models`): provider (OpenRouter, SiliconFlow,
-  Deepgram), model id, name, task type (`text-generation`,
-  `image-generation`, `video-generation`, `embedding`, `speech-to-text`),
-  tier, credit cost (0–1000), context length, tags, streaming/vision, active.
+- **Add model** (`POST /admin/models`): provider (OpenRouter, SiliconFlow),
+  model id, name, task type (`text-generation`, `image-generation`,
+  `video-generation`, `embedding`), tier, credit cost (0–1000), context
+  length, tags, streaming/vision, active. Speech-to-text is no longer added
+  here — the voice model and its price live in Admin → Voice (§14h);
+  `speech-to-text` rows added before are still listed but price nothing.
   Stored with `isCustom = true`: model sync never updates or deactivates it.
   Generative models also get their `Provider` row (as synced ones do).
 - Custom models can be **deleted** (`DELETE /admin/models/:id`, disables its
@@ -3536,8 +3584,8 @@ she appears in Tools, Agents and the command palette.
 
 | Step        | How                                                                                                                                                                                                                                                                                                          |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Listen      | The platform's STT, unchanged (WebSocket `stt:*`, Deepgram Nova-3 `language=multi`). `useLiveSpeechToText` also exposes the **mic level** (an `AnalyserNode` tap) for the orb.                                                                                                                               |
-| End of turn | `TurnDetector`: a 3 s pause after the last final phrase (any new word restarts it; room to think), Deepgram's `UtteranceEnd` when no final phrase is pending, or a second tap. No speech for 8 s ends the turn as silence (conversation mode pauses).                                                        |
+| Listen      | The platform's STT (WebSocket `stt:*`, Deepgram Nova-3 `language=multi`). `useLiveSpeechToText` also exposes the **mic level** (an `AnalyserNode` tap) for the orb. Drops and late events are handled (§7, STT session lifecycle).                                                                           |
+| End of turn | `TurnDetector`: a 3 s pause after the last final phrase (any new word restarts it; room to think), Deepgram's `UtteranceEnd` when no final phrase is pending, or a second tap. No speech for 8 s ends the turn as silence (conversation mode pauses). Interim-only speech ends after 5 s with no news.       |
 | Language    | `detectLanguage()` — function words and letters only one language uses (ñ ¿ ¡ vs ã õ ç ê ô); shared words count for none. Unclear → the conversation's language → the interface language → English. The system prompt pins the reply language.                                                               |
 | Think       | Any active **text** model (same `ModelSettingsPanel` as the X tools: model, temperature, max tokens). PRO models need a paid plan. Last 20 messages as history.                                                                                                                                              |
 | Speak       | `SpeechChunker` sends the **first sentence** to Aura-2 as soon as it is complete (she starts talking while the model still writes); later sentences are grouped (≥ 140 chars, ≤ 400). Markdown, code, URLs and emojis are never read (`toSpeakableText`). Requests run in parallel and are emitted in order. |
@@ -3562,19 +3610,30 @@ packages/tool-sdk   AssistantActionRegistry (global, ToolSdkModule)
                       validateActionArgs(): names, required, types, date/time
                       formats, enums, ranges — model output is never trusted
         ▲ registers at startup (OnModuleInit)
-tools/content-planner  ContentPlannerAssistantActions
-                      calendar.create_event  title, date, startTime,
-                                             endTime | durationMinutes,
-                                             type?, notes?, reminderMinutes?
-                      calendar.list_events   date, days? (1–14)
-                      → ContentPlannerService (same validation, default
-                        reminder and overlap warnings as the calendar UI)
+tools/content-planner  ContentPlannerAssistantActions — full control
+                      sessions  calendar.list_events    date, days?, query?
+                                calendar.create_event   title, date, startTime,
+                                                        endTime | durationMinutes,
+                                                        type?, notes?, reminder?, project?
+                                calendar.update_event   eventId + what changes (move
+                                                        keeps the length, end, title,
+                                                        type, status, notes, reminder,
+                                                        project)
+                                calendar.delete_event   eventId          (confirmation)
+                      projects  calendar.list_projects  query?
+                                calendar.create_project title, publish date/time?,
+                                                        platform?, notes?
+                                calendar.update_project projectId + what changes
+                                calendar.delete_project projectId + its sessions
+                                                                         (confirmation)
+                      → ContentPlannerService (same validation, ownership,
+                        reminders and overlap warnings as the calendar UI)
         ▼ used by
 tools/voice-assistant  persona prompt lists the actions + rules
                       ActionStreamParser hides <action>{…}</action>
                       from text and voice → registry.execute() → SSE
                       `action` → the model gets "ACTION RESULT …" and
-                      tells the user (≤ 3 actions per reply)
+                      tells the user (≤ 4 actions per reply)
 ```
 
 | Concern           | How                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -3584,10 +3643,12 @@ tools/voice-assistant  persona prompt lists the actions + rules
 | Time zones        | The browser sends its IANA zone (`timeZone`); the prompt gives her the user's local date, time and UTC offset; `zonedDateTimeToUtc()` (`shared-utils`, `Intl` only) turns "2026-11-28 15:00" into the instant, DST-safe (skipped times are refused).                                                                                                                                                                                                                                                                                                                                       |
 | Safety            | Runs as the authenticated user only (`context.userId`); arguments validated against the declared parameters; unknown actions, bad arguments and handler errors come back as `{ ok: false, summary }` — never thrown; past start times refused.                                                                                                                                                                                                                                                                                                                                             |
 | Feedback          | `AssistantActionCard` in the chat (and compact on the widget): the session with its type, day, time, overlaps and "Open in planner"; the agenda she read; running/failed states. A created session invalidates the `["content-planner"]` queries, so "Plans for today" shows it at once.                                                                                                                                                                                                                                                                                                   |
+| Finding items     | Editing or deleting needs an id: list results carry `[id …]` and the lists search by name (accent-insensitive, `query`) and ahead in time (`days` up to 62). She never invents ids and asks which one when several match. A move keeps the session's length unless a new end or duration is given.                                                                                                                                                                                                                                                                                         |
+| Confirmation      | Actions marked `requiresConfirmation` (deletes) **never run on the first call**: the service asks the registry for a `preview` (`describe()`: what would be deleted) and records the action as `needs_confirmation`; she asks the user. Only the **next** reply can run it — when her previous reply (stored on `VoiceMessage.actions`, so it works across replicas) holds the same pending action, same arguments, under 15 min old; each "yes" confirms one action once. She can't confirm on her own within a reply.                                                                    |
 | Self-correction   | Models sometimes say "let me check" / "lo busco" and end the reply without the action (or write it in another format), so nothing would happen and the turn would pass to the user. The parser accepts common variants (`<action name="…">`, `name {…}`, top-level arguments, OpenAI-style `function.arguments`); if a round still has no usable action but announces one (`announcesAction()`, en/es/pt) or has an unreadable one, the server sends the model **one** "SYSTEM NOTE" in the same reply to write it. Tools also ship a worked `example` per action, rendered in the prompt. |
 | Her turn          | While an action runs her voice may pause: the player reports `onDrain`, the orb goes back to _thinking_ and the status says what she's doing ("Checking your calendar…"); conversation mode only reopens the mic after her last word of the whole reply.                                                                                                                                                                                                                                                                                                                                   |
 | Memory            | Each reply stores its actions (`VoiceMessage.actions`); the history sent to the model appends `[calendar.create_event done: Created …]`, so she knows what she did.                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| Price             | Actions are free (the calendar is free); the reply still costs 1 credit (per minute when spoken), even with the extra model round.                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Price             | Actions are free (the calendar is free); the reply still costs 1 credit (its seconds of speech when spoken), even with the extra model round.                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 Without registered actions the prompt tells her she can't change anything —
 she never offers what she can't do.
@@ -3598,11 +3659,12 @@ Mirrors `stt-engine`: `TTSProviderInterface`, `TTSProviderBase`,
 `TTSProviderRegistry`, `TTSProviderFactory` (OnModuleInit) and
 `TTSEngineService` (`synthesize`, `calculateCredits`, `isAvailable`).
 
-- **Always Deepgram Aura-2** (`POST https://api.deepgram.com/v1/speak`,
-  MP3 48 kbps), with the same `DEEPGRAM_API_KEY` as speech-to-text. The
-  voice is **not configurable** — not in Admin → AI Models, not in the
-  settings panel (the DTO rejects any voice field); it follows the
-  language of the reply (`TTS_VOICES`, `@creator-hub/shared-types`):
+- **Deepgram Aura** (`POST https://api.deepgram.com/v1/speak`, MP3
+  48 kbps), with the same `DEEPGRAM_API_KEY` as speech-to-text. Users never
+  pick the voice (the chat's settings panel and DTO have no voice field):
+  it follows the language of the reply. Which voice ("actor") speaks each
+  language is an **admin setting** — Admin → Voice (§14h), passed to
+  `synthesize({ voice })`; the defaults (`TTS_VOICES`) are:
 
   | Language   | Voice     | Model                 | Accent, gender      |
   | ---------- | --------- | --------------------- | ------------------- |
@@ -3621,12 +3683,16 @@ Mirrors `stt-engine`: `TTSProviderInterface`, `TTSProviderBase`,
 
 ### Credits
 
-| What         | Price                                                                   | Where                               |
-| ------------ | ----------------------------------------------------------------------- | ----------------------------------- |
-| Voice input  | `creditCost` of the active speech-to-text model per minute (default 1)  | STT gateway (as every voice button) |
-| Reply        | 1 credit (`VOICE_ASSISTANT_REPLY_CREDITS`)                              | `pricing.ts`                        |
-| Spoken reply | 1 credit per started minute of Aura-2 speech (`TTS_CREDITS_PER_MINUTE`) | `pricing.ts`                        |
+| What         | Price                                                               | Where                               |
+| ------------ | ------------------------------------------------------------------- | ----------------------------------- |
+| Voice input  | `sttCreditsPerSecond` per started second (Admin → Voice, default 1) | STT gateway (as every voice button) |
+| Reply        | 1 credit (`VOICE_ASSISTANT_REPLY_CREDITS`)                          | `pricing.ts`                        |
+| Spoken reply | Seconds of speech × `ttsCreditsPerSecond` (default 2), at least 1   | `pricing.ts`                        |
 
+- She only speaks what the balance pays for (`voiceSecondsAffordable`,
+  read when the reply starts): past it the speech stops with
+  `audio_error {reason: "credits"}` and the reply goes on in text ("Not
+  enough credits for her voice").
 - `hasEnoughCredits(1)` before anything is saved. Order: **save → charge**
   (`CreditService.deduct()`: atomic debit, thresholds, credit emails). If the
   balance dropped meanwhile (a long spoken reply, another tool), what is
@@ -3669,8 +3735,8 @@ Migrations: `20261127000000_add_voice_assistant`,
   builds); production always sets it.
 - `ModelSettings` / `DEFAULT_MODEL_SETTINGS` live in `lib/model-settings.ts`
   (re-exported by the panel) so stores and widgets don't load the panel;
-  the panel accepts a `footer` (Robotina's fixed-voice note and
-  conversation mode).
+  the panel accepts a `footer` (Robotina's voice note — the voice of each
+  language from `GET /voice/pricing` — and conversation mode).
 
 ### Tests
 
@@ -3685,13 +3751,16 @@ Migrations: `20261127000000_add_voice_assistant`,
   cards and planner refresh, and an E2E scheduling flow.
 - tts-engine (vitest): MP3 frame parser (MPEG-2, ID3, junk), WAV helpers,
   Aura-2 requests per language (URL, auth, body), retries, errors, abort,
-  factory (no mock in production), billing by started minute.
+  factory (no mock in production), the admin's voice (`synthesize({ voice })`),
+  billing by started second.
 - Backend (vitest, `tools/voice-assistant/backend`): language detection
   (en/es/pt sentences, ambiguous text), speakable text and chunking, pricing,
   persona prompt, DTO, service (event order, voice by language, speech
   while writing and in order, history, language switch, text-only replies,
   no-voice fallback, TTS failure, partial model failure, refusals, undo on
-  failure, partial charge, interruptions), controller (SSE, abort, errors).
+  failure, partial charge, interruptions, the admin's voice and price per
+  second, speech stopped when the balance runs out), controller (SSE,
+  abort, errors).
 - API (`apps/api`, supertest): HTTP contract through the global
   ValidationPipe (trimmed content, no voice field accepted, paging) and
   Tool SDK discovery. ai-engine: OpenRouter history.
@@ -3709,6 +3778,105 @@ Migrations: `20261127000000_add_voice_assistant`,
   the every-page a11y/responsive/performance gates (`WEB_PAGES`).
 - Storybook: `RobotinaOrb` (every state, synthetic voice) and
   `VoiceAssistantWidget`.
+
+---
+
+## 14h. Voice Settings — Admin → Voice (STT & TTS)
+
+One admin page configures the platform's voice, both ways, on Deepgram:
+
+| Setting            | Options                                                                                                       | Default                                       |
+| ------------------ | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| STT model          | Nova-3 (multilingual: `language=multi`, en/es/pt… in one session), Nova-2, Enhanced, Base (user's language)   | Nova-3                                        |
+| STT price          | Credits per second of voice input, 0–100 in cents (every voice button, Robotina's ears)                       | 1 cr/s                                        |
+| TTS voice per lang | English, Spanish, Portuguese: model (Aura-2; Aura-1 English only) + voice ("actor") from the catalog or typed | Andromeda, Celeste, Bianca (Aura-2, feminine) |
+| TTS price          | Credits per second of Robotina's speech, 0–100 in cents                                                       | 2 cr/s                                        |
+| Free plan limit    | Minutes with Robotina for the Free plan (their voice + hers), 1–10,000, every month or once in total          | Off (no limit)                                |
+
+```
+apps/admin  /voice ── VoiceSettingsForm (lib/voice-settings-form.ts: state, validation, payload)
+   │  GET/PUT /admin/voice-settings · POST /admin/voice-settings/preview (hear a voice)
+   ▼
+apps/api    AdminVoiceSettingsController (JwtAuthGuard + AdminGuard)      VoiceController GET /voice/pricing · /voice/allowance
+   │                 └──────────────┬──────────────────────────────────────────┘
+   ▼                                ▼
+packages/voice-settings   VoiceSettingsService  get() cached 30 s · update() validated · voiceFor(lang)
+   │                      (never fails to read: last good value or defaults)
+   │                      VoiceAllowanceService get(userId) · record(userId, ms)  (Free plan minutes)
+   ▼
+PostgreSQL  VoiceSettings ("global" row) · VoiceUsage (seconds per Free user: "2026-11" and "all")
+
+Consumers: AppGateway (stt:start → model + price, credit limit; Robotina's ears → free minutes) ·
+VoiceAssistantService (voice per language, TTS price, speech budget, free minutes) · web voice
+buttons and Robotina (useVoicePricing → prices, voices; store.loadAllowance → minutes left)
+```
+
+- **Contract** (`voice-settings.types.ts`, shared-types): catalogs
+  (`STT_MODEL_OPTIONS`, `TTS_MODEL_OPTIONS`, `TTS_VOICE_CATALOG` — the Aura-2
+  English/Spanish voices with accent and gender, Bianca for Portuguese,
+  Aura-1 English), `voiceSettingsErrors` (one validator for the API and the
+  admin form: known STT model, model that speaks the language, voice id
+  `<model>-<name>-<lang>`, prices 0–100 in cents), `voiceCredits` and
+  `voiceSecondsAffordable`, `voicePricingFrom` (public view).
+- **Engines stay configuration-free**: the STT provider takes `model` in
+  `createStream` (multilingual → `language=multi`, else the session's
+  language); the TTS provider takes `voice` in `synthesize`. Settings are
+  read by their callers, so `stt-engine`/`tts-engine` keep no database.
+- **Pricing**: every started second counts, rounded up to whole credits;
+  the STT price is locked when a session starts; billed seconds exclude the
+  finalize wait; a recording ends when the balance runs out
+  (`endedBy: "credit-limit"`) and a spoken reply stops speaking (text goes
+  on) — nothing is given away when the debit would fail.
+- **Free plan limit** (`freeTierMinutes`, `freeTierPeriod`): only users on
+  the `FREE` plan, only Robotina. Her voice input is tagged
+  (`stt:start {purpose: "voice-assistant"}`) and her speech is measured, so
+  both count: `VoiceAllowanceService.record()` adds every started second
+  of a Free user to the UTC month row and the total row of `VoiceUsage`
+  (counted even while no limit is set, so a limit set mid-month sees the
+  month so far); the period picks which row is checked. Enforcement is on
+  the server:
+  - `stt:start` for Robotina with the minutes used up →
+    `stt:error {code: "FREE_LIMIT_REACHED"}`; otherwise the session is
+    capped at the seconds left (`endedBy: "free-limit"`, billed and counted
+    up to there);
+  - a reply with the minutes used up → 403 `{code: "FREE_LIMIT_REACHED"}`
+    before anything is saved or charged (SSE `error.code`); while some
+    remain she speaks only what is left (`audio_error` with reason
+    `free-limit`), then text;
+  - `GET /voice/allowance` → limited, limit/used/remaining seconds,
+    exhausted, period and `resetsAt` (monthly: the 1st of next month,
+    UTC). Reading never blocks on a database error.
+  - The web (`FreeMinutesNotice`, page and widget) shows "7 of 10 minutes
+    left"; once used up — or on the server's code — the orb, mic and
+    composer are disabled and an **invitation to upgrade for unlimited use**
+    links to Credits (with the date the minutes come back, when monthly).
+    Paid plans never see any of it.
+- **A typed voice id** covers voices Deepgram releases after the catalog;
+  "Play" (`POST /admin/voice-settings/preview`, a sample sentence in that
+  language, not billed) checks it before saving — Deepgram's error is shown
+  if the voice doesn't exist.
+- **Caching**: a save refreshes the API instance that handled it at once;
+  other replicas within 30 s. The web reads `GET /voice/pricing` once per
+  page load (shared by every voice button).
+- **AI Models** no longer adds `speech-to-text` models (the task type is
+  gone from "Add model" and `CreateModelDto`); rows added before stay
+  listed but price nothing.
+- **Tests**: shared-types (defaults, billing by second, affordability,
+  rates, catalog, voice ids, validation, pricing view), voice-settings
+  (cache, shared query, DB failure fallback, save + validation, stored
+  garbage), API (admin controller guards/preview, `/voice/pricing`, gateway
+  model + price + credit limit), stt/tts engines (model, voice, billing),
+  Robotina (voice and price from settings, speech budget), admin (form
+  helpers; Storybook story with play tests; E2E `admin.voice-settings.spec.ts`:
+  configure, preview, custom id, Aura-1, validation, Deepgram warning,
+  phone, Free plan limit), web (pricing hook, prices per second, voices in
+  Robotina's note, out-of-credits messages, minutes left, upgrade invitation
+  on the widget/page, refused reply or voice, `purpose` in `stt:start`;
+  E2E "Free plan" flow). Free plan: shared-types (validation, period keys,
+  allowance math), `VoiceAllowanceService` (month/total, paid plans, DB
+  failure, recording), gateway (refusal, cap, counting only Robotina and
+  limited users), Robotina service (refusal before saving, speech budget,
+  counting), controller (`error.code`), DTOs.
 
 ---
 
@@ -4053,10 +4221,14 @@ export class YourToolService {
 | **Movement-gated widget swaps**  | Widgets of different sizes reflow truthfully while dragging; swaps need pointer movement, so a reflow can't start swap loops                      |
 | **Store-driven widget open**     | `isWidgetOpen` in Zustand store allows any component to open chat via `openWidget()`                                                              |
 | **Sentry for observability**     | Separate projects for API + Web, breadcrumbs for context, PII sanitization, flush on Render shutdown                                              |
-| **TTS fixed, not a setting**     | Always Deepgram Aura-2, voice picked by the reply language: nothing to configure or misconfigure, one price per minute                            |
+| **Voice per language, by admin** | Users never pick a voice (it follows the reply language); admins set each language's Aura voice in Admin → Voice — one place, checked with Play   |
+| **Voice priced per second**      | STT and TTS in credits per second (started seconds, rounded up), locked per session, capped by the balance: fair for short turns, no debt         |
+| **Config-free voice engines**    | stt-engine/tts-engine take model/voice as parameters; @creator-hub/voice-settings reads the row (cached) — engines keep no database               |
+| **Free minutes, server-side**    | Free plan's Robotina minutes counted and enforced by the API (STT start/cap, reply refusal); the web only shows them and invites to upgrade       |
 | **Sentence-level TTS over SSE**  | First sentence spoken while the model still writes; plain REST + the existing SSE pattern; parallel synthesis, in-order                           |
 | **Assistant actions registry**   | Tools register what the assistant may do and she discovers them at runtime: no tool-to-tool imports, new abilities without changing her           |
 | **Lexical language detection**   | Transcripts and typed text carry no language: a tiny en/es/pt detector is instant, free and testable, with fallbacks                              |
+| **Tagged STT sessions**          | Each session echoes the client's `requestId`; CloseStream + KeepAlive; drops reopen on the same mic: the mic never flips on a stale session       |
 | **Apify over Crawlee**           | Apify handles authentication and scraping at scale; no cookie management needed. Crawlee was fragile and required manual cookie refresh.          |
 
 ---

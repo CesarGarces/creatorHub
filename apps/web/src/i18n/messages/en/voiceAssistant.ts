@@ -19,10 +19,10 @@ export const voiceAssistant = {
   handsFree: "Conversation mode",
   handsFreeHint: "After she answers, Robotina listens again",
   voiceNote:
-    "Her voice is Deepgram Aura-2, picked from the language you speak: Andromeda (English), Celeste (Spanish), Bianca (Portuguese).",
+    "Her voice is Deepgram Aura, picked from the language you speak — one voice per language:",
   voiceSettings: "Voice",
-  pricing: "Voice input {stt} cr/min · Reply 1 cr (spoken: 1 cr/min)",
-  pricingShort: "{stt} cr/min voice · 1 cr/reply",
+  pricing: "Voice input {stt} cr/s · Reply 1 cr (spoken: {tts} cr/s)",
+  pricingShort: "{stt} cr/s voice · {tts} cr/s spoken reply",
   openChat: "Open chat",
   hideHistory: "Hide History",
   showHistory: "Show History",
@@ -39,6 +39,27 @@ export const voiceAssistant = {
   spoken: "Spoken",
   interrupted: "Interrupted",
   voiceFailed: "Voice unavailable — answered in text",
+  voiceOutOfCredits: "Not enough credits for her voice — the rest is in text",
+  voiceOutOfFreeMinutes: "Your free minutes ran out — the rest is in text",
+  freeTier: {
+    remainingMonthly_one:
+      "Free plan: {count} of {total} minutes with Robotina left this month",
+    remainingMonthly_other:
+      "Free plan: {count} of {total} minutes with Robotina left this month",
+    remainingTotal_one:
+      "Free plan: {count} of {total} minutes with Robotina left",
+    remainingTotal_other:
+      "Free plan: {count} of {total} minutes with Robotina left",
+    exhaustedTitle: "You've used your {total} free minutes with Robotina",
+    exhaustedTitleNoTotal: "You've used your free minutes with Robotina",
+    exhaustedMonthly:
+      "They come back on {date}. Upgrade your plan to talk with her without limits.",
+    exhaustedLifetime:
+      "Upgrade your plan to keep talking with her without limits.",
+    upgrade: "Upgrade for unlimited use",
+    limitError:
+      "You've used all your free minutes with Robotina. Upgrade your plan for unlimited use.",
+  },
   credits: "{count} cr",
   loading: "Loading conversation…",
   suggestions: {
@@ -56,9 +77,25 @@ export const voiceAssistant = {
     running: {
       create: "Adding it to your calendar…",
       list: "Checking your calendar…",
+      update: "Updating your calendar…",
+      delete: "Preparing the deletion…",
       other: "Working on it…",
     },
     created: "Added to your calendar",
+    updated: "Updated in your calendar",
+    moved: "Was {time}",
+    deleted: "Deleted from your calendar",
+    confirm: "Waiting for your OK to delete",
+    confirmHint: "Say “yes” to confirm",
+    projectCreated: "Video project created",
+    projectUpdated: "Video project updated",
+    projectDeleted: "Video project deleted",
+    projectSessions: "{done}/{total} sessions done",
+    projectWithSessions: "With its {count} sessions",
+    noPublishDate: "No publish date",
+    publishOn: "Publishes {date}",
+    projects: "Your video projects",
+    noProjects: "No video projects yet",
     agenda: "Your calendar",
     agendaEmpty: "Nothing planned",
     overlaps: "Overlaps with {title}",

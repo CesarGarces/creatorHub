@@ -74,6 +74,11 @@ const EXACT_MESSAGES: Record<string, TranslationKey> = {
     "videoClipper.errors.modelFailed",
   "Analysis not found": "errors.notFound",
   "Conversation not found": "errors.notFound",
+  "The voice connection was interrupted": "voice.errors.connectionLost",
+  "The voice session was lost": "voice.errors.connectionLost",
+  "Recording limit reached (3 minutes max)": "voice.errors.timeLimit",
+  "You've used all your free minutes with Robotina. Upgrade your plan for unlimited use.":
+    "voiceAssistant.freeTier.limitError",
   "Robotina couldn't answer. Try again or choose another model.":
     "voiceAssistant.errors.modelFailed",
   "Robotina couldn't answer. Please try again.":

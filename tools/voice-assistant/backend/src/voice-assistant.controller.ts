@@ -76,6 +76,9 @@ export class VoiceAssistantController {
     } catch (error) {
       const status =
         (error as { getStatus?: () => number }).getStatus?.() ?? 500;
+      const body = (
+        error as { getResponse?: () => unknown }
+      ).getResponse?.() as { code?: unknown } | undefined;
       send({
         type: "error",
         status,
@@ -83,6 +86,8 @@ export class VoiceAssistantController {
           status >= 500 && status !== 502
             ? "Robotina couldn't answer. Please try again."
             : (error as Error).message,
+        // e.g. FREE_LIMIT_REACHED: the app shows the upgrade invitation.
+        ...(typeof body?.code === "string" ? { code: body.code } : {}),
       });
     } finally {
       if (!res.writableEnded) res.end();

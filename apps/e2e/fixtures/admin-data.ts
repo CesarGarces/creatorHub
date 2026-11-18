@@ -145,6 +145,25 @@ const MODES = [
   },
 ];
 
+/** `GET /admin/voice-settings` (Admin → Voice: STT & TTS). */
+export const ADMIN_VOICE_SETTINGS = {
+  settings: {
+    stt: { provider: "deepgram", model: "nova-3", creditsPerSecond: 1 },
+    tts: {
+      provider: "deepgram",
+      creditsPerSecond: 2,
+      voices: {
+        en: { model: "aura-2", voice: "aura-2-andromeda-en" },
+        es: { model: "aura-2", voice: "aura-2-celeste-es" },
+        pt: { model: "aura-2", voice: "aura-2-bianca-pt" },
+      },
+    },
+    freeTier: { minutes: null as number | null, period: "monthly" },
+    updatedAt: daysAgo(1),
+  },
+  ttsProvider: "deepgram",
+};
+
 /** Every API call the admin pages make, with representative data. */
 export function adminApiRoutes(): Record<string, unknown> {
   const listModels: MockHandler = () => ({
@@ -209,6 +228,7 @@ export function adminApiRoutes(): Record<string, unknown> {
       byTaskType: { "image-generation": 9, "text-generation": 30 },
       byTier: {},
     },
+    "/admin/voice-settings": ADMIN_VOICE_SETTINGS,
     "/admin/users": {
       data: ADMIN_USERS,
       meta: { page: 1, limit: 20, total: 60, totalPages: 3 },
@@ -330,6 +350,7 @@ const h1 = (name: string) => (page: Page) =>
 export const ADMIN_PAGES: AdminPageSpec[] = [
   { path: "/", ready: h1("Dashboard") },
   { path: "/models", ready: h1("AI Models") },
+  { path: "/voice", ready: h1("Voice (STT & TTS)") },
   { path: "/tools", ready: h1("Tools") },
   { path: "/modes", ready: h1("Modes") },
   { path: "/users", ready: h1("Users") },

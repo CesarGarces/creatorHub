@@ -71,6 +71,20 @@ describe("TurnDetector", () => {
     expect(onEnd).toHaveBeenCalledWith("speech");
   });
 
+  it("ends a stalled turn whose words never became final", () => {
+    const onEnd = vi.fn();
+    const turn = new TurnDetector(onEnd);
+    turn.start();
+    turn.transcript("so what do you", false);
+    vi.advanceTimersByTime(4000);
+    turn.transcript("so what do you think", false); // still talking
+    vi.advanceTimersByTime(4999);
+    expect(onEnd).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(onEnd).toHaveBeenCalledWith("stalled");
+    expect(turn.heardSpeech).toBe(true);
+  });
+
   it("gives up after a long silence", () => {
     const onEnd = vi.fn();
     const turn = new TurnDetector(onEnd, { noSpeechMs: 5000 });

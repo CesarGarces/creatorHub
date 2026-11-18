@@ -60,7 +60,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Dashboard widget **Robotina**: the AI voice assistant. Tap the orb and talk — voice input uses the platform's Deepgram STT (1 credit per minute, like every voice button); she answers out loud with Deepgram Aura-2 in the language you speak (Andromeda/English, Celeste/Spanish, Bianca/Portuguese), 1 credit per reply (per started minute of speech). While you speak the orb waves with your voice, while she speaks with hers. A second tap sends at once; tapping while she talks interrupts her. **Conversation mode** listens again after each answer (it stops after 8 s of silence). “Open chat” continues the same conversation in the tool. When she acts for you (e.g. “schedule a recording tomorrow from 3 to 4”) the session appears as a compact card linking to the planner. Loads no data until tapped.",
+          "Dashboard widget **Robotina**: the AI voice assistant. Tap the orb and talk — voice input uses the platform's Deepgram STT (priced per second in Admin → Voice, like every voice button); she answers out loud with Deepgram Aura in the language you speak, with the voice the admin set for it (by default Andromeda/English, Celeste/Spanish, Bianca/Portuguese) — 1 credit per written reply, spoken replies by the second. While you speak the orb waves with your voice, while she speaks with hers. A second tap sends at once; tapping while she talks interrupts her. **Conversation mode** listens again after each answer (it stops after 8 s of silence). “Open chat” continues the same conversation in the tool. When she acts for you (e.g. “schedule a recording tomorrow from 3 to 4”) the session appears as a compact card linking to the planner. Loads no data until tapped.",
       },
     },
   },
@@ -132,6 +132,7 @@ export const AfterSchedulingAPlan: Story = {
               status: "done",
               data: {
                 kind: "calendar-event",
+                change: "created",
                 event: {
                   id: "ev1",
                   title: "Grabar el unboxing",

@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Microphone toggle for speech-to-text (chat, translator, script writer). Recording state is shown with color and pulse; optionally the credit rate per minute.",
+          "Microphone toggle for speech-to-text (chat, translator, script writer). Recording state is shown with color and pulse; optionally the credit rate per second (Admin → Voice).",
       },
     },
   },

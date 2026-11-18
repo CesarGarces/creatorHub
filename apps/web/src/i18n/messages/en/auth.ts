@@ -18,8 +18,6 @@ export const auth = {
   login: {
     title: "Welcome to Creator Hub",
     subtitle: "Sign in to your account",
-    maintenanceNotice:
-      "We're currently undergoing maintenance. Our services are unavailable right now. Please come back later.",
     forgotPassword: "Forgot password?",
     submit: "Sign in",
     noAccount: "Don't have an account?",

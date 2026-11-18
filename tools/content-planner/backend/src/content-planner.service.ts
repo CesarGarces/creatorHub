@@ -187,6 +187,17 @@ export class ContentPlannerService {
     });
   }
 
+  /** One session of the user (null when missing or someone else's). */
+  async getEvent(
+    userId: string,
+    eventId: string,
+  ): Promise<ContentEventRecord | null> {
+    return prisma.contentEvent.findFirst({
+      where: { id: eventId, userId },
+      include: EVENT_INCLUDE,
+    });
+  }
+
   async createEvent(
     userId: string,
     dto: CreateContentEventDto,
@@ -324,6 +335,17 @@ export class ContentPlannerService {
         nextEvent:
           active.find((e) => e.status !== "DONE" && e.endAt > now) ?? null,
       };
+    });
+  }
+
+  /** One video project of the user with its session count, or null. */
+  async getProject(userId: string, projectId: string) {
+    return prisma.contentProject.findFirst({
+      where: { id: projectId, userId },
+      include: {
+        customPlatform: CUSTOM_PLATFORM_SUMMARY,
+        _count: { select: { events: true } },
+      },
     });
   }
 

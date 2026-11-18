@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   BadGatewayException,
   BadRequestException,
+  ForbiddenException,
   InternalServerErrorException,
 } from "@nestjs/common";
 import { GUARDS_METADATA, PATH_METADATA } from "@nestjs/common/constants";
@@ -116,6 +117,28 @@ describe("VoiceAssistantController", () => {
       { type: "error", status: 400, error: "Insufficient credits. Talking…" },
     ]);
     expect(res.writableEnded).toBe(true);
+  });
+
+  it("passes the error code on (Free plan minutes used up)", async () => {
+    const assistant = {
+      reply: vi.fn(async () => {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: "FREE_LIMIT_REACHED",
+          message: "You've used all your free minutes with Robotina.",
+        });
+      }),
+    };
+    const { res, events } = fakeResponse();
+    await new VoiceAssistantController(assistant as never).send("u1", DTO, res);
+    expect(events()).toEqual([
+      {
+        type: "error",
+        status: 403,
+        error: "You've used all your free minutes with Robotina.",
+        code: "FREE_LIMIT_REACHED",
+      },
+    ]);
   });
 
   it("keeps the model-failure message and hides other server errors", async () => {

@@ -29,7 +29,7 @@ import { useI18n } from "@/i18n/i18n-provider";
 import { localizeError } from "@/i18n/errors";
 import { ProviderSelect } from "@/components/provider-select";
 import { VoiceButton, useVoiceButton } from "@/components/voice-button";
-import { useSttCreditsPerMinute } from "@/components/voice-button/use-stt-rate";
+import { useSttCreditsPerSecond } from "@/components/voice-button/use-voice-pricing";
 import {
   PLANNING_STAGES,
   PLAN_FILE_EXTENSIONS,
@@ -109,7 +109,7 @@ function AiPlannerForm({
   const fetchBalance = useCreditsStore((s) => s.fetchBalance);
   const tools = useToolsStore((s) => s.tools);
   const fetchTools = useToolsStore((s) => s.fetchTools);
-  const sttRate = useSttCreditsPerMinute();
+  const sttRate = useSttCreditsPerSecond();
 
   const [model, setModel] = useState("");
   const [modelName, setModelName] = useState("");

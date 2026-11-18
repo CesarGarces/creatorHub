@@ -31,7 +31,7 @@ export class MockTTSProvider extends TTSProviderBase {
       audio: silentWav(durationMs),
       mimeType: "audio/wav",
       durationMs,
-      voice: ttsVoiceFor(params.language).model,
+      voice: params.voice || ttsVoiceFor(params.language).model,
       provider: this.name,
     };
   }

@@ -109,8 +109,14 @@ describe("assistant actions wiring", () => {
 
     const registry = moduleRef.get(AssistantActionRegistry);
     expect(registry.list().map((a) => a.name)).toEqual([
-      "calendar.create_event",
       "calendar.list_events",
+      "calendar.create_event",
+      "calendar.update_event",
+      "calendar.delete_event",
+      "calendar.list_projects",
+      "calendar.create_project",
+      "calendar.update_project",
+      "calendar.delete_project",
     ]);
     await moduleRef.close();
   });

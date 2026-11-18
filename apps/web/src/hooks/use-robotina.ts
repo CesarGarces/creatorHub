@@ -3,10 +3,14 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { QueryClientContext } from "@tanstack/react-query";
 import {
+  FREE_VOICE_LIMIT_CODE,
   isTTSLanguage,
+  type VoiceAllowance,
   type VoiceAssistantEvent,
+  type VoicePricing,
 } from "@creator-hub/shared-types";
 import { useVoiceButton } from "@/components/voice-button";
+import { useVoicePricing } from "@/components/voice-button/use-voice-pricing";
 import { useI18n } from "@/i18n/i18n-provider";
 import { localizeError } from "@/i18n/errors";
 import { useVoiceAssistantStore } from "@/store/voice-assistant.store";
@@ -29,8 +33,8 @@ export type RobotinaState = OrbState;
 const REPLAY_CACHE_SIZE = 30;
 /** Pause between her last word and the mic opening again (hands-free). */
 const RELISTEN_DELAY_MS = 350;
-/** If the STT result never comes after a turn ends, give up. */
-const RESULT_TIMEOUT_MS = 7000;
+/** If the STT result never comes after a turn ends, use what was heard. */
+const RESULT_TIMEOUT_MS = 8000;
 
 export interface UseRobotinaReturn {
   state: RobotinaState;
@@ -46,8 +50,16 @@ export interface UseRobotinaReturn {
   clearError: () => void;
   /** Voice input available (mic + WebSocket STT). */
   isVoiceSupported: boolean;
-  /** Credits per minute of voice input (Admin → AI Models). */
-  sttCreditsPerMinute: number;
+  /** Credits per second of voice input (Admin → Voice). */
+  sttCreditsPerSecond: number;
+  /** Credits per second of her speech (Admin → Voice). */
+  ttsCreditsPerSecond: number;
+  /** Who speaks each language (Admin → Voice). */
+  voices: VoicePricing["tts"]["voices"];
+  /** Free plan minutes with her (null: unknown or not limited). */
+  allowance: VoiceAllowance | null;
+  /** The Free plan's minutes are used up: show the upgrade invitation. */
+  limitReached: boolean;
   /**
    * The orb tap: idle → listen; listening → "I'm done" (send now);
    * thinking/speaking → interrupt her and listen (barge-in).
@@ -74,6 +86,19 @@ export function useRobotina(): UseRobotinaReturn {
   const queryClientRef = useRef(queryClient);
   queryClientRef.current = queryClient;
   const handsFree = useVoiceAssistantStore((s) => s.handsFree);
+  const pricing = useVoicePricing();
+  const allowance = useVoiceAssistantStore((s) => s.allowance);
+  const loadAllowance = useVoiceAssistantStore((s) => s.loadAllowance);
+  const markAllowanceExhausted = useVoiceAssistantStore(
+    (s) => s.markAllowanceExhausted,
+  );
+  const allowanceRef = useRef(allowance);
+  allowanceRef.current = allowance;
+  // Free plan minutes: only asked for when the admin set a limit.
+  const hasFreeLimit = pricing.freeTier !== null;
+  useEffect(() => {
+    if (hasFreeLimit) void loadAllowance();
+  }, [hasFreeLimit, loadAllowance]);
   const loadPreferences = useVoiceAssistantStore((s) => s.loadPreferences);
 
   const [state, setStateValue] = useState<RobotinaState>("idle");
@@ -94,6 +119,8 @@ export function useRobotina(): UseRobotinaReturn {
   const segmentsRef = useRef<SpeechSegment[]>([]);
   const cacheRef = useRef(new Map<string, SpeechSegment[]>());
   const committedRef = useRef("");
+  /** The phrase in progress (interim words, not final yet). */
+  const interimRef = useRef("");
   /** A voice conversation is running: relisten after she speaks. */
   const loopRef = useRef(false);
   /** The next STT result must be dropped (conversation stopped). */
@@ -132,16 +159,18 @@ export function useRobotina(): UseRobotinaReturn {
     partial: (_text: string, _isFinal: boolean) => {},
     utteranceEnd: () => {},
     result: (_full: string) => {},
-    sttError: (_message: string) => {},
+    sttError: (_message: string, _code?: string) => {},
   });
 
   const voice = useVoiceButton({
     language: locale,
+    // The server applies the Free plan's minutes with Robotina.
+    purpose: "voice-assistant",
     onPartialTranscript: (text, isFinal) =>
       handlers.current.partial(text, isFinal),
     onUtteranceEnd: () => handlers.current.utteranceEnd(),
     onResult: (full) => handlers.current.result(full),
-    onError: (message) => handlers.current.sttError(message),
+    onError: (message, code) => handlers.current.sttError(message, code),
   });
   const voiceRef = useRef(voice);
   voiceRef.current = voice;
@@ -184,9 +213,11 @@ export function useRobotina(): UseRobotinaReturn {
         } else if (
           event.type === "action" &&
           event.status === "done" &&
-          event.data?.kind === "calendar-event"
+          (event.data?.kind === "calendar-event" ||
+            event.data?.kind === "calendar-project")
         ) {
-          // "Plans for today" and the planner show it at once.
+          // Created, moved or deleted: "Plans for today" and the planner
+          // show it at once.
           void queryClientRef.current?.invalidateQueries({
             queryKey: ["content-planner"],
           });
@@ -221,7 +252,10 @@ export function useRobotina(): UseRobotinaReturn {
         speech.stop();
         loopRef.current = false;
         setState("idle");
-        report(err);
+        // Free minutes used up: the upgrade invitation shows instead.
+        if ((err as { code?: string })?.code !== FREE_VOICE_LIMIT_CODE) {
+          report(err);
+        }
       }
     },
     [player, report, sendMessage, setState],
@@ -230,6 +264,12 @@ export function useRobotina(): UseRobotinaReturn {
   // ── Listening ─────────────────────────────────────────────────────
   const startListening = useCallback(async () => {
     clearTimers();
+    // Free minutes used up: nothing to listen for (the UI invites to upgrade).
+    if (allowanceRef.current?.exhausted) {
+      loopRef.current = false;
+      setState("idle");
+      return;
+    }
     if (!voiceRef.current.isSupported) {
       setError(t("voiceAssistant.errors.voiceUnsupported"));
       return;
@@ -239,7 +279,9 @@ export function useRobotina(): UseRobotinaReturn {
     speech.stop();
     void speech.unlock(); // inside the tap: allows her voice later
     discardResultRef.current = false;
+    awaitingResultRef.current = false; // a pending turn is replaced
     committedRef.current = "";
+    interimRef.current = "";
     setLiveTranscript("");
     setError(null);
     loopRef.current = true;
@@ -256,11 +298,10 @@ export function useRobotina(): UseRobotinaReturn {
     voiceRef.current.stopListening();
     clearTimers();
     resultTimerRef.current = setTimeout(() => {
-      // No STT result (mic never opened, socket lost…): back to idle.
+      // Safety net (the STT hook answers within ~6 s): use what was heard.
       if (awaitingResultRef.current) {
-        awaitingResultRef.current = false;
-        loopRef.current = false;
-        setState("idle");
+        console.info("[Robotina] no STT result in time");
+        handlers.current.result("");
       }
     }, RESULT_TIMEOUT_MS);
   }, [setState]);
@@ -298,7 +339,7 @@ export function useRobotina(): UseRobotinaReturn {
 
   const sendText = useCallback(
     async (text: string) => {
-      if (!text.trim()) return;
+      if (!text.trim() || allowanceRef.current?.exhausted) return;
       if (stateRef.current === "listening") {
         discardResultRef.current = true;
         turn().stop();
@@ -319,23 +360,37 @@ export function useRobotina(): UseRobotinaReturn {
       turn().transcript(text, isFinal);
       if (isFinal) {
         committedRef.current = `${committedRef.current} ${text}`.trim();
+        interimRef.current = "";
         setLiveTranscript(committedRef.current);
       } else {
+        interimRef.current = text;
         setLiveTranscript(`${committedRef.current} ${text}`.trim());
       }
     },
     utteranceEnd: () => turn().utteranceEnd(),
     result: (full) => {
+      // A result nobody waits for (late, after the safety net) is dropped.
+      if (!awaitingResultRef.current && stateRef.current !== "listening") {
+        discardResultRef.current = false;
+        return;
+      }
       clearTimers();
       awaitingResultRef.current = false;
       turn().stop();
-      const text = (full || committedRef.current).trim();
+      // The STT hook already falls back to what it heard; this covers an
+      // empty result with words on screen (never drop what was said).
+      const text = (
+        full.trim() || `${committedRef.current} ${interimRef.current}`
+      ).trim();
       committedRef.current = "";
+      interimRef.current = "";
       setLiveTranscript("");
       if (!mountedRef.current || discardResultRef.current) {
         discardResultRef.current = false;
         return;
       }
+      // The user's voice counted towards the Free plan's minutes.
+      if (allowanceRef.current?.limited) void loadAllowance();
       if (!text) {
         // Nothing was said: the conversation pauses.
         loopRef.current = false;
@@ -344,7 +399,12 @@ export function useRobotina(): UseRobotinaReturn {
       }
       void send(text, true);
     },
-    sttError: (message) => {
+    sttError: (message, code) => {
+      console.info(`[Robotina] voice input stopped: ${code ?? "error"}`);
+      if (code === FREE_VOICE_LIMIT_CODE) {
+        markAllowanceExhausted();
+        message = ""; // the upgrade invitation says it
+      }
       clearTimers();
       awaitingResultRef.current = false;
       turn().stop();
@@ -356,6 +416,7 @@ export function useRobotina(): UseRobotinaReturn {
   };
   handlersEndTurn.current = (reason) => {
     if (stateRef.current !== "listening") return;
+    console.info(`[Robotina] turn ended: ${reason}`);
     if (reason === "silence") loopRef.current = false;
     finishTurn();
   };
@@ -442,7 +503,11 @@ export function useRobotina(): UseRobotinaReturn {
     activity: state === "thinking" ? activity : null,
     clearError: () => setError(null),
     isVoiceSupported: voice.isSupported,
-    sttCreditsPerMinute: voice.creditsPerMinute,
+    sttCreditsPerSecond: pricing.stt.creditsPerSecond,
+    ttsCreditsPerSecond: pricing.tts.creditsPerSecond,
+    voices: pricing.tts.voices,
+    allowance,
+    limitReached: !!allowance?.exhausted,
     toggle,
     startListening,
     stop,

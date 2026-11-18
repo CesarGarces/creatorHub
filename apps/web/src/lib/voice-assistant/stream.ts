@@ -18,6 +18,8 @@ export class AssistantStreamError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    /** e.g. FREE_LIMIT_REACHED (the Free plan's minutes are used up). */
+    readonly code?: string,
   ) {
     super(message);
     this.name = "AssistantStreamError";
@@ -72,15 +74,20 @@ export async function streamAssistantReply(
   });
   if (!response.ok || !response.body) {
     let message = `Request failed (${response.status})`;
+    let code: string | undefined;
     try {
-      const body = (await response.json()) as { message?: string | string[] };
+      const body = (await response.json()) as {
+        message?: string | string[];
+        code?: string;
+      };
       message = Array.isArray(body.message)
         ? body.message[0]!
         : (body.message ?? message);
+      code = typeof body.code === "string" ? body.code : undefined;
     } catch {
       // keep the generic message
     }
-    throw new AssistantStreamError(message, response.status);
+    throw new AssistantStreamError(message, response.status, code);
   }
 
   const reader = response.body.getReader();
@@ -94,7 +101,7 @@ export async function streamAssistantReply(
     buffer = parsed.rest;
     for (const event of parsed.events) {
       if (event.type === "error") {
-        throw new AssistantStreamError(event.error, event.status);
+        throw new AssistantStreamError(event.error, event.status, event.code);
       }
       onEvent(event);
       if (event.type === "done") done = event;

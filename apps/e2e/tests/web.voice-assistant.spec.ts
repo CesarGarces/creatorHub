@@ -76,11 +76,17 @@ async function fakeStt(
   context: BrowserContext,
   appOrigin: string,
   phrase: string,
+  /** Deepgram drops the first session mid-phrase (PROVIDER_CLOSED). */
+  { dropFirstSession = false } = {},
 ): Promise<SttFake> {
   const stats: SttFake = { starts: 0, ends: 0 };
   const appHost = new URL(appOrigin).host;
   const send = (ws: WebSocketRoute, event: string, data: unknown) =>
     ws.send(`42${JSON.stringify([event, data])}`);
+  const requestIdOf = (message: string): string | undefined =>
+    (JSON.parse(message.slice(2)) as [string, { requestId?: string }?])[1]
+      ?.requestId;
+  let requestId: string | undefined;
 
   await context.routeWebSocket(
     (url) => url.host !== appHost && url.pathname.startsWith("/socket.io"),
@@ -94,28 +100,68 @@ async function fakeStt(
         else if (message === "2") ws.send("3");
         else if (message.startsWith('42["stt:start"')) {
           stats.starts += 1;
-          send(ws, "stt:started", { sessionId: `s${stats.starts}` });
-          if (stats.starts === 1) {
+          // Like the real gateway: every event echoes the session's requestId.
+          requestId = requestIdOf(message);
+          const id = { requestId };
+          send(ws, "stt:started", { sessionId: `s${stats.starts}`, ...id });
+          const words = phrase.split(" ");
+          if (dropFirstSession && stats.starts === 1) {
+            setTimeout(
+              () =>
+                send(ws, "stt:partial", {
+                  text: words.slice(0, 2).join(" "),
+                  isFinal: false,
+                  ...id,
+                }),
+              400,
+            );
+            setTimeout(
+              () =>
+                send(ws, "stt:error", {
+                  code: "PROVIDER_CLOSED",
+                  message: "The voice connection was interrupted",
+                  ...id,
+                }),
+              900,
+            );
+          } else if (dropFirstSession && stats.starts === 2) {
+            setTimeout(
+              () =>
+                send(ws, "stt:partial", {
+                  text: words.slice(2).join(" "),
+                  isFinal: true,
+                  ...id,
+                }),
+              400,
+            );
+          } else if (stats.starts === 1) {
             setTimeout(
               () =>
                 send(ws, "stt:partial", {
                   text: phrase.split(" ").slice(0, 2).join(" "),
                   isFinal: false,
+                  ...id,
                 }),
               400,
             );
             setTimeout(
-              () => send(ws, "stt:partial", { text: phrase, isFinal: true }),
+              () =>
+                send(ws, "stt:partial", { text: phrase, isFinal: true, ...id }),
               900,
             );
           }
         } else if (message.startsWith('42["stt:end"')) {
           stats.ends += 1;
+          // The server's transcript covers its own session only.
+          const heard = dropFirstSession
+            ? phrase.split(" ").slice(2).join(" ")
+            : phrase;
           send(ws, "stt:result", {
-            fullTranscript: stats.ends === 1 ? phrase : "",
+            fullTranscript: stats.ends === 1 ? heard : "",
             durationMs: 2000,
             wordCount: 4,
             credits: 1,
+            requestId: requestIdOf(message) ?? requestId,
           });
         }
       });
@@ -246,6 +292,52 @@ test.describe("Robotina voice assistant", () => {
     expect(reply.bodies).toHaveLength(1);
   });
 
+  test("a dropped Deepgram session doesn't close the mic or lose words", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    await context.grantPermissions(["microphone"]);
+    const phrase = "Hola Robotina, ¿cómo estás?";
+    await setup(context, baseURL!);
+    const stt = await fakeStt(context, baseURL!, phrase, {
+      dropFirstSession: true,
+    });
+    const reply = await replyWith(context, baseURL!, [
+      {
+        type: "start",
+        conversationId: "vc-new",
+        userMessageId: "m1",
+        language: "es",
+        voice: null,
+        title: phrase,
+      },
+      { type: "delta", content: "¡Muy bien!" },
+      {
+        type: "done",
+        messageId: "m2",
+        content: "¡Muy bien!",
+        language: "es",
+        audioMs: 0,
+        credits: 1,
+        balance: 1499,
+      },
+    ]);
+
+    await page.goto("/tools/voice-assistant");
+    await orbButton(page).click();
+    // The provider drops mid-phrase: a new session opens on the same mic…
+    await expect.poll(() => stt.starts).toBe(2);
+    expect(await orbState(page)).toBe("listening");
+    expect(stt.ends).toBe(0);
+    // …and the whole phrase (both sessions) is shown and sent.
+    await expect(page.getByText(phrase).first()).toBeVisible();
+    await expect.poll(() => reply.bodies.length, { timeout: 10_000 }).toBe(1);
+    expect(reply.bodies[0]).toMatchObject({ content: phrase, spoken: true });
+    await expect(page.getByText("¡Muy bien!").first()).toBeVisible();
+    await expect(page.getByText(/voice connection/i)).toHaveCount(0);
+  });
+
   test("typed messages get a written reply; the history opens past talks", async ({
     context,
     page,
@@ -373,6 +465,7 @@ test.describe("Robotina voice assistant", () => {
         summary: "Created",
         data: {
           kind: "calendar-event",
+          change: "created",
           event: {
             id: "ev1",
             title: "Grabar el unboxing",
@@ -425,19 +518,261 @@ test.describe("Robotina voice assistant", () => {
     ).toBeVisible();
   });
 
-  test("model settings: only the text model — the voice is fixed", async ({
+  test("deleting a session: she asks first, the user's yes deletes it", async ({
     context,
     page,
     baseURL,
   }, testInfo) => {
     await setup(context, baseURL!);
+    const session = {
+      kind: "calendar-event",
+      change: "deleted",
+      event: {
+        id: "ev1",
+        title: "Grabar el unboxing",
+        type: "RECORDING",
+        startAt: "2026-11-28T20:00:00.000Z",
+        endAt: "2026-11-28T21:00:00.000Z",
+      },
+      conflicts: [],
+      url: "/tools/content-planner?date=2026-11-28T20%3A00%3A00.000Z",
+    };
+    const action = {
+      type: "action",
+      id: "a1",
+      name: "calendar.delete_event",
+      args: { eventId: "ev1" },
+    };
+    const turns = [
+      [
+        {
+          type: "start",
+          conversationId: "vc-new",
+          userMessageId: "m1",
+          language: "es",
+          voice: null,
+          title: "Borra",
+        },
+        { ...action, status: "running" },
+        {
+          ...action,
+          status: "needs_confirmation",
+          summary: "NOT DONE YET",
+          data: session,
+        },
+        {
+          type: "delta",
+          content: "¿Seguro que borro la grabación del sábado a las tres?",
+        },
+        {
+          type: "done",
+          messageId: "m2",
+          content: "¿Seguro que borro la grabación del sábado a las tres?",
+          language: "es",
+          audioMs: 0,
+          credits: 1,
+          balance: 1499,
+        },
+      ],
+      [
+        {
+          type: "start",
+          conversationId: "vc-new",
+          userMessageId: "m3",
+          language: "es",
+          voice: null,
+          title: "Borra",
+        },
+        { ...action, id: "a2", status: "running" },
+        {
+          ...action,
+          id: "a2",
+          status: "done",
+          summary: "Deleted",
+          data: session,
+        },
+        { type: "delta", content: "Listo, la borré." },
+        {
+          type: "done",
+          messageId: "m4",
+          content: "Listo, la borré.",
+          language: "es",
+          audioMs: 0,
+          credits: 1,
+          balance: 1498,
+        },
+      ],
+    ];
+    const headers = {
+      "access-control-allow-origin": baseURL!,
+      "access-control-allow-credentials": "true",
+      "access-control-allow-headers": "*",
+      "access-control-allow-methods": "POST,OPTIONS",
+    };
+    const bodies: Array<Record<string, unknown>> = [];
+    await context.route("**/api/v1/tools/voice-assistant/messages", (route) => {
+      if (route.request().method() === "OPTIONS") {
+        return route.fulfill({ status: 204, headers });
+      }
+      bodies.push(JSON.parse(route.request().postData() ?? "{}"));
+      return route.fulfill({
+        status: 201,
+        headers: { ...headers, "content-type": "text/event-stream" },
+        body: sse(...turns[bodies.length - 1]!),
+      });
+    });
+
     await page.goto("/tools/voice-assistant");
+    const input = page.getByRole("textbox", {
+      name: "Type a message or tap the mic…",
+    });
+    await input.fill("Borra la grabación del sábado");
+    await input.press("Enter");
+    await expect(page.getByText("Waiting for your OK to delete")).toBeVisible();
+    await expect(page.getByText("Say “yes” to confirm")).toBeVisible();
+    await expectAccessible(page, testInfo, "robotina delete confirmation");
+
+    await input.fill("Sí");
+    await input.press("Enter");
+    await expect(page.getByText("Deleted from your calendar")).toBeVisible();
+    // The yes continues the same conversation (it holds the pending delete).
+    expect(bodies[1]).toMatchObject({
+      conversationId: "vc-new",
+      content: "Sí",
+    });
+  });
+
+  test("model settings: only the text model — the voices are the admin's", async ({
+    context,
+    page,
+    baseURL,
+  }, testInfo) => {
+    await setup(context, baseURL!, {
+      // Admin → Voice: Spanish spoken by Estrella, prices per second.
+      "GET /voice/pricing": {
+        stt: { model: "nova-3", creditsPerSecond: 1 },
+        tts: {
+          creditsPerSecond: 2,
+          voices: {
+            en: {
+              model: "aura-2-andromeda-en",
+              name: "Andromeda",
+              accent: "American",
+              gender: "feminine",
+            },
+            es: {
+              model: "aura-2-estrella-es",
+              name: "Estrella",
+              accent: "Mexican",
+              gender: "feminine",
+            },
+            pt: {
+              model: "aura-2-bianca-pt",
+              name: "Bianca",
+              accent: "Brazilian",
+              gender: "feminine",
+            },
+          },
+        },
+      },
+    });
+    await page.goto("/tools/voice-assistant");
+    await expect(
+      page.getByText("Voice input 1 cr/s · Reply 1 cr (spoken: 2 cr/s)"),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Model settings" }).click();
-    await expect(page.getByText(/Her voice is Deepgram Aura-2/)).toBeVisible();
+    await expect(page.getByText(/Her voice is Deepgram Aura/)).toBeVisible();
+    await expect(page.getByText("Estrella · Spanish")).toBeVisible();
     await expect(
       page.getByRole("switch", { name: "Conversation mode" }),
     ).toBeVisible();
     await expectAccessible(page, testInfo, "robotina settings");
+  });
+
+  test("Free plan: the minutes left, then an invitation to upgrade", async ({
+    context,
+    page,
+    baseURL,
+  }, testInfo) => {
+    const pricing = {
+      stt: { model: "nova-3", creditsPerSecond: 1 },
+      freeTier: { minutes: 10, period: "monthly" },
+      tts: {
+        creditsPerSecond: 2,
+        voices: {
+          en: {
+            model: "aura-2-andromeda-en",
+            name: "Andromeda",
+            accent: "American",
+            gender: "feminine",
+          },
+          es: {
+            model: "aura-2-celeste-es",
+            name: "Celeste",
+            accent: "Colombian",
+            gender: "feminine",
+          },
+          pt: {
+            model: "aura-2-bianca-pt",
+            name: "Bianca",
+            accent: "Brazilian",
+            gender: "feminine",
+          },
+        },
+      },
+    };
+    let remainingSeconds = 30;
+    await setup(context, baseURL!, {
+      "GET /voice/pricing": pricing,
+      "GET /voice/allowance": () => ({
+        limited: true,
+        period: "monthly",
+        limitSeconds: 600,
+        usedSeconds: 600 - remainingSeconds,
+        remainingSeconds,
+        exhausted: remainingSeconds === 0,
+        resetsAt: "2026-12-01T00:00:00.000Z",
+      }),
+    });
+    // The server refuses the reply: the minutes ran out meanwhile.
+    await replyWith(context, baseURL!, [
+      {
+        type: "error",
+        status: 403,
+        code: "FREE_LIMIT_REACHED",
+        error:
+          "You've used all your free minutes with Robotina. Upgrade your plan for unlimited use.",
+      },
+    ]);
+
+    await page.goto("/tools/voice-assistant");
+    await expect(
+      page.getByText(
+        "Free plan: 1 of 10 minutes with Robotina left this month",
+      ),
+    ).toBeVisible();
+
+    remainingSeconds = 0;
+    await page
+      .getByRole("textbox", { name: "Type a message or tap the mic…" })
+      .fill("Hola Robotina");
+    await page.getByRole("button", { name: "Send" }).click();
+
+    await expect(
+      page.getByText("You've used your 10 free minutes with Robotina"),
+    ).toBeVisible();
+    const upgrade = page.getByRole("link", {
+      name: "Upgrade for unlimited use",
+    });
+    await expect(upgrade).toHaveAttribute("href", "/credits");
+    await expect(
+      page.getByRole("textbox", { name: "Type a message or tap the mic…" }),
+    ).toBeDisabled();
+    await expect(orbButton(page)).toBeDisabled();
+    await expectAccessible(page, testInfo, "robotina free minutes used up");
+
+    await upgrade.click();
+    await expect(page).toHaveURL(/\/credits$/);
   });
 
   test("dashboard widget: the orb with its status and a link to the chat", async ({

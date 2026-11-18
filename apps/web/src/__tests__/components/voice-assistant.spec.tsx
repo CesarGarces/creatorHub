@@ -40,7 +40,8 @@ const stt = vi.hoisted(() => ({
     onPartialTranscript: (text: string, isFinal: boolean) => void;
     onUtteranceEnd: () => void;
     onResult: (t: string, d: number, c: number) => void;
-    onError: (e: string) => void;
+    onError: (e: string, code?: string) => void;
+    purpose?: string;
   },
   startListening: vi.fn(async () => {}),
   stopListening: vi.fn(),
@@ -90,7 +91,9 @@ import { VoiceAssistantWidget } from "@/components/dashboard-widgets/widgets/voi
 import { AssistantActionCard } from "@/components/voice-assistant/assistant-action-card";
 import VoiceAssistantPage from "@/app/(authed)/tools/voice-assistant/page";
 import { useVoiceAssistantStore } from "@/store/voice-assistant.store";
-import { __resetSttRateCache } from "@/components/voice-button/use-stt-rate";
+import { __resetVoicePricingCache } from "@/components/voice-button/use-voice-pricing";
+import api from "@/lib/api";
+import { AssistantStreamError } from "@/lib/voice-assistant/stream";
 
 const done = (content = "¡Hola! Estoy muy bien.") =>
   ({
@@ -126,7 +129,7 @@ const status = () => screen.getByRole("status");
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   localStorage.clear();
-  __resetSttRateCache();
+  __resetVoicePricingCache();
   stt.options = null;
   stt.isSupported = true;
   stt.startListening.mockClear();
@@ -150,6 +153,7 @@ beforeEach(() => {
     isLoadingConversations: false,
     preferencesLoaded: false,
     handsFree: true,
+    allowance: null,
   });
 });
 
@@ -183,7 +187,7 @@ describe("Robotina dashboard widget", () => {
       screen.getByRole("button", { name: "Talk to Robotina" }),
     ).toBeTruthy();
     expect(status().textContent).toBe("Tap to talk");
-    expect(screen.getByText("1 cr/min voice · 1 cr/reply")).toBeTruthy();
+    expect(screen.getByText("1 cr/s voice · 2 cr/s spoken reply")).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "Open chat" }).getAttribute("href"),
     ).toBe("/tools/voice-assistant");
@@ -288,6 +292,74 @@ describe("Robotina dashboard widget", () => {
       );
     });
     expect(stt.stopListening).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends words that never became final (stalled turn, empty result)", async () => {
+    render(<VoiceAssistantWidget />);
+    await act(async () => {
+      fireEvent.click(orb());
+    });
+    act(() => stt.options!.onPartialTranscript("¿Qué tal el clima", false));
+    await act(async () => {
+      vi.advanceTimersByTime(4900);
+    });
+    // Interim words alone never close the mic early…
+    expect(stt.stopListening).not.toHaveBeenCalled();
+    expect(status().textContent).toBe("Listening…");
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+    });
+    // …but a stalled turn ends, and what was heard is not lost.
+    expect(stt.stopListening).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      stt.options!.onResult("", 5000, 1);
+    });
+    expect(reply.calls[0]!.request).toMatchObject({
+      content: "¿Qué tal el clima",
+    });
+  });
+
+  it("uses what was heard when the STT result never comes", async () => {
+    useVoiceAssistantStore.setState({
+      handsFree: false,
+      preferencesLoaded: true,
+    });
+    render(<VoiceAssistantWidget />);
+    await act(async () => {
+      fireEvent.click(orb());
+    });
+    act(() => stt.options!.onPartialTranscript("Hello there", true));
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(status().textContent).toBe("Thinking…");
+    await act(async () => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(reply.calls).toHaveLength(1);
+    expect(reply.calls[0]!.request).toMatchObject({ content: "Hello there" });
+    // A result arriving afterwards doesn't send it twice.
+    await act(async () => {
+      stt.options!.onResult("Hello there", 3000, 1);
+    });
+    expect(reply.calls).toHaveLength(1);
+  });
+
+  it("explains a lost voice connection in the user's language", async () => {
+    render(<VoiceAssistantWidget />);
+    await act(async () => {
+      fireEvent.click(orb());
+    });
+    act(() =>
+      stt.options!.onError(
+        "The voice connection was interrupted",
+        "PROVIDER_CLOSED",
+      ),
+    );
+    expect(screen.getByRole("alert").textContent).toContain(
+      "The voice connection was interrupted. Try again.",
+    );
+    expect(status().textContent).toBe("Tap to talk");
   });
 
   it("tapping while she thinks interrupts her and listens", async () => {
@@ -434,7 +506,7 @@ describe("Robotina tool page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show History" }));
     expect(await screen.findByText("No conversations yet")).toBeTruthy();
     expect(
-      screen.getByText("Voice input 1 cr/min · Reply 1 cr (spoken: 1 cr/min)"),
+      screen.getByText("Voice input 1 cr/s · Reply 1 cr (spoken: 2 cr/s)"),
     ).toBeTruthy();
   });
 
@@ -486,18 +558,96 @@ describe("Robotina tool page", () => {
     });
   });
 
-  it("configures only the text model: the voice is fixed (Aura-2 by language)", () => {
+  it("configures only the text model: the voices come from Admin → Voice", async () => {
+    const get = vi.mocked(api.get);
+    const original = get.getMockImplementation()!;
+    get.mockImplementation(async (path: string, ...rest: unknown[]) =>
+      path === "/voice/pricing"
+        ? {
+            stt: { model: "nova-3", creditsPerSecond: 1 },
+            tts: {
+              creditsPerSecond: 2,
+              voices: {
+                en: {
+                  model: "aura-2-orion-en",
+                  name: "Orion",
+                  accent: "American",
+                  gender: "masculine",
+                },
+                es: {
+                  model: "aura-2-estrella-es",
+                  name: "Estrella",
+                  accent: "Mexican",
+                  gender: "feminine",
+                },
+                pt: {
+                  model: "aura-2-bianca-pt",
+                  name: "Bianca",
+                  accent: "Brazilian",
+                  gender: "feminine",
+                },
+              },
+            },
+          }
+        : (original as (...args: unknown[]) => unknown)(path, ...rest),
+    );
+    try {
+      render(<VoiceAssistantPage />);
+      fireEvent.click(screen.getByRole("button", { name: "Model settings" }));
+      expect(screen.getByText(/Her voice is Deepgram Aura/)).toBeTruthy();
+      expect(await screen.findByText(/Estrella · Spanish/)).toBeTruthy();
+      expect(screen.getByText(/Orion · English/)).toBeTruthy();
+      expect(
+        screen.getByRole("switch", { name: "Conversation mode" }),
+      ).toBeTruthy();
+      // One model selector (the text model) — no voice/TTS selector.
+      expect(screen.queryAllByRole("combobox").length).toBeLessThanOrEqual(1);
+      expect(screen.queryByText(/text-to-speech model|TTS model/i)).toBeNull();
+    } finally {
+      get.mockImplementation(original);
+    }
+  });
+
+  it("says when her voice stopped because the credits ran out", async () => {
+    reply.impl = async (_r, onEvent) => {
+      onEvent({
+        type: "start",
+        conversationId: "c1",
+        userMessageId: "u1",
+        language: "en",
+        voice: { model: "aura-2-andromeda-en", name: "Andromeda" },
+        title: "Hi",
+      });
+      onEvent({ type: "delta", content: "Hello! The rest goes in text." });
+      onEvent({
+        type: "audio_error",
+        reason: "credits",
+        error: "Not enough credits for her voice — the rest is in text.",
+      });
+      onEvent({
+        type: "done",
+        messageId: "m2",
+        content: "Hello! The rest goes in text.",
+        language: "en",
+        audioMs: 0,
+        credits: 1,
+        balance: 0,
+      });
+      return true;
+    };
     render(<VoiceAssistantPage />);
-    fireEvent.click(screen.getByRole("button", { name: "Model settings" }));
+    const input = screen.getByRole("textbox", {
+      name: "Type a message or tap the mic…",
+    });
+    fireEvent.change(input, { target: { value: "Hi" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    });
     expect(
-      screen.getByText(/Her voice is Deepgram Aura-2/).textContent,
-    ).toContain("Andromeda (English), Celeste (Spanish), Bianca (Portuguese)");
-    expect(
-      screen.getByRole("switch", { name: "Conversation mode" }),
+      await screen.findByText(
+        "Not enough credits for her voice — the rest is in text",
+      ),
     ).toBeTruthy();
-    // One model selector (the text model) — no voice/TTS selector.
-    expect(screen.queryAllByRole("combobox").length).toBeLessThanOrEqual(1);
-    expect(screen.queryByText(/text-to-speech model|TTS model/i)).toBeNull();
   });
 
   it("shows a readable error when she can't answer", async () => {
@@ -527,6 +677,7 @@ describe("Robotina tool page", () => {
 describe("Robotina actions", () => {
   const created = {
     kind: "calendar-event" as const,
+    change: "created" as const,
     event: {
       id: "ev1",
       title: "Grabar el unboxing",
@@ -803,5 +954,298 @@ describe("Conversation mode during an action", () => {
     // Only after her last word does the mic reopen (conversation mode).
     expect(stt.startListening).toHaveBeenCalledTimes(2);
     expect(status().textContent).toBe("Listening…");
+  });
+});
+
+describe("AssistantActionCard — edits, deletions and projects", () => {
+  const slot = {
+    id: "ev1",
+    title: "Grabar el unboxing",
+    type: "RECORDING",
+    startAt: "2026-11-28T22:00:00.000Z",
+    endAt: "2026-11-28T23:00:00.000Z",
+  };
+  const record = (
+    status: string,
+    data: unknown,
+    name = "calendar.update_event",
+  ) => ({ id: "a1", name, args: {}, status, data }) as never;
+
+  it("shows a moved session with its previous time", () => {
+    render(
+      <AssistantActionCard
+        action={record("done", {
+          kind: "calendar-event",
+          change: "updated",
+          event: slot,
+          previous: {
+            startAt: "2026-11-28T20:00:00.000Z",
+            endAt: "2026-11-28T21:00:00.000Z",
+          },
+          conflicts: [],
+          url: "/tools/content-planner",
+        })}
+      />,
+    );
+    expect(screen.getByText("Updated in your calendar")).toBeTruthy();
+    expect(screen.getByText(/^Was /)).toBeTruthy();
+  });
+
+  it("asks for the OK before deleting, then shows it deleted", () => {
+    const data = {
+      kind: "calendar-event",
+      change: "deleted",
+      event: slot,
+      conflicts: [],
+      url: "/tools/content-planner",
+    };
+    const { rerender } = render(
+      <AssistantActionCard
+        action={record("needs_confirmation", data, "calendar.delete_event")}
+      />,
+    );
+    expect(screen.getByText("Waiting for your OK to delete")).toBeTruthy();
+    expect(screen.getByText("Say “yes” to confirm")).toBeTruthy();
+    expect(screen.getByText("Grabar el unboxing").className).not.toContain(
+      "line-through",
+    );
+
+    rerender(
+      <AssistantActionCard
+        action={record("done", data, "calendar.delete_event")}
+      />,
+    );
+    expect(screen.getByText("Deleted from your calendar")).toBeTruthy();
+    expect(screen.getByText("Grabar el unboxing").className).toContain(
+      "line-through",
+    );
+    expect(
+      screen.queryByRole("link", { name: "Open in planner →" }),
+    ).toBeNull();
+  });
+
+  it("shows video projects: created, deleted with its sessions, and the list", () => {
+    const project = {
+      id: "p1",
+      title: "Review del teléfono",
+      platform: "youtube-long",
+      publishAt: "2026-12-10T23:00:00.000Z",
+      sessions: { total: 3, done: 1 },
+    };
+    const { rerender } = render(
+      <AssistantActionCard
+        action={record(
+          "done",
+          { kind: "calendar-project", change: "created", project, url: "/x" },
+          "calendar.create_project",
+        )}
+      />,
+    );
+    expect(screen.getByText("Video project created")).toBeTruthy();
+    expect(screen.getByText(/Publishes .* · 1\/3 sessions done/)).toBeTruthy();
+
+    rerender(
+      <AssistantActionCard
+        action={record(
+          "needs_confirmation",
+          { kind: "calendar-project", change: "deleted", project, url: "/x" },
+          "calendar.delete_project",
+        )}
+      />,
+    );
+    expect(screen.getByText("Waiting for your OK to delete")).toBeTruthy();
+    expect(screen.getByText(/With its 3 sessions/)).toBeTruthy();
+
+    rerender(
+      <AssistantActionCard
+        action={record(
+          "done",
+          {
+            kind: "calendar-projects",
+            projects: [
+              project,
+              { ...project, id: "p2", title: "Vlog", publishAt: null },
+            ],
+            url: "/x",
+          },
+          "calendar.list_projects",
+        )}
+      />,
+    );
+    expect(screen.getByText("Your video projects")).toBeTruthy();
+    expect(screen.getByText("No publish date")).toBeTruthy();
+  });
+
+  it("says what she's doing while each kind of action runs", () => {
+    const { rerender } = render(
+      <AssistantActionCard
+        action={record("running", undefined, "calendar.update_event")}
+      />,
+    );
+    expect(screen.getByRole("status").textContent).toBe(
+      "Updating your calendar…",
+    );
+    rerender(
+      <AssistantActionCard
+        action={record("running", undefined, "calendar.delete_project")}
+      />,
+    );
+    expect(screen.getByRole("status").textContent).toBe(
+      "Preparing the deletion…",
+    );
+  });
+
+  it("still shows actions saved before edits existed (no `change`)", () => {
+    render(
+      <AssistantActionCard
+        action={record(
+          "done",
+          { kind: "calendar-event", event: slot, conflicts: [], url: "/x" },
+          "calendar.create_event",
+        )}
+      />,
+    );
+    expect(screen.getByText("Added to your calendar")).toBeTruthy();
+  });
+});
+
+describe("Robotina on the Free plan (minutes set in Admin → Voice)", () => {
+  const PRICING = {
+    stt: { model: "nova-3", creditsPerSecond: 1 },
+    freeTier: { minutes: 10, period: "monthly" },
+    tts: {
+      creditsPerSecond: 2,
+      voices: {
+        en: {
+          model: "aura-2-andromeda-en",
+          name: "Andromeda",
+          accent: "American",
+          gender: "feminine",
+        },
+        es: {
+          model: "aura-2-celeste-es",
+          name: "Celeste",
+          accent: "Colombian",
+          gender: "feminine",
+        },
+        pt: {
+          model: "aura-2-bianca-pt",
+          name: "Bianca",
+          accent: "Brazilian",
+          gender: "feminine",
+        },
+      },
+    },
+  };
+  const allowance = (remainingSeconds: number) => ({
+    limited: true,
+    period: "monthly",
+    limitSeconds: 600,
+    usedSeconds: 600 - remainingSeconds,
+    remainingSeconds,
+    exhausted: remainingSeconds === 0,
+    resetsAt: "2026-12-01T00:00:00.000Z",
+  });
+
+  /** Serves the voice pricing and the user's allowance for one test. */
+  function serve(remainingSeconds: number) {
+    const get = vi.mocked(api.get);
+    const original = get.getMockImplementation()!;
+    get.mockImplementation(async (path: string, ...rest: unknown[]) =>
+      path === "/voice/pricing"
+        ? PRICING
+        : path === "/voice/allowance"
+          ? allowance(remainingSeconds)
+          : (original as (...args: unknown[]) => unknown)(path, ...rest),
+    );
+    return () => get.mockImplementation(original);
+  }
+
+  it("shows the minutes left, and Robotina's voice input counts them", async () => {
+    const restore = serve(420);
+    try {
+      render(<VoiceAssistantWidget />);
+      expect(
+        await screen.findByText(
+          "Free plan: 7 of 10 minutes with Robotina left this month",
+        ),
+      ).toBeTruthy();
+      // Her ears tell the server it's Robotina (the Free minutes apply).
+      expect(stt.options?.purpose).toBe("voice-assistant");
+      await act(async () => {
+        fireEvent.click(orb());
+      });
+      expect(stt.startListening).toHaveBeenCalledTimes(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it("used up: invites to upgrade and doesn't listen", async () => {
+    const restore = serve(0);
+    try {
+      render(<VoiceAssistantWidget />);
+      expect(
+        await screen.findByText(
+          "You've used your 10 free minutes with Robotina",
+        ),
+      ).toBeTruthy();
+      expect(screen.getByText(/They come back on December 1/)).toBeTruthy();
+      expect(
+        screen
+          .getByRole("link", { name: "Upgrade for unlimited use" })
+          .getAttribute("href"),
+      ).toBe("/credits");
+      const button = orb() as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+      await act(async () => {
+        fireEvent.click(button);
+      });
+      expect(stt.startListening).not.toHaveBeenCalled();
+    } finally {
+      restore();
+    }
+  });
+
+  it("when the server refuses a reply, the invitation replaces the error", async () => {
+    reply.impl = async () => {
+      throw new AssistantStreamError(
+        "You've used all your free minutes with Robotina. Upgrade your plan for unlimited use.",
+        403,
+        "FREE_LIMIT_REACHED",
+      );
+    };
+    render(<VoiceAssistantPage />);
+    const input = screen.getByRole("textbox", {
+      name: "Type a message or tap the mic…",
+    });
+    fireEvent.change(input, { target: { value: "Hola" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    });
+    expect(
+      await screen.findByRole("link", { name: "Upgrade for unlimited use" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect((input as HTMLInputElement).disabled).toBe(true);
+    expect(screen.queryByText("Hola")).toBeNull();
+  });
+
+  it("when the voice is refused mid-conversation, the invitation shows", async () => {
+    render(<VoiceAssistantWidget />);
+    await act(async () => {
+      fireEvent.click(orb());
+    });
+    act(() =>
+      stt.options!.onError(
+        "You've used all your free minutes with Robotina. Upgrade your plan for unlimited use.",
+        "FREE_LIMIT_REACHED",
+      ),
+    );
+    expect(
+      screen.getByRole("link", { name: "Upgrade for unlimited use" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(status().textContent).toBe("Tap to talk");
   });
 });

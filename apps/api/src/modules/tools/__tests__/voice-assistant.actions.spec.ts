@@ -225,7 +225,7 @@ describe("Robotina schedules a plan", () => {
 
     // She got the real result to confirm it.
     expect(requests[1]!.prompt).toContain(
-      `Created "Grabar el unboxing" (RECORDING) on ${zonedParts(startAt, ZONE).weekday} ${TOMORROW} 15:00–16:30 (America/Bogota)`,
+      `Created "Grabar el unboxing" (RECORDING, PLANNED) ${zonedParts(startAt, ZONE).weekday} ${TOMORROW} 15:00–16:30 (America/Bogota)`,
     );
     const saved = prismaMock.voiceMessage.create.mock.calls.find(
       ([arg]) => arg.data.role === "assistant",
@@ -299,11 +299,133 @@ describe("Robotina schedules a plan", () => {
       kind: "calendar-agenda",
       events: [{ id: "ev7", title: "Grabar el intro" }],
     });
-    expect(requests[2]!.prompt).toContain('09:00–10:00 "Grabar el intro"');
+    expect(requests[2]!.prompt).toContain(
+      `[id ev7] "Grabar el intro" (RECORDING, PLANNED) ${zonedParts(zonedDateTimeToUtc(TOMORROW, "09:00", ZONE), ZONE).weekday} ${TOMORROW} 09:00–10:00`,
+    );
     expect(events(res.text).at(-1)).toMatchObject({
       type: "done",
       content:
         "Ok, lo busco en este momento. Mañana tienes una sesión: grabar el intro de nueve a diez.",
     });
+  });
+
+  it("moves a session to another time, keeping its length", async () => {
+    const current = {
+      id: "ev7",
+      userId: "u1",
+      title: "Grabar el intro",
+      type: "RECORDING",
+      status: "PLANNED",
+      startAt: zonedDateTimeToUtc(TOMORROW, "09:00", ZONE),
+      endAt: zonedDateTimeToUtc(TOMORROW, "10:30", ZONE),
+      reminderMinutes: 15,
+      remindAt: null,
+      project: null,
+      customType: null,
+    };
+    prismaMock.contentEvent.findFirst.mockResolvedValue(current);
+    prismaMock.contentEvent.update.mockImplementation(async ({ data }) => ({
+      ...current,
+      ...data,
+    }));
+    rounds = [
+      `Claro, la muevo. <action>{"name":"calendar.update_event","args":{"eventId":"ev7","startTime":"17:00"}}</action>`,
+      "Listo, ahora es de cinco a seis y media.",
+    ];
+
+    const res = await request(app.getHttpServer())
+      .post("/api/v1/tools/voice-assistant/messages")
+      .send({
+        content: "Mueve la grabación del intro de mañana a las 5 de la tarde",
+        spoken: false,
+        model: "m1",
+        timeZone: ZONE,
+      });
+
+    const update = prismaMock.contentEvent.update.mock.calls[0]![0];
+    expect(update.where).toEqual({ id: "ev7" });
+    expect(update.data).toMatchObject({
+      startAt: zonedDateTimeToUtc(TOMORROW, "17:00", ZONE),
+      endAt: zonedDateTimeToUtc(TOMORROW, "18:30", ZONE),
+    });
+    const done = events(res.text).find(
+      (e) => e.type === "action" && e.status === "done",
+    );
+    expect(done.data).toMatchObject({
+      kind: "calendar-event",
+      change: "updated",
+      previous: { startAt: current.startAt.toISOString() },
+    });
+  });
+
+  it("deletes only after the user's yes in the next message", async () => {
+    const session = {
+      id: "ev7",
+      userId: "u1",
+      title: "Grabar el intro",
+      type: "RECORDING",
+      status: "PLANNED",
+      startAt: zonedDateTimeToUtc(TOMORROW, "09:00", ZONE),
+      endAt: zonedDateTimeToUtc(TOMORROW, "10:00", ZONE),
+      project: null,
+      customType: null,
+    };
+    prismaMock.contentEvent.findFirst.mockResolvedValue(session);
+    prismaMock.contentEvent.deleteMany.mockResolvedValue({ count: 1 });
+    const DELETE =
+      '<action>{"name":"calendar.delete_event","args":{"eventId":"ev7"}}</action>';
+
+    // 1) She asks for confirmation: nothing is deleted.
+    rounds = [
+      DELETE,
+      "¿Seguro que borro la grabación del intro de mañana a las nueve?",
+    ];
+    const first = await request(app.getHttpServer())
+      .post("/api/v1/tools/voice-assistant/messages")
+      .send({
+        content: "Borra la grabación de mañana",
+        spoken: false,
+        model: "m1",
+        timeZone: ZONE,
+      });
+    expect(prismaMock.contentEvent.deleteMany).not.toHaveBeenCalled();
+    const asked = events(first.text).find(
+      (e) => e.type === "action" && e.status !== "running",
+    );
+    expect(asked.status).toBe("needs_confirmation");
+    const saved = prismaMock.voiceMessage.create.mock.calls.find(
+      ([arg]) => arg.data.role === "assistant",
+    )![0].data;
+
+    // 2) The user says yes: her previous reply holds the pending action.
+    requests.length = 0;
+    prismaMock.voiceConversation.findFirst.mockResolvedValue({
+      id: "conv1",
+      title: "Borra",
+      language: "es",
+    });
+    prismaMock.voiceMessage.findFirst.mockResolvedValue({
+      actions: saved.actions,
+      createdAt: new Date(),
+    });
+    rounds = [DELETE, "Listo, la borré."];
+    const second = await request(app.getHttpServer())
+      .post("/api/v1/tools/voice-assistant/messages")
+      .send({
+        conversationId: "conv1",
+        content: "Sí",
+        spoken: false,
+        model: "m1",
+        timeZone: ZONE,
+      });
+
+    expect(prismaMock.contentEvent.deleteMany).toHaveBeenCalledWith({
+      where: { id: "ev7", userId: "u1" },
+    });
+    expect(
+      events(second.text).find(
+        (e) => e.type === "action" && e.status === "done",
+      ),
+    ).toBeTruthy();
   });
 });

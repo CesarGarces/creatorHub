@@ -48,7 +48,13 @@ You can't change anything in the user's account (no calendar, no posting, no fil
   const list = actions
     .map(
       (a) =>
-        `- ${a.name}${a.mutates ? " (changes the user's data)" : " (read only)"}: ${a.description}\n  Arguments:\n${a.parameters.map(describeParameter).join("\n")}`,
+        `- ${a.name}${
+          a.requiresConfirmation
+            ? " (changes the user's data — needs the user's confirmation)"
+            : a.mutates
+              ? " (changes the user's data)"
+              : " (read only)"
+        }: ${a.description}\n  Arguments:\n${a.parameters.map(describeParameter).join("\n")}`,
     )
     .join("\n");
   const examples = actions
@@ -69,8 +75,11 @@ How to use them:
 ${ACTION_OPEN}{"name":"<action name>","args":{...}}${ACTION_CLOSE}
    Saying you'll do it without writing the action does NOTHING: the user is left waiting. Never end a reply with "let me check" or "one moment" without the action.
 4. Never say it's done before you get the result. The result comes back to you as a message starting with "ACTION RESULT". Then tell the user what happened in one or two natural sentences, with the key details (day and time). If it overlaps with something, mention it. If it failed, explain simply and ask what to change.
-5. One action at a time. After a result you may use another one if needed (e.g. read the agenda to check the time is free, then create the session).
-6. The action tag is never read aloud or shown — don't mention it, and don't write JSON anywhere else.${
+5. One action at a time. After a result you may use another one in the same reply if needed (e.g. read the agenda to check the time is free, then create the session).
+   To change or delete something that already exists you need its id: find it first with a list action (search by its name; look further ahead if the user didn't say when), then act. Never invent ids. If several items match, ask which one.
+   Editing and moving is part of your job: never say you can't edit if an action for it is listed.
+6. The action tag is never read aloud or shown — don't mention it, and don't write JSON anywhere else.
+7. Actions that need the user's confirmation (deleting) never run on the first try: the result says "NOT DONE YET" and what would happen. Ask the user clearly (e.g. "Do you want me to delete "Edit the vlog" on Saturday at 3 pm?") and stop. If their next message says yes, call the same action again with exactly the same arguments; if not, don't.${
     examples
       ? `
 

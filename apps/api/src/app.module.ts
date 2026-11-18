@@ -28,6 +28,7 @@ import { ToolFavoritesService } from "./modules/tools/tool-favorites.service";
 import { ImagesController } from "./modules/images/images.controller";
 import { AdminModule } from "./modules/admin/admin.module";
 import { AIModule } from "./modules/ai/ai.module";
+import { VoiceModule } from "./modules/voice/voice.module";
 import { WebhooksController } from "./modules/webhooks/webhooks.controller";
 import { SharingModule } from "./modules/sharing/sharing.module";
 import { NotificationModule } from "./modules/notification/notification.module";
@@ -122,6 +123,8 @@ const throttlerStorage = process.env.REDIS_URL
     ToolSdkModule,
     AdminModule,
     AIModule,
+    // Voice prices and voices (Admin → Voice) for the web app
+    VoiceModule,
 
     // WebSocket + event listeners
     WebsocketModule,

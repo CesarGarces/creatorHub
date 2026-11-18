@@ -45,6 +45,7 @@ export const es: Messages = {
     creditPlans: "Planes de créditos",
     creditEmails: "Emails de crédito",
     backups: "Copias de seguridad",
+    voice: "Voz (STT y TTS)",
     logout: "Cerrar sesión",
     openMenu: "Abrir menú",
     closeMenu: "Cerrar menú",
@@ -473,7 +474,7 @@ export const es: Messages = {
         embedding:
           "Convierte los proyectos en vectores para la búsqueda por similitud del Planificador IA. Si no hay ninguno activo, se usa un embedding integrado gratuito.",
         "speech-to-text":
-          "Su costo en créditos es el precio por minuto de entrada por voz. Mantén uno activo.",
+          "Ya no se usa para cobrar: el modelo de voz y su precio por segundo se configuran en Voz (STT y TTS).",
       },
       errors: {
         required: "Obligatorio",
@@ -580,7 +581,7 @@ export const es: Messages = {
       },
       creditCost: "Costo en créditos",
       creditCostHint:
-        "Modelos de texto, imagen y video: créditos por uso. Embedding: créditos por indexación (0 = gratis). Voz a texto: créditos por minuto de entrada por voz.",
+        "Modelos de texto, imagen y video: créditos por uso. Embedding: créditos por indexación (0 = gratis). La entrada por voz y la voz de Robotina se cobran por segundo en Voz (STT y TTS).",
       profitMargin: "Margen de beneficio (×)",
       pricing: "Precios",
       prompt: "Prompt:",
@@ -595,6 +596,101 @@ export const es: Messages = {
       loadFailed: "No se pudieron cargar los detalles del modelo",
       updated: "Configuración del modelo actualizada",
       updateFailed: "No se pudo actualizar el modelo",
+    },
+  },
+  voice: {
+    title: "Voz (STT y TTS)",
+    subtitle:
+      "Modelos de Deepgram, las voces de Robotina y el precio por segundo de la entrada por voz y del habla.",
+    lastSaved: "Guardado por última vez {date}",
+    neverSaved: "Usando los valores predeterminados — aún sin guardar",
+    providerMissing:
+      "DEEPGRAM_API_KEY no está configurada en la API: la entrada por voz y la voz de Robotina no están disponibles.",
+    providerMock:
+      "Modo desarrollo: Robotina habla con un sustituto silencioso y las muestras no suenan.",
+    provider: "Proveedor",
+    model: "Modelo",
+    pricePerSecond: "Créditos por segundo",
+    priceHint:
+      "Cuenta cada segundo iniciado; el total se redondea hacia arriba a créditos enteros. 0 = gratis.",
+    unsaved: "Cambios sin guardar",
+    reset: "Restaurar valores predeterminados",
+    saved: "Configuración de voz guardada",
+    saveFailed: "No se pudo guardar la configuración de voz",
+    loadFailed: "No se pudo cargar la configuración de voz",
+    retry: "Reintentar",
+    stt: {
+      title: "Voz a texto",
+      subtitle:
+        "Entrada por voz de todos los botones de voz y los oídos de Robotina.",
+      multilingual:
+        "Entiende inglés, español, portugués y más en la misma sesión.",
+      singleLanguage: "Transcribe solo el idioma de la interfaz del usuario.",
+      example_one: "1 minuto de entrada por voz = {count} crédito",
+      example_other: "1 minuto de entrada por voz = {count} créditos",
+    },
+    tts: {
+      title: "Texto a voz",
+      subtitle:
+        "La voz de Robotina: responde en el idioma del usuario con la voz configurada para él.",
+      priceHint:
+        "Segundos de habla de cada respuesta hablada (las respuestas escritas cuestan 1 crédito).",
+      example_one: "Una respuesta hablada de 20 segundos = {count} crédito",
+      example_other: "Una respuesta hablada de 20 segundos = {count} créditos",
+      languages: {
+        en: "Inglés",
+        es: "Español",
+        pt: "Portugués",
+      },
+      voice: "Voz",
+      voiceOption: "{name} — {accent}, {gender}",
+      customVoice: "Otra voz (id de Deepgram)…",
+      customVoiceLabel: "Id de voz de Deepgram",
+      customVoiceHint: "Tal como la nombra Deepgram, p. ej. {example}",
+      play: "Reproducir {name}",
+      playing: "Reproduciendo…",
+      playFailed: "No se pudo reproducir esta voz",
+      genders: {
+        feminine: "femenina",
+        masculine: "masculina",
+      },
+      accents: {
+        American: "estadounidense",
+        Argentine: "argentina",
+        Australian: "australiana",
+        Brazilian: "brasileña",
+        British: "británica",
+        Colombian: "colombiana",
+        Filipino: "filipina",
+        Irish: "irlandesa",
+        "Latin American": "latinoamericana",
+        Mexican: "mexicana",
+        Peninsular: "de España",
+      },
+    },
+    errors: {
+      invalidModel: "Elige un modelo de la lista",
+      invalidRate: "Entre 0 y 100, con hasta 2 decimales",
+      invalidVoice: "No es una voz de este modelo e idioma",
+      invalidMinutes: "Minutos enteros, de 1 a 10.000",
+      invalidPeriod: "Elige cuándo se renuevan los minutos",
+    },
+    freeTier: {
+      title: "Límite del plan Free",
+      subtitle:
+        "Minutos de voz con Robotina para los usuarios del plan Free — su voz más la de ella. Los planes de pago son ilimitados.",
+      enable: "Limitar a Robotina en el plan Free",
+      unlimited:
+        "Desactivado: los usuarios Free hablan con Robotina mientras les duren los créditos.",
+      upgradeHint:
+        "Cuando se acaban los minutos, los usuarios Free ven una invitación a mejorar su plan para uso ilimitado.",
+      minutes: "Minutos",
+      minutesHint: "Cuenta cada segundo iniciado (p. ej. 10 o 20).",
+      period: "Los minutos se renuevan",
+      periods: {
+        monthly: "Cada mes",
+        lifetime: "Nunca (una sola vez, en total)",
+      },
     },
   },
   errors: {

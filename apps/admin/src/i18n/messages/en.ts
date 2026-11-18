@@ -43,6 +43,7 @@ export const en = {
     creditPlans: "Credit Plans",
     creditEmails: "Credit Emails",
     backups: "Backups",
+    voice: "Voice (STT & TTS)",
     logout: "Logout",
     openMenu: "Open menu",
     closeMenu: "Close menu",
@@ -466,7 +467,7 @@ export const en = {
         embedding:
           "Turns projects into vectors for the AI Planner's similarity search. When none is active, a free built-in embedding is used.",
         "speech-to-text":
-          "Its credit cost is the price per minute of voice input. Keep one active.",
+          "No longer used for pricing: the voice model and its price per second are set in Voice (STT & TTS).",
       },
       errors: {
         required: "Required",
@@ -572,7 +573,7 @@ export const en = {
       },
       creditCost: "Credit Cost",
       creditCostHint:
-        "Text, image and video models: credits per use. Embedding: credits per indexing run (0 = free). Speech-to-text: credits per minute of voice input.",
+        "Text, image and video models: credits per use. Embedding: credits per indexing run (0 = free). Voice input and Robotina's voice are priced per second in Voice (STT & TTS).",
       profitMargin: "Profit Margin (×)",
       pricing: "Pricing",
       prompt: "Prompt:",
@@ -587,6 +588,100 @@ export const en = {
       loadFailed: "Failed to load model details",
       updated: "Model configuration updated",
       updateFailed: "Failed to update model",
+    },
+  },
+  voice: {
+    title: "Voice (STT & TTS)",
+    subtitle:
+      "Deepgram models, Robotina's voices and the price per second of voice input and speech.",
+    lastSaved: "Last saved {date}",
+    neverSaved: "Using the defaults — not saved yet",
+    providerMissing:
+      "DEEPGRAM_API_KEY is not set on the API: voice input and Robotina's voice are unavailable.",
+    providerMock:
+      "Development mode: Robotina speaks with a silent stand-in, previews are silent.",
+    provider: "Provider",
+    model: "Model",
+    pricePerSecond: "Credits per second",
+    priceHint:
+      "Every started second counts; the total is rounded up to whole credits. 0 = free.",
+    unsaved: "Unsaved changes",
+    reset: "Restore defaults",
+    saved: "Voice settings saved",
+    saveFailed: "Could not save the voice settings",
+    loadFailed: "Could not load the voice settings",
+    retry: "Try again",
+    stt: {
+      title: "Speech-to-text",
+      subtitle: "Voice input of every voice button and Robotina's ears.",
+      multilingual:
+        "Understands English, Spanish, Portuguese and more in the same session.",
+      singleLanguage: "Transcribes the user's interface language only.",
+      example_one: "1 minute of voice input = {count} credit",
+      example_other: "1 minute of voice input = {count} credits",
+    },
+    tts: {
+      title: "Text-to-speech",
+      subtitle:
+        "Robotina's voice: she answers in the user's language with the voice set for it.",
+      priceHint:
+        "Seconds of speech of each spoken reply (typed replies cost 1 credit).",
+      example_one: "A 20-second spoken answer = {count} credit",
+      example_other: "A 20-second spoken answer = {count} credits",
+      languages: {
+        en: "English",
+        es: "Spanish",
+        pt: "Portuguese",
+      },
+      voice: "Voice",
+      voiceOption: "{name} — {accent}, {gender}",
+      customVoice: "Other voice (Deepgram id)…",
+      customVoiceLabel: "Deepgram voice id",
+      customVoiceHint: "Exactly as Deepgram names it, e.g. {example}",
+      play: "Play {name}",
+      playing: "Playing…",
+      playFailed: "Could not play this voice",
+      genders: {
+        feminine: "feminine",
+        masculine: "masculine",
+      },
+      accents: {
+        American: "American",
+        Argentine: "Argentine",
+        Australian: "Australian",
+        Brazilian: "Brazilian",
+        British: "British",
+        Colombian: "Colombian",
+        Filipino: "Filipino",
+        Irish: "Irish",
+        "Latin American": "Latin American",
+        Mexican: "Mexican",
+        Peninsular: "Spain",
+      },
+    },
+    errors: {
+      invalidModel: "Choose a model from the list",
+      invalidRate: "Between 0 and 100, with up to 2 decimals",
+      invalidVoice: "Not a voice of this model and language",
+      invalidMinutes: "Whole minutes, from 1 to 10,000",
+      invalidPeriod: "Choose when the minutes come back",
+    },
+    freeTier: {
+      title: "Free plan limit",
+      subtitle:
+        "Minutes of voice with Robotina for users on the Free plan — their voice plus hers. Paid plans are unlimited.",
+      enable: "Limit Robotina on the Free plan",
+      unlimited:
+        "Off: Free users talk with Robotina as long as their credits last.",
+      upgradeHint:
+        "When the minutes are used up, Free users see an invitation to upgrade for unlimited use.",
+      minutes: "Minutes",
+      minutesHint: "Every started second counts (e.g. 10 or 20).",
+      period: "Minutes come back",
+      periods: {
+        monthly: "Every month",
+        lifetime: "Never (once, in total)",
+      },
     },
   },
   errors: {

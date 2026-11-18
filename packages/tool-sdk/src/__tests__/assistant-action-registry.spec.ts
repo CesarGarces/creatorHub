@@ -198,3 +198,70 @@ describe("AssistantActionRegistry", () => {
     });
   });
 });
+
+describe("AssistantActionRegistry — confirmation support", () => {
+  it("exposes the definition and whether it needs confirmation", () => {
+    const registry = new AssistantActionRegistry();
+    registry.register(
+      action({ name: "calendar.delete_event", requiresConfirmation: true }),
+    );
+    expect(registry.get("calendar.delete_event")).toMatchObject({
+      name: "calendar.delete_event",
+      requiresConfirmation: true,
+    });
+    expect(registry.get("calendar.delete_event")).not.toHaveProperty("execute");
+    expect(registry.get("nope.nope")).toBeUndefined();
+  });
+
+  it("previews with validated arguments, without running", async () => {
+    const registry = new AssistantActionRegistry();
+    const execute = vi.fn();
+    const describe_ = vi.fn(async () => ({
+      ok: true,
+      summary: "Would delete X",
+    }));
+    registry.register(
+      action({ name: "calendar.delete_event", execute, describe: describe_ }),
+    );
+
+    const preview = await registry.preview(
+      "calendar.delete_event",
+      { title: " X ", date: "2026-11-28" },
+      CONTEXT,
+    );
+
+    expect(preview).toEqual({
+      ok: true,
+      summary: "Would delete X",
+      args: { title: "X", date: "2026-11-28" },
+    });
+    expect(describe_).toHaveBeenCalledWith(
+      { title: "X", date: "2026-11-28" },
+      CONTEXT,
+    );
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("previews never throw", async () => {
+    const registry = new AssistantActionRegistry();
+    registry.register(
+      action({
+        describe: async () => {
+          throw new Error("db down");
+        },
+      }),
+    );
+    expect(
+      (await registry.preview("calendar.create_event", { date: "x" }, CONTEXT))
+        .summary,
+    ).toMatch(/^Invalid arguments/);
+    expect(
+      await registry.preview(
+        "calendar.create_event",
+        { title: "X", date: "2026-11-28" },
+        CONTEXT,
+      ),
+    ).toMatchObject({ ok: false, summary: "The action failed: db down" });
+    expect((await registry.preview("x.y", {}, CONTEXT)).ok).toBe(false);
+  });
+});

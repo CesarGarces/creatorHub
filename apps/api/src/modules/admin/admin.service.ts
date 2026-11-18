@@ -851,8 +851,8 @@ export class AdminService {
 
   /**
    * "Add model": registers a model by hand (e.g. an embedding model for the
-   * planner's RAG, or a speech-to-text price). Marked isCustom so the provider
-   * sync never overwrites or deactivates it.
+   * planner's RAG). Marked isCustom so the provider sync never overwrites or
+   * deactivates it. Voice models live in Admin → Voice (STT & TTS).
    */
   async createModel(dto: CreateModelDto): Promise<ModelMetadata> {
     const modelId = dto.modelId.trim();
@@ -979,8 +979,8 @@ export class AdminService {
     taskType: string;
     providerSlug: string;
   }): Promise<void> {
-    // Embedding / speech-to-text models are priced from ModelMetadata
-    // directly; they must not appear as generation providers.
+    // Embedding (and legacy speech-to-text) models are not generation
+    // providers.
     if (!GENERATIVE_TASK_TYPES.includes(model.taskType)) return;
 
     const slug = this.toSlug(model.displayName);

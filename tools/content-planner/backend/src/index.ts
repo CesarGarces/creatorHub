@@ -10,6 +10,12 @@ export {
   ContentPlannerAssistantActions,
   CREATE_EVENT_ACTION,
   LIST_EVENTS_ACTION,
+  UPDATE_EVENT_ACTION,
+  DELETE_EVENT_ACTION,
+  LIST_PROJECTS_ACTION,
+  CREATE_PROJECT_ACTION,
+  UPDATE_PROJECT_ACTION,
+  DELETE_PROJECT_ACTION,
 } from "./assistant-actions";
 export { ContentPlannerAiModule } from "./ai-planner/content-planner-ai.module";
 export { AiPlannerService } from "./ai-planner/ai-planner.service";
