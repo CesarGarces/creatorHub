@@ -50,12 +50,15 @@ FROM build AS deploy
 
 RUN pnpm --filter @creator-hub/api deploy --prod --legacy /prod/api
 RUN mkdir -p /prod/api/packages/database/generated \
-    && cp -r packages/database/generated/. /prod/api/packages/database/generated/ \
+    && if [ -d packages/database/generated ]; then \
+         cp -r packages/database/generated/. /prod/api/packages/database/generated/; \
+       fi \
     && for d in /prod/api/node_modules/.pnpm/@creator-hub+database*/node_modules/@creator-hub/database /prod/api/node_modules/@creator-hub/database; do \
-         if [ -d "$d" ]; then \
+         if [ -d "$d" ] && [ -d packages/database/generated ]; then \
            mkdir -p "$d/generated" && cp -r packages/database/generated/. "$d/generated/"; \
          fi; \
-       done
+       done \
+    && find /app -name "*debian-openssl-3.0.x*.so.node" -exec cp {} /prod/api/packages/database/generated/ \;
 
 # Never ship local env files or database backups.
 RUN find /prod/api -type f \( -name '.env' -o -name '.env.*' \) -delete \
