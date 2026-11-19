@@ -49,6 +49,13 @@ RUN pnpm turbo run build --filter=@creator-hub/api...
 FROM build AS deploy
 
 RUN pnpm --filter @creator-hub/api deploy --prod --legacy /prod/api
+RUN mkdir -p /prod/api/packages/database/generated \
+    && cp -r packages/database/generated/. /prod/api/packages/database/generated/ \
+    && for d in /prod/api/node_modules/.pnpm/@creator-hub+database*/node_modules/@creator-hub/database /prod/api/node_modules/@creator-hub/database; do \
+         if [ -d "$d" ]; then \
+           mkdir -p "$d/generated" && cp -r packages/database/generated/. "$d/generated/"; \
+         fi; \
+       done
 
 # Never ship local env files or database backups.
 RUN find /prod/api -type f \( -name '.env' -o -name '.env.*' \) -delete \
