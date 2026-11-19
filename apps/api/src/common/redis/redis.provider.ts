@@ -10,11 +10,22 @@ export const REDIS_CLIENT = "REDIS_CLIENT";
  */
 export const redisProvider: Provider = {
   provide: REDIS_CLIENT,
-  useFactory: () =>
-    process.env.REDIS_URL
-      ? new Redis(process.env.REDIS_URL)
-      : new Redis({
-          host: process.env.REDIS_HOST || "localhost",
-          port: parseInt(process.env.REDIS_PORT || "6379", 10),
-        }),
+  useFactory: () => {
+    const url = process.env.REDIS_URL;
+    if (url) {
+      return new Redis(url, {
+        connectTimeout: 15000,
+        maxRetriesPerRequest: null,
+        ...(url.startsWith("rediss://")
+          ? { tls: { rejectUnauthorized: false } }
+          : {}),
+      });
+    }
+
+    return new Redis({
+      host: process.env.REDIS_HOST || "localhost",
+      port: parseInt(process.env.REDIS_PORT || "6379", 10),
+      connectTimeout: 15000,
+    });
+  },
 };

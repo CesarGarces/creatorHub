@@ -8,6 +8,10 @@ export class RedisEventSubscriber implements DomainEventSubscriber {
   constructor(redisUrl: string) {
     this.redis = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
+      connectTimeout: 15000,
+      ...(redisUrl.startsWith("rediss://")
+        ? { tls: { rejectUnauthorized: false } }
+        : {}),
       retryStrategy(times) {
         const delay = Math.min(times * 50, 2000);
         return delay;
