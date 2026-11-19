@@ -20,6 +20,7 @@ export const auth: Messages["auth"] = {
   login: {
     title: "Bem-vindo ao Creator Hub",
     subtitle: "Entre na sua conta",
+    maintenance: "Estamos em manutenção. Tente novamente mais tarde.",
     forgotPassword: "Esqueceu a senha?",
     submit: "Entrar",
     noAccount: "Não tem uma conta?",
