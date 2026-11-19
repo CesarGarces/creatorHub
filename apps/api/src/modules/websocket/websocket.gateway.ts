@@ -27,15 +27,10 @@ import {
   type STTProviderName,
 } from "@creator-hub/shared-types";
 import * as Sentry from "@sentry/nestjs";
-
-const allowedOrigins = [
-  process.env.FRONTEND_URL || "http://localhost:3000",
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-];
+import { CORS_ALLOWED_ORIGINS } from "../../common/cors";
 
 @WebSocketGateway({
-  cors: { origin: allowedOrigins, credentials: true },
+  cors: { origin: [...CORS_ALLOWED_ORIGINS], credentials: true },
   transports: ["websocket"],
 })
 export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {

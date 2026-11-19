@@ -12,6 +12,7 @@ import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { SentryExceptionFilter } from "./common/filters/sentry-exception.filter";
 import { SentryInterceptor } from "./common/interceptors/sentry.interceptor";
+import { CORS_ALLOWED_ORIGINS, isAllowedOrigin } from "./common/cors";
 
 async function bootstrap() {
   // Disable built-in body parser so we can capture raw body for webhook verification
@@ -54,26 +55,22 @@ async function bootstrap() {
   SwaggerModule.setup("api/docs", app, document);
 
   app.setGlobalPrefix("api/v1");
-  const frontendUrl = (
-    process.env.FRONTEND_URL || "http://localhost:3000"
-  ).replace(/\/+$/, "");
-  const adminUrl = (process.env.ADMIN_URL || "http://localhost:3003").replace(
-    /\/+$/,
-    "",
-  );
-  const devOrigins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:3002",
-    "http://127.0.0.1:3002",
-    "http://localhost:3003",
-    "http://127.0.0.1:3003",
-  ];
-  const allowedOrigins = [...new Set([frontendUrl, adminUrl, ...devOrigins])];
-  console.log(`[CORS] Allowed origins: ${allowedOrigins.join(", ")}`);
+  console.log(`[CORS] Allowed origins: ${CORS_ALLOWED_ORIGINS.join(", ")}`);
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
+      // No Origin: server-to-server calls, health checks, curl.
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    },
     credentials: true,
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Accept", "Authorization"],
   });
 
   app.useGlobalPipes(
