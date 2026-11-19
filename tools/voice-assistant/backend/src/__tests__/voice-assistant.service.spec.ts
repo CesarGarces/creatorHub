@@ -565,7 +565,7 @@ describe("VoiceAssistantService.reply — conversations", () => {
     expect(ofType(events, "start")[0]).toMatchObject({
       conversationId: "conv9",
       language: "pt",
-      voice: { model: "aura-2-bianca-pt", name: "Bianca" },
+      voice: { model: "flux-bianca-pt", name: "Bianca" },
     });
     const request = provider.generateStream!.mock.calls[0]![0] as {
       parameters: { conversationHistory: unknown };

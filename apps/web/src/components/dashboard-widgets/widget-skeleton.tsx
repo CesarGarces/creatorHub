@@ -1,5 +1,7 @@
 import type { DashboardWidgetId } from "@creator-hub/shared-types";
 import { Skeleton, cn } from "@creator-hub/ui";
+import { useI18n } from "@/i18n/i18n-provider";
+import { QUICK_PROMPT_EXAMPLES } from "./widgets/quick-prompt-examples";
 
 interface WidgetSkeletonProps {
   id: DashboardWidgetId;
@@ -25,6 +27,36 @@ function Rows({ count }: { count: number }) {
 }
 
 /**
+ * The quick prompt's exact box (same paddings, the button's touch height)
+ * and its examples row — real text, invisible, so it wraps like the widget
+ * does in every language and screen width.
+ */
+function QuickPromptSkeleton() {
+  const { t } = useI18n();
+  return (
+    <div className="relative sm:pb-6">
+      <div className="rounded-xl border border-border bg-surface p-1">
+        <div className="flex items-center gap-2 rounded-lg bg-surface-elevated px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
+          <Skeleton className="h-4 flex-1" />
+          <span className="invisible shrink-0 rounded-lg px-3 py-2 pointer-coarse:min-h-11 sm:px-4 text-sm font-medium">
+            {t("dashboard.quickPrompt.generate")}
+          </span>
+        </div>
+      </div>
+      <div className="invisible mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-xs sm:absolute sm:bottom-0 sm:left-4 sm:mt-0 sm:flex-nowrap sm:px-0">
+        <span>{t("dashboard.quickPrompt.try")}</span>
+        {QUICK_PROMPT_EXAMPLES.map((key, i) => (
+          <span key={key} className="contents">
+            {i > 0 && <span>·</span>}
+            <span>{t(key)}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Placeholder of a widget while its code or data loads, with the widget's
  * real geometry (same grids, rows and heights): nothing below moves when
  * the widget arrives (CLS gate, ARCHITECTURE.md §2e).
@@ -32,12 +64,7 @@ function Rows({ count }: { count: number }) {
 export function WidgetSkeleton({ id, className }: WidgetSkeletonProps) {
   return (
     <div aria-hidden="true" className={cn("h-full", className)}>
-      {id === "quick-prompt" && (
-        <div className="sm:pb-6">
-          <Skeleton className="h-[50px] rounded-xl sm:h-[58px]" />
-          <Skeleton className="mt-3 h-4 w-3/4 sm:hidden" />
-        </div>
-      )}
+      {id === "quick-prompt" && <QuickPromptSkeleton />}
       {id === "favorites" && (
         <>
           {title}

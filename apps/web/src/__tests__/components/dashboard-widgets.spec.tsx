@@ -379,3 +379,17 @@ describe("DashboardWidgets", () => {
     });
   });
 });
+
+describe("WidgetSkeleton — quick prompt", () => {
+  it("has the widget's geometry: the button's touch height and the examples row", async () => {
+    const { WidgetSkeleton } =
+      await import("@/components/dashboard-widgets/widget-skeleton");
+    const { container } = render(<WidgetSkeleton id="quick-prompt" />);
+    // Invisible real texts: they wrap like the widget in every language.
+    expect(screen.getByText("Generate").className).toContain(
+      "pointer-coarse:min-h-11",
+    );
+    expect(screen.getByText("Try:")).toBeTruthy();
+    expect(container.querySelectorAll(".invisible").length).toBe(2);
+  });
+});

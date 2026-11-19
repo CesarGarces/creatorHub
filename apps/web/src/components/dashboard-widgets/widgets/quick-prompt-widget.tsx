@@ -3,13 +3,7 @@
 import { useState } from "react";
 import { useChatStore } from "@/store/chat.store";
 import { useI18n } from "@/i18n/i18n-provider";
-import type { TranslationKey } from "@/i18n/translate";
-
-const EXAMPLES: TranslationKey[] = [
-  "dashboard.quickPrompt.examples.gamingThumbnail",
-  "dashboard.quickPrompt.examples.youtubeIntro",
-  "dashboard.quickPrompt.examples.viralTitle",
-];
+import { QUICK_PROMPT_EXAMPLES as EXAMPLES } from "./quick-prompt-examples";
 
 /**
  * Quick prompt widget: sends the text to the assistant chat. Keeps its

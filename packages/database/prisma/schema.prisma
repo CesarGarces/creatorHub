@@ -1180,7 +1180,7 @@ model VideoAnalysis {
 }
 
 // ─── Robotina — AI voice assistant (tool "voice-assistant", §14g) ─────────
-// Only text is stored: the audio (Deepgram Aura-2) is streamed to the
+// Only text is stored: the audio (Deepgram TTS) is streamed to the
 // browser and never saved.
 
 model VoiceConversation {
@@ -1189,7 +1189,7 @@ model VoiceConversation {
   /// The first message, shortened.
   title     String
   /// Language of the last exchange ("en" | "es" | "pt"): Robotina answers
-  /// — and speaks, with the matching Aura-2 voice — in it.
+  /// — and speaks, with the matching TTS voice — in it.
   language  String         @default("en")
   /// Text model of the last reply (ModelMetadata.modelId).
   modelId   String?
@@ -1210,7 +1210,7 @@ model VoiceMessage {
   language       String            @default("en")
   /// User: said with the voice (STT). Assistant: answered with the voice.
   spoken         Boolean           @default(false)
-  /// Assistant: Aura-2 voice model that spoke the reply.
+  /// Assistant: TTS voice model that spoke the reply.
   voice          String?
   /// Assistant: milliseconds of speech (drives the price of spoken replies).
   audioMs        Int               @default(0)
@@ -1240,7 +1240,7 @@ model VoiceSettings {
   sttCreditsPerSecond Float    @default(1)
   /// Credits per second of synthesized speech (Robotina's spoken replies).
   ttsCreditsPerSecond Float    @default(2)
-  /// Voice per language: { en|es|pt: { model: "aura-2", voice: "aura-2-…" } }.
+  /// Voice per language: { en|es|pt: { model: "aura-2" | "flux", voice: "…" } }.
   ttsVoices           Json
   /// Free plan minutes with Robotina (her voice + the user's); null = no limit.
   freeTierMinutes     Int?

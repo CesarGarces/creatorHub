@@ -33,7 +33,7 @@ const PRICING: VoicePricing = {
         gender: "feminine",
       },
       pt: {
-        model: "aura-2-bianca-pt",
+        model: "flux-bianca-pt",
         name: "Bianca",
         accent: "Brazilian",
         gender: "feminine",

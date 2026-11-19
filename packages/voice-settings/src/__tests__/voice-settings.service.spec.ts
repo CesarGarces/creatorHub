@@ -27,7 +27,7 @@ function row(overrides: Record<string, unknown> = {}) {
     ttsVoices: {
       en: { model: "aura", voice: "aura-luna-en" },
       es: { model: "aura-2", voice: "aura-2-javier-es" },
-      pt: { model: "aura-2", voice: "aura-2-bianca-pt" },
+      pt: { model: "flux", voice: "flux-bianca-pt" },
     },
     freeTierMinutes: 20,
     freeTierPeriod: "lifetime",
@@ -183,5 +183,15 @@ describe("toVoiceSettings", () => {
     expect(toVoiceSettings(row({ ttsVoices: null })).tts.voices).toEqual(
       DEFAULT_TTS_LANGUAGE_VOICES,
     );
+    // Aura-2 never spoke Portuguese: old rows fall back to the Flux default.
+    expect(
+      toVoiceSettings(
+        row({
+          ttsVoices: {
+            pt: { model: "aura-2", voice: "aura-2-bianca-pt" },
+          },
+        }),
+      ).tts.voices.pt,
+    ).toEqual({ model: "flux", voice: "flux-bianca-pt" });
   });
 });

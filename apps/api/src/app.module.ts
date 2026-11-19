@@ -169,7 +169,7 @@ const throttlerStorage = process.env.REDIS_URL
     ContentPlannerRemindersModule,
     // AI Video Analyzer & Smart Clipper (browser-side video, vision AI)
     VideoClipperModule,
-    // Robotina: AI voice assistant (STT gateway in, Deepgram Aura-2 out)
+    // Robotina: AI voice assistant (STT gateway in, Deepgram TTS out)
     VoiceAssistantModule,
   ],
   controllers: [

@@ -38,7 +38,7 @@ export interface AdminVoiceSettingsResponse {
 }
 
 /**
- * Admin → Voice (STT & TTS): the Deepgram speech-to-text model, the Aura
+ * Admin → Voice (STT & TTS): the Deepgram speech-to-text model, the Deepgram
  * voice of each language and the prices per second.
  */
 @Controller("admin/voice-settings")

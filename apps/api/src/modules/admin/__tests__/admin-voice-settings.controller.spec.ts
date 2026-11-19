@@ -101,7 +101,7 @@ describe("AdminVoiceSettingsController", () => {
       new Error("Deepgram TTS error 400: model not found"),
     );
     const error = await controller
-      .preview({ language: "pt", voice: "aura-2-nova-pt" })
+      .preview({ language: "pt", voice: "flux-bruno-pt" })
       .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(BadGatewayException);
     expect((error as Error).message).toContain("model not found");

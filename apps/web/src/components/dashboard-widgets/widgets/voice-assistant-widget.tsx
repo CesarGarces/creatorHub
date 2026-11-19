@@ -24,7 +24,7 @@ function lastAssistant<M extends { role: string }>(
 /**
  * "Robotina": the AI voice assistant on the dashboard. A glowing orb with
  * floating particles — tap it and talk. While you speak its rim waves with
- * your voice; while she answers (out loud, Deepgram Aura-2, in your
+ * your voice; while she answers (out loud, Deepgram TTS, in your
  * language) it waves with hers. Conversation mode listens again after each
  * answer. "Open chat" continues the same conversation in the tool.
  *

@@ -87,15 +87,23 @@ export async function audit(
   options: AuditOptions = {},
 ): Promise<Audit> {
   // Let entrance animations finish: mid-fade text has a lower contrast.
-  await page.evaluate(() =>
-    Promise.all(
-      document
+  // Repeated until nothing is animating, since one can start meanwhile
+  // (e.g. the assistant's "Do you need help?" hint, shown after 1.5 s).
+  for (let round = 0; round < 10; round++) {
+    const running = await page.evaluate(async () => {
+      const finite = document
         .getAnimations()
-        .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
-        .map((a) => a.finished.catch(() => undefined)),
-    ),
-  );
-  await page.waitForTimeout(100);
+        .filter(
+          (a) =>
+            a.playState === "running" &&
+            a.effect?.getComputedTiming().iterations !== Infinity,
+        );
+      await Promise.all(finite.map((a) => a.finished.catch(() => undefined)));
+      return finite.length;
+    });
+    await page.waitForTimeout(100);
+    if (running === 0) break;
+  }
 
   const hasAxe = await page.evaluate(() => "axe" in window);
   if (!hasAxe) await page.evaluate(AXE_SOURCE);
@@ -149,7 +157,14 @@ export async function expectAccessible(
   label: string,
   options?: AuditOptions,
 ): Promise<void> {
-  const result = await audit(page, options);
+  let result = await audit(page, options);
+  // A contrast failure of something that was still fading in (an element
+  // shown by a timer while axe ran) is re-checked once it has settled; a
+  // real one fails again.
+  if (result.blocking.some((v) => CONTRAST_RULES.includes(v.id))) {
+    await page.waitForTimeout(500);
+    result = await audit(page, options);
+  }
   const findings = {
     screen: label,
     url: page.url(),

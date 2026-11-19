@@ -21,7 +21,7 @@ export const voiceAssistant: Messages["voiceAssistant"] = {
   handsFree: "Modo conversa",
   handsFreeHint: "Depois de responder, a Robotina volta a ouvir",
   voiceNote:
-    "A voz dela é Deepgram Aura, escolhida pelo idioma em que você fala — uma voz por idioma:",
+    "A voz dela é Deepgram, escolhida pelo idioma em que você fala — uma voz por idioma:",
   voiceSettings: "Voz",
   pricing: "Voz {stt} cr/s · Resposta 1 cr (falada: {tts} cr/s)",
   pricingShort: "{stt} cr/s de voz · {tts} cr/s resposta falada",

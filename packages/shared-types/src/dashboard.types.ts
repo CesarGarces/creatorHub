@@ -55,7 +55,7 @@ export const DEFAULT_DASHBOARD_WIDGETS: readonly Readonly<DashboardWidgetState>[
     { id: "tips", visible: true },
     // Likes and views of the user's assets, with previews.
     { id: "asset-stats", visible: true },
-    // Robotina: tap the orb and talk (voice in, Aura-2 voice out).
+    // Robotina: tap the orb and talk (voice in, Deepgram voice out).
     { id: "voice-assistant", visible: true },
     { id: "credits", visible: false },
   ];

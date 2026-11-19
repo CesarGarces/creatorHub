@@ -24,6 +24,10 @@ import { ProviderRegistry } from "@creator-hub/ai-engine";
 import { CreditService } from "@creator-hub/billing";
 import { PlatformUsageLogger } from "@creator-hub/analytics";
 import { TTSEngineService } from "@creator-hub/tts-engine";
+import {
+  VoiceAllowanceService,
+  VoiceSettingsService,
+} from "@creator-hub/voice-settings";
 import { ContentPlannerModule } from "@creator-hub/content-planner-backend";
 import {
   VoiceAssistantController,
@@ -34,7 +38,10 @@ import {
   zonedDateTimeToUtc,
   zonedParts,
 } from "@creator-hub/shared-utils";
-import type { AIStreamChunk } from "@creator-hub/shared-types";
+import {
+  DEFAULT_VOICE_SETTINGS,
+  type AIStreamChunk,
+} from "@creator-hub/shared-types";
 import { ToolSdkModule } from "../../../tool-sdk.module";
 import {
   prismaMock,
@@ -92,6 +99,26 @@ beforeAll(async () => {
       {
         provide: TTSEngineService,
         useValue: { isAvailable: () => false, voiceFor: () => null },
+      },
+      // Admin → Voice: defaults, and no Free plan limit.
+      {
+        provide: VoiceSettingsService,
+        useValue: { get: async () => DEFAULT_VOICE_SETTINGS },
+      },
+      {
+        provide: VoiceAllowanceService,
+        useValue: {
+          get: async () => ({
+            limited: false,
+            period: "monthly",
+            limitSeconds: null,
+            usedSeconds: 0,
+            remainingSeconds: null,
+            exhausted: false,
+            resetsAt: null,
+          }),
+          record: async () => undefined,
+        },
       },
     ],
   })

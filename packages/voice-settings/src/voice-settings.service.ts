@@ -37,7 +37,7 @@ interface VoiceSettingsRow {
 
 /**
  * The platform's voice configuration (Admin → Voice: STT & TTS): the
- * Deepgram speech-to-text model, the Aura voice of each language and the
+ * Deepgram speech-to-text model, the Deepgram voice of each language and the
  * prices per second.
  *
  * Read on every voice session and spoken reply, so reads are cached for

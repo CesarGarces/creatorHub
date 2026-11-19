@@ -180,8 +180,8 @@ describe("asset engagement contract", () => {
   });
 });
 
-describe("text-to-speech contract (Deepgram Aura-2)", () => {
-  it("speaks every assistant language with its Aura-2 feminine voice", () => {
+describe("text-to-speech contract (Deepgram Aura-2 / Flux)", () => {
+  it("speaks every assistant language with its Deepgram voice", () => {
     expect(types.TTS_LANGUAGES).toEqual(["en", "es", "pt"]);
     expect(types.TTS_VOICES.en).toMatchObject({
       model: "aura-2-andromeda-en",
@@ -196,14 +196,20 @@ describe("text-to-speech contract (Deepgram Aura-2)", () => {
       gender: "feminine",
     });
     expect(types.TTS_VOICES.pt).toMatchObject({
-      model: "aura-2-bianca-pt",
+      model: "flux-bianca-pt",
       name: "Bianca",
       accent: "Brazilian",
       gender: "feminine",
     });
     for (const [language, voice] of Object.entries(types.TTS_VOICES)) {
       expect(voice.language).toBe(language);
-      expect(voice.model.startsWith(`${types.TTS_MODEL_FAMILY}-`)).toBe(true);
+      expect(
+        types.TTS_MODEL_OPTIONS.some(
+          (model) =>
+            model.languages.includes(voice.language) &&
+            voice.model.startsWith(`${model.id}-`),
+        ),
+      ).toBe(true);
     }
   });
 
@@ -223,7 +229,7 @@ describe("text-to-speech contract (Deepgram Aura-2)", () => {
 });
 
 describe("voice settings (Admin → Voice: STT & TTS)", () => {
-  it("defaults: Nova-3, the Aura-2 voices by language, 1 cr/s in, 2 cr/s out", () => {
+  it("defaults: Nova-3, Aura-2 for English/Spanish, Flux for Portuguese, 1 cr/s in, 2 cr/s out", () => {
     const d = types.DEFAULT_VOICE_SETTINGS;
     expect(d.stt).toEqual({
       provider: "deepgram",
@@ -234,7 +240,7 @@ describe("voice settings (Admin → Voice: STT & TTS)", () => {
     expect(d.tts.voices).toEqual({
       en: { model: "aura-2", voice: "aura-2-andromeda-en" },
       es: { model: "aura-2", voice: "aura-2-celeste-es" },
-      pt: { model: "aura-2", voice: "aura-2-bianca-pt" },
+      pt: { model: "flux", voice: "flux-bianca-pt" },
     });
     expect(d.updatedAt).toBeNull();
   });
@@ -271,9 +277,14 @@ describe("voice settings (Admin → Voice: STT & TTS)", () => {
     const es = types.ttsVoicesFor("aura-2", "es");
     expect(es[0]).toMatchObject({ name: "Celeste", accent: "Colombian" });
     expect(es.every((v) => v.model.endsWith("-es"))).toBe(true);
-    expect(types.ttsVoicesFor("aura-2", "pt").map((v) => v.name)).toContain(
+    expect(types.ttsVoicesFor("aura-2", "pt")).toEqual([]);
+    expect(types.ttsVoicesFor("flux", "pt").map((v) => v.name)).toContain(
       "Bianca",
     );
+    expect(types.ttsVoicesFor("flux", "pt")[0]).toMatchObject({
+      model: "flux-bianca-pt",
+      accent: "Brazilian",
+    });
     expect(types.ttsVoicesFor("aura", "es")).toEqual([]);
     expect(types.ttsVoicesFor("aura", "en").length).toBeGreaterThan(5);
     const ids = types.TTS_VOICE_CATALOG.map((v) => v.model);
@@ -284,7 +295,8 @@ describe("voice settings (Admin → Voice: STT & TTS)", () => {
   });
 
   it("validates typed voice ids against model and language", () => {
-    expect(types.isTTSVoiceId("aura-2", "aura-2-nuevo-pt", "pt")).toBe(true);
+    expect(types.isTTSVoiceId("flux", "flux-nuevo-pt", "pt")).toBe(true);
+    expect(types.isTTSVoiceId("aura-2", "aura-2-nuevo-pt", "pt")).toBe(false);
     expect(types.isTTSVoiceId("aura-2", "aura-2-celeste-es", "pt")).toBe(false);
     expect(types.isTTSVoiceId("aura", "aura-2-celeste-es", "es")).toBe(false);
     expect(types.isTTSVoiceId("aura", "aura-2-thalia-en", "en")).toBe(false);
@@ -292,8 +304,8 @@ describe("voice settings (Admin → Voice: STT & TTS)", () => {
     expect(types.isTTSVoiceId("aura-2", "aura-2-<script>-en", "en")).toBe(
       false,
     );
-    expect(types.ttsVoiceInfo("aura-2-nuevo-pt", "pt")).toMatchObject({
-      family: "aura-2",
+    expect(types.ttsVoiceInfo("flux-nuevo-pt", "pt")).toMatchObject({
+      family: "flux",
       name: "Nuevo",
       language: "pt",
     });
@@ -348,7 +360,7 @@ describe("voice settings validation", () => {
         ttsVoices: {
           en: { model: "aura", voice: "aura-asteria-en" },
           es: { model: "aura-2", voice: "aura-2-javier-es" },
-          pt: { model: "aura-2", voice: "aura-2-bianca-pt" },
+          pt: { model: "flux", voice: "flux-bianca-pt" },
         },
       }),
     ).toEqual([]);

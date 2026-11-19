@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { LayoutGrid } from "lucide-react";
 import { cn } from "@creator-hub/ui";
 import { useAuthStore } from "@/store/auth.store";
@@ -18,6 +24,34 @@ function getGreetingKey(): TranslationKey {
   return "dashboard.greeting.evening";
 }
 
+interface PaletteHandle {
+  open: () => void;
+}
+
+/**
+ * The command palette with its own open state and ⌘K shortcut: opening it
+ * re-renders only the palette, never the dashboard and its widgets (INP).
+ */
+const DashboardCommandPalette = forwardRef<PaletteHandle>(
+  function DashboardCommandPalette(_props, ref) {
+    const [open, setOpen] = useState(false);
+    useImperativeHandle(ref, () => ({ open: () => setOpen(true) }), []);
+
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+          e.preventDefault();
+          setOpen((o) => !o);
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }, []);
+
+    return <CommandPalette isOpen={open} onClose={() => setOpen(false)} />;
+  },
+);
+
 const toolbarButton =
   "flex h-9 min-w-9 items-center justify-center gap-2 rounded-lg border text-sm transition-colors pointer-coarse:h-11 pointer-coarse:min-w-11 sm:px-3";
 
@@ -30,33 +64,22 @@ export default function DashboardPage() {
   const { t } = useI18n();
   const { user } = useAuthStore();
   const { fetchBalance } = useCreditsStore();
-  const [cmdOpen, setCmdOpen] = useState(false);
+  const palette = useRef<PaletteHandle>(null);
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     fetchBalance();
   }, [fetchBalance]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setCmdOpen((o) => !o);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
   return (
     <>
-      <CommandPalette isOpen={cmdOpen} onClose={() => setCmdOpen(false)} />
+      <DashboardCommandPalette ref={palette} />
       <TopBar
         breadcrumbs={[{ label: t("nav.dashboard") }]}
         actions={
           <button
             type="button"
-            onClick={() => setCmdOpen(true)}
+            onClick={() => palette.current?.open()}
             aria-label={t("dashboard.search")}
             aria-keyshortcuts="Meta+K Control+K"
             className={cn(

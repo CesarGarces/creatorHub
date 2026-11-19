@@ -105,14 +105,14 @@ export const EditAndSave: Story = {
     );
     await userEvent.type(
       canvas.getByLabelText("Deepgram voice id (Portuguese)"),
-      "aura-2-nova-pt",
+      "flux-paula-pt",
     );
     await userEvent.click(canvas.getByRole("button", { name: "Save Changes" }));
     await expect(args.onSave).toHaveBeenCalledWith(
       expect.objectContaining({
         sttCreditsPerSecond: 0.5,
         ttsVoices: expect.objectContaining({
-          pt: { model: "aura-2", voice: "aura-2-nova-pt" },
+          pt: { model: "flux", voice: "flux-paula-pt" },
         }),
       }),
     );

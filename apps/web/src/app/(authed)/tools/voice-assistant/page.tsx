@@ -35,7 +35,7 @@ const SUGGESTION_KEYS: TranslationKey[] = [
  * Robotina — AI voice assistant (ARCHITECTURE.md §14g). Same layout as
  * Post to X / X Trend Research: history, model settings, voice button and
  * composer. The difference: when you speak, she answers with her voice
- * (Deepgram Aura-2, in your language), and conversation mode keeps the
+ * (Deepgram TTS, in your language), and conversation mode keeps the
  * dialog going hands-free.
  */
 export default function VoiceAssistantPage() {

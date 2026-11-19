@@ -2,10 +2,12 @@
  * Text-to-speech (TTS) contract — `@creator-hub/tts-engine`.
  *
  * Mirrors the speech-to-text contract (`stt.types.ts`): providers behind an
- * interface, a registry and a factory. The platform speaks with **Deepgram
- * Aura**; the voice ("actor") of each language and the price per second
- * are set in Admin → Voice (STT & TTS) — see `voice-settings.types.ts`.
- * `TTS_VOICES` are the defaults (and the fallback when nothing is saved).
+ * interface, a registry and a factory. The platform speaks with **Deepgram**:
+ * Aura-2 for English and Spanish, Flux for Portuguese (Aura-2 has no
+ * Portuguese voices). The voice ("actor") of each language and the price per
+ * second are set in Admin → Voice (STT & TTS) — see
+ * `voice-settings.types.ts`. `TTS_VOICES` are the defaults (and the fallback
+ * when nothing is saved).
  */
 
 export type TTSProviderName = "deepgram" | "mock";
@@ -15,7 +17,10 @@ export const TTS_LANGUAGES = ["en", "es", "pt"] as const;
 export type TTSLanguage = (typeof TTS_LANGUAGES)[number];
 
 export interface TTSVoice {
-  /** Deepgram model id sent to `/v1/speak?model=…`. */
+  /**
+   * Deepgram model id sent to `/v1/speak?model=…` (Aura) or
+   * `/v2/speak?model=…` (Flux, `flux-*`).
+   */
   model: string;
   /** Display name of the voice. */
   name: string;
@@ -25,14 +30,11 @@ export interface TTSVoice {
   language: TTSLanguage;
 }
 
-/** Deepgram TTS model family of the default voices. */
-export const TTS_MODEL_FAMILY = "aura-2";
-
 /**
- * Default Aura-2 voice per language (Admin → Voice can change them):
- * - English → Andromeda (American, feminine)
- * - Spanish → Celeste (Colombian, feminine)
- * - Portuguese → Bianca (Brazilian, feminine)
+ * Default voice per language (Admin → Voice can change them):
+ * - English → Andromeda (Aura-2, American, feminine)
+ * - Spanish → Celeste (Aura-2, Colombian, feminine)
+ * - Portuguese → Bianca (Flux, Brazilian, feminine)
  */
 export const TTS_VOICES: Readonly<Record<TTSLanguage, TTSVoice>> = {
   en: {
@@ -50,7 +52,7 @@ export const TTS_VOICES: Readonly<Record<TTSLanguage, TTSVoice>> = {
     language: "es",
   },
   pt: {
-    model: "aura-2-bianca-pt",
+    model: "flux-bianca-pt",
     name: "Bianca",
     accent: "Brazilian",
     gender: "feminine",
@@ -70,7 +72,7 @@ export function ttsVoiceFor(language: unknown): TTSVoice {
   return TTS_VOICES[isTTSLanguage(language) ? language : "en"];
 }
 
-/** Deepgram `/v1/speak` accepts at most 2,000 characters per request. */
+/** Deepgram TTS accepts at most 2,000 characters per request. */
 export const TTS_MAX_CHARS_PER_REQUEST = 2000;
 
 export interface TTSSynthesizeParams {

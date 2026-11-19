@@ -581,7 +581,7 @@ describe("Robotina tool page", () => {
                   gender: "feminine",
                 },
                 pt: {
-                  model: "aura-2-bianca-pt",
+                  model: "flux-bianca-pt",
                   name: "Bianca",
                   accent: "Brazilian",
                   gender: "feminine",
@@ -594,7 +594,7 @@ describe("Robotina tool page", () => {
     try {
       render(<VoiceAssistantPage />);
       fireEvent.click(screen.getByRole("button", { name: "Model settings" }));
-      expect(screen.getByText(/Her voice is Deepgram Aura/)).toBeTruthy();
+      expect(screen.getByText(/Her voice is Deepgram/)).toBeTruthy();
       expect(await screen.findByText(/Estrella · Spanish/)).toBeTruthy();
       expect(screen.getByText(/Orion · English/)).toBeTruthy();
       expect(
@@ -1129,7 +1129,7 @@ describe("Robotina on the Free plan (minutes set in Admin → Voice)", () => {
           gender: "feminine",
         },
         pt: {
-          model: "aura-2-bianca-pt",
+          model: "flux-bianca-pt",
           name: "Bianca",
           accent: "Brazilian",
           gender: "feminine",

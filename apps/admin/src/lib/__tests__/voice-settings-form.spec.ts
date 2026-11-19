@@ -22,7 +22,7 @@ const saved = {
     voices: {
       ...DEFAULT_VOICE_SETTINGS.tts.voices,
       // A voice Deepgram released after this catalog.
-      pt: { model: "aura-2", voice: "aura-2-nova-pt" },
+      pt: { model: "flux", voice: "flux-paula-pt" },
     },
   },
   updatedAt: "2026-11-29T10:00:00.000Z",
@@ -47,12 +47,12 @@ describe("voice settings form", () => {
   it("shows voices outside the catalog as typed ids", () => {
     const form = formFromSettings(saved);
     expect(form.voices.pt).toEqual({
-      model: "aura-2",
+      model: "flux",
       voice: CUSTOM_VOICE,
-      customVoice: "aura-2-nova-pt",
+      customVoice: "flux-paula-pt",
     });
     expect(toVoiceSettingsPayload(form).ttsVoices.pt.voice).toBe(
-      "aura-2-nova-pt",
+      "flux-paula-pt",
     );
     expect(isVoiceFormDirty(form, saved)).toBe(false);
   });
@@ -60,6 +60,7 @@ describe("voice settings form", () => {
   it("offers Aura-1 only for English, and switching model picks its first voice", () => {
     expect(modelsFor("en").map((m) => m.id)).toEqual(["aura-2", "aura"]);
     expect(modelsFor("es").map((m) => m.id)).toEqual(["aura-2"]);
+    expect(modelsFor("pt").map((m) => m.id)).toEqual(["flux"]);
     const form = withVoiceModel(defaultVoiceForm(), "en", "aura");
     expect(form.voices.en).toEqual({
       model: "aura",

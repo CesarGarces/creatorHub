@@ -107,10 +107,10 @@ describe("DeepgramTTSProvider (Aura-2)", () => {
   });
 
   it.each([
-    ["en", "aura-2-andromeda-en"],
-    ["es", "aura-2-celeste-es"],
-    ["pt", "aura-2-bianca-pt"],
-  ] as const)("speaks %s with %s", async (language, model) => {
+    ["en", "aura-2-andromeda-en", "/v1/speak"],
+    ["es", "aura-2-celeste-es", "/v1/speak"],
+    ["pt", "flux-bianca-pt", "/v2/speak"],
+  ] as const)("speaks %s with %s", async (language, model, path) => {
     const fetchMock = vi.fn(async () => response(mp3(125)));
     const provider = new DeepgramTTSProvider(fetchMock as never);
 
@@ -122,7 +122,7 @@ describe("DeepgramTTSProvider (Aura-2)", () => {
     ];
     const parsed = new URL(url);
     expect(parsed.origin + parsed.pathname).toBe(
-      "https://api.deepgram.com/v1/speak",
+      `https://api.deepgram.com${path}`,
     );
     expect(parsed.searchParams.get("model")).toBe(model);
     expect(parsed.searchParams.get("encoding")).toBe("mp3");
@@ -223,7 +223,7 @@ describe("MockTTSProvider", () => {
     expect(audio).toMatchObject({
       mimeType: "audio/wav",
       durationMs: 2000,
-      voice: "aura-2-bianca-pt",
+      voice: "flux-bianca-pt",
       provider: "mock",
     });
     expect(wavDurationMs(audio.audio)).toBe(2000);
@@ -276,7 +276,7 @@ describe("TTSEngineService", () => {
     expect(engine.isAvailable()).toBe(true);
     expect(engine.activeProvider()).toBe("mock");
     const audio = await engine.synthesize({ text: "Olá", language: "pt" });
-    expect(audio.voice).toBe("aura-2-bianca-pt");
+    expect(audio.voice).toBe("flux-bianca-pt");
   });
 
   it("fails clearly without providers", async () => {

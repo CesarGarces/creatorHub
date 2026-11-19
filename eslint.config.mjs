@@ -10,6 +10,8 @@ export default [
       "**/.next/**",
       "**/storybook-static/**",
       "**/coverage/**",
+      "**/playwright-report/**",
+      "**/test-results/**",
       "**/*.d.ts",
     ],
   },

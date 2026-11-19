@@ -97,6 +97,7 @@ export function FreeMinutesNotice({
                   date: formatDate(allowance.resetsAt, {
                     month: "long",
                     day: "numeric",
+                    timeZone: "UTC",
                   }),
                 })
               : t("voiceAssistant.freeTier.exhaustedLifetime")}

@@ -39,7 +39,7 @@ export interface VoiceAssistantMessage {
   language: TTSLanguage;
   /** User: said with the voice. Assistant: answered with the voice. */
   spoken: boolean;
-  /** Assistant: Aura-2 model that spoke it. */
+  /** Assistant: Deepgram model that spoke it. */
   voice: string | null;
   /** Assistant: milliseconds of speech. */
   audioMs: number;
@@ -93,7 +93,7 @@ export type VoiceAssistantEvent =
       userMessageId: string;
       /** Language Robotina answers (and speaks) in. */
       language: TTSLanguage;
-      /** Aura-2 voice that will speak, `null` for a written reply. */
+      /** Deepgram voice that will speak, `null` for a written reply. */
       voice: { model: string; name: string } | null;
       title: string;
     }

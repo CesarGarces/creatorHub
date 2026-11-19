@@ -66,7 +66,9 @@ describe("AuthService", () => {
       expect(result.user).toEqual({
         id: "user-1",
         email: "test@example.com",
+        name: null,
         role: "USER",
+        preferredLanguage: null,
       });
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: {
@@ -142,7 +144,9 @@ describe("AuthService", () => {
       expect(result.user).toEqual({
         id: "user-1",
         email: "test@example.com",
+        name: null,
         role: "USER",
+        preferredLanguage: null,
       });
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: "user-1" },

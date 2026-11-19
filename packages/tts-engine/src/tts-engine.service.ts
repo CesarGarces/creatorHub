@@ -13,8 +13,9 @@ import { TTSProviderRegistry } from "./providers/tts-provider.registry";
 /**
  * Text-to-speech for the platform (the Robotina voice assistant today).
  *
- * Deepgram Aura. Callers pass the voice set for the language in Admin →
- * Voice (`@creator-hub/voice-settings`); without one the language's
+ * Deepgram: Aura-2 for English/Spanish, Flux for Portuguese. Callers pass
+ * the voice set for the language in Admin → Voice
+ * (`@creator-hub/voice-settings`); without one the language's
  * default speaks (`TTS_VOICES`). Tools call `synthesize()` per chunk of
  * text and add up `durationMs` to bill with `calculateCredits()`.
  */

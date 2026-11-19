@@ -103,7 +103,7 @@ export function defaultVoiceForm(): VoiceSettingsForm {
   return formFromSettings(DEFAULT_VOICE_SETTINGS);
 }
 
-/** TTS models that speak a language (Aura-1 is English only). */
+/** TTS models that speak a language (Aura-1 is English only; Portuguese is Flux). */
 export function modelsFor(language: TTSLanguage): TTSModelOption[] {
   return TTS_MODEL_OPTIONS.filter((m) => m.languages.includes(language));
 }

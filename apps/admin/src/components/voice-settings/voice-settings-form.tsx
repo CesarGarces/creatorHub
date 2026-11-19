@@ -88,7 +88,7 @@ const ACCENTS = new Set([
 ]);
 
 /**
- * Admin → Voice (STT & TTS): the Deepgram speech-to-text model, the Aura
+ * Admin → Voice (STT & TTS): the Deepgram speech-to-text model, the Deepgram
  * voice ("actor") that speaks each language, both prices per second and
  * the Free plan's minutes with Robotina.
  * Validates like the API; remount it (`key`) to load newly saved settings.

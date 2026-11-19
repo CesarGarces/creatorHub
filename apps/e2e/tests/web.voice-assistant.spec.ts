@@ -667,7 +667,7 @@ test.describe("Robotina voice assistant", () => {
               gender: "feminine",
             },
             pt: {
-              model: "aura-2-bianca-pt",
+              model: "flux-bianca-pt",
               name: "Bianca",
               accent: "Brazilian",
               gender: "feminine",
@@ -681,7 +681,7 @@ test.describe("Robotina voice assistant", () => {
       page.getByText("Voice input 1 cr/s · Reply 1 cr (spoken: 2 cr/s)"),
     ).toBeVisible();
     await page.getByRole("button", { name: "Model settings" }).click();
-    await expect(page.getByText(/Her voice is Deepgram Aura/)).toBeVisible();
+    await expect(page.getByText(/Her voice is Deepgram/)).toBeVisible();
     await expect(page.getByText("Estrella · Spanish")).toBeVisible();
     await expect(
       page.getByRole("switch", { name: "Conversation mode" }),
@@ -713,7 +713,7 @@ test.describe("Robotina voice assistant", () => {
             gender: "feminine",
           },
           pt: {
-            model: "aura-2-bianca-pt",
+            model: "flux-bianca-pt",
             name: "Bianca",
             accent: "Brazilian",
             gender: "feminine",

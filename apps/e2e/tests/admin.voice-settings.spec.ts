@@ -96,7 +96,7 @@ test.describe("admin panel · Voice (STT & TTS)", () => {
     await page.getByLabel("Voice (Portuguese)").selectOption("__custom__");
     await page
       .getByLabel("Deepgram voice id (Portuguese)")
-      .fill("aura-2-nova-pt");
+      .fill("flux-paula-pt");
 
     // English on Aura-1.
     await page.getByLabel("Model (English)").selectOption("aura");
@@ -124,7 +124,7 @@ test.describe("admin panel · Voice (STT & TTS)", () => {
       ttsVoices: {
         en: { model: "aura", voice: "aura-asteria-en" },
         es: { model: "aura-2", voice: "aura-2-estrella-es" },
-        pt: { model: "aura-2", voice: "aura-2-nova-pt" },
+        pt: { model: "flux", voice: "flux-paula-pt" },
       },
       freeTierMinutes: null,
       freeTierPeriod: "monthly",

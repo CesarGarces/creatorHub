@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToolsStore } from "@/store/tools.store";
 import { useFavoritesStore } from "@/store/favorites.store";
-import { ToolCard, EmptyState, Badge } from "@creator-hub/ui";
+import { ToolCard, EmptyState, Badge, Skeleton } from "@creator-hub/ui";
 import { TopBar } from "@/components/layout/top-bar";
 import { useI18n } from "@/i18n/i18n-provider";
 import { useToolText } from "@/i18n/use-tool-text";
@@ -77,9 +77,12 @@ export default function ToolsPage() {
   const { tools, fetchTools } = useToolsStore();
   const { favoriteIds, fetchFavorites, toggleFavorite } = useFavoritesStore();
   const [activeCategory, setActiveCategory] = useState("all");
+  // Until the list has loaded, nothing is drawn below the grid: no "no
+  // tools" flash, and "Coming soon" never gets pushed down (CLS).
+  const [loaded, setLoaded] = useState(tools.length > 0);
 
   useEffect(() => {
-    fetchTools();
+    void Promise.allSettled([fetchTools()]).then(() => setLoaded(true));
     fetchFavorites();
   }, [fetchTools, fetchFavorites]);
 
@@ -130,6 +133,11 @@ export default function ToolsPage() {
 
         {/* Tools Grid */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {!loaded &&
+            filtered.length === 0 &&
+            [0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-[150px] rounded-xl" />
+            ))}
           {filtered.map((tool) => (
             <ToolCard
               key={tool.id}
@@ -146,7 +154,7 @@ export default function ToolsPage() {
           ))}
         </div>
 
-        {filtered.length === 0 && (
+        {loaded && filtered.length === 0 && (
           <EmptyState
             icon="🛠️"
             title={t("tools.emptyTitle")}
@@ -155,7 +163,7 @@ export default function ToolsPage() {
         )}
 
         {/* Coming Soon */}
-        <div>
+        <div hidden={!loaded}>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim mb-4">
             {t("tools.comingSoon")}
           </h2>

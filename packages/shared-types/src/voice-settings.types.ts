@@ -6,8 +6,9 @@
  * Both run on Deepgram:
  * - STT: one streaming model (Nova-3 by default) for every voice button and
  *   Robotina's ears, priced in **credits per second** of recording;
- * - TTS: an Aura voice ("actor") per language — English, Spanish and
- *   Portuguese — priced in **credits per second** of speech.
+ * - TTS: Aura-2 for English and Spanish and Flux for Portuguese (Aura-2 has
+ *   no Portuguese voices), one voice ("actor") per language, priced in
+ *   **credits per second** of speech.
  *
  * The catalogs below are what the admin can pick from; a Deepgram voice id
  * that is not listed (a newly released voice) can still be typed in.
@@ -66,7 +67,9 @@ export interface TTSModelOption {
 }
 
 export const TTS_MODEL_OPTIONS: readonly TTSModelOption[] = [
-  { id: "aura-2", name: "Aura-2", languages: ["en", "es", "pt"] },
+  { id: "aura-2", name: "Aura-2", languages: ["en", "es"] },
+  // Portuguese has no Aura-2 voices: only Flux speaks it.
+  { id: "flux", name: "Flux", languages: ["pt"] },
   { id: "aura", name: "Aura-1", languages: ["en"] },
 ];
 
@@ -74,7 +77,7 @@ export const DEFAULT_TTS_MODEL = "aura-2";
 
 /** A voice ("actor") of the catalog. `model` is the full Deepgram voice id. */
 export interface TTSVoiceOption extends TTSVoice {
-  /** TTS model (family) it belongs to: `aura-2` or `aura`. */
+  /** TTS model (family) it belongs to: `aura-2`, `flux` or `aura`. */
   family: string;
 }
 
@@ -98,7 +101,7 @@ const voice = (
 const F: Gender = "feminine";
 const M: Gender = "masculine";
 
-/** Deepgram Aura voices by language (defaults first). */
+/** Deepgram TTS voices by language (defaults first). */
 export const TTS_VOICE_CATALOG: readonly TTSVoiceOption[] = [
   // Aura-2 — English
   voice("aura-2", "en", "andromeda", "American", F),
@@ -160,8 +163,19 @@ export const TTS_VOICE_CATALOG: readonly TTSVoiceOption[] = [
   voice("aura-2", "es", "aquila", "Latin American", M),
   voice("aura-2", "es", "nestor", "Peninsular", M),
   voice("aura-2", "es", "alvaro", "Peninsular", M),
-  // Aura-2 — Portuguese
-  voice("aura-2", "pt", "bianca", "Brazilian", F),
+  // Flux — Portuguese (Aura-2 has no Portuguese voices)
+  voice("flux", "pt", "bianca", "Brazilian", F),
+  voice("flux", "pt", "bruno", "Brazilian", M),
+  voice("flux", "pt", "claudia", "Brazilian", F),
+  voice("flux", "pt", "leandro", "Brazilian", M),
+  voice("flux", "pt", "marcia", "Brazilian", F),
+  voice("flux", "pt", "mariana", "Brazilian", F),
+  voice("flux", "pt", "marta", "Brazilian", F),
+  voice("flux", "pt", "mateus", "Brazilian", M),
+  voice("flux", "pt", "miguel", "Brazilian", M),
+  voice("flux", "pt", "renato", "Brazilian", M),
+  voice("flux", "pt", "roberto", "Brazilian", M),
+  voice("flux", "pt", "rodrigo", "Brazilian", M),
   // Aura-1 — English only
   voice("aura", "en", "asteria", "American", F),
   voice("aura", "en", "luna", "American", F),
@@ -199,7 +213,8 @@ export function isTTSVoiceId(
   voiceId: string,
   language: TTSLanguage,
 ): boolean {
-  if (!TTS_MODEL_OPTIONS.some((m) => m.id === model)) return false;
+  const option = TTS_MODEL_OPTIONS.find((m) => m.id === model);
+  if (!option || !option.languages.includes(language)) return false;
   const pattern = new RegExp(`^${model}-${VOICE_KEY}-${language}$`);
   // "aura-2-x-en" must not pass as an Aura-1 voice named "2-x".
   return (
@@ -217,7 +232,8 @@ export function ttsVoiceInfo(
 ): TTSVoiceOption {
   const known = TTS_VOICE_CATALOG.find((v) => v.model === voiceId);
   if (known) return known;
-  const family = voiceId.startsWith("aura-2-") ? "aura-2" : "aura";
+  const family =
+    TTS_MODEL_OPTIONS.find((m) => voiceId.startsWith(`${m.id}-`))?.id ?? "aura";
   const key = voiceId.slice(family.length + 1).replace(/-[a-z]{2}$/, "");
   return {
     family,
@@ -232,7 +248,7 @@ export function ttsVoiceInfo(
 // ── Settings ───────────────────────────────────────────────────────────
 
 export interface TTSLanguageVoice {
-  /** TTS model (family): `aura-2` or `aura`. */
+  /** TTS model (family): `aura-2`, `flux` or `aura`. */
   model: string;
   /** Deepgram voice id ("actor"), e.g. `aura-2-celeste-es`. */
   voice: string;
@@ -355,10 +371,16 @@ export const MAX_VOICE_CREDITS_PER_SECOND = 100;
 export const DEFAULT_TTS_LANGUAGE_VOICES: Readonly<
   Record<TTSLanguage, TTSLanguageVoice>
 > = Object.fromEntries(
-  TTS_LANGUAGES.map((language) => [
-    language,
-    { model: DEFAULT_TTS_MODEL, voice: TTS_VOICES[language].model },
-  ]),
+  TTS_LANGUAGES.map((language) => {
+    const voice = TTS_VOICES[language].model;
+    const model =
+      TTS_MODEL_OPTIONS.find(
+        (option) =>
+          option.languages.includes(language) &&
+          voice.startsWith(`${option.id}-`),
+      )?.id ?? DEFAULT_TTS_MODEL;
+    return [language, { model, voice }];
+  }),
 ) as Record<TTSLanguage, TTSLanguageVoice>;
 
 export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {

@@ -5,11 +5,11 @@ import { MockTTSProvider } from "./mock-tts.provider";
 
 /**
  * Registers the built-in TTS providers, like `STTProviderFactory`: Deepgram
- * Aura-2 when `DEEPGRAM_API_KEY` is set (the same key as speech-to-text),
- * and the silent mock in development/test only. Unlike STT there is no mock
- * fallback in production: without Deepgram the platform answers in text
- * (`TTSEngineService.isAvailable()` is false) instead of charging for
- * silence.
+ * (Aura-2 and Flux) when `DEEPGRAM_API_KEY` is set (the same key as
+ * speech-to-text), and the silent mock in development/test only. Unlike STT
+ * there is no mock fallback in production: without Deepgram the platform
+ * answers in text (`TTSEngineService.isAvailable()` is false) instead of
+ * charging for silence.
  */
 @Injectable()
 export class TTSProviderFactory implements OnModuleInit {
@@ -25,7 +25,7 @@ export class TTSProviderFactory implements OnModuleInit {
     const deepgram = new DeepgramTTSProvider();
     if (deepgram.validateConfig()) {
       this.registry.register(deepgram);
-      this.logger.log("Registered TTS provider: deepgram (Aura-2)");
+      this.logger.log("Registered TTS provider: deepgram (Aura-2/Flux)");
     } else {
       this.logger.warn(
         "Deepgram API key not found, skipping deepgram TTS provider",

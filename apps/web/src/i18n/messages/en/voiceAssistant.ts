@@ -19,7 +19,7 @@ export const voiceAssistant = {
   handsFree: "Conversation mode",
   handsFreeHint: "After she answers, Robotina listens again",
   voiceNote:
-    "Her voice is Deepgram Aura, picked from the language you speak — one voice per language:",
+    "Her voice is Deepgram, picked from the language you speak — one voice per language:",
   voiceSettings: "Voice",
   pricing: "Voice input {stt} cr/s · Reply 1 cr (spoken: {tts} cr/s)",
   pricingShort: "{stt} cr/s voice · {tts} cr/s spoken reply",

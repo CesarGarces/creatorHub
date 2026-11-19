@@ -155,7 +155,7 @@ export const ADMIN_VOICE_SETTINGS = {
       voices: {
         en: { model: "aura-2", voice: "aura-2-andromeda-en" },
         es: { model: "aura-2", voice: "aura-2-celeste-es" },
-        pt: { model: "aura-2", voice: "aura-2-bianca-pt" },
+        pt: { model: "flux", voice: "flux-bianca-pt" },
       },
     },
     freeTier: { minutes: null as number | null, period: "monthly" },

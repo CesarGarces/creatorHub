@@ -516,7 +516,9 @@ apps.
 **Gate:** zero colour-contrast violations (`color-contrast`, `link-in-text-block`), zero
 missing names/labels (`label`, `button-name`, `link-name`, `image-alt`, `aria-dialog-name`,
 `aria-*-name`, `document-title`, …) and zero `critical` violations. Other findings are attached
-to the report.
+to the report. Axe runs once entrance animations have settled; a contrast failure is re-checked
+once after 0.5 s (an element shown by a timer, e.g. the assistant's hint, may still be fading in) —
+a real one fails again.
 
 Conventions that keep it green:
 
@@ -732,6 +734,10 @@ New for existing users: appended at the end, shown (normalizer).
 | CLS     | Until then a `WidgetSkeleton` with the widget's geometry holds the cell; the user's last layout is cached per user (`creator_hub.dashboard.layout`) so returning users paint their own order at once |
 | Drag    | The lifted widget is a static DOM copy (`cloneNode`), not a second mount; cells memoize their widget element so pointer moves skip the widgets' subtrees; animations are transform-only              |
 | Saves   | Optimistic; one request at a time, each sending the latest list (quick toggles collapse, a reset can't be overtaken). A failed save restores the last saved layout and shows a toast                 |
+
+The quick prompt's placeholder draws its real box (the button's touch height
+on phones) and its "Try:" examples as invisible text, so it wraps exactly
+like the widget in every language and width — its arrival moves nothing.
 
 ### Rearranging (press and hold)
 

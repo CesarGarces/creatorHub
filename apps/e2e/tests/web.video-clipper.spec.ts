@@ -210,6 +210,8 @@ test.describe("Video Clipper · real video in the browser", () => {
     await card.getByRole("button", { name: "Export" }).click();
     await expect(card.getByRole("progressbar")).toBeVisible();
     const download = await downloadPromise;
+    // The confirmation toast (checked now: it goes away after a few seconds).
+    await expect(page.getByText("Clip saved to your device")).toBeVisible();
     expect(download.suggestedFilename()).toMatch(
       /^clip-16s-clip-1-00m02s-00m05s\.(webm|mp4)$/,
     );
@@ -246,7 +248,6 @@ test.describe("Video Clipper · real video in the browser", () => {
     expect(exported.width).toBe(202); // 9:16 centre crop of 640×360
     expect(exported.duration).toBeGreaterThan(2.5);
     expect(exported.duration).toBeLessThan(4);
-    await expect(page.getByText("Clip saved to your device")).toBeVisible();
   });
 
   test.describe("phone", () => {

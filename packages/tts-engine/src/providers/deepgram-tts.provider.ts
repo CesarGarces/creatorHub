@@ -11,6 +11,7 @@ import { TTSProviderBase } from "./tts-provider.base";
 import { mp3DurationMs } from "../audio-format";
 
 export const DEEPGRAM_SPEAK_URL = "https://api.deepgram.com/v1/speak";
+export const DEEPGRAM_FLUX_SPEAK_URL = "https://api.deepgram.com/v2/speak";
 /** MP3 at 48 kbps: small enough to stream as base64, clear for speech. */
 const MP3_BIT_RATE = 48_000;
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -29,11 +30,11 @@ export class DeepgramTTSError extends Error {
 }
 
 /**
- * Deepgram Aura text-to-speech (REST `POST /v1/speak`).
+ * Deepgram text-to-speech: Aura on `POST /v1/speak`, Flux on `POST /v2/speak`.
  *
  * Speaks with `params.voice` — the voice set for the language in Admin →
- * Voice — or the language's default (Andromeda, Celeste, Bianca on Aura-2,
- * see `TTS_VOICES`). One request per chunk
+ * Voice — or the language's default (Andromeda, Celeste on Aura-2; Bianca on
+ * Flux, see `TTS_VOICES`). One request per chunk
  * of text (≤ 2,000 characters); the caller sends sentences as the model
  * writes them, so the first words are heard while the rest is generated.
  * Uses the same `DEEPGRAM_API_KEY` as speech-to-text.
@@ -51,9 +52,11 @@ export class DeepgramTTSProvider extends TTSProviderBase {
     return "DEEPGRAM_API_KEY";
   }
 
-  /** `/v1/speak` URL for a voice model (exported for tests). */
+  /** Speak URL for a voice model: Flux on v2, Aura on v1 (exported for tests). */
   static speakUrl(model: string): string {
-    const url = new URL(DEEPGRAM_SPEAK_URL);
+    const url = new URL(
+      model.startsWith("flux-") ? DEEPGRAM_FLUX_SPEAK_URL : DEEPGRAM_SPEAK_URL,
+    );
     url.searchParams.set("model", model);
     url.searchParams.set("encoding", "mp3");
     url.searchParams.set("bit_rate", String(MP3_BIT_RATE));
@@ -93,7 +96,7 @@ export class DeepgramTTSProvider extends TTSProviderBase {
       } catch (error) {
         lastError = error;
         if (params.signal?.aborted || !isRetryable(error)) break;
-        this.logger.warn("Aura-2 request failed, retrying", {
+        this.logger.warn("Deepgram TTS request failed, retrying", {
           voice: voice.model,
           error: (error as Error).message,
         });
