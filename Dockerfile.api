@@ -49,16 +49,16 @@ RUN pnpm turbo run build --filter=@creator-hub/api...
 FROM build AS deploy
 
 RUN pnpm --filter @creator-hub/api deploy --prod --legacy /prod/api
-RUN mkdir -p /prod/api/packages/database/generated \
-    && if [ -d packages/database/generated ]; then \
-         cp -r packages/database/generated/. /prod/api/packages/database/generated/; \
-       fi \
-    && for d in /prod/api/node_modules/.pnpm/@creator-hub+database*/node_modules/@creator-hub/database /prod/api/node_modules/@creator-hub/database; do \
-         if [ -d "$d" ] && [ -d packages/database/generated ]; then \
-           mkdir -p "$d/generated" && cp -r packages/database/generated/. "$d/generated/"; \
-         fi; \
-       done \
-    && find /app -name "*debian-openssl-3.0.x*.so.node" -exec cp {} /prod/api/packages/database/generated/ \;
+RUN mkdir -p /prod/api/packages/database/generated; \
+    if [ -d packages/database/generated ]; then \
+      cp -r packages/database/generated/. /prod/api/packages/database/generated/ || true; \
+    fi; \
+    for d in /prod/api/node_modules/.pnpm/@creator-hub+database*/node_modules/@creator-hub/database /prod/api/node_modules/@creator-hub/database; do \
+      if [ -d "$d" ] && [ -d packages/database/generated ]; then \
+        mkdir -p "$d/generated" && cp -r packages/database/generated/. "$d/generated/" || true; \
+      fi; \
+    done; \
+    find /app -path /prod -prune -o -name "*debian-openssl-3.0.x*.so.node" -print0 2>/dev/null | xargs -0 -r -I{} cp -f "{}" /prod/api/packages/database/generated/ || true
 
 # Never ship local env files or database backups.
 RUN find /prod/api -type f \( -name '.env' -o -name '.env.*' \) -delete \
