@@ -132,10 +132,10 @@ export class ModelRegistryService {
 
     for (const model of remoteModels) {
       const existing = existingMap.get(model.id);
-      if (existing) {
-        toUpdate.push({ remote: model, existing });
-      } else {
+      if (!existing) {
         toCreate.push(model);
+      } else if (this.hasModelChanges(existing, model)) {
+        toUpdate.push({ remote: model, existing });
       }
     }
 
@@ -171,10 +171,14 @@ export class ModelRegistryService {
       results.created = batchResult.count;
     }
 
-    // Batch update existing models using transaction
-    if (toUpdate.length > 0) {
+    // Update only models whose data actually changed. A full-provider update
+    // used to run ~500 sequential queries inside one transaction every hour,
+    // which is very expensive on small containers and cross-region databases.
+    const UPDATE_BATCH_SIZE = 25;
+    for (let i = 0; i < toUpdate.length; i += UPDATE_BATCH_SIZE) {
+      const batch = toUpdate.slice(i, i + UPDATE_BATCH_SIZE);
       await prisma.$transaction(
-        toUpdate.map(({ remote, existing }) =>
+        batch.map(({ remote, existing }) =>
           prisma.modelMetadata.update({
             where: {
               providerSlug_modelId: { providerSlug, modelId: remote.id },
@@ -200,26 +204,68 @@ export class ModelRegistryService {
           }),
         ),
       );
-      results.updated = toUpdate.length;
     }
+    results.updated = toUpdate.length;
 
-    // Mark models not in remote list as stale
+    // Mark models not in remote list as stale, but only the ones that are
+    // still active: re-deactivating hundreds of rows every hour is wasted work.
     const remoteIds = new Set(remoteModels.map((m) => m.id));
-    const staleModels = existingModels.filter((m) => !remoteIds.has(m.modelId));
-    if (staleModels.length > 0) {
-      await prisma.$transaction(
-        staleModels.map((existing) =>
-          prisma.modelMetadata.update({
-            where: { id: existing.id },
-            data: { isActive: false },
-          }),
-        ),
-      );
-      results.deactivated = staleModels.length;
+    const staleModels = existingModels.filter(
+      (m) => m.isActive && !remoteIds.has(m.modelId),
+    );
+    const DEACTIVATE_BATCH_SIZE = 100;
+    for (let i = 0; i < staleModels.length; i += DEACTIVATE_BATCH_SIZE) {
+      const ids = staleModels
+        .slice(i, i + DEACTIVATE_BATCH_SIZE)
+        .map((m) => m.id);
+      await prisma.modelMetadata.updateMany({
+        where: { id: { in: ids } },
+        data: { isActive: false },
+      });
     }
+    results.deactivated = staleModels.length;
 
     this.logger.info(`Sync completed for ${providerSlug}`, results);
     return results;
+  }
+
+  /**
+   * True when the provider data differs from what is stored, so unchanged
+   * models are skipped during sync.
+   */
+  private hasModelChanges(
+    existing: Prisma.ModelMetadataGetPayload<Prisma.ModelMetadataDefaultArgs>,
+    model: ModelInfo,
+  ): boolean {
+    const nextTaskType =
+      existing.taskType === "text-generation" &&
+      model.taskType !== "text-generation"
+        ? model.taskType
+        : existing.taskType;
+
+    return (
+      existing.displayName !== model.name ||
+      existing.taskType !== nextTaskType ||
+      (existing.contextLength ?? null) !== (model.contextLength ?? null) ||
+      (existing.maxOutputTokens ?? null) !== (model.maxOutputTokens ?? null) ||
+      existing.supportsStreaming !== model.supportsStreaming ||
+      existing.supportsVision !== model.supportsVision ||
+      (existing.promptPricePer1k ?? null) !==
+        (model.pricing.promptPer1k ?? null) ||
+      (existing.completionPricePer1k ?? null) !==
+        (model.pricing.completionPer1k ?? null) ||
+      (existing.imagePricePerGen ?? null) !==
+        (model.pricing.imagePerGen ?? null) ||
+      (existing.description ?? null) !== (model.description ?? null) ||
+      !this.sameTags(existing.tags, model.tags ?? [])
+    );
+  }
+
+  private sameTags(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return sortedA.every((tag, i) => tag === sortedB[i]);
   }
 
   /**

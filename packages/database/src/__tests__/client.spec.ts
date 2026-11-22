@@ -57,15 +57,19 @@ describe("database client", () => {
     expect(getPrisma()).toBe(mockClient);
     void prisma.$disconnect;
 
-    expect(PrismaClientMock).toHaveBeenCalledTimes(1);
-    expect(PrismaPgMock).toHaveBeenCalledWith({
+    const pgOptions = {
       connectionString: "postgresql://u:p@db:5432/app",
-    });
+      max: 3,
+      connectionTimeoutMillis: 10_000,
+      idleTimeoutMillis: 10_000,
+      keepAlive: true,
+      application_name: "creatorhub-api",
+    };
+
+    expect(PrismaClientMock).toHaveBeenCalledTimes(1);
+    expect(PrismaPgMock).toHaveBeenCalledWith(pgOptions);
     expect(PrismaClientMock).toHaveBeenCalledWith({
-      adapter: {
-        adapter: "pg",
-        options: { connectionString: "postgresql://u:p@db:5432/app" },
-      },
+      adapter: { adapter: "pg", options: pgOptions },
       log: ["error"],
     });
   });

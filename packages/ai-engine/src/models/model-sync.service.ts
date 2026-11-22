@@ -23,6 +23,11 @@ export class ModelSyncService implements OnModuleInit {
   private readonly SYNC_INTERVAL_MS =
     parseInt(process.env.MODEL_SYNC_INTERVAL_MS || "3600000", 10) || 3600000;
 
+  // Default: 60 seconds. Syncing during Nest startup competes for CPU/memory
+  // with the first requests (login, health checks) on small containers.
+  private readonly INITIAL_SYNC_DELAY_MS =
+    parseInt(process.env.MODEL_SYNC_INITIAL_DELAY_MS || "60000", 10) || 60000;
+
   constructor(private modelRegistry: ModelRegistryService) {}
 
   onModuleInit() {
@@ -53,15 +58,17 @@ export class ModelSyncService implements OnModuleInit {
         });
       });
     }, this.SYNC_INTERVAL_MS);
+    this.syncInterval.unref?.();
 
-    // Run initial sync after 5 seconds (don't block startup)
-    setTimeout(() => {
+    // Run the first sync after startup has settled.
+    const initialSync = setTimeout(() => {
       this.sync().catch((error) => {
         this.logger.error("Initial sync failed", {
           error: (error as Error).message,
         });
       });
-    }, 5000);
+    }, this.INITIAL_SYNC_DELAY_MS);
+    initialSync.unref?.();
   }
 
   /**

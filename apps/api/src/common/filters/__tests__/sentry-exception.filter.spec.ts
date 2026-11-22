@@ -56,6 +56,28 @@ describe("SentryExceptionFilter", () => {
     expect(response.status).toHaveBeenCalledWith(499);
   });
 
+  it("honours status from an HttpException-like object from another package copy", () => {
+    const { host: h, response } = host({});
+    const foreignUnauthorized = {
+      getStatus: () => 401,
+      getResponse: () => ({
+        statusCode: 401,
+        message: "Invalid credentials",
+        error: "Unauthorized",
+      }),
+    };
+
+    filter.catch(foreignUnauthorized, h);
+
+    expect(sentry.captureException).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(401);
+    expect(response.json).toHaveBeenCalledWith({
+      statusCode: 401,
+      message: "Invalid credentials",
+      error: "Unauthorized",
+    });
+  });
+
   it("reports 400s with the body sanitized at every depth", () => {
     const keyframe = `data:image/jpeg;base64,${"A".repeat(400_000)}`;
     const { host: h, response } = host({

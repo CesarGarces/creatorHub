@@ -29,8 +29,12 @@ if (!process.env.SENTRY_DSN) {
 Sentry.init({
   ...sentryConfig,
 
-  // Add profiling integration (must be explicit)
-  integrations: [nodeProfilingIntegration()],
+  // Profiling is opt-in: the native profiler is only loaded when sampling
+  // profiles, otherwise it only adds memory/CPU overhead on small pods.
+  integrations:
+    (sentryConfig.profilesSampleRate ?? 0) > 0
+      ? [nodeProfilingIntegration()]
+      : [],
 });
 
 console.log(

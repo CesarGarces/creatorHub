@@ -11,8 +11,17 @@ function createPrismaClient() {
     throw new Error("DATABASE_URL is not set");
   }
 
+  const poolMax =
+    Number(process.env.DATABASE_POOL_MAX) ||
+    (process.env.NODE_ENV === "production" ? 3 : 10);
+
   const adapter = new PrismaPg({
     connectionString: databaseUrl,
+    max: poolMax,
+    connectionTimeoutMillis: 10_000,
+    idleTimeoutMillis: 10_000,
+    keepAlive: true,
+    application_name: "creatorhub-api",
   });
 
   return new PrismaClient({

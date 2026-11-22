@@ -135,7 +135,7 @@ describe("ModelSyncService", () => {
     expect(sync.getStatus().syncStatus).toBe("error");
   });
 
-  it("runs an initial sync after 5s and then hourly, unless disabled", async () => {
+  it("runs an initial sync after the startup delay and then hourly, unless disabled", async () => {
     jest.useFakeTimers();
     const registry = {
       syncModels: jest.fn(async () => ({
@@ -148,7 +148,7 @@ describe("ModelSyncService", () => {
     const sync = new ModelSyncService(registry as never);
 
     sync.onModuleInit();
-    await jest.advanceTimersByTimeAsync(5000);
+    await jest.advanceTimersByTimeAsync(60_000);
     expect(registry.syncModels).toHaveBeenCalledTimes(1);
     await jest.advanceTimersByTimeAsync(3_600_000);
     expect(registry.syncModels).toHaveBeenCalledTimes(2);
@@ -219,6 +219,7 @@ describe("ModelRegistryService.syncModels", () => {
                 id: "row-2",
                 modelId: "removed/model",
                 taskType: "text-generation",
+                isActive: true,
               },
             ]
           : [],
@@ -257,8 +258,8 @@ describe("ModelRegistryService.syncModels", () => {
         }),
       }),
     );
-    expect(updates).toContainEqual({
-      where: { id: "row-2" },
+    expect(mockPrisma.modelMetadata.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["row-2"] } },
       data: { isActive: false },
     });
   });

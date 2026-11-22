@@ -109,9 +109,36 @@ export class SentryExceptionFilter implements ExceptionFilter {
 
   // ─── Helpers ────────────────────────────────────────────────────────────
 
+  /**
+   * Resolve an HttpException-like object. Workspace packages can resolve a
+   * different physical copy of @nestjs/common, so `instanceof HttpException`
+   * is not reliable across package boundaries. Duck typing keeps 401/403/404
+   * responses from being downgraded to 500.
+   */
+  private getHttpException(exception: unknown): HttpException | null {
+    if (exception instanceof HttpException) return exception;
+
+    const candidate = exception as {
+      getStatus?: () => number;
+      getResponse?: () => unknown;
+    } | null;
+    if (
+      candidate &&
+      typeof candidate.getStatus === "function" &&
+      typeof candidate.getResponse === "function"
+    ) {
+      const status = candidate.getStatus();
+      if (typeof status === "number" && status >= 100 && status <= 599) {
+        return exception as HttpException;
+      }
+    }
+    return null;
+  }
+
   private getHttpStatus(exception: unknown): number {
-    if (exception instanceof HttpException) {
-      return exception.getStatus();
+    const httpException = this.getHttpException(exception);
+    if (httpException) {
+      return httpException.getStatus();
     }
     // Defense in depth: an unhandled Prisma unique-constraint violation
     // (P2002, e.g. a lost duplicate-registration race) is a client conflict,
@@ -215,8 +242,9 @@ export class SentryExceptionFilter implements ExceptionFilter {
     status: number,
     exception: unknown,
   ): void {
-    if (exception instanceof HttpException) {
-      const exceptionResponse = exception.getResponse();
+    const httpException = this.getHttpException(exception);
+    if (httpException) {
+      const exceptionResponse = httpException.getResponse();
       response.status(status).json(exceptionResponse);
     } else if (this.isPrismaUniqueViolation(exception)) {
       // Don't leak which unique field conflicted (information disclosure):

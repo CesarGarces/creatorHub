@@ -132,6 +132,13 @@ const release =
   process.env.SENTRY_RELEASE || process.env.RENDER_GIT_COMMIT || "unknown";
 const isProduction = environment === "production";
 
+function sampleRate(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(Math.max(parsed, 0), 1);
+}
+
 export const sentryConfig: NodeOptions = {
   dsn: process.env.SENTRY_DSN,
 
@@ -139,12 +146,17 @@ export const sentryConfig: NodeOptions = {
   release,
 
   // ─── Sampling ────────────────────────────────────────────────────────────
-  // Production: 20% traces (Render free tier memory constraints)
-  // Development: 100% traces (full visibility)
-  tracesSampleRate: isProduction ? 0.2 : 1.0,
-
-  // Profiling: Same sample rate as traces
-  profilesSampleRate: isProduction ? 0.2 : 1.0,
+  // Production keeps tracing light because the API runs on a 0.1 vCPU pod.
+  // Profiling is disabled by default in production: continuous CPU profiling
+  // competes directly with request handling on such a small container.
+  tracesSampleRate: sampleRate(
+    process.env.SENTRY_TRACES_SAMPLE_RATE,
+    isProduction ? 0.05 : 1.0,
+  ),
+  profilesSampleRate: sampleRate(
+    process.env.SENTRY_PROFILES_SAMPLE_RATE,
+    isProduction ? 0 : 1.0,
+  ),
 
   // ─── PII & Privacy ──────────────────────────────────────────────────────
   // NEVER send user IP addresses
