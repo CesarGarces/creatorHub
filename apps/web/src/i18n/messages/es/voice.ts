@@ -5,7 +5,7 @@ export const voice: Messages["voice"] = {
   listening: "Escuchando...",
   startRecording: "Iniciar dictado por voz",
   stopRecording: "Detener grabación",
-  creditsPerSecond: "+{count} cr/s",
+  creditsPerMinute: "+{count} cr/min",
   errors: {
     notSupported: "El dictado por voz no es compatible con este navegador",
     connectionFailed: "No se pudo conectar con el servidor",

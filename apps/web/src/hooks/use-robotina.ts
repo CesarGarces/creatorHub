@@ -50,10 +50,10 @@ export interface UseRobotinaReturn {
   clearError: () => void;
   /** Voice input available (mic + WebSocket STT). */
   isVoiceSupported: boolean;
-  /** Credits per second of voice input (Admin → Voice). */
-  sttCreditsPerSecond: number;
-  /** Credits per second of her speech (Admin → Voice). */
-  ttsCreditsPerSecond: number;
+  /** Credits per minute of voice input (Admin → Voice). */
+  sttCreditsPerMinute: number;
+  /** Credits per minute of her speech (Admin → Voice). */
+  ttsCreditsPerMinute: number;
   /** Who speaks each language (Admin → Voice). */
   voices: VoicePricing["tts"]["voices"];
   /** Free plan minutes with her (null: unknown or not limited). */
@@ -503,8 +503,8 @@ export function useRobotina(): UseRobotinaReturn {
     activity: state === "thinking" ? activity : null,
     clearError: () => setError(null),
     isVoiceSupported: voice.isSupported,
-    sttCreditsPerSecond: pricing.stt.creditsPerSecond,
-    ttsCreditsPerSecond: pricing.tts.creditsPerSecond,
+    sttCreditsPerMinute: pricing.stt.creditsPerMinute,
+    ttsCreditsPerMinute: pricing.tts.creditsPerMinute,
     voices: pricing.tts.voices,
     allowance,
     limitReached: !!allowance?.exhausted,

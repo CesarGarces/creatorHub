@@ -5,10 +5,10 @@
  *
  * Both run on Deepgram:
  * - STT: one streaming model (Nova-3 by default) for every voice button and
- *   Robotina's ears, priced in **credits per second** of recording;
+ *   Robotina's ears, priced in **credits per minute** of recording;
  * - TTS: Aura-2 for English and Spanish and Flux for Portuguese (Aura-2 has
  *   no Portuguese voices), one voice ("actor") per language, priced in
- *   **credits per second** of speech.
+ *   **credits per minute** of speech.
  *
  * The catalogs below are what the admin can pick from; a Deepgram voice id
  * that is not listed (a newly released voice) can still be typed in.
@@ -258,11 +258,11 @@ export interface VoiceSettings {
   stt: {
     provider: "deepgram";
     model: string;
-    creditsPerSecond: number;
+    creditsPerMinute: number;
   };
   tts: {
     provider: "deepgram";
-    creditsPerSecond: number;
+    creditsPerMinute: number;
     voices: Record<TTSLanguage, TTSLanguageVoice>;
   };
   /** Robotina's voice time for the Free plan (see `VoiceAllowance`). */
@@ -354,19 +354,19 @@ export function voiceAllowanceFrom(
 /** Body of `PUT /admin/voice-settings`. */
 export interface UpdateVoiceSettingsRequest {
   sttModel: string;
-  sttCreditsPerSecond: number;
-  ttsCreditsPerSecond: number;
+  sttCreditsPerMinute: number;
+  ttsCreditsPerMinute: number;
   ttsVoices: Record<TTSLanguage, TTSLanguageVoice>;
   /** Free plan minutes with Robotina; null = no limit. */
   freeTierMinutes: number | null;
   freeTierPeriod: FreeTierPeriod;
 }
 
-/** Starting prices: 1 credit per second of listening, 2 per second spoken. */
-export const DEFAULT_STT_CREDITS_PER_SECOND = 1;
-export const DEFAULT_TTS_CREDITS_PER_SECOND = 2;
-/** Highest price per second the admin can set. */
-export const MAX_VOICE_CREDITS_PER_SECOND = 100;
+/** Starting prices: 60 credits per minute of listening, 120 per minute spoken. */
+export const DEFAULT_STT_CREDITS_PER_MINUTE = 60;
+export const DEFAULT_TTS_CREDITS_PER_MINUTE = 120;
+/** Highest price per minute the admin can set. */
+export const MAX_VOICE_CREDITS_PER_MINUTE = 6000;
 
 export const DEFAULT_TTS_LANGUAGE_VOICES: Readonly<
   Record<TTSLanguage, TTSLanguageVoice>
@@ -387,11 +387,11 @@ export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   stt: {
     provider: "deepgram",
     model: DEFAULT_STT_MODEL,
-    creditsPerSecond: DEFAULT_STT_CREDITS_PER_SECOND,
+    creditsPerMinute: DEFAULT_STT_CREDITS_PER_MINUTE,
   },
   tts: {
     provider: "deepgram",
-    creditsPerSecond: DEFAULT_TTS_CREDITS_PER_SECOND,
+    creditsPerMinute: DEFAULT_TTS_CREDITS_PER_MINUTE,
     voices: { ...DEFAULT_TTS_LANGUAGE_VOICES },
   },
   // No limit until the admin sets one.
@@ -409,31 +409,31 @@ export function isFreeTierMinutes(value: unknown): value is number {
   );
 }
 
-/** A valid price per second: 0 (free) up to the maximum, cents at most. */
+/** A valid price per minute: 0 (free) up to the maximum, cents at most. */
 export function isVoiceCreditRate(value: unknown): value is number {
   return (
     typeof value === "number" &&
     Number.isFinite(value) &&
     value >= 0 &&
-    value <= MAX_VOICE_CREDITS_PER_SECOND &&
+    value <= MAX_VOICE_CREDITS_PER_MINUTE &&
     Math.abs(Math.round(value * 100) - value * 100) < 1e-6
   );
 }
 
 /**
- * Credits for `durationMs` of audio at `creditsPerSecond`: every started
- * second counts, and the total is rounded up to whole credits
- * (2.3 s at 1 cr/s → 3; 4.2 s at 2 cr/s → 10; 30 s at 0.02 cr/s → 1).
+ * Credits for `durationMs` of audio at `creditsPerMinute`, prorated by the
+ * started second and rounded up to whole credits
+ * (2.3 s at 60 cr/min → 3; 4.2 s at 120 cr/min → 10; 30 s at 1.2 cr/min → 1).
  * No audio or a free rate → 0.
  */
 export function voiceCredits(
   durationMs: number,
-  creditsPerSecond: number,
+  creditsPerMinute: number,
 ): number {
-  if (!(durationMs > 0) || !(creditsPerSecond > 0)) return 0;
+  if (!(durationMs > 0) || !(creditsPerMinute > 0)) return 0;
   const seconds = Math.ceil(durationMs / 1000);
-  // Cents avoid float noise (3 × 0.1 = 0.30000000000000004 → 1, not 2).
-  return Math.ceil((seconds * Math.round(creditsPerSecond * 100)) / 100);
+  // Cents avoid float noise; divide by 60 because the price is per minute.
+  return Math.ceil((seconds * Math.round(creditsPerMinute * 100)) / (100 * 60));
 }
 
 /**
@@ -442,12 +442,12 @@ export function voiceCredits(
  */
 export function voiceSecondsAffordable(
   balance: number,
-  creditsPerSecond: number,
+  creditsPerMinute: number,
 ): number {
-  if (!(creditsPerSecond > 0)) return Infinity;
+  if (!(creditsPerMinute > 0)) return Infinity;
   return Math.max(
     0,
-    Math.floor((balance * 100) / Math.round(creditsPerSecond * 100)),
+    Math.floor((balance * 100 * 60) / Math.round(creditsPerMinute * 100)),
   );
 }
 
@@ -456,11 +456,11 @@ export function voiceSecondsAffordable(
  * next to voice buttons and Robotina (prices, who speaks each language).
  */
 export interface VoicePricing {
-  stt: { model: string; creditsPerSecond: number };
+  stt: { model: string; creditsPerMinute: number };
   /** Free plan minutes with Robotina (null: no limit). */
   freeTier: FreeTierLimit | null;
   tts: {
-    creditsPerSecond: number;
+    creditsPerMinute: number;
     voices: Record<
       TTSLanguage,
       Pick<TTSVoice, "model" | "name" | "accent" | "gender">
@@ -486,17 +486,17 @@ export function voicePricingFrom(settings: VoiceSettings): VoicePricing {
   return {
     stt: {
       model: settings.stt.model,
-      creditsPerSecond: settings.stt.creditsPerSecond,
+      creditsPerMinute: settings.stt.creditsPerMinute,
     },
     freeTier: settings.freeTier.minutes === null ? null : settings.freeTier,
-    tts: { creditsPerSecond: settings.tts.creditsPerSecond, voices },
+    tts: { creditsPerMinute: settings.tts.creditsPerMinute, voices },
   };
 }
 
 export type VoiceSettingsField =
   | "sttModel"
-  | "sttCreditsPerSecond"
-  | "ttsCreditsPerSecond"
+  | "sttCreditsPerMinute"
+  | "ttsCreditsPerMinute"
   | `ttsVoices.${TTSLanguage}`
   | "freeTierMinutes"
   | "freeTierPeriod";
@@ -523,11 +523,11 @@ export function voiceSettingsErrors(input: unknown): VoiceSettingsError[] {
   if (!isSTTModel(body.sttModel)) {
     errors.push({ field: "sttModel", code: "invalidModel" });
   }
-  if (!isVoiceCreditRate(body.sttCreditsPerSecond)) {
-    errors.push({ field: "sttCreditsPerSecond", code: "invalidRate" });
+  if (!isVoiceCreditRate(body.sttCreditsPerMinute)) {
+    errors.push({ field: "sttCreditsPerMinute", code: "invalidRate" });
   }
-  if (!isVoiceCreditRate(body.ttsCreditsPerSecond)) {
-    errors.push({ field: "ttsCreditsPerSecond", code: "invalidRate" });
+  if (!isVoiceCreditRate(body.ttsCreditsPerMinute)) {
+    errors.push({ field: "ttsCreditsPerMinute", code: "invalidRate" });
   }
   const voices = (body.ttsVoices ?? {}) as Partial<
     Record<string, Partial<TTSLanguageVoice> | undefined>

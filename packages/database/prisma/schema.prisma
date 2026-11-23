@@ -1237,10 +1237,10 @@ model VoiceSettings {
   id                  String   @id @default("global")
   /// Deepgram speech-to-text model ("nova-3", "nova-2"…).
   sttModel            String   @default("nova-3")
-  /// Credits per second of voice input (every started second counts).
-  sttCreditsPerSecond Float    @default(1)
-  /// Credits per second of synthesized speech (Robotina's spoken replies).
-  ttsCreditsPerSecond Float    @default(2)
+  /// Credits per minute of voice input, prorated by the started second.
+  sttCreditsPerMinute Float    @default(60)
+  /// Credits per minute of synthesized speech (Robotina's spoken replies).
+  ttsCreditsPerMinute Float    @default(120)
   /// Voice per language: { en|es|pt: { model: "aura-2" | "flux", voice: "…" } }.
   ttsVoices           Json
   /// Free plan minutes with Robotina (her voice + the user's); null = no limit.

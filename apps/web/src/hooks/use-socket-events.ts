@@ -137,7 +137,7 @@ export function useSocketEvents(options: UseSocketEventsOptions = {}) {
       on("stt:result", (data?: { endedBy?: string }) => {
         fetchBalance();
         // The recording stopped because the balance ran out (Admin → Voice
-        // price per second): say why the mic went off.
+        // price per minute): say why the mic went off.
         if (data?.endedBy === "credit-limit") {
           toast.error(t("voice.errors.outOfCredits"));
         }

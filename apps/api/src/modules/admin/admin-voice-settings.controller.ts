@@ -39,7 +39,7 @@ export interface AdminVoiceSettingsResponse {
 
 /**
  * Admin → Voice (STT & TTS): the Deepgram speech-to-text model, the Deepgram
- * voice of each language and the prices per second.
+ * voice of each language and the prices per minute.
  */
 @Controller("admin/voice-settings")
 @UseGuards(JwtAuthGuard, AdminGuard)

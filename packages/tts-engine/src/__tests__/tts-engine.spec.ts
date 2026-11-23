@@ -295,10 +295,10 @@ describe("TTSEngineService", () => {
 
   it("bills every started second of speech, nothing without speech", () => {
     const engine = new TTSEngineService(new TTSProviderRegistry());
-    expect(engine.calculateCredits(0, 2)).toBe(0);
-    expect(engine.calculateCredits(1, 2)).toBe(2);
-    expect(engine.calculateCredits(4200, 2)).toBe(10);
-    expect(engine.calculateCredits(60_000, 0.5)).toBe(30);
+    expect(engine.calculateCredits(0, 120)).toBe(0);
+    expect(engine.calculateCredits(1, 120)).toBe(2);
+    expect(engine.calculateCredits(4200, 120)).toBe(10);
+    expect(engine.calculateCredits(60_000, 30)).toBe(30);
     expect(engine.calculateCredits(30_000, 0)).toBe(0);
   });
 });

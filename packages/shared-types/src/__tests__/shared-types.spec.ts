@@ -229,14 +229,14 @@ describe("text-to-speech contract (Deepgram Aura-2 / Flux)", () => {
 });
 
 describe("voice settings (Admin → Voice: STT & TTS)", () => {
-  it("defaults: Nova-3, Aura-2 for English/Spanish, Flux for Portuguese, 1 cr/s in, 2 cr/s out", () => {
+  it("defaults: Nova-3, Aura-2 for English/Spanish, Flux for Portuguese, 60 cr/min in, 120 cr/min out", () => {
     const d = types.DEFAULT_VOICE_SETTINGS;
     expect(d.stt).toEqual({
       provider: "deepgram",
       model: "nova-3",
-      creditsPerSecond: 1,
+      creditsPerMinute: 60,
     });
-    expect(d.tts.creditsPerSecond).toBe(2);
+    expect(d.tts.creditsPerMinute).toBe(120);
     expect(d.tts.voices).toEqual({
       en: { model: "aura-2", voice: "aura-2-andromeda-en" },
       es: { model: "aura-2", voice: "aura-2-celeste-es" },
@@ -245,30 +245,30 @@ describe("voice settings (Admin → Voice: STT & TTS)", () => {
     expect(d.updatedAt).toBeNull();
   });
 
-  it("bills every started second, rounded up to whole credits", () => {
-    expect(types.voiceCredits(0, 1)).toBe(0);
+  it("bills every started second at the per-minute rate, rounded up to whole credits", () => {
+    expect(types.voiceCredits(0, 60)).toBe(0);
     expect(types.voiceCredits(5000, 0)).toBe(0);
-    expect(types.voiceCredits(1, 1)).toBe(1);
-    expect(types.voiceCredits(2300, 1)).toBe(3);
-    expect(types.voiceCredits(4200, 2)).toBe(10);
-    expect(types.voiceCredits(30_000, 0.02)).toBe(1);
-    expect(types.voiceCredits(3000, 0.1)).toBe(1); // not 2 (float noise)
-    expect(types.voiceCredits(60_000, 1.5)).toBe(90);
+    expect(types.voiceCredits(1, 60)).toBe(1);
+    expect(types.voiceCredits(2300, 60)).toBe(3);
+    expect(types.voiceCredits(4200, 120)).toBe(10);
+    expect(types.voiceCredits(30_000, 1.2)).toBe(1);
+    expect(types.voiceCredits(3000, 6)).toBe(1); // not 2 (float noise)
+    expect(types.voiceCredits(60_000, 90)).toBe(90);
   });
 
   it("knows how many seconds a balance pays for", () => {
-    expect(types.voiceSecondsAffordable(10, 2)).toBe(5);
-    expect(types.voiceSecondsAffordable(5, 1)).toBe(5);
-    expect(types.voiceSecondsAffordable(1, 0.3)).toBe(3);
-    expect(types.voiceSecondsAffordable(-4, 1)).toBe(0);
+    expect(types.voiceSecondsAffordable(10, 120)).toBe(5);
+    expect(types.voiceSecondsAffordable(5, 60)).toBe(5);
+    expect(types.voiceSecondsAffordable(1, 18)).toBe(3);
+    expect(types.voiceSecondsAffordable(-4, 60)).toBe(0);
     expect(types.voiceSecondsAffordable(0, 0)).toBe(Infinity);
   });
 
-  it("accepts prices from 0 to 100 credits per second, in cents", () => {
-    for (const ok of [0, 0.01, 1, 2, 2.5, 100]) {
+  it("accepts prices from 0 to 6,000 credits per minute, in cents", () => {
+    for (const ok of [0, 0.06, 60, 120, 150, 6000]) {
       expect(types.isVoiceCreditRate(ok)).toBe(true);
     }
-    for (const bad of [-1, 100.01, 0.001, Number.NaN, "1", null]) {
+    for (const bad of [-1, 6000.01, 0.006, Number.NaN, "60", null]) {
       expect(types.isVoiceCreditRate(bad)).toBe(false);
     }
   });
@@ -330,8 +330,8 @@ describe("voice settings (Admin → Voice: STT & TTS)", () => {
         },
       },
     });
-    expect(pricing.stt).toEqual({ model: "nova-3", creditsPerSecond: 1 });
-    expect(pricing.tts.creditsPerSecond).toBe(2);
+    expect(pricing.stt).toEqual({ model: "nova-3", creditsPerMinute: 60 });
+    expect(pricing.tts.creditsPerMinute).toBe(120);
     expect(pricing.tts.voices.es).toEqual({
       model: "aura-2-javier-es",
       name: "Javier",
@@ -344,8 +344,8 @@ describe("voice settings (Admin → Voice: STT & TTS)", () => {
 describe("voice settings validation", () => {
   const valid = {
     sttModel: "nova-3",
-    sttCreditsPerSecond: 1,
-    ttsCreditsPerSecond: 2,
+    sttCreditsPerMinute: 60,
+    ttsCreditsPerMinute: 120,
     ttsVoices: { ...types.DEFAULT_TTS_LANGUAGE_VOICES },
     freeTierMinutes: null,
     freeTierPeriod: "monthly",
@@ -370,8 +370,8 @@ describe("voice settings validation", () => {
     expect(
       types.voiceSettingsErrors({
         sttModel: "whisper",
-        sttCreditsPerSecond: -1,
-        ttsCreditsPerSecond: "2",
+        sttCreditsPerMinute: -1,
+        ttsCreditsPerMinute: "2",
         ttsVoices: {
           en: { model: "aura-2", voice: "aura-2-celeste-es" },
           es: { model: "aura", voice: "aura-luna-es" },
@@ -381,8 +381,8 @@ describe("voice settings validation", () => {
       }),
     ).toEqual([
       { field: "sttModel", code: "invalidModel" },
-      { field: "sttCreditsPerSecond", code: "invalidRate" },
-      { field: "ttsCreditsPerSecond", code: "invalidRate" },
+      { field: "sttCreditsPerMinute", code: "invalidRate" },
+      { field: "ttsCreditsPerMinute", code: "invalidRate" },
       { field: "ttsVoices.en", code: "invalidVoice" },
       { field: "ttsVoices.es", code: "invalidModel" },
       { field: "ttsVoices.pt", code: "invalidModel" },
@@ -413,8 +413,8 @@ describe("Free plan minutes with Robotina", () => {
   it("validates whole minutes from 1 to 10,000 and the period", () => {
     const base = {
       sttModel: "nova-3",
-      sttCreditsPerSecond: 1,
-      ttsCreditsPerSecond: 2,
+      sttCreditsPerMinute: 60,
+      ttsCreditsPerMinute: 120,
       ttsVoices: { ...types.DEFAULT_TTS_LANGUAGE_VOICES },
     };
     for (const minutes of [null, 1, 10, 20, 10_000]) {

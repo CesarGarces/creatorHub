@@ -16,7 +16,7 @@ export type ModelTaskType = (typeof MODEL_TASK_TYPES)[number];
 
 /**
  * Task types "Add model" offers. Speech-to-text is not one of them: the
- * voice model and its price per second live in Admin → Voice (STT & TTS);
+ * voice model and its price per minute live in Admin → Voice (STT & TTS);
  * speech-to-text rows added before are kept but no longer price anything.
  */
 export const CREATABLE_TASK_TYPES: readonly ModelTaskType[] =

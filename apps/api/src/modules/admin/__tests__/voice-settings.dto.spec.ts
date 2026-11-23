@@ -18,8 +18,8 @@ const errorsFor = async (cls: new () => object, body: object) =>
 
 const valid = {
   sttModel: "nova-3",
-  sttCreditsPerSecond: 1,
-  ttsCreditsPerSecond: 2,
+  sttCreditsPerMinute: 60,
+  ttsCreditsPerMinute: 120,
   ttsVoices: DEFAULT_TTS_LANGUAGE_VOICES,
   freeTierMinutes: 10,
   freeTierPeriod: "monthly",
@@ -41,14 +41,14 @@ describe("UpdateVoiceSettingsDto", () => {
     expect(
       await errorsFor(UpdateVoiceSettingsDto, {
         ...valid,
-        sttCreditsPerSecond: "1",
+        sttCreditsPerMinute: "60",
         freeTierMinutes: 2.5,
         freeTierPeriod: "weekly",
         extra: true,
       }),
     ).toEqual(
       expect.arrayContaining([
-        "sttCreditsPerSecond",
+        "sttCreditsPerMinute",
         "freeTierMinutes",
         "freeTierPeriod",
         "extra",

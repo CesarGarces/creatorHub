@@ -20,7 +20,7 @@ import {
 
 /**
  * `PUT /admin/voice-settings`. Shapes are checked here; the rules (known
- * models, voice ids per language, prices 0–100 cr/s in cents, 1–10,000
+ * models, voice ids per language, prices 0–6,000 cr/min in cents, 1–10,000
  * free minutes) are `voiceSettingsErrors`, applied by VoiceSettingsService.
  */
 export class UpdateVoiceSettingsDto implements UpdateVoiceSettingsRequest {
@@ -28,10 +28,10 @@ export class UpdateVoiceSettingsDto implements UpdateVoiceSettingsRequest {
   sttModel!: string;
 
   @IsNumber()
-  sttCreditsPerSecond!: number;
+  sttCreditsPerMinute!: number;
 
   @IsNumber()
-  ttsCreditsPerSecond!: number;
+  ttsCreditsPerMinute!: number;
 
   @IsObject()
   ttsVoices!: Record<TTSLanguage, TTSLanguageVoice>;

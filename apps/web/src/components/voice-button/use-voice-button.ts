@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState, useEffect } from "react";
 import { useLiveSpeechToText } from "@/hooks/use-live-speech-to-text";
-import { useSttCreditsPerSecond } from "./use-voice-pricing";
+import { useSttCreditsPerMinute } from "./use-voice-pricing";
 
 interface UseVoiceButtonOptions {
   /** Language code for speech recognition (e.g., "en", "es") */
@@ -35,8 +35,8 @@ interface UseVoiceButtonReturn {
   toggleMic: () => Promise<void>;
   startListening: () => Promise<void>;
   stopListening: () => void;
-  /** Credits per second of voice input (Admin → Voice). */
-  creditsPerSecond: number;
+  /** Credits per minute of voice input (Admin → Voice). */
+  creditsPerMinute: number;
   /** Live microphone level (0–1) while listening — for visuals. */
   getLevel: () => number;
 }
@@ -61,7 +61,7 @@ export function useVoiceButton(
     setExternalListening,
   } = options;
 
-  const creditsPerSecond = useSttCreditsPerSecond();
+  const creditsPerMinute = useSttCreditsPerMinute();
 
   // Internal state that updates immediately on user action
   const [internalListening, setInternalListening] = useState(false);
@@ -147,7 +147,7 @@ export function useVoiceButton(
     toggleMic,
     startListening,
     stopListening,
-    creditsPerSecond,
+    creditsPerMinute,
     getLevel,
   };
 }

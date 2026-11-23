@@ -337,8 +337,8 @@ export default function VoiceAssistantPage() {
                 </p>
                 <p className="mt-3 text-xs text-text-dim">
                   {t("voiceAssistant.pricing", {
-                    stt: robotina.sttCreditsPerSecond,
-                    tts: robotina.ttsCreditsPerSecond,
+                    stt: robotina.sttCreditsPerMinute,
+                    tts: robotina.ttsCreditsPerMinute,
                   })}
                 </p>
                 {!limitReached && (

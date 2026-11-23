@@ -3,7 +3,7 @@ export const voice = {
   listening: "Listening...",
   startRecording: "Start voice input",
   stopRecording: "Stop recording",
-  creditsPerSecond: "+{count} cr/s",
+  creditsPerMinute: "+{count} cr/min",
   errors: {
     notSupported: "Voice input is not supported in this browser",
     connectionFailed: "Could not connect to server",

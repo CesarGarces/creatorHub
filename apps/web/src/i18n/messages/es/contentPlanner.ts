@@ -224,7 +224,7 @@ export const contentPlanner: Messages["contentPlanner"] = {
     cost: "Este análisis cuesta {total} créditos",
     costBreakdown:
       "{model}: {modelCost} · Búsqueda de conocimiento: {embeddingCost}",
-    voiceCost: "Entrada de voz: {count} créditos por segundo",
+    voiceCost: "Entrada de voz: {count} créditos por minuto",
     balance: "Tu saldo: {balance} créditos",
     notEnough: "No tienes créditos suficientes para este análisis.",
     analyze: "Analizar con IA",

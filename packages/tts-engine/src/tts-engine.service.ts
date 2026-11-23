@@ -58,11 +58,11 @@ export class TTSEngineService {
   }
 
   /**
-   * Credits for `durationMs` of speech at the price per second (Admin →
+   * Credits for `durationMs` of speech at the price per minute (Admin →
    * Voice): every started second, rounded up to whole credits. No speech,
    * no charge.
    */
-  calculateCredits(durationMs: number, creditsPerSecond: number): number {
-    return voiceCredits(durationMs, creditsPerSecond);
+  calculateCredits(durationMs: number, creditsPerMinute: number): number {
+    return voiceCredits(durationMs, creditsPerMinute);
   }
 }

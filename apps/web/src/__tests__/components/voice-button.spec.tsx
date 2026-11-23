@@ -55,7 +55,7 @@ describe("VoiceButton", () => {
 
     const button = screen.getByTitle("Stop recording");
     expect(button.textContent).toContain("Listening...");
-    expect(button.textContent).toContain("+1 cr/s");
+    expect(button.textContent).toContain("+60 cr/min");
   });
 
   it("hides text and credits in the icon-only variant", () => {
@@ -68,7 +68,7 @@ describe("VoiceButton", () => {
   it("can hide the credit badge", () => {
     render(<VoiceButton isListening showCredits={false} />);
     expect(screen.getByTitle("Stop recording").textContent).not.toContain(
-      "cr/s",
+      "cr/min",
     );
   });
 
@@ -106,7 +106,7 @@ describe("useVoiceButton", () => {
     expect(stt.startListening).toHaveBeenCalled();
     expect(Audio).toHaveBeenCalledWith("/Voice_record_start.mp3");
     expect(result.current.isListening).toBe(true);
-    expect(result.current.creditsPerSecond).toBe(1);
+    expect(result.current.creditsPerMinute).toBe(60);
   });
 
   it("stops listening on the second toggle", async () => {

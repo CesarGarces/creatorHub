@@ -144,8 +144,8 @@ export function VoiceAssistantWidget() {
           ) : (
             <span className="text-[11px] text-text-dim">
               {t("voiceAssistant.pricingShort", {
-                stt: robotina.sttCreditsPerSecond,
-                tts: robotina.ttsCreditsPerSecond,
+                stt: robotina.sttCreditsPerMinute,
+                tts: robotina.ttsCreditsPerMinute,
               })}
             </span>
           )}

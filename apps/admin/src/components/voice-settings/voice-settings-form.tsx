@@ -89,7 +89,7 @@ const ACCENTS = new Set([
 
 /**
  * Admin → Voice (STT & TTS): the Deepgram speech-to-text model, the Deepgram
- * voice ("actor") that speaks each language, both prices per second and
+ * voice ("actor") that speaks each language, both prices per minute and
  * the Free plan's minutes with Robotina.
  * Validates like the API; remount it (`key`) to load newly saved settings.
  */
@@ -182,8 +182,8 @@ export function VoiceSettingsForm({
     });
 
   const sttModel = STT_MODEL_OPTIONS.find((m) => m.id === form.sttModel);
-  const sttExample = creditsFor(form.sttCreditsPerSecond, 60);
-  const ttsExample = creditsFor(form.ttsCreditsPerSecond, 20);
+  const sttExample = creditsFor(form.sttCreditsPerMinute, 60);
+  const ttsExample = creditsFor(form.ttsCreditsPerMinute, 20);
 
   return (
     <form onSubmit={submit} noValidate className="space-y-6">
@@ -265,18 +265,18 @@ export function VoiceSettingsForm({
 
           <RateField
             id="voice-stt-rate"
-            value={form.sttCreditsPerSecond}
+            value={form.sttCreditsPerMinute}
             onChange={(value) =>
-              change({ ...form, sttCreditsPerSecond: value })
+              change({ ...form, sttCreditsPerMinute: value })
             }
-            invalid={Boolean(errors.sttCreditsPerSecond)}
+            invalid={Boolean(errors.sttCreditsPerMinute)}
             hint={t("voice.priceHint")}
             example={
               sttExample === null
                 ? null
                 : t("voice.stt.example", { count: sttExample })
             }
-            error={errorText("sttCreditsPerSecond", "voice-stt-rate-error")}
+            error={errorText("sttCreditsPerMinute", "voice-stt-rate-error")}
           />
         </div>
       </section>
@@ -313,18 +313,18 @@ export function VoiceSettingsForm({
           <div className="hidden md:block" aria-hidden />
           <RateField
             id="voice-tts-rate"
-            value={form.ttsCreditsPerSecond}
+            value={form.ttsCreditsPerMinute}
             onChange={(value) =>
-              change({ ...form, ttsCreditsPerSecond: value })
+              change({ ...form, ttsCreditsPerMinute: value })
             }
-            invalid={Boolean(errors.ttsCreditsPerSecond)}
+            invalid={Boolean(errors.ttsCreditsPerMinute)}
             hint={t("voice.tts.priceHint")}
             example={
               ttsExample === null
                 ? null
                 : t("voice.tts.example", { count: ttsExample })
             }
-            error={errorText("ttsCreditsPerSecond", "voice-tts-rate-error")}
+            error={errorText("ttsCreditsPerMinute", "voice-tts-rate-error")}
           />
         </div>
 
@@ -676,7 +676,7 @@ function RateField({
   return (
     <div className="space-y-1.5">
       <label htmlFor={id} className="text-sm font-medium text-text">
-        {t("voice.pricePerSecond")}
+        {t("voice.pricePerMinute")}
       </label>
       <div className="relative">
         <Input
@@ -693,7 +693,7 @@ function RateField({
           className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-text-dim"
           aria-hidden
         >
-          cr/s
+          cr/min
         </span>
       </div>
       <p id={`${id}-hint`} className="text-xs text-text-muted">

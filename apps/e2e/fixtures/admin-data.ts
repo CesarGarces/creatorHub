@@ -148,10 +148,10 @@ const MODES = [
 /** `GET /admin/voice-settings` (Admin → Voice: STT & TTS). */
 export const ADMIN_VOICE_SETTINGS = {
   settings: {
-    stt: { provider: "deepgram", model: "nova-3", creditsPerSecond: 1 },
+    stt: { provider: "deepgram", model: "nova-3", creditsPerMinute: 60 },
     tts: {
       provider: "deepgram",
-      creditsPerSecond: 2,
+      creditsPerMinute: 120,
       voices: {
         en: { model: "aura-2", voice: "aura-2-andromeda-en" },
         es: { model: "aura-2", voice: "aura-2-celeste-es" },

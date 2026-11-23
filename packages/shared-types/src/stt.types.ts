@@ -101,4 +101,4 @@ export type STTErrorCode =
 
 export const MIN_CREDITS_FOR_STT = 5;
 export const MAX_STT_SESSION_MS = 180_000;
-// Price: credits per second, set in Admin → Voice (voice-settings.types.ts).
+// Price: credits per minute, set in Admin → Voice (voice-settings.types.ts).

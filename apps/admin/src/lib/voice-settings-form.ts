@@ -7,7 +7,7 @@ import {
   DEFAULT_VOICE_SETTINGS,
   FREE_TIER_PERIODS,
   MAX_FREE_TIER_MINUTES,
-  MAX_VOICE_CREDITS_PER_SECOND,
+  MAX_VOICE_CREDITS_PER_MINUTE,
   STT_MODEL_OPTIONS,
   TTS_LANGUAGES,
   TTS_MODEL_OPTIONS,
@@ -29,7 +29,7 @@ import {
 export {
   FREE_TIER_PERIODS,
   MAX_FREE_TIER_MINUTES,
-  MAX_VOICE_CREDITS_PER_SECOND,
+  MAX_VOICE_CREDITS_PER_MINUTE,
   STT_MODEL_OPTIONS,
   TTS_LANGUAGES,
   TTS_MODEL_OPTIONS,
@@ -50,8 +50,8 @@ export interface VoiceLanguageForm {
 export interface VoiceSettingsForm {
   sttModel: string;
   /** Prices are kept as typed; validated on save. */
-  sttCreditsPerSecond: string;
-  ttsCreditsPerSecond: string;
+  sttCreditsPerMinute: string;
+  ttsCreditsPerMinute: string;
   voices: Record<TTSLanguage, VoiceLanguageForm>;
   /** Free plan: limit Robotina to some minutes. */
   freeTierEnabled: boolean;
@@ -82,8 +82,8 @@ function languageForm(
 export function formFromSettings(settings: VoiceSettings): VoiceSettingsForm {
   return {
     sttModel: settings.stt.model,
-    sttCreditsPerSecond: String(settings.stt.creditsPerSecond),
-    ttsCreditsPerSecond: String(settings.tts.creditsPerSecond),
+    sttCreditsPerMinute: String(settings.stt.creditsPerMinute),
+    ttsCreditsPerMinute: String(settings.tts.creditsPerMinute),
     voices: Object.fromEntries(
       TTS_LANGUAGES.map((language) => [
         language,
@@ -98,7 +98,7 @@ export function formFromSettings(settings: VoiceSettings): VoiceSettingsForm {
   };
 }
 
-/** The platform defaults (Nova-3, 1 cr/s; Andromeda, Celeste, Bianca, 2 cr/s). */
+/** The platform defaults (Nova-3, 1 cr/min; Andromeda, Celeste, Bianca, 2 cr/min). */
 export function defaultVoiceForm(): VoiceSettingsForm {
   return formFromSettings(DEFAULT_VOICE_SETTINGS);
 }
@@ -148,8 +148,8 @@ export function toVoiceSettingsPayload(
 ): UpdateVoiceSettingsRequest {
   return {
     sttModel: form.sttModel,
-    sttCreditsPerSecond: parseRate(form.sttCreditsPerSecond),
-    ttsCreditsPerSecond: parseRate(form.ttsCreditsPerSecond),
+    sttCreditsPerMinute: parseRate(form.sttCreditsPerMinute),
+    ttsCreditsPerMinute: parseRate(form.ttsCreditsPerMinute),
     ttsVoices: Object.fromEntries(
       TTS_LANGUAGES.map((language) => {
         const entry = form.voices[language];

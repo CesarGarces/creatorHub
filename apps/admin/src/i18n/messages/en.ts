@@ -467,7 +467,7 @@ export const en = {
         embedding:
           "Turns projects into vectors for the AI Planner's similarity search. When none is active, a free built-in embedding is used.",
         "speech-to-text":
-          "No longer used for pricing: the voice model and its price per second are set in Voice (STT & TTS).",
+          "No longer used for pricing: the voice model and its price per minute are set in Voice (STT & TTS).",
       },
       errors: {
         required: "Required",
@@ -573,7 +573,7 @@ export const en = {
       },
       creditCost: "Credit Cost",
       creditCostHint:
-        "Text, image and video models: credits per use. Embedding: credits per indexing run (0 = free). Voice input and Robotina's voice are priced per second in Voice (STT & TTS).",
+        "Text, image and video models: credits per use. Embedding: credits per indexing run (0 = free). Voice input and Robotina's voice are priced per minute in Voice (STT & TTS).",
       profitMargin: "Profit Margin (×)",
       pricing: "Pricing",
       prompt: "Prompt:",
@@ -593,7 +593,7 @@ export const en = {
   voice: {
     title: "Voice (STT & TTS)",
     subtitle:
-      "Deepgram models, Robotina's voices and the price per second of voice input and speech.",
+      "Deepgram models, Robotina's voices and the price per minute of voice input and speech.",
     lastSaved: "Last saved {date}",
     neverSaved: "Using the defaults — not saved yet",
     providerMissing:
@@ -602,9 +602,9 @@ export const en = {
       "Development mode: Robotina speaks with a silent stand-in, previews are silent.",
     provider: "Provider",
     model: "Model",
-    pricePerSecond: "Credits per second",
+    pricePerMinute: "Credits per minute",
     priceHint:
-      "Every started second counts; the total is rounded up to whole credits. 0 = free.",
+      "The price is per minute, prorated by the second; the total is rounded up to whole credits. 0 = free.",
     unsaved: "Unsaved changes",
     reset: "Restore defaults",
     saved: "Voice settings saved",
@@ -625,7 +625,7 @@ export const en = {
       subtitle:
         "Robotina's voice: she answers in the user's language with the voice set for it.",
       priceHint:
-        "Seconds of speech of each spoken reply (typed replies cost 1 credit).",
+        "Price per minute of speech of each spoken reply (typed replies cost 1 credit).",
       example_one: "A 20-second spoken answer = {count} credit",
       example_other: "A 20-second spoken answer = {count} credits",
       languages: {
@@ -661,7 +661,7 @@ export const en = {
     },
     errors: {
       invalidModel: "Choose a model from the list",
-      invalidRate: "Between 0 and 100, with up to 2 decimals",
+      invalidRate: "Between 0 and 6,000, with up to 2 decimals",
       invalidVoice: "Not a voice of this model and language",
       invalidMinutes: "Whole minutes, from 1 to 10,000",
       invalidPeriod: "Choose when the minutes come back",

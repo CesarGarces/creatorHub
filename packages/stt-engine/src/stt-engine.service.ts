@@ -76,11 +76,11 @@ export class STTEngineService {
   }
 
   /**
-   * Credits for a session: every started second × the price per second
+   * Credits for a session: every started second × the price per minute (prorated)
    * (Admin → Voice), rounded up to whole credits. See `voiceCredits`.
    */
-  calculateCredits(durationMs: number, creditsPerSecond: number): number {
-    return voiceCredits(durationMs, creditsPerSecond);
+  calculateCredits(durationMs: number, creditsPerMinute: number): number {
+    return voiceCredits(durationMs, creditsPerMinute);
   }
 
   hasActiveSession(clientId: string): boolean {

@@ -14,8 +14,8 @@ function voiceRoutes() {
   const save: MockHandler = ({ body }) => {
     const b = body as {
       sttModel: string;
-      sttCreditsPerSecond: number;
-      ttsCreditsPerSecond: number;
+      sttCreditsPerMinute: number;
+      ttsCreditsPerMinute: number;
       ttsVoices: typeof current.settings.tts.voices;
       freeTierMinutes: number | null;
       freeTierPeriod: string;
@@ -26,11 +26,11 @@ function voiceRoutes() {
         stt: {
           provider: "deepgram",
           model: b.sttModel,
-          creditsPerSecond: b.sttCreditsPerSecond,
+          creditsPerMinute: b.sttCreditsPerMinute,
         },
         tts: {
           provider: "deepgram",
-          creditsPerSecond: b.ttsCreditsPerSecond,
+          creditsPerMinute: b.ttsCreditsPerMinute,
           voices: b.ttsVoices,
         },
         freeTier: { minutes: b.freeTierMinutes, period: b.freeTierPeriod },
@@ -53,7 +53,7 @@ function voiceRoutes() {
 }
 
 test.describe("admin panel · Voice (STT & TTS)", () => {
-  test("configures the STT model, the voice of each language and the prices per second", async ({
+  test("configures the STT model, the voice of each language and the prices per minute", async ({
     page,
     context,
     baseURL,
@@ -65,12 +65,12 @@ test.describe("admin panel · Voice (STT & TTS)", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       "Voice (STT & TTS)",
     );
-    // Saved values: Nova-3, 1 cr/s in; Andromeda, Celeste, Bianca, 2 cr/s out.
+    // Saved values: Nova-3, 60 cr/min in; Andromeda, Celeste, Bianca, 120 cr/min out.
     await expect(page.getByLabel("Model", { exact: true })).toHaveValue(
       "nova-3",
     );
-    await expect(page.locator("#voice-stt-rate")).toHaveValue("1");
-    await expect(page.locator("#voice-tts-rate")).toHaveValue("2");
+    await expect(page.locator("#voice-stt-rate")).toHaveValue("60");
+    await expect(page.locator("#voice-tts-rate")).toHaveValue("120");
     await expect(page.getByLabel("Voice (Spanish)")).toHaveValue(
       "aura-2-celeste-es",
     );
@@ -104,8 +104,8 @@ test.describe("admin panel · Voice (STT & TTS)", () => {
       "aura-asteria-en",
     );
 
-    // Prices per second.
-    await page.locator("#voice-stt-rate").fill("0.5");
+    // Prices per minute.
+    await page.locator("#voice-stt-rate").fill("30");
     await expect(
       page.getByText("1 minute of voice input = 30 credits"),
     ).toBeVisible();
@@ -119,8 +119,8 @@ test.describe("admin panel · Voice (STT & TTS)", () => {
     await expect(page.getByText("Voice settings saved")).toBeVisible();
     expect(api.calls("PUT", "/admin/voice-settings")[0]?.body).toEqual({
       sttModel: "nova-2",
-      sttCreditsPerSecond: 0.5,
-      ttsCreditsPerSecond: 2,
+      sttCreditsPerMinute: 30,
+      ttsCreditsPerMinute: 120,
       ttsVoices: {
         en: { model: "aura", voice: "aura-asteria-en" },
         es: { model: "aura-2", voice: "aura-2-estrella-es" },

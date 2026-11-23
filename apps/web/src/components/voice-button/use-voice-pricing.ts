@@ -21,8 +21,8 @@ function isVoicePricing(value: unknown): value is VoicePricing {
   const v = value as Partial<VoicePricing> | null;
   return (
     !!v &&
-    isVoiceCreditRate(v.stt?.creditsPerSecond) &&
-    isVoiceCreditRate(v.tts?.creditsPerSecond) &&
+    isVoiceCreditRate(v.stt?.creditsPerMinute) &&
+    isVoiceCreditRate(v.tts?.creditsPerMinute) &&
     TTS_LANGUAGES.every(
       (language) => typeof v.tts?.voices?.[language]?.name === "string",
     )
@@ -31,7 +31,7 @@ function isVoicePricing(value: unknown): value is VoicePricing {
 
 /**
  * Voice prices and voices, as set in Admin → Voice (STT & TTS): credits per
- * second of voice input (every voice button) and of Robotina's speech, and
+ * minute of voice input (every voice button) and of Robotina's speech, and
  * who speaks each language. Fetched once and shared by every voice button.
  */
 export function fetchVoicePricing(): Promise<VoicePricing> {
@@ -61,9 +61,9 @@ export function useVoicePricing(): VoicePricing {
   return pricing;
 }
 
-/** Credits per second of voice input (shown next to every voice button). */
-export function useSttCreditsPerSecond(): number {
-  return useVoicePricing().stt.creditsPerSecond;
+/** Credits per minute of voice input (shown next to every voice button). */
+export function useSttCreditsPerMinute(): number {
+  return useVoicePricing().stt.creditsPerMinute;
 }
 
 /** Tests only. */

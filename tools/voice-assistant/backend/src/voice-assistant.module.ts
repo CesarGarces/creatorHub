@@ -9,7 +9,7 @@ import { VoiceAssistantService } from "./voice-assistant.service";
 
 /**
  * Robotina — AI voice assistant. Voice input reuses the platform's STT
- * gateway (WebSocket `stt:*`, billed per second); this module turns the
+ * gateway (WebSocket `stt:*`, billed per minute); this module turns the
  * transcript into a reply (any active text model) spoken with Deepgram
  * Aura (TTSEngineModule) in the voice set for its language in Admin →
  * Voice (VoiceSettingsModule). ToolRegistry comes from the global

@@ -221,7 +221,7 @@ export const contentPlanner = {
     publishDateHint: "Leave it empty and the assistant suggests one.",
     cost: "This analysis costs {total} credits",
     costBreakdown: "{model}: {modelCost} · Knowledge search: {embeddingCost}",
-    voiceCost: "Voice input: {count} credits per second",
+    voiceCost: "Voice input: {count} credits per minute",
     balance: "Your balance: {balance} credits",
     notEnough: "You don't have enough credits for this analysis.",
     analyze: "Analyze with AI",

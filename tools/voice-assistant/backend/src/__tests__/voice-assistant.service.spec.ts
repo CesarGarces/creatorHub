@@ -271,7 +271,7 @@ describe("VoiceAssistantService.reply — spoken", () => {
     });
   });
 
-  it("saves both messages and charges its seconds of speech (2 cr/s)", async () => {
+  it("saves both messages and charges its seconds of speech (120 cr/min)", async () => {
     const { service, credits } = setup();
     const { input: req, events } = input();
 
@@ -291,7 +291,7 @@ describe("VoiceAssistantService.reply — spoken", () => {
       spoken: true,
       voice: "aura-2-celeste-es",
       audioMs: 27 * 50,
-      creditsCharged: 4, // 1.35 s → 2 started seconds × 2 credits
+      creditsCharged: 4, // 1.35 s → 2 started seconds at 120 credits per minute
       interrupted: false,
       modelId: MODEL.modelId,
     });
@@ -322,7 +322,7 @@ describe("VoiceAssistantService.reply — spoken", () => {
         ...DEFAULT_VOICE_SETTINGS,
         tts: {
           ...DEFAULT_VOICE_SETTINGS.tts,
-          creditsPerSecond: 0.5,
+          creditsPerMinute: 30,
           voices: {
             ...DEFAULT_VOICE_SETTINGS.tts.voices,
             en: { model: "aura-2", voice: "aura-2-orion-en" },
@@ -350,7 +350,7 @@ describe("VoiceAssistantService.reply — spoken", () => {
       model: "aura-2-orion-en",
       name: "Orion",
     });
-    // 95 s × 0.5 credits per second = 47.5 → 48.
+    // 95 s at 30 credits per minute = 47.5 → 48.
     expect(credits.deduct).toHaveBeenCalledWith(
       "u1",
       48,
@@ -365,7 +365,7 @@ describe("VoiceAssistantService.reply — spoken", () => {
 
   it("only speaks what the balance pays for, then goes on in text", async () => {
     const { service, credits } = setup({
-      balance: 5, // 2 s of speech at 2 credits per second
+      balance: 5, // 2 s of speech at 120 credits per minute
       chunks: text("First sentence here. ", "Second sentence there."),
       synthesize: async ({ text: said, voice }) => ({
         audio: Buffer.from(said),
@@ -762,7 +762,7 @@ describe("VoiceAssistantService.reply — refusals and failures", () => {
     const { service, credits } = setup({
       settings: {
         ...DEFAULT_VOICE_SETTINGS,
-        tts: { ...DEFAULT_VOICE_SETTINGS.tts, creditsPerSecond: 0.02 },
+        tts: { ...DEFAULT_VOICE_SETTINGS.tts, creditsPerMinute: 1.2 },
       },
       synthesize: async () => ({
         audio: Buffer.from("x"),
@@ -1071,7 +1071,7 @@ describe("VoiceAssistantService.reply — actions", () => {
           data: CREATED,
         }),
       ],
-      creditsCharged: 8, // spoken: 3.45 s → 4 started seconds × 2 cr/s
+      creditsCharged: 8, // spoken: 3.45 s → 4 started seconds at 120 cr/min
     });
     expect(credits.deduct).toHaveBeenCalledTimes(1);
   });

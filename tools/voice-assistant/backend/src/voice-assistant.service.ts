@@ -117,7 +117,7 @@ const MODEL_FAILED = `${VOICE_ASSISTANT_NAME} couldn't answer. Try again or choo
  * `action` events; the model then gets the result and tells the user.
  *
  * Voice and prices come from Admin → Voice (VoiceSettingsService): the
- * Aura voice set for the reply language, and the TTS price per second.
+ * Aura voice set for the reply language, and the TTS price per minute.
  *
  * Billing (CreditService — atomic debit, thresholds, credit emails):
  * 1 credit per written reply; a spoken reply costs its seconds of speech
@@ -210,9 +210,9 @@ export class VoiceAssistantService {
     });
 
     const speak = input.spoken && this.tts.isAvailable();
-    // The voice set for this language and the price per second of speech.
+    // The voice set for this language and the price per minute of speech.
     const settings = await this.voiceSettings.get();
-    const ttsRate = settings.tts.creditsPerSecond;
+    const ttsRate = settings.tts.creditsPerMinute;
     const voice = speak
       ? ttsVoiceInfo(settings.tts.voices[language].voice, language)
       : null;
@@ -504,7 +504,7 @@ export class VoiceAssistantService {
     const cost = replyCredits({
       hasContent: true,
       audioMs,
-      ttsCreditsPerSecond: ttsRate,
+      ttsCreditsPerMinute: ttsRate,
     });
     const assistant = await prisma.voiceMessage.create({
       data: {

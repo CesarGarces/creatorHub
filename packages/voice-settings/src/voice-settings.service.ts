@@ -27,8 +27,8 @@ export const VOICE_SETTINGS_CACHE_MS = 30_000;
 
 interface VoiceSettingsRow {
   sttModel: string;
-  sttCreditsPerSecond: number;
-  ttsCreditsPerSecond: number;
+  sttCreditsPerMinute: number;
+  ttsCreditsPerMinute: number;
   ttsVoices: unknown;
   freeTierMinutes?: number | null;
   freeTierPeriod?: string | null;
@@ -38,7 +38,7 @@ interface VoiceSettingsRow {
 /**
  * The platform's voice configuration (Admin → Voice: STT & TTS): the
  * Deepgram speech-to-text model, the Deepgram voice of each language and the
- * prices per second.
+ * prices per minute.
  *
  * Read on every voice session and spoken reply, so reads are cached for
  * 30 s (a save refreshes this instance at once; other API replicas within
@@ -93,8 +93,8 @@ export class VoiceSettingsService {
     ) as unknown as Prisma.InputJsonValue;
     const data = {
       sttModel: input.sttModel,
-      sttCreditsPerSecond: input.sttCreditsPerSecond,
-      ttsCreditsPerSecond: input.ttsCreditsPerSecond,
+      sttCreditsPerMinute: input.sttCreditsPerMinute,
+      ttsCreditsPerMinute: input.ttsCreditsPerMinute,
       ttsVoices,
       freeTierMinutes: input.freeTierMinutes,
       freeTierPeriod: input.freeTierPeriod,
@@ -110,8 +110,8 @@ export class VoiceSettingsService {
     this.logger.info("Voice settings updated", {
       adminId,
       sttModel: value.stt.model,
-      sttCreditsPerSecond: value.stt.creditsPerSecond,
-      ttsCreditsPerSecond: value.tts.creditsPerSecond,
+      sttCreditsPerMinute: value.stt.creditsPerMinute,
+      ttsCreditsPerMinute: value.tts.creditsPerMinute,
       voices: TTS_LANGUAGES.map((l) => value.tts.voices[l].voice).join(","),
       freeTierMinutes: value.freeTier.minutes,
       freeTierPeriod: value.freeTier.period,
@@ -184,15 +184,15 @@ export function toVoiceSettings(row: VoiceSettingsRow): VoiceSettings {
     stt: {
       provider: "deepgram",
       model: isSTTModel(row.sttModel) ? row.sttModel : d.stt.model,
-      creditsPerSecond: isVoiceCreditRate(row.sttCreditsPerSecond)
-        ? row.sttCreditsPerSecond
-        : d.stt.creditsPerSecond,
+      creditsPerMinute: isVoiceCreditRate(row.sttCreditsPerMinute)
+        ? row.sttCreditsPerMinute
+        : d.stt.creditsPerMinute,
     },
     tts: {
       provider: "deepgram",
-      creditsPerSecond: isVoiceCreditRate(row.ttsCreditsPerSecond)
-        ? row.ttsCreditsPerSecond
-        : d.tts.creditsPerSecond,
+      creditsPerMinute: isVoiceCreditRate(row.ttsCreditsPerMinute)
+        ? row.ttsCreditsPerMinute
+        : d.tts.creditsPerMinute,
       voices,
     },
     freeTier: {

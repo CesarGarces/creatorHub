@@ -651,14 +651,14 @@ describe("STTSessionManager / STTEngineService", () => {
   });
 
   it.each([
-    [1, 1, 1],
-    [1000, 1, 1],
-    [2300, 1, 3],
-    [4200, 2, 10],
-    [30_000, 0.02, 1],
-    [179_000, 1, 179],
+    [1, 60, 1],
+    [1000, 60, 1],
+    [2300, 60, 3],
+    [4200, 120, 10],
+    [30_000, 1.2, 1],
+    [179_000, 60, 179],
   ])(
-    "bills %d ms at %d cr/s as %d credit(s) (every started second)",
+    "bills %d ms at %d cr/min as %d credit(s) (every started second)",
     (ms, rate, credits) => {
       expect(engine.calculateCredits(ms, rate)).toBe(credits);
     },
@@ -666,7 +666,7 @@ describe("STTSessionManager / STTEngineService", () => {
 
   it("never charges at a free rate (0) or for no audio", () => {
     expect(engine.calculateCredits(90_000, 0)).toBe(0);
-    expect(engine.calculateCredits(0, 1)).toBe(0);
+    expect(engine.calculateCredits(0, 60)).toBe(0);
   });
 
   it("reports availability from the registry", () => {

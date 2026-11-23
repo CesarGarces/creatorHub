@@ -10,7 +10,7 @@ registerTool({
   category: "assistant",
   // Priced per reply, not per use: 1 credit per written reply; spoken ones
   // cost their seconds of speech (Admin → Voice). Voice input is billed by
-  // the STT gateway, per second.
+  // the STT gateway per started second at the per-minute rate.
   creditsPerUse: 1,
   permissions: [
     {

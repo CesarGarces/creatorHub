@@ -8,7 +8,10 @@ vi.mock("@creator-hub/database", () => ({
 }));
 
 import { prisma } from "@creator-hub/database";
-import { DEFAULT_VOICE_SETTINGS } from "@creator-hub/shared-types";
+import {
+  DEFAULT_VOICE_SETTINGS,
+  voiceCredits,
+} from "@creator-hub/shared-types";
 import { AppGateway } from "../websocket.gateway";
 
 /** Free plan minutes with Robotina (default: unlimited). */
@@ -27,7 +30,7 @@ function allowanceOf(remainingSeconds: number | null = null) {
   };
 }
 
-/** Admin → Voice settings: model and price per second of voice input. */
+/** Admin → Voice settings: model and price per minute of voice input. */
 function voiceSettings(stt: Partial<typeof DEFAULT_VOICE_SETTINGS.stt> = {}) {
   return {
     get: vi.fn(async () => ({
@@ -182,9 +185,7 @@ describe("AppGateway — STT session lifecycle", () => {
       closeSession: vi.fn(),
       startSession: vi.fn(() => ({ sessionId: "s1", language: "es" })),
       endSession: vi.fn(),
-      calculateCredits: vi.fn((ms: number, rate: number) =>
-        ms > 0 && rate > 0 ? Math.ceil(Math.ceil(ms / 1000) * rate) : 0,
-      ),
+      calculateCredits: vi.fn(voiceCredits),
     };
     const credits = {
       deduct: vi.fn().mockResolvedValue(true),
@@ -280,7 +281,7 @@ describe("AppGateway — STT session lifecycle", () => {
       fullTranscript: "hola qué planes tengo",
       durationMs: 4000,
       wordCount: 4,
-      credits: 4, // 4 s × 1 credit per second
+      credits: 4, // 4 s at 60 credits per minute
       requestId: "req-4",
     });
 
@@ -293,9 +294,9 @@ describe("AppGateway — STT session lifecycle", () => {
     });
   });
 
-  it("uses the model and price per second set in Admin → Voice", async () => {
+  it("uses the model and price per minute set in Admin → Voice", async () => {
     const { gateway, stt, socket, credits } = setup({
-      stt: { model: "nova-2", creditsPerSecond: 2 },
+      stt: { model: "nova-2", creditsPerMinute: 120 },
     });
     await gateway.handleSTTStart(socket, { language: "es", requestId: "r" });
     expect(stt.startSession).toHaveBeenCalledWith(
@@ -315,10 +316,10 @@ describe("AppGateway — STT session lifecycle", () => {
       requestId: "r",
     });
     await gateway.handleSTTEnd(socket, { requestId: "r" });
-    expect(stt.calculateCredits).toHaveBeenCalledWith(2300, 2);
+    expect(stt.calculateCredits).toHaveBeenCalledWith(2300, 120);
     expect(credits.deduct).toHaveBeenCalledWith(
       "u1",
-      6, // 3 started seconds × 2
+      6, // 3 started seconds at 120 credits per minute
       "speech-to-text",
       expect.stringContaining("2.3s"),
     );
@@ -327,7 +328,7 @@ describe("AppGateway — STT session lifecycle", () => {
   it("refuses to start when the balance can't pay a second", async () => {
     const { gateway, stt, socket } = setup({
       balance: 6,
-      stt: { creditsPerSecond: 10 },
+      stt: { creditsPerMinute: 600 },
     });
     await gateway.handleSTTStart(socket, { requestId: "r" });
     expect(stt.startSession).not.toHaveBeenCalled();
@@ -342,7 +343,7 @@ describe("AppGateway — STT session lifecycle", () => {
     try {
       const { gateway, stt, socket, credits } = setup({
         balance: 10,
-        stt: { creditsPerSecond: 2 },
+        stt: { creditsPerMinute: 120 },
       });
       await gateway.handleSTTStart(socket, { requestId: "r" });
       stt.hasActiveSession.mockReturnValue(true);
@@ -355,7 +356,7 @@ describe("AppGateway — STT session lifecycle", () => {
       });
       await vi.advanceTimersByTimeAsync(4999);
       expect(stt.endSession).not.toHaveBeenCalled();
-      await vi.advanceTimersByTimeAsync(1); // 10 credits / 2 per second = 5 s
+      await vi.advanceTimersByTimeAsync(1); // 10 credits / 120 per minute = 5 s
       expect(stt.endSession).toHaveBeenCalledWith("sock-1");
       expect(credits.deduct).toHaveBeenCalledWith(
         "u1",
@@ -381,7 +382,7 @@ describe("AppGateway — STT session lifecycle", () => {
     try {
       const { gateway, stt, socket } = setup({
         balance: 10,
-        stt: { creditsPerSecond: 2 },
+        stt: { creditsPerMinute: 120 },
       });
       await gateway.handleSTTStart(socket, { requestId: "r" });
       stt.hasActiveSession.mockReturnValue(true);

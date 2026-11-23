@@ -12,7 +12,7 @@ import {
 
 /**
  * Voice prices and voices for the web app (Admin → Voice: STT & TTS):
- * credits per second of voice input (every voice button) and of
+ * credits per minute of voice input (every voice button) and of
  * Robotina's speech, who speaks each language, the Free plan's minutes
  * with Robotina — and what the signed-in user has left of them.
  */

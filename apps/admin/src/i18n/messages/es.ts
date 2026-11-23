@@ -474,7 +474,7 @@ export const es: Messages = {
         embedding:
           "Convierte los proyectos en vectores para la búsqueda por similitud del Planificador IA. Si no hay ninguno activo, se usa un embedding integrado gratuito.",
         "speech-to-text":
-          "Ya no se usa para cobrar: el modelo de voz y su precio por segundo se configuran en Voz (STT y TTS).",
+          "Ya no se usa para cobrar: el modelo de voz y su precio por minuto se configuran en Voz (STT y TTS).",
       },
       errors: {
         required: "Obligatorio",
@@ -581,7 +581,7 @@ export const es: Messages = {
       },
       creditCost: "Costo en créditos",
       creditCostHint:
-        "Modelos de texto, imagen y video: créditos por uso. Embedding: créditos por indexación (0 = gratis). La entrada por voz y la voz de Robotina se cobran por segundo en Voz (STT y TTS).",
+        "Modelos de texto, imagen y video: créditos por uso. Embedding: créditos por indexación (0 = gratis). La entrada por voz y la voz de Robotina se cobran por minuto en Voz (STT y TTS).",
       profitMargin: "Margen de beneficio (×)",
       pricing: "Precios",
       prompt: "Prompt:",
@@ -601,7 +601,7 @@ export const es: Messages = {
   voice: {
     title: "Voz (STT y TTS)",
     subtitle:
-      "Modelos de Deepgram, las voces de Robotina y el precio por segundo de la entrada por voz y del habla.",
+      "Modelos de Deepgram, las voces de Robotina y el precio por minuto de la entrada por voz y del habla.",
     lastSaved: "Guardado por última vez {date}",
     neverSaved: "Usando los valores predeterminados — aún sin guardar",
     providerMissing:
@@ -610,9 +610,9 @@ export const es: Messages = {
       "Modo desarrollo: Robotina habla con un sustituto silencioso y las muestras no suenan.",
     provider: "Proveedor",
     model: "Modelo",
-    pricePerSecond: "Créditos por segundo",
+    pricePerMinute: "Créditos por minuto",
     priceHint:
-      "Cuenta cada segundo iniciado; el total se redondea hacia arriba a créditos enteros. 0 = gratis.",
+      "El precio es por minuto, prorrateado por segundo; el total se redondea hacia arriba a créditos enteros. 0 = gratis.",
     unsaved: "Cambios sin guardar",
     reset: "Restaurar valores predeterminados",
     saved: "Configuración de voz guardada",
@@ -634,7 +634,7 @@ export const es: Messages = {
       subtitle:
         "La voz de Robotina: responde en el idioma del usuario con la voz configurada para él.",
       priceHint:
-        "Segundos de habla de cada respuesta hablada (las respuestas escritas cuestan 1 crédito).",
+        "Precio por minuto de habla de cada respuesta hablada (las respuestas escritas cuestan 1 crédito).",
       example_one: "Una respuesta hablada de 20 segundos = {count} crédito",
       example_other: "Una respuesta hablada de 20 segundos = {count} créditos",
       languages: {
@@ -670,7 +670,7 @@ export const es: Messages = {
     },
     errors: {
       invalidModel: "Elige un modelo de la lista",
-      invalidRate: "Entre 0 y 100, con hasta 2 decimales",
+      invalidRate: "Entre 0 y 6.000, con hasta 2 decimales",
       invalidVoice: "No es una voz de este modelo e idioma",
       invalidMinutes: "Minutos enteros, de 1 a 10.000",
       invalidPeriod: "Elige cuándo se renuevan los minutos",

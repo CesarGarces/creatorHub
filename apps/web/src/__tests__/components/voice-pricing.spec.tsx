@@ -9,16 +9,16 @@ import {
   DEFAULT_VOICE_PRICING,
   __resetVoicePricingCache,
   fetchVoicePricing,
-  useSttCreditsPerSecond,
+  useSttCreditsPerMinute,
   useVoicePricing,
 } from "@/components/voice-button/use-voice-pricing";
 import { VoiceButton } from "@/components/voice-button";
 
 const PRICING: VoicePricing = {
-  stt: { model: "nova-2", creditsPerSecond: 0.5 },
+  stt: { model: "nova-2", creditsPerMinute: 30 },
   freeTier: { minutes: 10, period: "monthly" },
   tts: {
-    creditsPerSecond: 3,
+    creditsPerMinute: 180,
     voices: {
       en: {
         model: "aura-2-orion-en",
@@ -48,15 +48,15 @@ beforeEach(() => {
 });
 
 describe("voice prices (Admin → Voice: STT & TTS)", () => {
-  it("reads the prices per second and voices from the API", async () => {
+  it("reads the prices per minute and voices from the API", async () => {
     get.mockResolvedValue(PRICING);
     await expect(fetchVoicePricing()).resolves.toEqual(PRICING);
     expect(get).toHaveBeenCalledWith("/voice/pricing");
   });
 
-  it("defaults to 1 cr/s in, 2 cr/s out and the Aura-2 voices", () => {
-    expect(DEFAULT_VOICE_PRICING.stt.creditsPerSecond).toBe(1);
-    expect(DEFAULT_VOICE_PRICING.tts.creditsPerSecond).toBe(2);
+  it("defaults to 60 cr/min in, 120 cr/min out and the Aura-2 voices", () => {
+    expect(DEFAULT_VOICE_PRICING.stt.creditsPerMinute).toBe(60);
+    expect(DEFAULT_VOICE_PRICING.tts.creditsPerMinute).toBe(120);
     expect(DEFAULT_VOICE_PRICING.tts.voices.es.name).toBe("Celeste");
   });
 
@@ -80,19 +80,19 @@ describe("voice prices (Admin → Voice: STT & TTS)", () => {
 
   it("asks the API once for every voice button on the page", async () => {
     get.mockResolvedValue(PRICING);
-    const a = renderHook(() => useSttCreditsPerSecond());
+    const a = renderHook(() => useSttCreditsPerMinute());
     const b = renderHook(() => useVoicePricing());
-    expect(a.result.current).toBe(1); // default until loaded
-    await waitFor(() => expect(a.result.current).toBe(0.5));
+    expect(a.result.current).toBe(60); // default until loaded
+    await waitFor(() => expect(a.result.current).toBe(30));
     await waitFor(() =>
       expect(b.result.current.tts.voices.en.name).toBe("Orion"),
     );
     expect(get).toHaveBeenCalledTimes(1);
   });
 
-  it("the recording button shows the configured price per second", async () => {
+  it("the recording button shows the configured price per minute", async () => {
     get.mockResolvedValue(PRICING);
     render(<VoiceButton isListening onToggle={() => {}} />);
-    expect(await screen.findByText("+0.5 cr/s")).toBeTruthy();
+    expect(await screen.findByText("+30 cr/min")).toBeTruthy();
   });
 });

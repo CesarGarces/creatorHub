@@ -33,8 +33,8 @@ describe("voice settings form", () => {
     const form = defaultVoiceForm();
     expect(form).toMatchObject({
       sttModel: "nova-3",
-      sttCreditsPerSecond: "1",
-      ttsCreditsPerSecond: "2",
+      sttCreditsPerMinute: "60",
+      ttsCreditsPerMinute: "120",
     });
     expect(form.voices.es).toEqual({
       model: "aura-2",
@@ -74,13 +74,13 @@ describe("voice settings form", () => {
     const form = {
       ...defaultVoiceForm(),
       sttModel: "nova-2",
-      sttCreditsPerSecond: "0,5",
-      ttsCreditsPerSecond: "2.25",
+      sttCreditsPerMinute: "30",
+      ttsCreditsPerMinute: "135",
     };
     expect(toVoiceSettingsPayload(form)).toEqual({
       sttModel: "nova-2",
-      sttCreditsPerSecond: 0.5,
-      ttsCreditsPerSecond: 2.25,
+      sttCreditsPerMinute: 30,
+      ttsCreditsPerMinute: 135,
       ttsVoices: DEFAULT_VOICE_SETTINGS.tts.voices,
       freeTierMinutes: null,
       freeTierPeriod: "monthly",
@@ -89,8 +89,8 @@ describe("voice settings form", () => {
 
   it("flags bad prices and voice ids like the API does", () => {
     const form = defaultVoiceForm();
-    form.sttCreditsPerSecond = "abc";
-    form.ttsCreditsPerSecond = "101";
+    form.sttCreditsPerMinute = "abc";
+    form.ttsCreditsPerMinute = "6001";
     form.voices.es = {
       model: "aura-2",
       voice: CUSTOM_VOICE,
@@ -98,8 +98,8 @@ describe("voice settings form", () => {
     };
     const errors = validateVoiceForm(form);
     expect(errors).toEqual({
-      sttCreditsPerSecond: "invalidRate",
-      ttsCreditsPerSecond: "invalidRate",
+      sttCreditsPerMinute: "invalidRate",
+      ttsCreditsPerMinute: "invalidRate",
       "ttsVoices.es": "invalidVoice",
     });
     expect(hasVoiceErrors(errors)).toBe(true);
@@ -108,9 +108,9 @@ describe("voice settings form", () => {
   });
 
   it("explains prices in credits for real durations", () => {
-    expect(creditsFor("1", 60)).toBe(60);
-    expect(creditsFor("2", 20)).toBe(40);
-    expect(creditsFor("0.02", 30)).toBe(1);
+    expect(creditsFor("60", 60)).toBe(60);
+    expect(creditsFor("120", 20)).toBe(40);
+    expect(creditsFor("1.2", 30)).toBe(1);
     expect(creditsFor("0", 60)).toBe(0);
     expect(creditsFor("x", 60)).toBeNull();
   });

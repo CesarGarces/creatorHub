@@ -21,8 +21,8 @@ export const voiceAssistant = {
   voiceNote:
     "Her voice is Deepgram, picked from the language you speak — one voice per language:",
   voiceSettings: "Voice",
-  pricing: "Voice input {stt} cr/s · Reply 1 cr (spoken: {tts} cr/s)",
-  pricingShort: "{stt} cr/s voice · {tts} cr/s spoken reply",
+  pricing: "Voice input {stt} cr/min · Reply 1 cr (spoken: {tts} cr/min)",
+  pricingShort: "{stt} cr/min voice · {tts} cr/min spoken reply",
   openChat: "Open chat",
   hideHistory: "Hide History",
   showHistory: "Show History",

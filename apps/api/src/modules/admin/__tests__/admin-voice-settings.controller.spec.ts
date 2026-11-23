@@ -42,8 +42,8 @@ function setup() {
 
 const body = {
   sttModel: "nova-3",
-  sttCreditsPerSecond: 1,
-  ttsCreditsPerSecond: 2,
+  sttCreditsPerMinute: 60,
+  ttsCreditsPerMinute: 120,
   ttsVoices: DEFAULT_VOICE_SETTINGS.tts.voices,
   freeTierMinutes: 10,
   freeTierPeriod: "monthly" as const,

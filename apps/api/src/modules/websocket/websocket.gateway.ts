@@ -232,9 +232,9 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.sttEngine.closeSession(client.id, "replaced-by-new-session");
     }
 
-    // Model and price per second: Admin → Voice (STT & TTS).
+    // Model and price per minute: Admin → Voice (STT & TTS).
     const settings = await this.voiceSettings.get();
-    const rate = settings.stt.creditsPerSecond;
+    const rate = settings.stt.creditsPerMinute;
     const balance = await this.currentBalance(client, userId);
     const affordableMs = voiceSecondsAffordable(balance, rate) * 1000;
     if (balance < MIN_CREDITS_FOR_STT || affordableMs < 1000) {
@@ -313,7 +313,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         sessionId: session.sessionId,
         clientId: client.id,
         model: settings.stt.model,
-        creditsPerSecond: rate,
+        creditsPerMinute: rate,
         maxMs,
       });
 
@@ -410,7 +410,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Price locked when the session started; never beyond what the
       // balance paid for (the credit-limit timer fires a few ms late).
       const rate =
-        billing?.rate ?? (await this.voiceSettings.get()).stt.creditsPerSecond;
+        billing?.rate ?? (await this.voiceSettings.get()).stt.creditsPerMinute;
       const billedMs = Math.min(
         result.durationMs,
         billing?.maxMs ?? MAX_STT_SESSION_MS,
@@ -491,7 +491,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         durationMs: result.durationMs,
         wordCount: result.wordCount,
         credits,
-        creditsPerSecond: rate,
+        creditsPerMinute: rate,
         endedBy: endedBy ?? "client",
       });
 

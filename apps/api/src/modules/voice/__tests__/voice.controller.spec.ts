@@ -11,21 +11,21 @@ describe("VoiceController (GET /voice/pricing)", () => {
     ]);
   });
 
-  it("publishes the prices per second and the voice of each language", async () => {
+  it("publishes the prices per minute and the voice of each language", async () => {
     const controller = new VoiceController(
       {
         get: vi.fn(async () => ({
           ...DEFAULT_VOICE_SETTINGS,
-          stt: { ...DEFAULT_VOICE_SETTINGS.stt, creditsPerSecond: 0.5 },
+          stt: { ...DEFAULT_VOICE_SETTINGS.stt, creditsPerMinute: 30 },
           freeTier: { minutes: 10, period: "monthly" },
         })),
       } as never,
       {} as never,
     );
     const pricing = await controller.pricing();
-    expect(pricing.stt).toEqual({ model: "nova-3", creditsPerSecond: 0.5 });
+    expect(pricing.stt).toEqual({ model: "nova-3", creditsPerMinute: 30 });
     expect(pricing.freeTier).toEqual({ minutes: 10, period: "monthly" });
-    expect(pricing.tts.creditsPerSecond).toBe(2);
+    expect(pricing.tts.creditsPerMinute).toBe(120);
     expect(pricing.tts.voices.es).toMatchObject({
       model: "aura-2-celeste-es",
       name: "Celeste",

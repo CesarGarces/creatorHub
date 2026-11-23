@@ -19,8 +19,8 @@ export const VOICE_ASSISTANT_NAME = "Robotina";
 /**
  * A written reply costs 1 credit ("one shot"). A spoken reply costs the
  * seconds of speech at the TTS price instead (Admin → Voice, credits per
- * second — see `voiceCredits`). Voice input is billed apart by the STT
- * gateway, per second, like every voice button of the platform.
+ * minute, prorated by the second — see `voiceCredits`). Voice input is billed apart by the STT
+ * gateway, per minute, like every voice button of the platform.
  */
 export const VOICE_ASSISTANT_REPLY_CREDITS = 1;
 

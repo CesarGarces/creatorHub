@@ -648,11 +648,11 @@ test.describe("Robotina voice assistant", () => {
     baseURL,
   }, testInfo) => {
     await setup(context, baseURL!, {
-      // Admin → Voice: Spanish spoken by Estrella, prices per second.
+      // Admin → Voice: Spanish spoken by Estrella, prices per minute.
       "GET /voice/pricing": {
-        stt: { model: "nova-3", creditsPerSecond: 1 },
+        stt: { model: "nova-3", creditsPerMinute: 60 },
         tts: {
-          creditsPerSecond: 2,
+          creditsPerMinute: 120,
           voices: {
             en: {
               model: "aura-2-andromeda-en",
@@ -678,7 +678,7 @@ test.describe("Robotina voice assistant", () => {
     });
     await page.goto("/tools/voice-assistant");
     await expect(
-      page.getByText("Voice input 1 cr/s · Reply 1 cr (spoken: 2 cr/s)"),
+      page.getByText("Voice input 60 cr/min · Reply 1 cr (spoken: 120 cr/min)"),
     ).toBeVisible();
     await page.getByRole("button", { name: "Model settings" }).click();
     await expect(page.getByText(/Her voice is Deepgram/)).toBeVisible();
@@ -695,10 +695,10 @@ test.describe("Robotina voice assistant", () => {
     baseURL,
   }, testInfo) => {
     const pricing = {
-      stt: { model: "nova-3", creditsPerSecond: 1 },
+      stt: { model: "nova-3", creditsPerMinute: 60 },
       freeTier: { minutes: 10, period: "monthly" },
       tts: {
-        creditsPerSecond: 2,
+        creditsPerMinute: 120,
         voices: {
           en: {
             model: "aura-2-andromeda-en",

@@ -187,7 +187,9 @@ describe("Robotina dashboard widget", () => {
       screen.getByRole("button", { name: "Talk to Robotina" }),
     ).toBeTruthy();
     expect(status().textContent).toBe("Tap to talk");
-    expect(screen.getByText("1 cr/s voice · 2 cr/s spoken reply")).toBeTruthy();
+    expect(
+      screen.getByText("60 cr/min voice · 120 cr/min spoken reply"),
+    ).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "Open chat" }).getAttribute("href"),
     ).toBe("/tools/voice-assistant");
@@ -506,7 +508,9 @@ describe("Robotina tool page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show History" }));
     expect(await screen.findByText("No conversations yet")).toBeTruthy();
     expect(
-      screen.getByText("Voice input 1 cr/s · Reply 1 cr (spoken: 2 cr/s)"),
+      screen.getByText(
+        "Voice input 60 cr/min · Reply 1 cr (spoken: 120 cr/min)",
+      ),
     ).toBeTruthy();
   });
 
@@ -564,9 +568,9 @@ describe("Robotina tool page", () => {
     get.mockImplementation(async (path: string, ...rest: unknown[]) =>
       path === "/voice/pricing"
         ? {
-            stt: { model: "nova-3", creditsPerSecond: 1 },
+            stt: { model: "nova-3", creditsPerMinute: 1 },
             tts: {
-              creditsPerSecond: 2,
+              creditsPerMinute: 2,
               voices: {
                 en: {
                   model: "aura-2-orion-en",
@@ -1111,10 +1115,10 @@ describe("AssistantActionCard — edits, deletions and projects", () => {
 
 describe("Robotina on the Free plan (minutes set in Admin → Voice)", () => {
   const PRICING = {
-    stt: { model: "nova-3", creditsPerSecond: 1 },
+    stt: { model: "nova-3", creditsPerMinute: 1 },
     freeTier: { minutes: 10, period: "monthly" },
     tts: {
-      creditsPerSecond: 2,
+      creditsPerMinute: 2,
       voices: {
         en: {
           model: "aura-2-andromeda-en",

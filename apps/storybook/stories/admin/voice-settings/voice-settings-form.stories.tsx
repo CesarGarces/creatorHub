@@ -11,10 +11,10 @@ const SILENT_WAV =
 
 const saved = {
   ...DEFAULT_VOICE_SETTINGS,
-  stt: { ...DEFAULT_VOICE_SETTINGS.stt, creditsPerSecond: 1 },
+  stt: { ...DEFAULT_VOICE_SETTINGS.stt, creditsPerMinute: 60 },
   tts: {
     ...DEFAULT_VOICE_SETTINGS.tts,
-    creditsPerSecond: 2,
+    creditsPerMinute: 120,
     voices: {
       ...DEFAULT_VOICE_SETTINGS.tts.voices,
       es: { model: "aura-2", voice: "aura-2-estrella-es" },
@@ -32,7 +32,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Admin → Voice (STT & TTS). Deepgram speech-to-text model and its price per second; the Aura voice (“actor”) of English, Spanish and Portuguese — picked from the catalog or typed as a Deepgram id — with a play button; the text-to-speech price per second; and the **Free plan limit**: minutes with Robotina (their voice + hers) every month or once, after which Free users are invited to upgrade. Prices show what they mean for users (1 minute of voice input, a 20-second answer). Validates like the API; the save bar sticks to the bottom.",
+          "Admin → Voice (STT & TTS). Deepgram speech-to-text model and its price per minute; the Aura voice (“actor”) of English, Spanish and Portuguese — picked from the catalog or typed as a Deepgram id — with a play button; the text-to-speech price per minute; and the **Free plan limit**: minutes with Robotina (their voice + hers) every month or once, after which Free users are invited to upgrade. Prices show what they mean for users (1 minute of voice input, a 20-second answer). Validates like the API; the save bar sticks to the bottom.",
       },
     },
   },
@@ -90,11 +90,11 @@ export const EditAndSave: Story = {
   globals: viewport("desktop"),
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    const sttRate = canvas.getByLabelText("Credits per second", {
+    const sttRate = canvas.getByLabelText("Credits per minute", {
       selector: "#voice-stt-rate",
     });
     await userEvent.clear(sttRate);
-    await userEvent.type(sttRate, "0.5");
+    await userEvent.type(sttRate, "30");
     await expect(
       canvas.getByText("1 minute of voice input = 30 credits"),
     ).toBeInTheDocument();
@@ -110,7 +110,7 @@ export const EditAndSave: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Save Changes" }));
     await expect(args.onSave).toHaveBeenCalledWith(
       expect.objectContaining({
-        sttCreditsPerSecond: 0.5,
+        sttCreditsPerMinute: 30,
         ttsVoices: expect.objectContaining({
           pt: { model: "flux", voice: "flux-paula-pt" },
         }),
@@ -149,14 +149,14 @@ export const ValidationErrors: Story = {
   globals: viewport("desktop"),
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    const ttsRate = canvas.getByLabelText("Credits per second", {
+    const ttsRate = canvas.getByLabelText("Credits per minute", {
       selector: "#voice-tts-rate",
     });
     await userEvent.clear(ttsRate);
-    await userEvent.type(ttsRate, "500");
+    await userEvent.type(ttsRate, "6001");
     await userEvent.click(canvas.getByRole("button", { name: "Save Changes" }));
     await expect(
-      canvas.getByText("Between 0 and 100, with up to 2 decimals"),
+      canvas.getByText("Between 0 and 6,000, with up to 2 decimals"),
     ).toBeInTheDocument();
     await expect(args.onSave).not.toHaveBeenCalled();
   },

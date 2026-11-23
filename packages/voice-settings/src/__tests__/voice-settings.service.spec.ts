@@ -22,8 +22,8 @@ function row(overrides: Record<string, unknown> = {}) {
   return {
     id: "global",
     sttModel: "nova-2",
-    sttCreditsPerSecond: 0.5,
-    ttsCreditsPerSecond: 3,
+    sttCreditsPerMinute: 30,
+    ttsCreditsPerMinute: 180,
     ttsVoices: {
       en: { model: "aura", voice: "aura-luna-en" },
       es: { model: "aura-2", voice: "aura-2-javier-es" },
@@ -40,8 +40,8 @@ function row(overrides: Record<string, unknown> = {}) {
 
 const update = {
   sttModel: "nova-3",
-  sttCreditsPerSecond: 1,
-  ttsCreditsPerSecond: 2,
+  sttCreditsPerMinute: 60,
+  ttsCreditsPerMinute: 120,
   ttsVoices: {
     ...DEFAULT_TTS_LANGUAGE_VOICES,
     es: { model: "aura-2", voice: "aura-2-estrella-es" },
@@ -64,10 +64,10 @@ describe("VoiceSettingsService", () => {
       where: { id: "global" },
     });
     expect(settings).toEqual({
-      stt: { provider: "deepgram", model: "nova-2", creditsPerSecond: 0.5 },
+      stt: { provider: "deepgram", model: "nova-2", creditsPerMinute: 30 },
       tts: {
         provider: "deepgram",
-        creditsPerSecond: 3,
+        creditsPerMinute: 180,
         voices: row().ttsVoices,
       },
       freeTier: { minutes: 20, period: "lifetime" },
@@ -122,8 +122,8 @@ describe("VoiceSettingsService", () => {
         where: { id: "global" },
         update: expect.objectContaining({
           sttModel: "nova-3",
-          sttCreditsPerSecond: 1,
-          ttsCreditsPerSecond: 2,
+          sttCreditsPerMinute: 60,
+          ttsCreditsPerMinute: 120,
           freeTierMinutes: 10,
           freeTierPeriod: "monthly",
           updatedById: "admin-7",
@@ -145,7 +145,7 @@ describe("VoiceSettingsService", () => {
   it("rejects invalid settings without saving", async () => {
     const service = new VoiceSettingsService();
     await expect(
-      service.update({ ...update, ttsCreditsPerSecond: -2 }),
+      service.update({ ...update, ttsCreditsPerMinute: -2 }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.update({
@@ -165,8 +165,8 @@ describe("toVoiceSettings", () => {
     const settings = toVoiceSettings(
       row({
         sttModel: "whisper",
-        sttCreditsPerSecond: -1,
-        ttsCreditsPerSecond: Number.NaN,
+        sttCreditsPerMinute: -1,
+        ttsCreditsPerMinute: Number.NaN,
         ttsVoices: { es: { model: "aura-2", voice: "aura-2-javier-es" } },
         freeTierMinutes: 0,
         freeTierPeriod: "weekly",
@@ -174,8 +174,8 @@ describe("toVoiceSettings", () => {
     );
     expect(settings.freeTier).toEqual({ minutes: null, period: "monthly" });
     expect(settings.stt.model).toBe("nova-3");
-    expect(settings.stt.creditsPerSecond).toBe(1);
-    expect(settings.tts.creditsPerSecond).toBe(2);
+    expect(settings.stt.creditsPerMinute).toBe(60);
+    expect(settings.tts.creditsPerMinute).toBe(120);
     expect(settings.tts.voices).toEqual({
       ...DEFAULT_TTS_LANGUAGE_VOICES,
       es: { model: "aura-2", voice: "aura-2-javier-es" },

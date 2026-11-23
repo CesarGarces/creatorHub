@@ -23,8 +23,8 @@ export const voiceAssistant: Messages["voiceAssistant"] = {
   voiceNote:
     "Su voz es Deepgram, elegida según el idioma en que hablas — una voz por idioma:",
   voiceSettings: "Voz",
-  pricing: "Voz {stt} cr/s · Respuesta 1 cr (hablada: {tts} cr/s)",
-  pricingShort: "{stt} cr/s de voz · {tts} cr/s respuesta hablada",
+  pricing: "Voz {stt} cr/min · Respuesta 1 cr (hablada: {tts} cr/min)",
+  pricingShort: "{stt} cr/min de voz · {tts} cr/min respuesta hablada",
   openChat: "Abrir chat",
   hideHistory: "Ocultar historial",
   showHistory: "Mostrar historial",
