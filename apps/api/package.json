@@ -25,11 +25,11 @@
     "@creator-hub/database": "workspace:*",
     "@creator-hub/domain-events": "workspace:*",
     "@creator-hub/email": "workspace:*",
+    "@creator-hub/script-writer": "workspace:*",
+    "@creator-hub/script-writer-backend": "workspace:*",
     "@creator-hub/shared-types": "workspace:*",
     "@creator-hub/shared-utils": "workspace:*",
     "@creator-hub/social-research-backend": "workspace:*",
-    "@creator-hub/script-writer": "workspace:*",
-    "@creator-hub/script-writer-backend": "workspace:*",
     "@creator-hub/storage": "workspace:*",
     "@creator-hub/stt-engine": "workspace:*",
     "@creator-hub/thumbnail-generator": "workspace:*",
@@ -92,5 +92,11 @@
     "tsx": "^4.0.0",
     "typescript": "^5.5.0",
     "vitest": "^3.2.6"
+  },
+  "optionalDependencies": {
+    "@equin/pg-client-darwin-arm64": "18.7.0",
+    "@equin/pg-client-darwin-x64": "18.7.0",
+    "@equin/pg-client-linux-arm64": "18.7.0",
+    "@equin/pg-client-linux-x64": "18.7.0"
   }
 }

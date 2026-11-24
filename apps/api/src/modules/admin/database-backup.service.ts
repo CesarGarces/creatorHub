@@ -5,7 +5,37 @@ import {
 } from "@nestjs/common";
 import { StorageService } from "@creator-hub/storage";
 import { spawn } from "child_process";
-import { statSync, unlinkSync, createReadStream } from "fs";
+import { existsSync, statSync, unlinkSync, createReadStream } from "fs";
+import { dirname, join } from "path";
+
+const PG_DUMP_PACKAGES: Record<string, Record<string, string>> = {
+  linux: {
+    x64: "@equin/pg-client-linux-x64",
+    arm64: "@equin/pg-client-linux-arm64",
+  },
+  darwin: {
+    x64: "@equin/pg-client-darwin-x64",
+    arm64: "@equin/pg-client-darwin-arm64",
+  },
+};
+
+export function resolvePgDumpPath(): string {
+  const configured = process.env.PG_DUMP_PATH?.trim();
+  if (configured) return configured;
+
+  const packageName = PG_DUMP_PACKAGES[process.platform]?.[process.arch];
+  if (packageName) {
+    try {
+      const packageJson = require.resolve(`${packageName}/package.json`);
+      const bundled = join(dirname(packageJson), "native", "bin", "pg_dump");
+      if (existsSync(bundled)) return bundled;
+    } catch {
+      // Optional platform package not installed; fall back to PATH.
+    }
+  }
+
+  return "pg_dump";
+}
 
 export interface BackupMetadata {
   id: string;
@@ -169,7 +199,8 @@ export class DatabaseBackupService {
         params.outputPath,
       ];
 
-      const child = spawn("pg_dump", args, {
+      const command = resolvePgDumpPath();
+      const child = spawn(command, args, {
         env: {
           ...process.env,
           PGPASSWORD: params.password,
@@ -185,7 +216,12 @@ export class DatabaseBackupService {
       });
 
       child.on("error", (error) => {
-        reject(new Error(`Failed to spawn pg_dump: ${error.message}`));
+        reject(
+          new Error(
+            `Failed to spawn pg_dump (${command}): ${error.message}. ` +
+              "Set PG_DUMP_PATH or install the PostgreSQL client tools.",
+          ),
+        );
       });
 
       child.on("close", (code) => {

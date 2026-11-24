@@ -19,6 +19,7 @@ vi.mock("fs", async (importOriginal) => ({
 
 import {
   DatabaseBackupService,
+  resolvePgDumpPath,
   type BackupMetadata,
 } from "../database-backup.service";
 
@@ -66,6 +67,9 @@ describe("DatabaseBackupService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("fetch", fetchMock);
+    // Keep spawned-command assertions independent of the host's platform
+    // package; production resolves the bundled binary automatically.
+    process.env.PG_DUMP_PATH = "pg_dump";
     service = new DatabaseBackupService(storage as never);
   });
 
@@ -105,6 +109,14 @@ describe("DatabaseBackupService", () => {
     it("returns the stored metadata", async () => {
       givenStoredMetadata([existing]);
       expect(await service.listBackups()).toEqual([existing]);
+    });
+  });
+
+  describe("resolvePgDumpPath", () => {
+    it("prefers an explicitly configured binary", () => {
+      process.env.PG_DUMP_PATH = "/opt/postgres/bin/pg_dump";
+
+      expect(resolvePgDumpPath()).toBe("/opt/postgres/bin/pg_dump");
     });
   });
 
@@ -201,7 +213,10 @@ describe("DatabaseBackupService", () => {
       const entry = await service.createBackup();
 
       expect(entry.status).toBe("failed");
-      expect(entry.error).toBe("Failed to spawn pg_dump: ENOENT");
+      expect(entry.error).toContain(
+        "Failed to spawn pg_dump (pg_dump): ENOENT",
+      );
+      expect(entry.error).toContain("PG_DUMP_PATH");
     });
   });
 

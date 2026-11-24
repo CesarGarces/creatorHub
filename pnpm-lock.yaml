@@ -353,6 +353,19 @@ importers:
       vitest:
         specifier: ^3.2.6
         version: 3.2.6(@types/node@20.19.42)(jsdom@26.1.0)(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.48.0)
+    optionalDependencies:
+      '@equin/pg-client-darwin-arm64':
+        specifier: 18.7.0
+        version: 18.7.0
+      '@equin/pg-client-darwin-x64':
+        specifier: 18.7.0
+        version: 18.7.0
+      '@equin/pg-client-linux-arm64':
+        specifier: 18.7.0
+        version: 18.7.0
+      '@equin/pg-client-linux-x64':
+        specifier: 18.7.0
+        version: 18.7.0
 
   apps/community-worker:
     dependencies:
@@ -2377,6 +2390,26 @@ packages:
 
   '@emnapi/wasi-threads@1.2.2':
     resolution: {integrity: sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA==}
+
+  '@equin/pg-client-darwin-arm64@18.7.0':
+    resolution: {integrity: sha512-3eXNEyV4epiVOFCQ8XFcfhe1M3cUxcvWdluveVoCszngbe1SbM03n4eIWSpYj35JkbQHLOlaOkgdWvkcfciIgg==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@equin/pg-client-darwin-x64@18.7.0':
+    resolution: {integrity: sha512-Wzs9hAVMCEq0i2wEOLUOKM445Y7TPrchxGEyubcCA+/W45oGbg6CRinPosC4o/4PYoQlWCkfNMA1rHyNSCFcWw==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@equin/pg-client-linux-arm64@18.7.0':
+    resolution: {integrity: sha512-+4ebpdcqjoc+rJBNvaleTbLVhciiJBkQPlkA9Ffu+y/XTwsf+/j/PjhHTNWMThKH4hWl24knAbc83ABDnlVMGA==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@equin/pg-client-linux-x64@18.7.0':
+    resolution: {integrity: sha512-8DVSDspeNXzRCl+fXsS9evrXe4eSoJWH4klq4NZ3LklyhANM4M3vK9rQA1jzdKf/eS0nQkzDUrPRfmjEn04rVw==}
+    cpu: [x64]
+    os: [linux]
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -10427,6 +10460,18 @@ snapshots:
   '@emnapi/wasi-threads@1.2.2':
     dependencies:
       tslib: 2.8.1
+    optional: true
+
+  '@equin/pg-client-darwin-arm64@18.7.0':
+    optional: true
+
+  '@equin/pg-client-darwin-x64@18.7.0':
+    optional: true
+
+  '@equin/pg-client-linux-arm64@18.7.0':
+    optional: true
+
+  '@equin/pg-client-linux-x64@18.7.0':
     optional: true
 
   '@esbuild/aix-ppc64@0.21.5':
