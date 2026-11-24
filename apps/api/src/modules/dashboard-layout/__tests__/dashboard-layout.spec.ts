@@ -83,12 +83,12 @@ describe("DashboardLayoutService", () => {
       "tips",
       "credits",
       "quick-prompt",
-      "favorites",
       "today-plans",
+      "voice-assistant",
+      "favorites",
+      "asset-stats",
       "activity",
       "recommendations",
-      "asset-stats",
-      "voice-assistant",
     ]);
     expect(layout.updatedAt).toBe(SAVED_AT.toISOString());
   });

@@ -89,6 +89,18 @@ describe("layout operations", () => {
 
   it("knows the default layout", () => {
     expect(sameWidgets(defaultWidgets(), DEFAULT_DASHBOARD_WIDGETS)).toBe(true);
+    expect(ids(defaultWidgets())).toEqual([
+      "quick-prompt",
+      "today-plans",
+      "voice-assistant",
+      "favorites",
+      "asset-stats",
+      "activity",
+      "recommendations",
+      "credits",
+      "tips",
+    ]);
+    expect(defaultWidgets().every((w) => w.visible)).toBe(true);
     expect(isDefaultLayout(defaultWidgets())).toBe(true);
     expect(isDefaultLayout(base)).toBe(false);
   });

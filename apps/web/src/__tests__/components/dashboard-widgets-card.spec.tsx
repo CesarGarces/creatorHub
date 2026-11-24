@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import {
   DEFAULT_DASHBOARD_WIDGETS,
   type DashboardWidgetState,
@@ -89,14 +89,15 @@ describe("Settings → Dashboard", () => {
     const credits = screen.getByRole("switch", {
       name: "Show Credits on the dashboard",
     });
-    expect(credits.getAttribute("aria-checked")).toBe("false");
-    // Hidden widgets are marked as such.
-    const creditsRow = document.querySelector('[data-widget-row="credits"]')!;
-    expect(within(creditsRow as HTMLElement).getByText("Hidden")).toBeTruthy();
+    expect(credits.getAttribute("aria-checked")).toBe("true");
+    // Nothing is hidden in the default layout.
+    expect(screen.queryByText("Hidden")).toBeNull();
   });
 
   it("showing a widget updates the preview and saves", async () => {
-    seed();
+    seed(
+      DEFAULTS.map((w) => (w.id === "credits" ? { ...w, visible: false } : w)),
+    );
     render(<DashboardWidgetsCard />);
     expect(previewed()).not.toContain("credits");
 
@@ -125,7 +126,7 @@ describe("Settings → Dashboard", () => {
     expect(
       (
         screen.getByRole("button", {
-          name: "Move Credits down",
+          name: "Move Pro tip down",
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
@@ -134,20 +135,24 @@ describe("Settings → Dashboard", () => {
       screen.getByRole("button", { name: "Move Recent activity up" }),
     );
 
-    expect(rows().slice(0, 4)).toEqual([
+    expect(rows().slice(0, 6)).toEqual([
       "quick-prompt",
+      "today-plans",
+      "voice-assistant",
       "favorites",
       "activity",
-      "today-plans",
+      "asset-stats",
     ]);
-    expect(previewed().slice(0, 4)).toEqual([
+    expect(previewed().slice(0, 6)).toEqual([
       "quick-prompt",
+      "today-plans",
+      "voice-assistant",
       "favorites",
       "activity",
-      "today-plans",
+      "asset-stats",
     ]);
     expect(
-      screen.getByText("Recent activity moved to position 3."),
+      screen.getByText("Recent activity moved to position 5."),
     ).toBeTruthy();
     await flush();
     expect(apiMock.put).toHaveBeenCalledTimes(1);

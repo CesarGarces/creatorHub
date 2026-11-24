@@ -84,22 +84,35 @@ describe("dashboard widgets contract", () => {
     // Stored in DashboardLayout.widgets — renaming one drops it from layouts.
     expect(types.DASHBOARD_WIDGET_IDS).toEqual([
       "quick-prompt",
-      "favorites",
       "today-plans",
+      "voice-assistant",
+      "favorites",
       "activity",
       "recommendations",
       "credits",
       "tips",
       "asset-stats",
-      "voice-assistant",
     ]);
   });
 
-  it("the default layout lists every widget exactly once", () => {
-    const defaults = ids([...types.DEFAULT_DASHBOARD_WIDGETS]);
-    expect([...defaults].sort()).toEqual(
-      [...types.DASHBOARD_WIDGET_IDS].sort(),
-    );
+  it("the default layout lists every widget exactly once, in product order", () => {
+    expect(ids([...types.DEFAULT_DASHBOARD_WIDGETS])).toEqual([
+      "quick-prompt",
+      "today-plans",
+      "voice-assistant",
+      "favorites",
+      "asset-stats",
+      "activity",
+      "recommendations",
+      "credits",
+      "tips",
+    ]);
+    expect(
+      [...types.DEFAULT_DASHBOARD_WIDGETS]
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map((w) => w.id),
+    ).toEqual([...types.DASHBOARD_WIDGET_IDS].sort());
+    expect(types.DEFAULT_DASHBOARD_WIDGETS.every((w) => w.visible)).toBe(true);
   });
 
   it("anything that isn't a list normalizes to the default layout", () => {
@@ -123,12 +136,12 @@ describe("dashboard widgets contract", () => {
       "tips",
       "credits",
       "quick-prompt",
-      "favorites",
       "today-plans",
+      "voice-assistant",
+      "favorites",
+      "asset-stats",
       "activity",
       "recommendations",
-      "asset-stats",
-      "voice-assistant",
     ]);
     expect(result.every((w) => w.visible !== undefined)).toBe(true);
   });

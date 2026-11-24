@@ -47,11 +47,19 @@ export const Default: Story = {
     const credits = canvas.getByRole("switch", {
       name: "Show Credits on the dashboard",
     });
+    const creditsPreview = () =>
+      canvasElement.querySelector('[data-preview-widget="credits"]');
+
+    await expect(credits).toHaveAttribute("aria-checked", "true");
+    await expect(creditsPreview()).not.toBeNull();
+
+    await userEvent.click(credits);
+    await expect(credits).toHaveAttribute("aria-checked", "false");
+    await expect(creditsPreview()).toBeNull();
+
     await userEvent.click(credits);
     await expect(credits).toHaveAttribute("aria-checked", "true");
-    await expect(
-      canvasElement.querySelector('[data-preview-widget="credits"]'),
-    ).not.toBeNull();
+    await expect(creditsPreview()).not.toBeNull();
   },
 };
 

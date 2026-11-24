@@ -580,11 +580,12 @@ that collector. Unset, nothing leaves the browser.
 
 ## 2f. Dashboard widgets
 
-The dashboard is a grid of **widgets** — Quick prompt, Favorite tools, Plans
-for today, Recent activity, Recommendations, Pro tip, Likes & views, Robotina,
-Credits — that each user shows, hides and orders. They choose them in **Settings → Dashboard** (preview of every widget,
-live preview of the layout on a desktop or a phone) and rearrange them on the
-dashboard itself by **pressing and holding** one, iOS home-screen style.
+The dashboard is a grid of **widgets** — Quick prompt, Plans for today,
+Robotina, Favorite tools, Likes & views, Recent activity, Recommendations,
+Credits and Pro tip — that each user shows, hides and orders. They choose them
+in **Settings → Dashboard** (preview of every widget, live preview of the
+layout on a desktop or a phone) and rearrange them on the dashboard itself by
+**pressing and holding** one, iOS home-screen style.
 
 ### Layers
 

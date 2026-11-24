@@ -21,14 +21,14 @@ type Widget = { id: string; visible: boolean };
 
 const DEFAULT_LAYOUT: Widget[] = [
   { id: "quick-prompt", visible: true },
-  { id: "favorites", visible: true },
   { id: "today-plans", visible: true },
+  { id: "voice-assistant", visible: true },
+  { id: "favorites", visible: true },
+  { id: "asset-stats", visible: true },
   { id: "activity", visible: true },
   { id: "recommendations", visible: true },
+  { id: "credits", visible: true },
   { id: "tips", visible: true },
-  { id: "asset-stats", visible: true },
-  { id: "credits", visible: false },
-  { id: "voice-assistant", visible: false },
 ];
 
 /** A backend that remembers the layout (survives reloads). */
@@ -95,12 +95,14 @@ test.describe("dashboard widgets · desktop", () => {
     await openDashboard(page);
     expect(await order(page)).toEqual([
       "quick-prompt",
-      "favorites",
       "today-plans",
+      "voice-assistant",
+      "favorites",
+      "asset-stats",
       "activity",
       "recommendations",
+      "credits",
       "tips",
-      "asset-stats",
     ]);
 
     // A short click is a click: no rearranging.
@@ -131,11 +133,13 @@ test.describe("dashboard widgets · desktop", () => {
       .toEqual([
         "activity",
         "quick-prompt",
-        "favorites",
         "today-plans",
-        "recommendations",
-        "tips",
+        "voice-assistant",
+        "favorites",
         "asset-stats",
+        "recommendations",
+        "credits",
+        "tips",
       ]);
     await snap(page, testInfo, "dashboard widget dragging");
 
@@ -149,13 +153,13 @@ test.describe("dashboard widgets · desktop", () => {
     expect(backend.current().map((w) => w.id)).toEqual([
       "activity",
       "quick-prompt",
-      "favorites",
       "today-plans",
-      "recommendations",
-      "tips",
-      "asset-stats",
-      "credits",
       "voice-assistant",
+      "favorites",
+      "asset-stats",
+      "recommendations",
+      "credits",
+      "tips",
     ]);
 
     // Still rearranging until Done; the order survives a reload.
@@ -238,25 +242,27 @@ test.describe("dashboard widgets · desktop", () => {
     await page.evaluate(() => new Promise((r) => setTimeout(r, 0)));
     // One place per arrow, by position — whatever the widget sizes.
     await page.keyboard.press("ArrowUp");
-    await announced("Pro tip is now at position 5 of 7.");
+    await announced("Pro tip is now at position 8 of 9.");
     await page.keyboard.press("ArrowUp");
-    await announced("Pro tip is now at position 4 of 7.");
+    await announced("Pro tip is now at position 7 of 9.");
     // The opposite arrow takes it back; then up again.
     await page.keyboard.press("ArrowDown");
-    await announced("Pro tip is now at position 5 of 7.");
+    await announced("Pro tip is now at position 8 of 9.");
     await page.keyboard.press("ArrowLeft");
-    await announced("Pro tip is now at position 4 of 7.");
+    await announced("Pro tip is now at position 7 of 9.");
     await page.keyboard.press("Space");
-    await announced("Pro tip dropped at position 4 of 7.");
+    await announced("Pro tip dropped at position 7 of 9.");
 
     expect(await order(page)).toEqual([
       "quick-prompt",
-      "favorites",
       "today-plans",
-      "tips",
-      "activity",
-      "recommendations",
+      "voice-assistant",
+      "favorites",
       "asset-stats",
+      "activity",
+      "tips",
+      "recommendations",
+      "credits",
     ]);
     await expect
       .poll(() => api.calls("PUT", "/user/dashboard-layout").length)
@@ -291,7 +297,9 @@ test.describe("dashboard widgets · desktop", () => {
   }) => {
     const hidden = layoutBackend(
       DEFAULT_LAYOUT.map((w) =>
-        w.id === "activity" ? { ...w, visible: false } : w,
+        w.id === "activity" || w.id === "credits"
+          ? { ...w, visible: false }
+          : w,
       ),
     );
     const calls = await mockApi(
@@ -693,14 +701,8 @@ test.describe("Settings → Dashboard", () => {
     });
     await expect(
       preview.locator('[data-preview-widget="credits"]'),
-    ).toHaveCount(0);
-
-    await card
-      .getByRole("switch", { name: "Show Credits on the dashboard" })
-      .click();
-    await expect(
-      preview.locator('[data-preview-widget="credits"]'),
     ).toHaveCount(1);
+
     for (let i = 0; i < 7; i++) {
       await card.getByRole("button", { name: "Move Credits up" }).click();
     }

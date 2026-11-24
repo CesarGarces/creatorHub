@@ -136,11 +136,13 @@ describe("loading", () => {
     apiMock.put.mockReturnValue(save.promise as never);
 
     const loading = store().load("u1");
-    store().setVisible("credits", true);
+    store().setVisible("credits", false);
     request.resolve({ widgets: DEFAULT_DASHBOARD_WIDGETS, updatedAt: null });
     await loading;
 
-    expect(store().widgets.find((w) => w.id === "credits")!.visible).toBe(true);
+    expect(store().widgets.find((w) => w.id === "credits")!.visible).toBe(
+      false,
+    );
     save.resolve({}); // writes are serial: let the next tests' saves run
     await flush();
   });
@@ -156,13 +158,15 @@ describe("changes", () => {
     apiMock.put.mockResolvedValue({});
   });
 
-  it("shows a change at once, caches it and saves the whole list", async () => {
-    store().setVisible("credits", true);
+  it("applies a change at once, caches it and saves the whole list", async () => {
+    store().setVisible("credits", false);
 
-    expect(store().widgets.find((w) => w.id === "credits")!.visible).toBe(true);
+    expect(store().widgets.find((w) => w.id === "credits")!.visible).toBe(
+      false,
+    );
     expect(readCachedLayout("u1")!.find((w) => w.id === "credits")).toEqual({
       id: "credits",
-      visible: true,
+      visible: false,
     });
     await flush();
 
@@ -189,7 +193,7 @@ describe("changes", () => {
 
     store().move("quick-prompt", 1);
     expect(ids(store().widgets).slice(0, 2)).toEqual([
-      "favorites",
+      "today-plans",
       "quick-prompt",
     ]);
     await flush();
@@ -200,7 +204,7 @@ describe("changes", () => {
     const first = deferred();
     apiMock.put.mockReturnValueOnce(first.promise as never);
 
-    store().setVisible("credits", true);
+    store().setVisible("credits", false);
     await flush();
     store().setVisible("tips", false);
     store().setVisible("activity", false);
@@ -237,13 +241,15 @@ describe("changes", () => {
 
     store().setVisible("favorites", false);
     await flush();
-    store().setVisible("credits", true); // while the first save is running
+    store().setVisible("credits", false); // while the first save is running
     first.reject(new Error("500"));
     await flush();
     await flush();
 
     expect(store().saveErrors).toBe(1);
-    expect(store().widgets.find((w) => w.id === "credits")!.visible).toBe(true);
+    expect(store().widgets.find((w) => w.id === "credits")!.visible).toBe(
+      false,
+    );
     expect(apiMock.put).toHaveBeenCalledTimes(2);
   });
 
@@ -256,7 +262,7 @@ describe("changes", () => {
   });
 
   it("reset shows the default and deletes the saved layout", async () => {
-    store().setVisible("credits", true);
+    store().setVisible("credits", false);
     await flush();
     apiMock.delete.mockResolvedValue({});
 
@@ -272,7 +278,7 @@ describe("changes", () => {
     apiMock.put.mockReturnValueOnce(save.promise as never);
     apiMock.delete.mockResolvedValue({});
 
-    store().setVisible("credits", true);
+    store().setVisible("credits", false);
     await flush();
     const resetting = store().reset();
     await flush();

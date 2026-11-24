@@ -41,23 +41,23 @@ export interface DashboardLayout {
 }
 
 /**
- * The dashboard before any customization: the sections it always had, in
- * the same order. "Credits" is opt-in (Settings → Dashboard).
+ * The dashboard before any customization: the default order and visibility,
+ * also restored by "Reset to default" (Settings → Dashboard).
  */
 export const DEFAULT_DASHBOARD_WIDGETS: readonly Readonly<DashboardWidgetState>[] =
   [
     { id: "quick-prompt", visible: true },
-    { id: "favorites", visible: true },
-    // Today's Content Planner sessions, next to the activity on desktops.
+    // Today's Content Planner sessions, next to Robotina on desktops.
     { id: "today-plans", visible: true },
-    { id: "activity", visible: true },
-    { id: "recommendations", visible: true },
-    { id: "tips", visible: true },
-    // Likes and views of the user's assets, with previews.
-    { id: "asset-stats", visible: true },
     // Robotina: tap the orb and talk (voice in, Deepgram voice out).
     { id: "voice-assistant", visible: true },
-    { id: "credits", visible: false },
+    { id: "favorites", visible: true },
+    // Likes and views of the user's assets, with previews.
+    { id: "asset-stats", visible: true },
+    { id: "activity", visible: true },
+    { id: "recommendations", visible: true },
+    { id: "credits", visible: true },
+    { id: "tips", visible: true },
   ];
 
 export function isDashboardWidgetId(
